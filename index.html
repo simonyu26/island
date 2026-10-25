@@ -111,6 +111,7 @@
   .chip.on { background: var(--plum); color: #fff; } .chip.on small, .chip.on i { color: #fde; }
   button.x { background: none; color: var(--muted); padding: 4px 6px; }
   label.btn { display: block; margin: 0; font-size: 16px; background: var(--plum); color: #fff; padding: 10px 16px; border-radius: 12px; cursor: pointer; }
+  .purple-ic { display: inline-block; filter: hue-rotate(185deg) saturate(1.4); }   /* 紫色的烏龜 */
   .pill { display: inline-block; background: var(--plum-light); color: var(--plum); border-radius: 8px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 13px; }
   .step { display: flex; align-items: center; gap: 4px; }
   .step button { padding: 4px 10px; } .step b { min-width: 26px; text-align: center; }
@@ -186,8 +187,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.8';
+const APP_VERSION = '2.8.1';
 const CHANGELOG = [
+  { v: '2.8.1', date: '2026-10-25', items: ['🐢 讓島順起來「卡卡的」換成紫色的烏龜'] },
   { v: '2.8', date: '2026-10-25', items: ['📋 首頁變清爽了：最上面是「今日のおつとめ」，今天要做的事一行一件，右邊標好做了沒，點一下就展開', '📮 右上角多了郵便受け：小島更新、家人寄的明信片、邀請、爸爸的回覆都收在這裡，有新東西會亮紅點', '🏃 運動集章卡搬到海邊步道自己的頁面，管理員在那裡等你；首頁那一行也能直接蓋章', '🏝️ 3D 小島往上移，打開就看得到；島民的信和新聞收進嚮導的回覧板', '🏅 徽章搬到我的家'] },
   { v: '2.7', date: '2026-10-25', items: ['🗼 島的岬角上蓋了一座燈塔：先幫它取名字，再請一位你自己設定的守燈人', '🍶 答錯的題會變成漂流瓶漂到燈塔海灘，隔天漂回來時換成 AI 類題（同一個觀念、換了數字和情境），上面會寫是改編自哪一題', '🏮 類題連續兩次答對，瓶子就變成紙燈籠放到海上，那一次照難度給 1～3 枚島幣', '📝 可以在瓶子上記下為什麼錯、寫一句話；想問爸爸的題按「給爸爸看」，家人才看得到', '🔗 做過的任務題如果用到兩科的觀念，島會自動發現這條跨科連結，島民的好感度也會上升', '⛵ 紙船碼頭搬到燈塔的小碼頭了'] },
   { v: '2.6.1', date: '2026-10-25', items: ['👋 第一次來到一個地方時，那裡的管理員會先跟你打招呼，說明這裡可以做什麼（海邊步道先開始）'] },
@@ -761,7 +763,7 @@ function guideNews() {
 }
 
 /* --- 讓島順起來：她對遊戲設計的想法，寫進試算表的「讓島順起來」分頁，爸爸改狀態、寫回覆 --- */
-const WISH_KINDS = [['新玩法', '💡'], ['卡卡的', '🐢'], ['想要的東西', '🎁'], ['其他', '💬']];
+const WISH_KINDS = [['新玩法', '💡'], ['卡卡的', '<span class="purple-ic">🐢</span>'], ['想要的東西', '🎁'], ['其他', '💬']];
 const WISH_PILL = { 新: '📮 寄出了', 討論中: '🗣️ 討論中', 做好了: '✅ 做好了', 先不做: '💤 先不做' };
 function wishSig(w) { return w.id + w.status + w.reply; }
 // 爸爸改了狀態或寫了回覆、她還沒看過的則數
