@@ -179,7 +179,8 @@
         S: { grid: {}, assessments: [], save: {}, weeks: [] },
         bond: snap.bond || {}, resident, roommate, imgOf: () => null, subjectName: SUBJECT_NAME,
         pointsUntil: () => snap.pts || {}, sig: JSON.stringify(snap.pts || {}), season: snap.season, walk: snap.walk || 0,
-        home: snap.home || null, onHome: () => openRoom('me'), grade: () => null, onSelect: showInfo
+        home: snap.home || null, onHome: () => openRoom('me'), grade: () => null, onSelect: showInfo,
+        garden: snap.garden || null   // v2.10：她種的植物（不含小木牌）
       });
       Island3D.setEnvironment({ phase: phaseOf(taipeiHour()), weather: 'clear' });
     } catch (e) {
