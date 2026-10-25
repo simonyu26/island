@@ -173,7 +173,7 @@ let draft = {};        // 表單暫存
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
 const APP_VERSION = '2.5';
 const CHANGELOG = [
-  { v: '2.5', date: '2026-10-25', items: ['🏃 運動集章卡：今天運動了就蓋一章，一週 3 章得 3 枚島幣，連續達標解鎖排球和日本風家具', '海邊步道：每蓋一章鋪一段木棧道，每三章多一盞燈籠', '⛵ 紙船碼頭：檢討完紙本考卷放一艘紙船，和爸爸一起檢討是親子船', '🍁 整座島跟著二十四節氣換季：春天櫻花、夏夜螢火蟲、秋天楓紅'] },
+  { v: '2.5', date: '2026-10-25', items: ['🏃 運動集章卡：今天運動了就蓋一章，一週 3 章得 3 枚島幣，連續達標解鎖排球和日本風家具', '海邊步道：每蓋一章鋪一段木棧道，每三章多一盞燈籠', '⛵ 紙船碼頭：檢討完紙本考卷放一艘紙船，和爸爸一起檢討是親子船', '🍁 整座島跟著二十四節氣換季：春天櫻花、夏夜螢火蟲、秋天楓紅', '🧢 海邊步道可以請一位你自己設定的管理員'] },
   { v: '2.4', date: '2026-10-24', items: ['💡 讓島順起來：在嚮導卡下面寫你對小島的想法，爸爸會收到，也會在這裡回覆你'] },
   { v: '2.3', date: '2026-10-24', items: ['嚮導每天第一次見面會先跟你打招呼', '加碼任務改成「挑戰任務」：不用花島幣，自己選基礎／中級／進階，答對賺 1～3 枚島幣，每天最多 10 題', '挑戰任務的題目來自會考考古題（106～115 年，心測中心）', '我的家可以用 3D 走進房間看', '可以去島民家作客、送他們家具、幫他們換牆壁顏色'] },
   { v: '2.2', date: '2026-10-24', items: ['🏠 我的家：在島中央蓋你的家，島嶼升級就會擴建', '🛋️ 家具店：用島幣買家具，擺進自己的房間', '📬 信箱：島民每天的信和嚮導的新聞都收在這裡', '🪙 加碼任務降價，1 枚島幣就能換一題'] },
@@ -471,9 +471,9 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home' }[tab] || tab;
+  const navOn = { pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
-  app.innerHTML = ({ home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = ({ home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home') { ensureDaily(); maybeGreet(); }
   if (tab === 'house') mountRoom();
@@ -558,6 +558,7 @@ function dailyCtx() {
     residents: SUBJECTS.map(s => { const r = resident(s);
       return { key: s, name: r.name, personality: r.personality, relation: r.relation, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null }; }),
     guide: { name: g.name, tone: TONES[g.tone] || g.tone },
+    keepers: Object.keys(PLACES).filter(k => keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : {})),
     weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '') + '；今天的節氣是' + solarTerm(S.today) + '（' + TERM_NOTE[solarTerm(S.today)] + '）'
   };
 }
@@ -889,7 +890,7 @@ function exToday() { return !!S.save['ex:' + S.today]; }
 function habitCard() {
   const wk = mondayOf(S.today), n = D.exWeeks[wk] || 0, on = exToday();
   const next = EX_REWARDS.find(r => D.exBest < r.weeks);
-  const runner = resident(SUBJECTS[daySeed() % 5]);
+  const kp = keeperOf('walk'), daily = S.save['daily:' + S.today];
   const stamps = DAYS.map((d, i) => { const date = addD(wk, i), got = !!S.save['ex:' + date];
     return `<div class="stamp ${got ? 'on' : ''} ${date === S.today ? 'today' : ''}"><span>${got ? '済' : d}</span></div>`; }).join('');
   const paperToday = D.paperSessions.filter(x => x.date === S.today);
@@ -897,12 +898,44 @@ function habitCard() {
     <div class="row"><h3 class="grow" style="margin:0">🏃 運動集章卡</h3><span class="muted">本週 ${n}／${EX_GOAL} 章${n >= EX_GOAL ? '・🪙 +3 達成！' : ''}</span></div>
     <div class="stamps">${stamps}</div>
     <div class="row" style="margin-top:8px;flex-wrap:nowrap">
-      ${on ? `<div class="grow muted">${runner.ipic} ${esc(runner.name)}陪你跑完了！海邊步道又多了一段 🏮</div><button class="ghost" style="padding:6px 10px;font-size:13px" onclick="toggleExercise()">按錯了</button>`
+      ${on ? `<div class="grow muted">${kp ? esc(kp.emoji) + ' ' + esc(kp.name) + '陪你跑完了！' : '🏮 '}海邊步道又多了一段</div><button class="ghost" style="padding:6px 10px;font-size:13px" onclick="toggleExercise()">按錯了</button>`
         : `<button class="grow" onclick="toggleExercise()">🏃 今天運動了！</button>`}</div>
+    ${kp ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('walk')"><span style="font-size:28px">${esc(kp.emoji)}</span>
+        <div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.walk) || keeperLine('walk', on, n))}</div></div>`
+      : `<button class="ghost" style="width:100%;margin-top:8px;font-size:14px" onclick="openKeeper('walk')">🧢 海邊步道還沒有管理員，幫步道找一位陪跑夥伴</button>`}
     <div class="muted" style="margin-top:6px">${D.exStreak ? `已經連續 ${D.exStreak} 週達標 🔥` : '一週運動 3 天就達標'}${next ? `・連續 ${next.weeks} 週可以拿到 ${next.ic} ${next.name}` : '・所有運動家具都拿到了！'}</div>
     <div class="row" style="margin-top:12px;border-top:1px dashed var(--plum-light);padding-top:10px;flex-wrap:nowrap">
       <div class="grow"><b>⛵ 紙本檢討</b><div class="muted">${paperToday.length ? '今天放了 ' + paperToday.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、') : '寫完考卷、檢討完錯題，放一艘紙船'}</div></div>
       <button class="ghost" onclick="go('paper')">去碼頭</button></div></div>`;
+}
+// 地方的管理角色：她自己取名、選樣子、寫個性；每天的訊息由 AI 依個性寫（getDaily 的 keepers）
+const PLACES = { walk: { name: '海邊步道', ic: '🏃', roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️'] } };
+function keeperOf(place) { return S.save['keeper:' + place] || null; }
+function keeperLine(place, on, n) {
+  const k = keeperOf(place), lines = on ? ['今天跑得很棒！海風好舒服對吧？', '蓋章完成～明天也一起來吧！', '流了汗的感覺很好吧？記得喝水喔。']
+    : n >= EX_GOAL ? ['這週已經達標了，今天想散散步也很好。', '達標啦！今天就輕鬆動一動吧～'] : ['今天要不要一起去步道走走？', '我在步道等你喔，動一動腦袋也會更清楚！', '天氣不錯，出來跑一圈吧？'];
+  return lines[(daySeed() + (k ? k.name.length : 0)) % lines.length];
+}
+function openKeeper(place) { draft = {}; draft.keeperPlace = place; tab = 'keeper'; render(); window.scrollTo(0, 0); }
+function viewKeeper() {
+  const place = draft.keeperPlace || 'walk', pl = PLACES[place], cur = keeperOf(place);
+  const k = draft.keeper || (draft.keeper = Object.assign({ name: '', emoji: pl.emojis[0], personality: '', role: pl.roles[0] }, cur || {}));
+  return `<div class="card"><h2>${pl.ic} ${pl.name}的管理員</h2>
+      <div class="muted">這個地方由你挑一位管理員：取名字、選樣子、寫個性。他每天會用自己的個性跟你說話。</div>
+      <label>名字</label><input id="kpName" value="${esc(k.name)}" maxlength="12" placeholder="例如：小夏學姊" oninput="draft.keeper.name=this.value">
+      <label>樣子</label><div class="row" style="gap:6px">${pl.emojis.map(e => `<button type="button" class="${k.emoji === e ? '' : 'ghost'}" style="padding:4px 8px;font-size:24px" onclick="keeperKeep();draft.keeper.emoji='${e}';render()">${e}</button>`).join('')}</div>
+      <label>身分</label><div class="row" style="gap:6px">${pl.roles.map(r => `<button type="button" class="${k.role === r ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="keeperKeep();draft.keeper.role='${r}';render()">${r}</button>`).join('')}</div>
+      <input id="kpRole" style="margin-top:6px" value="${esc(k.role)}" maxlength="20" placeholder="也可以自己寫" oninput="draft.keeper.role=this.value">
+      <label>個性</label><input id="kpPers" value="${esc(k.personality)}" maxlength="60" placeholder="例如：開朗、很會鼓勵人，喜歡排球和冰淇淋" oninput="draft.keeper.personality=this.value">
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="saveKeeperForm('${place}')">${cur ? '儲存' : '請他來上班！'}</button><button class="ghost" onclick="go('home')">取消</button></div></div>`;
+}
+function keeperKeep() { ['kpName', 'kpRole', 'kpPers'].forEach((id, i) => { const el = document.getElementById(id); if (el) draft.keeper[['name', 'role', 'personality'][i]] = el.value; }); }
+async function saveKeeperForm(place) {
+  keeperKeep(); const k = draft.keeper;
+  if (!k.name.trim()) return toast('幫他取個名字吧');
+  try { await flush(); S = await call('saveKeeper', place, k); D = derive(S); }
+  catch (e) { return toast('儲存失敗：' + (e.message || e)); }
+  toast(k.emoji + ' ' + k.name + ' 來' + PLACES[place].name + '上班了！'); go('home');
 }
 function toggleExercise() {
   const on = !exToday(), wk = mondayOf(S.today), before = D.exWeeks[wk] || 0;
@@ -2014,6 +2047,7 @@ function viewGuide() {
   ${sec('🏃', '運動集章卡', p('首頁的「運動集章卡」就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
     p('每蓋一章 +5 經驗值，島的海邊會多鋪一段木棧道，每三章多一盞燈籠。一週（週一到週日）集滿 3 章，🪙 +3。') +
     `<table><tr><th>連續達標</th><th>解鎖的家具</th></tr>${EX_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` +
+    p('海邊步道可以有自己的管理員：在集章卡下面按「幫步道找一位陪跑夥伴」，取名字、選樣子、寫個性，他每天會用自己的口吻跟你聊運動。') +
     p('斷掉了也沒關係：拿到的家具都會留著，重新累積就好。解鎖的家具在「我的家」的家具店最下面，可以擺出來。'))}
   ${sec('⛵', '紙船碼頭（紙本檢討）', p('寫完紙本考卷或練習、檢討完錯題，到首頁按「去碼頭」放一艘船。選這次檢討了哪幾科，寫一句今天最大的收穫就好，大約 30 秒。想多記一點，可以填每科錯幾題、錯的原因，跳過也一樣有島幣。') +
     p('自己檢討是 ⛵ 紙船；爸爸陪你檢討是 🚢 親子船，要請爸爸在你的手機上蓋章。第一科 🪙 2 枚＋20 經驗值，每多一科再 +1 枚，一次最多 4 枚。紙船和親子船每天各算一次。'))}
