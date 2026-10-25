@@ -184,6 +184,46 @@
   .tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
   .tiers button { padding: 10px 4px; font-size: 14px; line-height: 1.4; } .tiers button small { display: block; font-size: 11px; opacity: .85; }
   .furn button.on { border-color: var(--plum); background: var(--plum-light); } .furn button.has { background: var(--sand); }
+  /* 獨立書店（v2.17）：台灣巷弄書店的店內插畫，店貓在幾個點之間走動 */
+  .bscene { position: relative; width: 100%; aspect-ratio: 16 / 11; border-radius: 18px; overflow: hidden; background: #f1ead9; margin-top: 10px; user-select: none; -webkit-user-select: none; }
+  .bscene .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 26%; background: repeating-linear-gradient(90deg, #c99a63 0 46px, #bf8f58 46px 48px); }
+  .bscene .wall { position: absolute; left: 0; right: 0; top: 0; height: 74%; background: linear-gradient(#f6f1e4, #ece3cf); }
+  .bscene .lamp { position: absolute; top: 0; width: 9%; height: 15%; }
+  .bscene .lamp::before { content: ''; position: absolute; left: 50%; top: 0; width: 1px; height: 55%; background: #555; }
+  .bscene .lamp::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 45%; border-radius: 50% 50% 8% 8% / 90% 90% 10% 10%; background: radial-gradient(circle at 30% 30%, #fff 0 8%, transparent 9%), #2f7fd1; box-shadow: 0 6px 14px rgba(255, 220, 140, .65); }
+  .bscene.night .lamp::after { box-shadow: 0 10px 26px rgba(255, 210, 120, .95); }
+  .bscene .shelf { position: absolute; display: grid; gap: 3px; padding: 4px; border-radius: 3px; }
+  .bscene .shelf.back { left: 28%; width: 40%; top: 18%; height: 50%; background: #2c2622; grid-template-rows: repeat(5, 1fr); }
+  .bscene .shelf.side { left: 3%; width: 18%; top: 22%; height: 52%; background: #b98a55; grid-template-rows: repeat(5, 1fr); }
+  .bscene .shelf .row-b { display: flex; align-items: flex-end; gap: 1px; overflow: hidden; background: rgba(0,0,0,.18); padding: 0 2px; }
+  .bscene .shelf .row-b i { display: block; flex: 0 0 auto; border-radius: 1px 1px 0 0; }
+  .bscene .window { position: absolute; right: 4%; top: 14%; width: 22%; height: 34%; border: 5px solid #6b4a2b; border-radius: 4px; overflow: hidden; }
+  .bscene .window::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #6b4a2b; }
+  .bscene .window .rain { position: absolute; inset: 0; background: repeating-linear-gradient(105deg, transparent 0 7px, rgba(255,255,255,.55) 7px 8px); background-size: 40px 40px; animation: bsRain .5s linear infinite; }
+  @keyframes bsRain { to { background-position: -8px 40px; } }
+  .bscene .sill { position: absolute; right: 3%; top: 48%; width: 24%; height: 3%; background: #8a6136; border-radius: 2px; }
+  .bscene .table { position: absolute; left: 30%; width: 34%; bottom: 8%; height: 18%; border-radius: 4px 4px 0 0; background: repeating-linear-gradient(90deg, #8d97a4 0 6px, #e9ecef 6px 12px); box-shadow: 0 4px 0 rgba(0,0,0,.12); }
+  .bscene .table .books { position: absolute; left: 4%; right: 4%; top: -16%; height: 22%; display: flex; gap: 2px; }
+  .bscene .table .books i { flex: 1; border-radius: 2px; }
+  .bscene .counter { position: absolute; right: 4%; bottom: 8%; width: 26%; height: 20%; background: linear-gradient(#a8733d, #8a5a2c); border-radius: 4px 4px 0 0; }
+  .bscene .counter .bell { position: absolute; right: 12%; top: -24%; font-size: 14px; }
+  .bscene .keeper { position: absolute; right: 6%; bottom: 25%; font-size: 34px; line-height: 1; cursor: pointer; }
+  .bscene .keeper .kpic { width: 40px; height: 40px; }
+  .bscene .sign { position: absolute; left: 50%; transform: translateX(-50%); top: 3%; background: #fffaf0; border: 2px solid #6b4a2b; border-radius: 6px; padding: 2px 10px; font-size: 13px; font-weight: 700; color: #5b4630; white-space: nowrap; }
+  .bscene .cat { position: absolute; font-size: 30px; line-height: 1; transform: translate(-50%, -100%); transition: left 3.2s ease-in-out, top 3.2s ease-in-out; cursor: pointer; z-index: 3; }
+  .bscene .cat .kpic { width: 32px; height: 32px; }
+  .bscene .cat .body { display: inline-block; }
+  .bscene .cat.walk .body { animation: bsWalk .45s ease-in-out infinite alternate; }
+  .bscene .cat.wash .body { animation: bsWash 1.1s ease-in-out infinite; }
+  .bscene .cat.sleep .body { transform: scaleY(.72) translateY(14%); }
+  .bscene .cat.flip .body { transform: scaleX(-1); }
+  .bscene .cat .zz { position: absolute; left: 70%; top: -40%; font-size: 13px; animation: bsZz 2.4s ease-in-out infinite; }
+  .bscene .cat .say { position: absolute; left: 50%; bottom: 105%; transform: translateX(-50%); background: #fff; border-radius: 10px; padding: 3px 8px; font-size: 12px; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+  @keyframes bsWalk { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+  @keyframes bsWash { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-12deg); } }
+  @keyframes bsZz { 0% { opacity: 0; transform: translateY(4px); } 50% { opacity: 1; } 100% { opacity: 0; transform: translateY(-8px); } }
+  .bookrow { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; padding: 8px 8px 0; background: linear-gradient(transparent calc(100% - 8px), #8a5a2c calc(100% - 8px)); border-radius: 6px; }
+  .bookrow .spine { width: 34px; min-height: 120px; line-height: 1.15; border-radius: 3px 3px 0 0; color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 1px; display: flex; justify-content: center; padding: 6px 0; text-align: center; cursor: pointer; border: none; box-shadow: inset -3px 0 0 rgba(0,0,0,.18); margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -233,8 +273,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.16';
+const APP_VERSION = '2.17';
 const CHANGELOG = [
+  { v: '2.17', date: '2026-10-25', items: ['📚 島上的巷口開了一間獨立書店！先請一位店長：名字、樣子、個性都由你決定，第一次進店店長會跟你介紹書店', '🐈 店裡也可以養一隻店貓：取名字、選花色和個性。牠會在書架、平台桌、窗邊、櫃台之間走來走去，晚上比較愛睡，下雨天會坐在窗邊看雨，點牠會有反應', '📮 明信片冊和 🎟️ 邀請朋友從我的家搬到書店了，家人來島上也會到書店看明信片', '📖 書店裡有一座你的書架，之後智慧島上課得到的書會擺在這裡'] },
   { v: '2.16', date: '2026-10-25', items: ['📷 燈塔可以拍錯題了：紙本考卷、講義上答錯的題拍下來（國文、英文最好用），AI 會讀出題目、你的答案和正確答案，確認後收進海灘變成漂流瓶，隔天一樣漂回來出類題', '🧭 燈塔多了「錯題類型」：看看自己最常錯哪一類題（例如英文的時態、國文的修辭），按「練一題」就照這類題出新題練習'] },
   { v: '2.15.1', date: '2026-10-25', items: ['📷 拍照讀計畫變快、也不會再一直轉不停：讀的時候畫面會顯示等了幾秒，讀不出來會清楚說原因', '💬 島民和嚮導說話更自然了'] },
   { v: '2.15', date: '2026-10-25', items: ['📖 故事任務變成連續劇：答對之後，島民會依自己的個性、跟其他島民的關係，接著寫下一章；下次輪到這條街或巷子，就會接著演', '📚 每條故事都可以回看，還有前情提要'] },
@@ -597,14 +638,15 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
   if (tab === 'cards') seeAllCards();
+  if (tab === 'bookstore') catStart(); else catStop();
   if (tab === 'house') mountRoom();
   if (tab === 'plan') bindPlan();
   if (tab === 'pick') bindPicker();
@@ -691,7 +733,7 @@ function viewHome() {
 </div>` : '';
   const islandView = use3D() ? `<div id="i3d" style="height:min(62vh,520px);border-radius:24px;overflow:hidden;background:${env.phase === 'night' ? '#1b2440' : '#cfe8f3'};position:relative">
         <div class="loading" style="padding-top:120px">🏝️ 小島浮出水面中…</div></div>
-      <div class="card" style="margin-top:12px" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子；點燈塔、中間的家、植木屋可以走進去，點你種的樹會看到小木牌。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>
+      <div class="card" style="margin-top:12px" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子；點燈塔、中間的家、植木屋、書店可以走進去，點你種的樹會看到小木牌。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>
       <details class="card" ${replay.idx != null || replay.timer ? 'open' : ''}><summary><b>⏳ 成長回放</b><span class="muted">・看小島一週一週長大</span></summary><div id="i3dTime" style="margin-top:10px">${timelineHtml()}</div></details>`
     : `<div class="island"><div class="districts">${districts}</div></div>`;
   return hud() + boardCard() + `
@@ -727,6 +769,9 @@ const BOARD = [
     body() { return lightCard(); } },
   { key: 'paper', ic: '⛵', name: '紙本檢討', go: 'paper',
     st() { const n = D.paperSessions.filter(x => x.date === S.today); return n.length ? { t: '今天放了 ' + n.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、'), c: 'done' } : { t: '檢討完放一艘', c: 'info' }; },
+    todo() { return false; } },
+  { key: 'books', ic: '📚', name: '獨立書店', go: 'bookstore',
+    st() { const n = newCards().length; return !keeperOf('bookstore') ? { t: '巷口開了一間書店', c: 'info' } : n ? { t: '📮 ' + n + ' 張新明信片', c: 'info' } : { t: '去坐坐', c: 'info' }; },
     todo() { return false; } }
 ];
 function todayPlan() {
@@ -809,7 +854,7 @@ function dailyCtx() {
     residents: SUBJECTS.map(s => { const r = resident(s);
       return { key: s, name: r.name, personality: r.personality, relation: r.relation, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null }; }),
     guide: { name: g.name, tone: TONES[g.tone] || g.tone },
-    keepers: Object.keys(PLACES).filter(k => k !== 'home' && keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : {})),
+    keepers: Object.keys(PLACES).filter(k => k !== 'home' && k !== 'bookcat' && keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : k === 'bookstore' ? { note: bookNote() } : {})),
     weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '') + '；今天的節氣是' + solarTerm(S.today) + '（' + TERM_NOTE[solarTerm(S.today)] + '）'
   };
 }
@@ -1062,8 +1107,6 @@ function viewHouse() {
         ${isFamily() ? '' : '<button class="ghost" style="padding:6px 10px" onclick="draft.editHome=true;render()">🎨 改外觀</button>'}</div></div>
     ${homeMateCard()}
     ${diaryCard()}
-    <div class="row" style="margin-bottom:14px"><button class="ghost grow" onclick="go('visits')">🎟️ 邀請朋友來島上</button>
-      <button class="ghost grow" onclick="go('cards')">📮 明信片冊${cardList().length ? '（' + cardList().length + '）' : ''}</button></div>
     <div class="card"><h3>🛋️ 房間</h3>${roomHtml('me', vs)}
       <div class="speech" style="margin-top:10px"><b>${esc(vr.name)}</b>來作客：${esc(vline)}</div>
       <div class="muted" style="margin-top:6px">房間可以擺 ${tier.slots} 件家具，房子越大擺越多。點下面的家具可以收起來或擺出來。</div></div>
@@ -1260,6 +1303,15 @@ const PLACES = { home: { name: '我的家', ic: '🏠', tab: 'house', about: ['�
   walk: { name: '海邊步道', ic: '🏃', tab: 'walk', about: ['出門運動前按「出發」、回來按「回來了」，每運動 25 分鐘留下一個足あと 👣 +10 綠點（一天最多 2 個）', '一次滿 20 分鐘自動蓋今天的章；沒帶手機就按「今天運動了」手動蓋章', '一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️', '🐢'] },
   lighthouse: { name: '燈塔', ic: '🗼', tab: 'light', about: ['挑戰任務和故事任務答錯的題，會變成漂流瓶漂到燈塔海灘', '瓶子隔天漂回來，撿起來會出一題 AI 類題：同一個觀念，換了數字和情境，也會寫是改編自哪一題', '類題連續兩次答對，瓶子就變成紙燈籠放到海上，還有島幣', '在瓶子上記下為什麼錯；想問爸爸的題按「給爸爸看」', '紙本考卷上答錯的題，可以拍照收進海灘，也一樣會漂回來', '錯題類型會整理你最常錯哪一類題，按「練一題」就照這類題出新題', '紙本考卷檢討完，可以在燈塔的小碼頭放紙船'], roles: ['守燈的老爺爺', '燈塔的貓', '退休的船長', '海鷗郵差'], emojis: ['👴', '👵', '🧓', '👩‍✈️', '🧑‍🎨', '🐈', '🐈‍⬛', '🦉', '🐢', '🦭', '🐙', '🦀'] },
   garden: { name: '植木屋', ic: '🌱', tab: 'garden', about: ['讀書計時每專心 25 分鐘集一顆砂時計，一顆 +10 綠點，綠點可以在這裡換樹苗和花', '第一次見面送你 100 綠點當開張禮', '選一種植物，再點地圖上的空地格就能種下去，可以寫一塊小木牌', '植物會跟著節氣開花、變色，種下 7 天變小樹、14 天長大，不會枯掉', '島嶼升到 Lv.5、Lv.8 會開放更多空地'], roles: ['植木屋的老闆娘', '戴草帽的園丁', '愛花的狸貓', '苗圃的小學徒'], emojis: ['👩‍🌾', '🧑‍🌾', '👨‍🌾', '👵', '🧒', '🦝', '🐿️', '🐻', '🐸', '🐝', '🦔', '🐢'] } };
+// 獨立書店（v2.17）：管家人往來的地方（明信片冊、邀請朋友、她的書架）；不提讀書，學習的事都在燈塔
+PLACES.bookstore = { name: '獨立書店', ic: '📚', tab: 'bookstore',
+  about: ['這裡是島上的巷口書店，家人來島上也會先到這裡坐坐', '📮 明信片冊：家人來逛過寄給你的明信片，都收在這裡', '🎟️ 邀請朋友：發一張乘船券，請朋友來逛你的小島', '📖 你的書架：之後智慧島上課得到的書，會一本一本擺上來', '店裡還可以養一隻店貓，牠會自己在店裡晃來晃去'],
+  roles: ['書店店長', '愛看書的老闆', '巷口的文青店員', '戴眼鏡的狸貓'], emojis: ['🧑‍🦱', '👩', '🧔', '👵', '👴', '🧑‍🎨', '🦝', '🦉', '🐻', '🦊', '🐼', '🐧'] };
+PLACES.bookcat = { name: '書店', ic: '🐈', tab: 'bookstore', title: '🐈 書店的店貓', who: '店貓', roleLabel: '花色',
+  lead: '幫書店養一隻貓：取名字、選樣子和花色、寫個性。牠平常會在店裡走來走去。',
+  persHint: '例如：很黏人、喜歡睡在書上、看到雨會發呆',
+  about: ['牠會在書架、平台桌、窗邊和櫃台之間走走、坐坐、洗臉、睡覺', '晚上比較愛睡，下雨天會坐在窗邊看雨', '點牠一下會有反應'],
+  roles: ['橘貓', '三花', '虎斑', '黑貓', '白貓', '賓士貓'], emojis: ['🐈', '🐈‍⬛', '🐱', '😺', '😸', '😼'] };
 function keeperOf(place) { const k = S.save['keeper:' + place]; return k ? Object.assign({}, k, { img: imgOf('keeper:' + place) || '' }) : null; }
 // 管理員的樣子：她上傳了自己的圖就用圖，不然用 emoji（和島民一樣，Simon，2026-10-25）
 function kpPic(k) { return k && k.img ? `<img class="kpic" src="${k.img}" alt="">` : esc((k && k.emoji) || '🙂'); }
@@ -1438,17 +1490,17 @@ function openKeeper(place) { draft = {}; draft.keeperPlace = place; tab = 'keepe
 function viewKeeper() {
   const place = draft.keeperPlace || 'walk', pl = PLACES[place], cur = keeperOf(place);
   const k = draft.keeper || (draft.keeper = Object.assign({ name: '', emoji: pl.emojis[0], personality: '', role: pl.roles[0] }, cur || {}));
-  return `<div class="card"><h2>${pl.ic} ${pl.name}的管理員</h2>
-      <div class="muted">這個地方由你挑一位管理員：取名字、選樣子、寫個性。他每天會用自己的個性跟你說話。</div>
-      <div class="muted" style="margin-top:6px">${pl.name}是做什麼的：<ul style="margin:4px 0 0 18px;padding:0">${pl.about.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>
+  return `<div class="card"><h2>${pl.title || pl.ic + ' ' + pl.name + '的管理員'}</h2>
+      <div class="muted">${pl.lead || '這個地方由你挑一位管理員：取名字、選樣子、寫個性。他每天會用自己的個性跟你說話。'}</div>
+      <div class="muted" style="margin-top:6px">${pl.who ? pl.who + '平常會做什麼' : pl.name + '是做什麼的'}：<ul style="margin:4px 0 0 18px;padding:0">${pl.about.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>
       <label>名字</label><input id="kpName" value="${esc(k.name)}" maxlength="12" placeholder="例如：小夏學姊" oninput="draft.keeper.name=this.value">
       <label>樣子</label><div class="row" style="gap:6px">${pl.emojis.map(e => `<button type="button" class="${k.emoji === e ? '' : 'ghost'}" style="padding:4px 8px;font-size:24px" onclick="keeperKeep();draft.keeper.emoji='${e}';render()">${e}</button>`).join('')}</div>
       <div class="row" style="margin-top:8px;gap:8px">${imgOf('keeper:' + place) ? `<img class="pic" src="${imgOf('keeper:' + place)}" alt="">` : ''}
         <label class="btn">${imgOf('keeper:' + place) ? '換一張圖片' : '或上傳自己的圖片'}<input type="file" accept="image/*" hidden onchange="keeperImg('${place}', this)"></label>
         ${imgOf('keeper:' + place) ? `<button type="button" class="ghost" onclick="keeperImgDel('${place}')">改回 emoji</button>` : ''}</div>
-      <label>身分</label><div class="row" style="gap:6px">${pl.roles.map(r => `<button type="button" class="${k.role === r ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="keeperKeep();draft.keeper.role='${r}';render()">${r}</button>`).join('')}</div>
+      <label>${pl.roleLabel || '身分'}</label><div class="row" style="gap:6px">${pl.roles.map(r => `<button type="button" class="${k.role === r ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="keeperKeep();draft.keeper.role='${r}';render()">${r}</button>`).join('')}</div>
       <input id="kpRole" style="margin-top:6px" value="${esc(k.role)}" maxlength="20" placeholder="也可以自己寫" oninput="draft.keeper.role=this.value">
-      <label>個性</label><input id="kpPers" value="${esc(k.personality)}" maxlength="60" placeholder="例如：開朗、很會鼓勵人，喜歡排球和冰淇淋" oninput="draft.keeper.personality=this.value">
+      <label>個性</label><input id="kpPers" value="${esc(k.personality)}" maxlength="60" placeholder="${pl.persHint || '例如：開朗、很會鼓勵人，喜歡排球和冰淇淋'}" oninput="draft.keeper.personality=this.value">
       <div class="row" style="margin-top:14px"><button class="grow" onclick="saveKeeperForm('${place}')">${cur ? '儲存' : '請他來上班！'}</button><button class="ghost" onclick="go('${PLACES[place].tab || 'home'}')">取消</button></div></div>`;
 }
 function keeperKeep() { ['kpName', 'kpRole', 'kpPers'].forEach((id, i) => { const el = document.getElementById(id); if (el) draft.keeper[['name', 'role', 'personality'][i]] = el.value; }); }
@@ -1458,7 +1510,7 @@ async function saveKeeperForm(place) {
   try { await flush(); S = await call('saveKeeper', place, k); D = derive(S); }
   catch (e) { return toast('儲存失敗：' + (e.message || e)); }
   if (place === 'home') houseWho = 'me';
-  toast(k.emoji + ' ' + k.name + (place === 'home' ? ' 搬進來一起住了！' : ' 來' + PLACES[place].name + '上班了！')); go(PLACES[place].tab || 'home');
+  toast(k.emoji + ' ' + k.name + (place === 'home' ? ' 搬進來一起住了！' : place === 'bookcat' ? ' 住進書店了！' : ' 來' + PLACES[place].name + '上班了！')); go(PLACES[place].tab || 'home');
 }
 function toggleExercise() {
   const on = !exToday(), wk = mondayOf(S.today), before = D.exWeeks[wk] || 0;
@@ -2189,6 +2241,7 @@ async function mount3D() {
       onHome: () => openHouse('me'),
       light: (st => ({ name: lightTitle(), sea: st.sea, due: st.due, lanterns: st.lanterns }))(lightStats()), onLight: () => go('light'),
       garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),
+      book: { name: '獨立書店', sub: newCards().length ? '📮 ' + newCards().length + ' 張新明信片' : null }, onBook: () => go('bookstore'),
       grade: s => D.grades[s] && D.grades[s].level,
       onSelect: showInfo3D
     });
@@ -3127,7 +3180,7 @@ function islandSnapshot(withStats) {
     guide: { name: g.name, emoji: g.emoji }, residents, roommates, pts: pointsUntil(null), bond: D.bond,
     mate: keeperOf('home') ? { name: keeperOf('home').name, emoji: keeperOf('home').emoji } : null,
     diary: diaryPages().filter(dt => S.save['diary:' + dt].shared).slice(-14).map(dt => ({ date: dt, text: S.save['diary:' + dt].text, emoji: S.save['diary:' + dt].emoji || '' })),
-    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx() };
+    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx(), book: { name: '獨立書店' } };
   if (withStats) snap.stats = { streakWeeks: D.streak, weekDone: weekDoneCount() };
   return snap;
 }
@@ -3180,7 +3233,7 @@ function viewVisits() {
     ${active.length ? `<div class="card"><h3>🎫 有效的乘船券</h3>${active.map(v => ticketHtml(v, true)).join('')}</div>` : ''}
     ${past.length ? `<div class="card"><details><summary class="muted">已收回或過期的乘船券（${past.length}）</summary>${past.map(v =>
       `<div class="item"><div class="name">${esc(v.note || '未命名')}<div class="muted">${v.by === 'me' ? '' : esc(v.by) + ' 發的・'}${{ revoked: '已收回', declined: '沒有同意', expired: '已過期' }[visitState(v)]}・${v.views || 0} 人次</div></div></div>`).join('')}</details></div>` : ''}
-    <div class="row"><button class="ghost grow" onclick="openHouse('me')">回到我的家 🏠</button></div>`;
+    <div class="row"><button class="ghost grow" onclick="go('bookstore')">回到書店 📚</button></div>`;
 }
 function ticketHtml(v, owner) {
   const url = visitUrl(v.code);
@@ -3234,6 +3287,143 @@ async function shareVisit(code) {
   catch (e) { toast('長按上面的連結就能複製'); }
 }
 
+/* --- 獨立書店（v2.17）：家人往來的地方。店長（keeper:bookstore）、店貓（keeper:bookcat，role 是花色）、明信片冊、邀請朋友、她的書架 ---
+   書架只讀智慧島的存檔 wisdom.lessons（智慧島工作串定的格式），不另外存；書名、章名讀 wisdom/<key>.json */
+const WISDOM_BOOKS = [
+  { key: 'kongming', title: '孫子兵法', color: '#8C2F2B' }, { key: 'xiaomiao', title: '湯屋的放鬆筆記', color: '#7FA88A' },
+  { key: 'alu', title: '巷口小報', color: '#3B5B8C' }, { key: 'einstein', title: '愛因斯坦的科學筆記', color: '#2E3A59' },
+  { key: 'xiaomiao2', title: '湯屋的放鬆筆記・下冊', color: '#7FA88A' }, { key: 'alu2', title: '巷口小報・下冊', color: '#3B5B8C' },
+  { key: 'einstein2', title: '愛因斯坦的科學筆記・下冊', color: '#2E3A59' }];
+const wisdomJson = {};
+function newCards() { const seen = Number(S.save.cardsSeen || 0); return cardList().filter(c => c.ts > seen); }
+function myBooks() {
+  const ls = (S.save.wisdom && S.save.wisdom.lessons) || {};
+  return WISDOM_BOOKS.map(b => Object.assign({}, b, wisdomJson[b.key] || {}, { done: ls[b.key] || {} })).filter(b => Object.keys(b.done).length);
+}
+function loadWisdomJson(key) {
+  if (wisdomJson[key] || typeof fetch !== 'function' || !window.ISLAND_API_URL) return;
+  wisdomJson[key] = {};
+  fetch('wisdom/' + key + '.json').then(r => r.ok ? r.json() : {}).then(j => { const o = {}; ['title', 'color', 'chapters'].forEach(f => { if (j[f]) o[f] = j[f]; }); wisdomJson[key] = o; if (tab === 'bookstore' && Object.keys(o).length) render(); }).catch(() => {});
+}
+function bookNote() { return '這裡是島上的獨立書店，她和家人往來的地方：明信片冊有 ' + cardList().length + ' 張明信片' + (newCards().length ? '（' + newCards().length + ' 張新的）' : '') + '，也可以在這裡發乘船券邀請朋友。店裡有一隻店貓' + (keeperOf('bookcat') ? '叫' + keeperOf('bookcat').name : '') + '。請像巷口書店的店長一樣閒聊，不要提讀書、考試或成績。'; }
+function bookKeeperLine() {
+  const n = newCards().length, cat = keeperOf('bookcat');
+  if (n) return '有家人寄了 ' + n + ' 張明信片來，我幫你收在明信片冊裡了。';
+  const lines = ['歡迎光臨～今天店裡很安靜，慢慢逛。', '我剛泡了一壺茶，坐一下再走吧。', '窗邊那個位子今天光線很好喔。', cat ? cat.name + '今天又霸佔了平台桌，書都被牠壓住了。' : '下雨天的時候，店裡的人特別多。', '今天有人來問有沒有新的旅行書，我說還在路上。'];
+  return lines[daySeed() % lines.length];
+}
+function bookShelfHtml() {
+  const books = myBooks(), open = draft.bookOpen;
+  books.forEach(b => loadWisdomJson(b.key));
+  const ob = open && books.find(b => b.key === open);
+  return `<div class="card"><h3>📖 ${isFamily() ? '她的書架' : '我的書架'}</h3>
+    ${books.length ? `<div class="bookrow">${books.map(b => `<button class="spine" style="background:${esc(b.color)}" onclick="draft.bookOpen=draft.bookOpen==='${b.key}'?'':'${b.key}';render()"><span>${[...b.title].map(esc).join('<br>')}</span></button>`).join('')}</div>`
+      : '<div class="muted">書架還空著。之後智慧島開航，上完一講課就會在這裡蓋章，一本一本擺上來。</div>'}
+    ${ob ? `<div style="margin-top:10px"><b>${esc(ob.title)}</b>・蓋了 ${Object.keys(ob.done).length}／13 章
+      ${Array.from({ length: 13 }, (_, i) => i + 1).map(n => { const d = ob.done[n], ch = ob.chapters && ob.chapters[n - 1];
+        return `<div class="item" style="${d ? 'cursor:pointer' : 'opacity:.45'}" ${d && typeof openWisdomLesson === 'function' ? `onclick="openWisdomLesson('${ob.key}', ${n})"` : ''}><span style="width:26px">${d ? '<span class="hanko" style="font-size:11px">印</span>' : '・'}</span>
+          <div class="name grow">第 ${n} 章${ch ? '・' + esc(ch) : ''}</div><span class="muted">${d && d.at ? short(String(d.at).slice(0, 10)) : ''}</span></div>`; }).join('')}</div>` : ''}</div>`;
+}
+// 店內插畫：書架的書背顏色固定（同一天看起來一樣）
+function bookSpines(n, seed, h) {
+  const cs = ['#c0392b', '#e67e22', '#f1c40f', '#27ae60', '#2980b9', '#8e44ad', '#ecf0f1', '#d35400', '#16a085', '#7f8c8d', '#e8c39e', '#34495e'];
+  let x = seed, out = '';
+  for (let i = 0; i < n; i++) { x = (x * 9301 + 49297) % 233280; out += `<i style="width:${3 + x % 4}px;height:${h - x % 5 * 6}%;background:${cs[x % cs.length]}"></i>`; }
+  return out;
+}
+function bookScene() {
+  const kp = keeperOf('bookstore'), cat = keeperOf('bookcat'), night = env.phase === 'night', wet = env.weather === 'rain' || env.weather === 'storm';
+  const sky = night ? '#1b2440' : env.phase === 'dusk' ? '#f0a46b' : env.phase === 'dawn' ? '#f7c9a0' : wet ? '#9aa6b2' : '#a9d8f0';
+  const rows = (n, seed, k) => Array.from({ length: n }, (_, i) => `<div class="row-b">${bookSpines(k, seed + i * 7, 92)}</div>`).join('');
+  return `<div class="bscene${night ? ' night' : ''}" id="bscene">
+    <div class="wall"></div><div class="floor"></div>
+    <div class="sign">📚 巷口書店</div>
+    ${[10, 24, 70].map(x => `<div class="lamp" style="left:${x - 4.5}%"></div>`).join('')}
+    <div class="shelf side">${rows(5, 11, 14)}</div>
+    <div class="shelf back">${rows(5, 3, 34)}</div>
+    <div class="window" style="background:${sky}">${wet ? '<div class="rain"></div>' : ''}</div><div class="sill"></div>
+    <div class="table"><div class="books">${bookSpines(10, 5, 100).replace(/width:\d+px;/g, '')}</div></div>
+    <div class="counter"><span class="bell">🛎️</span></div>
+    ${kp ? `<div class="keeper" onclick="${isFamily() ? '' : "openKeeper('bookstore')"}" title="${esc(kp.name)}">${kpPic(kp)}</div>` : ''}
+    ${cat ? `<div class="cat" id="bcat" onclick="catTap()" title="${esc(cat.name)}"><span class="body">${kpPic(cat)}</span></div>` : ''}
+  </div>`;
+}
+function viewBookstore() {
+  const kp = keeperOf('bookstore'), cat = keeperOf('bookcat'), fam = isFamily(), n = cardList().length, fresh = newCards().length;
+  if (!kp && !fam) return `<div class="card"><h2>📚 巷口開了一間獨立書店</h2>
+      <div class="muted">這間小書店是你和家人往來的地方，可是還缺一位店長。先請一位店長來顧店吧！</div>
+      <ul style="margin:8px 0 0 18px;padding:0">${PLACES.bookstore.about.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+      <button style="width:100%;margin-top:12px" onclick="openKeeper('bookstore')">請一位店長 🧑‍🦱</button></div>
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+  const daily = S.save['daily:' + S.today], intro = fam ? '' : placeIntro('bookstore');
+  const say = fam ? 'いらっしゃいませ～歡迎來書店坐坐！要不要寄一張明信片給她？' : (daily && daily.messages && daily.messages.bookstore) || bookKeeperLine();
+  return `<div class="card"><h2>📚 巷口的獨立書店</h2>
+      ${bookScene()}
+      <div id="bcatSay" class="muted" style="min-height:1.4em;margin-top:6px;font-size:13px">${cat ? '🐾 ' + esc(cat.name) + catMood() : ''}</div>
+      ${intro || (kp ? `<div class="row" style="margin-top:6px;flex-wrap:nowrap;cursor:pointer" onclick="${fam ? '' : "openKeeper('bookstore')"}"><span style="font-size:30px">${kpPic(kp)}</span>
+        <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(say)}</div></div>` : '')}
+      ${!fam && kp && !cat && !intro ? `<button class="ghost" style="width:100%;margin-top:10px" onclick="openKeeper('bookcat')">🐾 ${esc(kp.name)}：「店裡好像少了一隻貓……要不要幫我們養一隻？」</button>` : ''}</div>
+    <div class="row" style="margin-bottom:14px">
+      <button class="ghost grow" onclick="go('cards')">📮 明信片冊${n ? '（' + n + '）' : ''}${fresh && !fam ? ' 🔴' : ''}</button>
+      ${fam ? `<button class="ghost grow" onclick="go('postcard')">✉️ 寄明信片</button>`
+        : `<button class="ghost grow" onclick="go('visits')">🎟️ 邀請朋友</button>`}</div>
+    ${bookShelfHtml()}
+    <div class="row">${!fam && cat ? `<button class="ghost" onclick="openKeeper('bookcat')">${kpPic(cat)} 店貓設定</button>` : ''}<button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+// 店貓：在幾個點之間走、坐、洗臉、睡覺；晚上多睡、雨天坐窗邊；點牠有反應
+const CAT_SPOTS = { shelf: [24, 44], table: [47, 74], window: [86, 48], counter: [75, 73], floor: [22, 94], floor2: [66, 95] };
+const CAT_ACTS = { sit: '坐著發呆', wash: '在洗臉', sleep: '睡著了', walk: '在店裡散步' };
+let catSt = { spot: 'table', act: 'sleep', flip: false }, catTimer = null, catSayUntil = 0;
+function catMood() { const sp = { shelf: '書架上', table: '平台桌上', window: '窗邊', counter: '櫃台上', floor: '地板上', floor2: '地板上' }[catSt.spot];
+  return catSt.act === 'walk' ? CAT_ACTS.walk : sp + CAT_ACTS[catSt.act]; }
+function catPaint() {
+  const el = document.getElementById('bcat'); if (!el) return;
+  const p = CAT_SPOTS[catSt.spot];
+  el.style.left = p[0] + '%'; el.style.top = p[1] + '%';
+  el.className = 'cat ' + catSt.act + (catSt.flip ? ' flip' : '');
+  const zz = el.querySelector('.zz');
+  if (catSt.act === 'sleep' && !zz) el.insertAdjacentHTML('beforeend', '<span class="zz">💤</span>'); else if (catSt.act !== 'sleep' && zz) zz.remove();
+  const say = document.getElementById('bcatSay'), cat = keeperOf('bookcat');
+  if (say && cat && Date.now() > catSayUntil) say.textContent = '🐾 ' + cat.name + catMood();
+}
+function catNext() {
+  const night = env.phase === 'night', wet = env.weather === 'rain' || env.weather === 'storm';
+  if (catSt.act === 'walk') {   // 走到了：坐下、洗臉或睡覺
+    const r = Math.random(), sleepP = night ? 0.6 : 0.25;
+    catSt.act = r < sleepP ? 'sleep' : r < sleepP + 0.25 ? 'wash' : 'sit';
+    if (wet && catSt.spot === 'window') catSt.act = night && r < 0.5 ? 'sleep' : 'sit';
+  } else if (catSt.act === 'wash') catSt.act = 'sit';
+  else if (catSt.act === 'sleep' && Math.random() < (night ? 0.8 : 0.4)) { /* 繼續睡 */ }
+  else {
+    const spots = Object.keys(CAT_SPOTS).filter(k => k !== catSt.spot);
+    const to = wet && catSt.spot !== 'window' && Math.random() < 0.7 ? 'window' : spots[Math.floor(Math.random() * spots.length)];
+    catSt.flip = CAT_SPOTS[to][0] > CAT_SPOTS[catSt.spot][0];
+    catSt.spot = to; catSt.act = 'walk';
+  }
+  catPaint();
+  catTimer = setTimeout(catNext, catSt.act === 'walk' ? 3400 : catSt.act === 'sleep' ? 9000 + Math.random() * 6000 : 5000 + Math.random() * 4000);
+}
+function catStart() {
+  if (!keeperOf('bookcat')) return catStop();
+  if (!catTimer) {
+    const wet = env.weather === 'rain' || env.weather === 'storm';
+    catSt = wet ? { spot: 'window', act: 'sit', flip: false } : env.phase === 'night' ? { spot: 'counter', act: 'sleep', flip: false } : { spot: 'table', act: 'sit', flip: false };
+    catTimer = setTimeout(catNext, 2500);
+  }
+  requestAnimationFrame(() => { const el = document.getElementById('bcat'); if (el) { el.style.transition = 'none'; catPaint(); el.offsetWidth; el.style.transition = ''; } });
+}
+function catStop() { if (catTimer) clearTimeout(catTimer); catTimer = null; }
+function catTap() {
+  const cat = keeperOf('bookcat'); if (!cat) return;
+  const sleepy = ['（耳朵動了一下，繼續睡）', '（翻了個身，打了個大呵欠）', '（尾巴輕輕甩了一下）'];
+  const awake = ['喵～', '（蹭了蹭你的手）', '（翻過來露出肚子）', '（盯著你看，慢慢眨了眨眼）', '（呼嚕呼嚕……）', '（伸了個懶腰）'];
+  const pool = catSt.act === 'sleep' ? sleepy : awake, line = pool[Math.floor(Math.random() * pool.length)];
+  const el = document.getElementById('bcat');
+  if (el) { const old = el.querySelector('.say'); if (old) old.remove(); el.insertAdjacentHTML('beforeend', `<span class="say">${esc(line)}</span>`); setTimeout(() => { const s = el.querySelector('.say'); if (s) s.remove(); }, 2200); }
+  const say = document.getElementById('bcatSay'); if (say) { say.textContent = '🐾 ' + cat.name + '：' + line; catSayUntil = Date.now() + 2500; }
+  if (catSt.act !== 'sleep' && catSt.act !== 'walk' && Math.random() < 0.4) { catSt.act = 'sit'; catPaint(); }
+}
+
 // 明信片冊（她和家人都能看）
 function viewCards() {
   const list = cardList();
@@ -3245,7 +3435,7 @@ function viewCards() {
       ${c.note ? `<div class="speech" style="margin-top:8px">✉️ ${esc(c.note)}<div style="text-align:right" class="muted">—— ${esc(c.from)}</div></div>` : `<div class="muted" style="margin-top:6px;text-align:right">—— ${esc(c.from)} 寄</div>`}
       <div class="muted" style="margin-top:6px;font-size:11px">📷 ${esc(c.credit || 'Wikimedia Commons')}${c.license ? '・' + esc(c.license) : ''}${c.page ? `・<a href="${esc(c.page)}" target="_blank" rel="noopener">照片出處</a>` : ''}</div></div>`).join('')
       : `<div class="card"><div class="muted">還沒有明信片。家人用家人碼來島上逛過之後，可以寄一張給你。</div></div>`}
-    <div class="row"><button class="ghost grow" onclick="${isFamily() ? "go('home')" : "openHouse('me')"}">${isFamily() ? '回到小島 🏝️' : '回到我的家 🏠'}</button></div>`;
+    <div class="row"><button class="ghost grow" onclick="go('bookstore')">回到書店 📚</button></div>`;
 }
 function seeAllCards() {
   if (isFamily()) return;
@@ -3259,7 +3449,7 @@ function familyBar() {
     <div class="row"><b class="grow">👀 家人觀看中・${esc(S.who.name)}</b><span style="font-size:12px;opacity:.85">只能看，不會改到她的東西</span></div>
     <div class="row" style="margin-top:8px"><button style="background:#fff;color:#2f4a7a;padding:6px 12px" onclick="go('postcard')">📮 寄明信片</button>
       <button style="background:#fff;color:#2f4a7a;padding:6px 12px" onclick="go('finvite')">🎟️ 邀請訪客</button>
-      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="go('cards')">明信片冊</button></div></div>`;
+      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="go('bookstore')">📚 書店</button></div></div>`;
 }
 function sentToday() { return cardList().some(c => c.from === S.who.name && c.at === S.today); }
 function viewPostcard() {
@@ -3429,11 +3619,14 @@ function viewGuide() {
   ${sec('🍁', '二十四節氣', p('整座島會跟著節氣換季：立春到清明櫻花慢慢開、花瓣飄落；芒種到小暑的夜晚有螢火蟲；寒露到立冬楓葉轉紅、紅葉飄下；冬天換上深綠的冬裝。右上角會顯示今天的節氣，嚮導打招呼時也可能聊到。'))}
   ${sec('💡', '讓島順起來', p('這座島你也是設計師！在首頁回覧板（嚮導那張卡）下面按「💡 讓島順起來」，選一種類型（新玩法、卡卡的、想要的東西、其他），寫下你的想法，也可以附一張截圖。') +
     p('送出後爸爸會收到。他會把狀態改成「討論中」「做好了」或「先不做」，也可能寫一句回覆給你；有新回覆時，右上角的 📮 郵便受け會亮紅點，嚮導卡上的按鈕也會提醒你。做好的點子會出現在之後的小島更新裡。'))}
-  ${sec('🎟️', '邀請朋友來島上', p('在「我的家」按「🎟️ 邀請朋友來島上」。第一次要先寫一句歡迎詞，嚮導會在碼頭唸給每位訪客聽，之後隨時可以改。') +
+  ${sec('🎟️', '邀請朋友來島上', p('在「📚 獨立書店」按「🎟️ 邀請朋友」。第一次要先寫一句歡迎詞，嚮導會在碼頭唸給每位訪客聽，之後隨時可以改。') +
     p('按「發一張乘船券」會產生一個連結和 QR code，用 LINE 傳給朋友就好。朋友打開後可以轉動你的 3D 小島、點街道看島民、走進你和島民的家，逛完每個地方還能集章、下載一張登島紀念明信片。') +
     p('訪客看到的是你發券那一刻的「快照」，而且<b>看不到</b>成績、計畫、錯題、信箱和你上傳的圖片。要不要給他們看「連續週數、這週完成幾項」，由你在發券時勾選，預設不給看。小島長大了，可以按「📸 重拍」更新；不想給看了，按「收回」連結就立刻失效。') +
     p('家人也可以替你邀請別人（例如奶奶），但會先寄到你的 📮 郵便受け，你看過、按同意之後連結才會生效。'))}
-  ${sec('📮', '明信片冊', p('家人有自己的「家人碼」，可以進來看看你的小島，但只能看、不會改到任何東西。家人來逛過的那天，可能會挑一張世界各地的風景或文化照片寄給你，附上一句話和一段小知識。收到時右上角的 📮 郵便受け會亮紅點，所有明信片都收在「我的家 → 📮 明信片冊」。'))}
+  ${sec('📮', '明信片冊', p('家人有自己的「家人碼」，可以進來看看你的小島，但只能看、不會改到任何東西。家人來逛過的那天，可能會挑一張世界各地的風景或文化照片寄給你，附上一句話和一段小知識。收到時右上角的 📮 郵便受け會亮紅點，所有明信片都收在「📚 獨立書店 → 📮 明信片冊」。'))}
+  ${sec('📚', '獨立書店', p('島上的巷口有一間獨立書店，是你和家人往來的地方。第一次去要先請一位店長：名字、樣子、個性都由你決定（也可以上傳自己的圖），店長會跟你介紹書店。之後點店長可以改設定。') +
+    p('店裡可以養一隻店貓，取名字、選花色和個性。牠會在書架、平台桌、窗邊和櫃台之間走走、坐坐、洗臉、睡覺；晚上比較愛睡，下雨天會坐在窗邊看雨，點牠一下會有反應。') +
+    p('📮 明信片冊、🎟️ 邀請朋友都在書店裡。店裡還有一座你的書架，之後智慧島上課得到的書會擺在這裡，點書可以看蓋過章的章節。家人用家人碼來島上，也會到書店看明信片、寄明信片給你。'))}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
   ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊 Threads 上最近的熱門話題，有的會關心你；很久沒去找他，他可能會抱怨或想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性。') +
     p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
