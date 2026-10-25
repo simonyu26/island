@@ -40,6 +40,8 @@
   let lightLayer, lightSig = null, lamp = null, beam = null, floats = [];
   // 節氣：草地、樹葉的顏色與飄落的花瓣／楓葉／螢火蟲
   let grassMat, leafMats = [], seasonFx, seasonNow = null;
+  // 植樹（v2.10）：她用綠點種在街道之間空地格上的植物，和碼頭旁的植木屋
+  let gardenLayer, gardenSig = null;
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
 
   // ---------- 小工具 ----------
@@ -191,6 +193,7 @@
       const a = rand() * Math.PI * 2, r = 4 + rand() * 8.6;
       const p = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
       if (SUBJECTS.some((s, j) => p.distanceTo(districtPos(j)) < 4.1)) continue;
+      if (GARDEN_SLOTS.some(q => Math.hypot(q.x - p.x, q.z - p.z) < 0.9) || Math.hypot(HUT.x - p.x, HUT.z - p.z) < 1.2) continue;
       const h = 0.7 + rand() * 0.6;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4, 5), std(0x9a6b4a)); trunk.position.set(p.x, 0.4, p.z);
       rand(); const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.42, h, 6), leafMats[ti++ % 3]); leaf.position.set(p.x, 0.6 + h / 2, p.z);
@@ -205,6 +208,7 @@
     lightLayer = new THREE.Group(); root.add(lightLayer);
     buildLayer = new THREE.Group(); root.add(buildLayer);
     linkLayer = new THREE.Group(); root.add(linkLayer);
+    gardenLayer = new THREE.Group(); root.add(gardenLayer);
   }
 
   // ---------- 天色與天氣：跟著台北的時間和天氣 ----------
@@ -273,6 +277,7 @@
     seasonFx.material.color.setHex(t.fx === 'maple' ? 0xe0603a : t.fx === 'firefly' ? 0xf6f08a : 0xf7bfd0);
     seasonFx.material.size = t.fx === 'firefly' ? 0.16 : 0.22;
     showSeasonFx();
+    if (gardenLayer && ctx) buildGarden();
   }
   function showSeasonFx() {
     if (!seasonFx) return;
@@ -432,6 +437,138 @@
     buildHome();
     buildWalk();
     buildLight();
+    buildGarden();
+  }
+
+  // ---------- 植樹 ----------
+  // 空地格：和 index.html 的 gardenSlot() 用同一個公式，改一邊就要改另一邊
+  // 0–24 街與街之間的中線（由內往外）、25–34 外圈街道間兩側（Lv.5 開放）、35–39 外圈街道正前方（Lv.8 開放）
+  function gardenSlot(i) {
+    const gap = j => -Math.PI / 2 + (j + 0.5) * (Math.PI * 2 / 5), dis = j => -Math.PI / 2 + j * (Math.PI * 2 / 5);
+    let r, a;
+    if (i < 25) { r = [4.8, 6.3, 7.8, 9.3, 10.8][Math.floor(i / 5)]; a = gap(i % 5); }
+    else if (i < 35) { r = 12.1; a = gap((i - 25) % 5) + (i < 30 ? -0.16 : 0.16); }
+    else { r = 12.2; a = dis(i - 35); }
+    return { x: Math.cos(a) * r, z: Math.sin(a) * r };
+  }
+  const GARDEN_SLOTS = Array.from({ length: 40 }, (_, i) => gardenSlot(i));
+  const HUT = { x: Math.cos(Math.PI / 10) * 3.2, z: Math.sin(Math.PI / 10) * 3.2 };   // 植木屋：碼頭右前方
+  const TERM_ORDER = ['立春', '雨水', '驚蟄', '春分', '清明', '穀雨', '立夏', '小滿', '芒種', '夏至', '小暑', '大暑',
+    '立秋', '處暑', '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'];
+
+  // 一株植物：k 品種、ti 節氣（0＝立春…23＝大寒）、stage 0 小苗／1 小樹／2 長成
+  function plantMesh(k, ti, stage) {
+    const g = new THREE.Group();
+    const S = (a, b) => a <= b ? ti >= a && ti <= b : ti >= a || ti <= b;   // 節氣區間，可以跨年（例如 19–1）
+    const add = (geo, color, x, y, z, extra) => { const m = new THREE.Mesh(geo, std(color, extra)); m.position.set(x, y, z); g.add(m); return m; };
+    const trunk = (h, r, c) => add(new THREE.CylinderGeometry(r * 0.7, r, h, 6), c || 0x8a5f42, 0, h / 2, 0);
+    const ball = (r, c, x, y, z) => add(new THREE.IcosahedronGeometry(r, 0), c, x, y, z);
+    const dots = (n, r, c, R, y0, y1, seed) => { for (let i = 0; i < n; i++) { const a = i * 2.39 + (seed || 0), rr = R * (0.45 + 0.55 * ((i * 0.37) % 1));
+      ball(r, c, Math.cos(a) * rr, y0 + (y1 - y0) * ((i * 0.61) % 1), Math.sin(a) * rr); } };
+    const twigs = (h, c) => [[0.5, 0.3], [-0.6, -0.2], [0.1, 0.6]].forEach(([rz, rx]) => {
+      const t = add(new THREE.CylinderGeometry(0.02, 0.035, 0.5, 4), c || 0x7a5a48, 0, h + 0.15, 0); t.rotation.set(rx, 0, rz); });
+    const canopy = (c, y, sx, sy) => { const m = ball(0.55, c, 0, y, 0); m.scale.set(sx || 1, sy || 1, sx || 1);
+      ball(0.38, c, 0.38 * (sx || 1), y - 0.08, 0.12); ball(0.38, c, -0.34 * (sx || 1), y - 0.05, -0.16); return m; };
+    switch (k) {
+      case 'hydrangea':   // 繡球花：芒種～小暑開藍紫色的花球
+        if (S(19, 1)) { ball(0.22, 0x8a8a5a, 0, 0.18, 0); break; }
+        ball(0.36, 0x5f9e55, 0, 0.3, 0); ball(0.26, 0x6fae5f, 0.25, 0.22, 0.1);
+        if (S(8, 10)) [0x7d8fe0, 0xa98ae0, 0x8fb8f0, 0xc79ae6, 0x7d8fe0].forEach((c, i) => { const a = i * 1.26; ball(0.15, c, Math.cos(a) * 0.3, 0.42 + (i % 2) * 0.1, Math.sin(a) * 0.3); });
+        break;
+      case 'cosmos':      // 波斯菊：白露～霜降一片粉白花田
+        for (let i = 0; i < 9; i++) { const a = i * 2.39, rr = 0.12 + (i % 3) * 0.14, h = S(14, 17) ? 0.4 + (i % 3) * 0.08 : 0.18;
+          const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+          add(new THREE.CylinderGeometry(0.012, 0.012, h, 3), 0x6fae4a, x, h / 2, z);
+          if (S(14, 17)) ball(0.07, [0xf4a6c6, 0xffffff, 0xd9549a][i % 3], x, h, z); else ball(0.06, 0x7cc070, x, h, z); }
+        break;
+      case 'sunflower':   // 向日葵：小滿～大暑
+        for (let i = 0; i < 3; i++) { const x = (i - 1) * 0.22, z = (i % 2) * 0.12, h = S(18, 4) ? 0.25 : 0.75 + i * 0.12;
+          add(new THREE.CylinderGeometry(0.025, 0.03, h, 5), S(18, 4) ? 0x9a8a5a : 0x5f9e45, x, h / 2, z);
+          if (S(7, 11)) { const f = add(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 10), 0xf5c518, x, h, z + 0.04); f.rotation.x = 1.2;
+            const c = add(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 8), 0x6b4423, x, h + 0.01, z + 0.06); c.rotation.x = 1.2; }
+          else if (!S(18, 4)) ball(0.08, 0x6fae4a, x, h, z); }
+        break;
+      case 'camellia':    // 山茶花（椿）：常綠，小雪～大寒開紅花
+        ball(0.4, 0x3f7a45, 0, 0.42, 0).scale.set(1, 1.2, 1); ball(0.28, 0x3f7a45, 0.2, 0.75, 0.05);
+        if (S(19, 23)) dots(7, 0.07, 0xd6334a, 0.38, 0.3, 0.9, 1);
+        break;
+      case 'bamboo':      // 竹子：全年常綠
+        for (let i = 0; i < 5; i++) { const a = i * 1.3, x = Math.cos(a) * 0.18, z = Math.sin(a) * 0.18, h = 1.4 + (i % 3) * 0.25;
+          add(new THREE.CylinderGeometry(0.035, 0.04, h, 5), 0x7cb342, x, h / 2, z);
+          ball(0.16, 0x5f9e45, x * 1.6, h, z * 1.6); }
+        break;
+      case 'kumquat':     // 金橘：常綠，冬至～立春結橘色果實（過年吉祥）
+        trunk(0.3, 0.06); canopy(0x3f7a45, 0.6, 0.8, 0.9);
+        if (S(21, 0)) dots(9, 0.06, 0xf59a1a, 0.42, 0.45, 0.85, 0.5);
+        break;
+      case 'sakura':      // 櫻花：驚蟄～清明滿樹粉紅
+        trunk(0.8, 0.09, 0x6b4a3a);
+        if (S(19, 1)) { twigs(0.8); break; }
+        canopy(S(2, 4) ? 0xf6bcd0 : S(15, 18) ? 0xe0904a : 0x6fb36a, 1.05);
+        if (S(2, 4)) dots(6, 0.09, 0xffffff, 0.5, 0.85, 1.35);
+        break;
+      case 'maple':       // 楓樹：寒露～立冬紅葉
+        trunk(0.75, 0.08, 0x6b4a3a);
+        if (S(19, 1)) { twigs(0.75); break; }
+        { const c = S(16, 18) ? 0xd9453b : S(2, 4) ? 0x9ad48a : 0x5fa858; canopy(c, 1.0);
+          if (S(16, 18)) dots(5, 0.14, 0xe8933d, 0.45, 0.85, 1.25); }
+        break;
+      case 'tung':        // 油桐花：立夏～小滿白花（五月雪）
+        trunk(0.85, 0.08);
+        if (S(18, 1)) { twigs(0.85); break; }
+        canopy(0x6fae5a, 1.1, 1.25, 0.7);
+        if (S(6, 7)) dots(12, 0.08, 0xffffff, 0.62, 1.0, 1.35, 2);
+        break;
+      case 'ginkgo':      // 銀杏：霜降～小雪金黃
+        trunk(0.6, 0.08);
+        if (S(20, 2)) { twigs(0.6); break; }
+        add(new THREE.ConeGeometry(0.5, 1.3, 7), S(17, 19) ? 0xf0c43a : 0x7cb866, 0, 1.15, 0);
+        break;
+      case 'pine':        // 黑松：常綠，冬天掛雪吊り
+        { const t = add(new THREE.CylinderGeometry(0.06, 0.1, 1.1, 6), 0x6b4a3a, 0.05, 0.55, 0); t.rotation.z = -0.18;
+          [[0.25, 0.55, 0.42], [-0.15, 0.85, 0.34], [0.12, 1.15, 0.28]].forEach(([x, y, r]) => { const m = ball(r, 0x2f5f3a, x, y, 0); m.scale.set(1.3, 0.55, 1.1); });
+          if (S(19, 1)) { add(new THREE.CylinderGeometry(0.015, 0.015, 1.9, 4), 0xc8b27a, 0, 0.95, 0);
+            add(new THREE.ConeGeometry(0.75, 1.5, 10, 1, true), 0xd9c79a, 0, 1.15, 0, { wireframe: true }); } }
+        break;
+      case 'flame':       // 鳳凰木：芒種～小暑滿樹紅花（鳳凰花開，畢業季）
+        trunk(0.9, 0.1);
+        if (S(18, 2)) { canopy(0xa8b86a, 1.05, 1.1, 0.4).scale.multiplyScalar(0.8); break; }
+        canopy(S(8, 10) ? 0xe8442e : 0x6fae4a, 1.1, 1.5, 0.45);
+        if (S(8, 10)) dots(8, 0.12, 0x6fae4a, 0.7, 1.0, 1.2, 1); else if (S(11, 12)) dots(6, 0.1, 0xe8442e, 0.7, 1.05, 1.25, 1);
+        break;
+    }
+    g.scale.setScalar([0.4, 0.7, 1][stage] || 1);
+    return g;
+  }
+  function buildGarden() {
+    const G = ctx.garden || null, ti = Math.max(0, TERM_ORDER.indexOf(seasonNow || ctx.season));
+    const sig = JSON.stringify([G, ti]);
+    if (sig === gardenSig) return;
+    gardenSig = sig;
+    while (gardenLayer.children.length) gardenLayer.remove(gardenLayer.children[0]);
+    if (!G) return;
+    if (G.hut) {   // 植木屋：木造小棚、陶盆、綠色暖簾
+      const hut = new THREE.Group(); hut.userData.garden = true;
+      const box = (w, h, d, x, y, z, c) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), std(c)); b.position.set(x, y, z); hut.add(b); return b; };
+      box(0.9, 0.55, 0.6, 0, 0.42, 0, 0xc9a77c);
+      const roof = box(1.1, 0.06, 0.8, 0, 0.78, 0.05, 0x5a6b4a); roof.rotation.x = -0.18;
+      box(0.4, 0.16, 0.02, 0, 0.6, 0.31, 0x3f7a45);   // 暖簾
+      box(0.9, 0.05, 0.25, 0, 0.3, 0.45, 0x8a5f42);    // 店門口的花台
+      [-0.3, 0, 0.3].forEach((x, i) => { box(0.12, 0.1, 0.12, x, 0.38, 0.45, 0xb5653a);
+        const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 0), std([0x6fae4a, 0xe98fb3, 0x7cb866][i])); l.position.set(x, 0.5, 0.45); hut.add(l); });
+      hut.position.set(HUT.x, 0.05, HUT.z);
+      hut.lookAt(new THREE.Vector3(HUT.x * 2, 0.05, HUT.z * 2 + 2));
+      gardenLayer.add(hut);
+      const lb = labelSprite('🌱 ' + (G.name || '植木屋'), null, { scale: 0.75, color: '#3a2a33' });
+      lb.position.set(HUT.x, 1.55, HUT.z); lb.userData.garden = true; gardenLayer.add(lb);
+    }
+    (G.list || []).forEach(p => {
+      const q = GARDEN_SLOTS[p.slot]; if (!q) return;
+      const m = plantMesh(p.k, ti, p.stage);
+      m.position.set(q.x, 0.2, q.z); m.rotation.y = (p.slot * 1.7) % (Math.PI * 2);
+      m.userData.plant = p.id || String(p.slot);
+      gardenLayer.add(m);
+    });
   }
 
   // 她的家：蓋在中央碼頭，跟著島嶼等級擴建
@@ -588,6 +725,12 @@
     if (homeHit && (!hit || homeHit.distance <= hit.distance)) { if (ctx.onHome) ctx.onHome(); return; }
     const lightHit = hits.find(h => { let o = h.object; while (o && !o.userData.light && !o.userData.subject) o = o.parent; return o && o.userData.light; });
     if (lightHit && ctx.onLight && (!hit || lightHit.distance <= hit.distance)) { ctx.onLight(); return; }
+    const gHit = hits.find(h => { let o = h.object; while (o && !o.userData.garden && !o.userData.plant && !o.userData.subject) o = o.parent; return o && (o.userData.garden || o.userData.plant); });
+    if (gHit && (!hit || gHit.distance <= hit.distance)) {
+      let o = gHit.object; while (!o.userData.garden && !o.userData.plant) o = o.parent;
+      if (o.userData.plant && ctx.onPlant) { ctx.onPlant(o.userData.plant); return; }
+      if (o.userData.garden && ctx.onGarden) { ctx.onGarden(); return; }
+    }
     if (!hit) return;
     let o = hit.object; while (!o.userData.subject) o = o.parent;
     select(o.userData.subject);
@@ -652,7 +795,7 @@
     if (ctx.season && ctx.season !== seasonNow) setSeason(ctx.season);
     el.appendChild(renderer.domElement);
     resize();
-    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light]) + weekIdx;
+    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden]) + weekIdx;
     if (sig !== signature) { signature = sig; buildDynamic(false); }
     if (selected && ctx.onSelect) ctx.onSelect(selected);
     if (!running) { running = true; clock.getDelta(); loop(); }
@@ -665,5 +808,5 @@
     buildDynamic(animate !== false);
   }
 
-  window.Island3D = { mount, setWeek, setEnvironment, setSeason, pointsUntil: w => pointsUntil(w), select, get selected() { return selected; } };
+  window.Island3D = { mount, setWeek, setEnvironment, setSeason, pointsUntil: w => pointsUntil(w), select, plantMesh: (k, ti, st) => plantMesh(k, ti, st), get selected() { return selected; } };
 })();
