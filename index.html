@@ -171,8 +171,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.6.1';
+const APP_VERSION = '2.7';
 const CHANGELOG = [
+  { v: '2.7', date: '2026-10-25', items: ['🗼 島的岬角上蓋了一座燈塔：先幫它取名字，再請一位你自己設定的守燈人', '🍶 答錯的題會變成漂流瓶漂到燈塔海灘，隔天漂回來時換成 AI 類題（同一個觀念、換了數字和情境），上面會寫是改編自哪一題', '🏮 類題連續兩次答對，瓶子就變成紙燈籠放到海上，那一次照難度給 1～3 枚島幣', '📝 可以在瓶子上記下為什麼錯、寫一句話；想問爸爸的題按「給爸爸看」，家人才看得到', '🔗 做過的任務題如果用到兩科的觀念，島會自動發現這條跨科連結，島民的好感度也會上升', '⛵ 紙船碼頭搬到燈塔的小碼頭了'] },
   { v: '2.6.1', date: '2026-10-25', items: ['👋 第一次來到一個地方時，那裡的管理員會先跟你打招呼，說明這裡可以做什麼（海邊步道先開始）'] },
   { v: '2.6', date: '2026-10-25', items: ['🎟️ 邀請朋友來島上：發一張乘船券（連結或 QR code），朋友就能來逛你的 3D 小島和房間，你決定給他們看什麼、什麼時候收回', '✍️ 先寫一句歡迎詞，嚮導會在碼頭唸給訪客聽', '📮 明信片冊：家人來島上逛過，可以寄一張世界各地的風景明信片給你', '👀 家人可以用自己的家人碼看你的小島，但不會改到任何東西；家人想邀請別人，要你同意才算數'] },
   { v: '2.5', date: '2026-10-25', items: ['🏃 運動集章卡：今天運動了就蓋一章，一週 3 章得 3 枚島幣，連續達標解鎖排球和日本風家具', '海邊步道：每蓋一章鋪一段木棧道，每三章多一盞燈籠', '⛵ 紙船碼頭：檢討完紙本考卷放一艘紙船，和爸爸一起檢討是親子船', '🍁 整座島跟著二十四節氣換季：春天櫻花、夏夜螢火蟲、秋天楓紅', '🧢 海邊步道可以請一位你自己設定的管理員'] },
@@ -389,6 +390,10 @@ function derive(S) {
   // 島民之間的好感度（跨科連結）
   const bond = {};
   links.forEach(l => { const k = [l.a, l.b].sort().join(''); bond[k] = (bond[k] || 0) + 1; });
+  // 跨科連結自動判斷（燈塔，xc:<題目 key>）：AI 判斷做過的任務題用到哪幾科，跨街的才算好感度；不給經驗值和島幣
+  const autoLinks = Object.keys(save).filter(k => k.startsWith('xc:') && save[k] && (save[k].lanes || []).length >= 2).sort().map(k => Object.assign({ id: k.slice(3) }, save[k]));
+  autoLinks.forEach(x => { const gs = [...new Set(x.lanes.map(l => GROUP[l] || l))].filter(g => SUBJECTS.includes(g)).sort();
+    for (let i = 0; i < gs.length; i++) for (let j = i + 1; j < gs.length; j++) { const k = gs[i] + gs[j]; bond[k] = (bond[k] || 0) + 1; } });
 
   const settledCount = Object.keys(save).filter(k => k.startsWith('settled:')).length;
   const badges = [
@@ -413,7 +418,7 @@ function derive(S) {
 
   return { cfg, xp, coins, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
-           exDays, exWeeks, exStreak, exBest, paperSessions: sessions };
+           exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks };
 }
 
 /* ===== 共用 ===== */
@@ -494,10 +499,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + ({ visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + ({ visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -556,7 +561,7 @@ function viewHome() {
       <div class="card" style="margin-top:12px" id="i3dTime">${timelineHtml()}</div>
       <div class="card" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>`
     : `<div class="island"><div class="districts">${districts}</div></div>`;
-  return hud() + newsCard + visitCards() + todayCard() + habitCard() + questCard() + xqCard() + guideCard() + `
+  return hud() + newsCard + visitCards() + todayCard() + habitCard() + questCard() + xqCard() + lightCard() + guideCard() + `
     ${toggle}${islandView}
     ${dailyCard()}
     <div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
@@ -584,7 +589,7 @@ function dailyCtx() {
     residents: SUBJECTS.map(s => { const r = resident(s);
       return { key: s, name: r.name, personality: r.personality, relation: r.relation, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null }; }),
     guide: { name: g.name, tone: TONES[g.tone] || g.tone },
-    keepers: Object.keys(PLACES).filter(k => keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : {})),
+    keepers: Object.keys(PLACES).filter(k => keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : {})),
     weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '') + '；今天的節氣是' + solarTerm(S.today) + '（' + TERM_NOTE[solarTerm(S.today)] + '）'
   };
 }
@@ -937,7 +942,8 @@ function habitCard() {
       <button class="ghost" onclick="go('paper')">去碼頭</button></div></div>`;
 }
 // 地方的管理角色：她自己取名、選樣子、寫個性；每天的訊息由 AI 依個性寫（getDaily 的 keepers）
-const PLACES = { walk: { name: '海邊步道', ic: '🏃', about: ['今天有運動就按「今天運動了」蓋一章，一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️'] } };
+const PLACES = { walk: { name: '海邊步道', ic: '🏃', about: ['今天有運動就按「今天運動了」蓋一章，一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️'] },
+  lighthouse: { name: '燈塔', ic: '🗼', about: ['挑戰任務和故事任務答錯的題，會變成漂流瓶漂到燈塔海灘', '瓶子隔天漂回來，撿起來會出一題 AI 類題：同一個觀念，換了數字和情境，也會寫是改編自哪一題', '類題連續兩次答對，瓶子就變成紙燈籠放到海上，還有島幣', '在瓶子上記下為什麼錯；想問爸爸的題按「給爸爸看」', '紙本考卷檢討完，可以在燈塔的小碼頭放紙船'], roles: ['守燈的老爺爺', '燈塔的貓', '退休的船長', '海鷗郵差'], emojis: ['👴', '👵', '🧓', '👩‍✈️', '🧑‍🎨', '🐈', '🐈‍⬛', '🦉', '🐢', '🦭', '🐙', '🦀'] } };
 function keeperOf(place) { return S.save['keeper:' + place] || null; }
 // 第一次來到這個地方：管理員先打招呼、說明這裡的玩法（每個地方只出現一次）
 function placeIntro(place) {
@@ -949,6 +955,7 @@ function placeIntro(place) {
       <button style="padding:6px 12px;font-size:13px" onclick="local.set('islandMet:${place}', S.today);render()">知道了！</button></div></div>`;
 }
 function keeperLine(place, on, n) {
+  if (place === 'lighthouse') return lightKeeperLine(lightStats());
   const k = keeperOf(place), lines = on ? ['今天跑得很棒！海風好舒服對吧？', '蓋章完成～明天也一起來吧！', '流了汗的感覺很好吧？記得喝水喔。']
     : n >= EX_GOAL ? ['這週已經達標了，今天想散散步也很好。', '達標啦！今天就輕鬆動一動吧～'] : ['今天要不要一起去步道走走？', '我在步道等你喔，動一動腦袋也會更清楚！', '天氣不錯，出來跑一圈吧？'];
   return lines[(daySeed() + (k ? k.name.length : 0)) % lines.length];
@@ -965,7 +972,7 @@ function viewKeeper() {
       <label>身分</label><div class="row" style="gap:6px">${pl.roles.map(r => `<button type="button" class="${k.role === r ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="keeperKeep();draft.keeper.role='${r}';render()">${r}</button>`).join('')}</div>
       <input id="kpRole" style="margin-top:6px" value="${esc(k.role)}" maxlength="20" placeholder="也可以自己寫" oninput="draft.keeper.role=this.value">
       <label>個性</label><input id="kpPers" value="${esc(k.personality)}" maxlength="60" placeholder="例如：開朗、很會鼓勵人，喜歡排球和冰淇淋" oninput="draft.keeper.personality=this.value">
-      <div class="row" style="margin-top:14px"><button class="grow" onclick="saveKeeperForm('${place}')">${cur ? '儲存' : '請他來上班！'}</button><button class="ghost" onclick="go('home')">取消</button></div></div>`;
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="saveKeeperForm('${place}')">${cur ? '儲存' : '請他來上班！'}</button><button class="ghost" onclick="go('${place === 'lighthouse' ? 'light' : 'home'}')">取消</button></div></div>`;
 }
 function keeperKeep() { ['kpName', 'kpRole', 'kpPers'].forEach((id, i) => { const el = document.getElementById(id); if (el) draft.keeper[['name', 'role', 'personality'][i]] = el.value; }); }
 async function saveKeeperForm(place) {
@@ -973,7 +980,7 @@ async function saveKeeperForm(place) {
   if (!k.name.trim()) return toast('幫他取個名字吧');
   try { await flush(); S = await call('saveKeeper', place, k); D = derive(S); }
   catch (e) { return toast('儲存失敗：' + (e.message || e)); }
-  toast(k.emoji + ' ' + k.name + ' 來' + PLACES[place].name + '上班了！'); go('home');
+  toast(k.emoji + ' ' + k.name + ' 來' + PLACES[place].name + '上班了！'); go(place === 'lighthouse' ? 'light' : 'home');
 }
 function toggleExercise() {
   const on = !exToday(), wk = mondayOf(S.today), before = D.exWeeks[wk] || 0;
@@ -992,7 +999,7 @@ function viewPaper() {
   const used = k => D.paperSessions.some(x => x.date === S.today && x.kind === k);
   const gain = f.lanes.length ? Math.min(PAPER_MAX, 1 + f.lanes.length) : 0;
   const list = D.paperSessions.slice().reverse().slice(0, 20);
-  return `<div class="card"><h2>⛵ 紙船碼頭</h2><div class="muted">寫完紙本考卷或練習、檢討完錯題，就放一艘船。自己檢討是紙船，爸爸陪你檢討是親子船。燈塔蓋好以後，船會停到燈塔的小碼頭。</div></div>
+  return `<div class="card"><h2>⛵ 紙船碼頭</h2><div class="muted">寫完紙本考卷或練習、檢討完錯題，就放一艘船。自己檢討是紙船，爸爸陪你檢討是親子船。船會停在燈塔的小碼頭。</div></div>
     <div class="card">
       <div class="row" style="gap:6px">${[['self', '⛵ 紙船（自己檢討）'], ['parent', '🚢 親子船（和爸爸）']].map(k => `<button class="${f.kind === k[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" onclick="paperKeep();draft.paper.kind='${k[0]}';render()">${k[1]}</button>`).join('')}</div>
       <label style="margin-top:10px">這次檢討了哪幾科（可以多選）</label>
@@ -1014,7 +1021,7 @@ function viewPaper() {
         <div style="margin-top:4px">💡 ${esc(x.note)}</div>
         ${x.rows.some(r => r.wrong != null || r.reasons) ? `<div class="muted" style="font-size:12px;margin-top:2px">${x.rows.filter(r => r.wrong != null || r.reasons).map(r => esc(r.lane) + (r.wrong != null ? ' 錯 ' + r.wrong + ' 題' : '') + (r.reasons ? '（' + REASONS.filter(q => r.reasons[q[0]]).map(q => q[1] + r.reasons[q[0]]).join('、') + '）' : '')).join('；')}</div>` : ''}</div>`).join('')
       : '<div class="muted">碼頭還空空的，放第一艘船吧！</div>'}</div>
-    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+    <div class="row"><button class="ghost" onclick="go('light')">去燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 function paperKeep() { const n = document.getElementById('ppNote'); if (n) draft.paper.note = n.value; }
 function paperLane(l) { paperKeep(); const f = draft.paper; f.lanes = f.lanes.includes(l) ? f.lanes.filter(x => x !== l) : f.lanes.concat([l]); render(); }
@@ -1034,6 +1041,180 @@ async function sendPaper() {
   try { await flush(); S = await call('addPaper', f.kind, f.lanes, f.note, f.details, f.stamp); D = derive(S); }
   catch (e) { document.getElementById('ppGo').disabled = false; return toast('放船失敗：' + (e.message || e)); }
   draft = {}; toast(D.coins > before ? '⛵ 船出發了！🪙 +' + (D.coins - before) : '⛵ 船停進碼頭了'); render(); window.scrollTo(0, 0);
+}
+
+/* --- 燈塔（學習中心）：主島岬角上的燈塔。海灘的漂流瓶是答錯的題，漂回來時用 AI 類題再挑戰，連續兩天答對變成紙燈籠 --- */
+// 存檔：lighthouse = { name }；rv:<題目 key> = { why, note, share, tries, lantern }；xc:<題目 key> = 跨科判斷。後端在 Lighthouse.gs
+const REVIEW_DAILY = 5;
+const LIGHT_NAMES = ['燈塔岬', '寺子屋', '秘密基地', '觀星台'];
+function lighthouseName() { return (S.save.lighthouse && S.save.lighthouse.name) || ''; }
+function lightTitle() { return lighthouseName() || '燈塔'; }
+// 海灘上的所有瓶子：挑戰任務和故事任務答錯的題（漂回來的類題本身不算）
+function bottles() {
+  const out = [];
+  extraQuests().filter(q => q.done && q.correct === false && !q.review).forEach(q => out.push({ id: q.id, lane: q.lane, tier: q.tier || 'mid', rec: q, wrongAt: q.at || q.date,
+    label: q.bank ? q.year + ' 年會考第 ' + q.qn + ' 題' : '挑戰任務（AI 出題）' }));
+  Object.keys(S.save).filter(k => k.startsWith('quest:') && S.save[k] && S.save[k].done && S.save[k].correct === false && S.save[k].qid).forEach(k => {
+    const q = S.save[k], p = q.qid.split(':'), item = QUESTS[p[0]] && QUESTS[p[0]][Number(p[1])];
+    if (item) out.push({ id: k, lane: q.lane, tier: 'mid', rec: q, item, wrongAt: q.at || k.slice(6), label: '故事任務' });
+  });
+  out.forEach(b => {
+    const rv = b.rv = S.save['rv:' + b.id] || {}, t = rv.tries || [];
+    let streak = 0; for (let i = t.length - 1; i >= 0 && t[i].ok; i--) streak++;
+    b.lantern = rv.lantern || null;
+    b.due = b.lantern ? null : addD(t.length ? t[t.length - 1].at : b.wrongAt, streak ? 2 : 1);
+  });
+  return out.sort((a, b) => (b.wrongAt || '').localeCompare(a.wrongAt || ''));
+}
+// 今天漂回來的瓶子：全國答對率高、她卻答錯的先漂回來
+function dueBottles(list) {
+  return (list || bottles()).filter(b => b.due && b.due <= S.today)
+    .sort((a, b) => ((b.rec.pass || 0) - (a.rec.pass || 0)) || (a.wrongAt || '').localeCompare(b.wrongAt || ''));
+}
+function reviewsToday() { return todayChallenges().filter(q => q.review); }
+function lightStats() {
+  const all = bottles(), left = all.filter(b => !b.lantern);
+  return { all, sea: left.length, due: Math.min(dueBottles(all).length, Math.max(0, REVIEW_DAILY - reviewsToday().length)), lanterns: all.length - left.length };
+}
+function lightNote() { const st = lightStats(); return { note: '這座燈塔叫「' + lightTitle() + '」。她答錯的題會變成漂流瓶漂到燈塔海灘，再用類題挑戰，連續答對兩次就變成紙燈籠放到海上。現在海灘上有 ' + st.sea + ' 個瓶子，今天漂回 ' + st.due + ' 個，已經放走 ' + st.lanterns + ' 盞燈籠。請溫柔，不要讓她覺得錯題很丟臉。' }; }
+function lightKeeperLine(st) {
+  const lines = st.due ? ['今天有 ' + st.due + ' 個瓶子漂回海灘了，一起撿起來看看吧。', '海浪送回來 ' + st.due + ' 個瓶子，裡面的題目換了新樣子喔。']
+    : st.sea ? ['瓶子們還在海上漂，時間到了它們會自己回來。', '今天海灘很安靜，可以去做新的挑戰喔。']
+    : ['海灘乾乾淨淨的！答錯的題會漂到這裡，別擔心。', '燈塔的燈一直亮著，等你來。'];
+  return lines[daySeed() % lines.length];
+}
+// 首頁的燈塔卡片
+function lightCard() {
+  const st = lightStats(), kp = keeperOf('lighthouse'), daily = S.save['daily:' + S.today];
+  const say = (daily && daily.messages && daily.messages.lighthouse) || lightKeeperLine(st);
+  return `<div class="card" id="lightCard"><div class="row" style="flex-wrap:nowrap"><span style="font-size:30px">${kp ? esc(kp.emoji) : '🗼'}</span>
+      <div class="grow"><b>🗼 ${esc(lightTitle())}</b><div class="muted">${st.due ? '🍶 今天漂回 ' + st.due + ' 個瓶子' : '海灘上 ' + st.sea + ' 個瓶子'}・🏮 ${st.lanterns} 盞燈籠</div>
+        ${kp ? `<div class="speech" style="font-size:14px;margin-top:6px"><b>${esc(kp.name)}</b>：${esc(say)}</div>` : ''}</div>
+      <button class="ghost" onclick="go('light')">去燈塔</button></div></div>`;
+}
+function viewLight() {
+  if (!lighthouseName() && !isFamily()) {
+    const v = draft.lightName != null ? draft.lightName : '';
+    return `<div class="card"><div class="big">🗼</div><h2 style="text-align:center">島的岬角上蓋了一座燈塔</h2>
+      <div class="muted" style="text-align:center">答錯的題會變成漂流瓶，漂到燈塔的海灘；之後也會在這裡看自己的學習紀錄。先幫燈塔取個名字吧！</div>
+      <div class="row" style="gap:6px;margin-top:12px;justify-content:center">${LIGHT_NAMES.map(n => `<button class="ghost" style="padding:6px 12px" onclick="draft.lightName='${n}';render()">${n}</button>`).join('')}</div>
+      <label>燈塔的名字（也可以自己取）</label><input id="lhName" maxlength="12" value="${esc(v)}" placeholder="例如：燈塔岬" oninput="draft.lightName=this.value">
+      <button style="width:100%;margin-top:12px" onclick="nameLighthouse()">就叫這個名字！</button></div>
+      <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+  }
+  const st = lightStats(), kp = keeperOf('lighthouse'), daily = S.save['daily:' + S.today];
+  const open = extraQuests().find(q => !q.done), lastXq = extraQuests().pop();
+  const room = Math.max(0, REVIEW_DAILY - reviewsToday().length), full = todayChallenges().length >= XQ_DAILY;
+  const due = dueBottles(st.all).slice(0, room), later = st.all.filter(b => b.due && b.due > S.today);
+  const lanterns = st.all.filter(b => b.lantern).sort((a, b) => b.lantern.localeCompare(a.lantern));
+  const fam = isFamily();
+  const tagOf = b => `${esc(laneLabel(b.lane))}・${XQ_TIERS[b.tier] ? XQ_TIERS[b.tier].ic + ' ' + XQ_TIERS[b.tier].name : ''}`;
+  const why = b => b.rv.why ? '・' + (REASONS.find(r => r[0] === b.rv.why) || [, ''])[1] : '';
+  const row = (b, btn) => `<div class="item" style="cursor:pointer" onclick="openBottle('${b.id}')"><span style="font-size:22px">${b.lantern ? '🏮' : '🍶'}</span>
+      <div class="name grow"><b>${tagOf(b)}</b><div class="muted">${esc(b.label)}・${short(b.wrongAt)} 答錯${fam && !b.rv.share ? '' : why(b)}${b.rv.share ? '・👀 給爸爸看' : ''}</div></div>${btn || ''}</div>`;
+  const say = (daily && daily.messages && daily.messages.lighthouse) || lightKeeperLine(st), intro = fam ? '' : placeIntro('lighthouse');
+  return `<div class="card"><h2>🗼 ${esc(lightTitle())}</h2>
+      ${intro || (kp ? `<div class="row" style="flex-wrap:nowrap;cursor:pointer" onclick="${fam ? '' : "openKeeper('lighthouse')"}"><span style="font-size:32px">${esc(kp.emoji)}</span>
+        <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(say)}</div></div>`
+        : fam ? '' : `<button class="ghost" style="width:100%" onclick="openKeeper('lighthouse')">🧓 燈塔還沒有守燈人，請一位來守燈吧</button>`)}
+      <div class="hud" style="margin-top:10px"><div><b>${st.sea}</b><span class="muted">🍶 海灘上的瓶子</span></div><div><b>${st.due}</b><span class="muted">🌊 今天漂回來</span></div><div><b>${st.lanterns}</b><span class="muted">🏮 放走的燈籠</span></div></div></div>
+    ${(open && open.review) || (!open && lastXq && lastXq.review && lastXq.at === S.today) ? xqCard(true) : ''}
+    <div class="card"><h3>🌊 今天漂回來的瓶子</h3>
+      <div class="muted" style="margin-bottom:6px">撿起瓶子會出一題 AI 類題：考同一個觀念，但數字和情境都換過。答錯隔 1 天再漂回來；答對隔 2 天再漂回來，連續兩次答對就變成紙燈籠放到海上。撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個。</div>
+      ${due.length ? due.map(b => row(b, fam ? '' : `<button style="padding:6px 12px" onclick="event.stopPropagation();reviewBottle('${b.id}')" ${lightBusy || open || full ? 'disabled' : ''}>撿起來</button>`)).join('')
+        : `<div class="muted">${room ? (st.sea ? '今天沒有瓶子漂回來。' : '海灘上還沒有瓶子。挑戰任務或故事任務答錯的題，會漂到這裡。') : '今天已經撿了 ' + REVIEW_DAILY + ' 個瓶子，明天再來。'}</div>`}
+      ${lightBusy ? '<div class="muted" style="margin-top:6px">✍️ 守燈人正在打開瓶子、寫類題…（大約 10～20 秒）</div>' : full && due.length ? '<div class="muted" style="margin-top:6px">今天的 ' + XQ_DAILY + ' 題挑戰都做完了，明天再來撿。</div>' : ''}</div>
+    ${later.length ? `<div class="card"><h3>🌫️ 還在海上漂的瓶子（${later.length}）</h3>${later.slice(0, 30).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.due)} 漂回</span>`)).join('')}</div>` : ''}
+    ${lanterns.length ? `<div class="card"><h3>🏮 放到海上的燈籠（${lanterns.length}）</h3>${lanterns.slice(0, 20).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.lantern)}</span>`)).join('')}</div>` : ''}
+    <div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>⛵ 燈塔的小碼頭</b><div class="muted">紙本考卷檢討完，放一艘紙船或親子船（${D.paperSessions.length} 艘停在這裡）</div></div>
+      <button class="ghost" onclick="go('paper')">去碼頭</button></div></div>
+    <div class="card"><div class="muted">🔧 燈塔二樓的「航海日誌」（學習歷程）和頂樓的「燈室」（學習分析）還在整修中，之後會開放。</div></div>
+    <div class="row">${fam ? '' : `<button class="ghost" onclick="renameLighthouse()">✏️ 改燈塔的名字</button>`}<button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+let lightBusy = false;
+async function nameLighthouse() {
+  const el = document.getElementById('lhName'), name = (el ? el.value : draft.lightName || '').trim();
+  if (!name) return toast('幫燈塔取個名字吧');
+  try { await flush(); S = await call('saveLighthouse', name); D = derive(S); }
+  catch (e) { return toast('儲存失敗：' + (e.message || e)); }
+  toast('🗼 「' + name + '」點燈了！');
+  if (!keeperOf('lighthouse')) openKeeper('lighthouse'); else go('light');
+}
+async function renameLighthouse() {
+  const name = (prompt('燈塔的新名字（12 個字以內）', lighthouseName()) || '').trim();
+  if (!name || name === lighthouseName()) return;
+  try { S = await call('saveLighthouse', name); D = derive(S); render(); } catch (e) { toast('儲存失敗：' + (e.message || e)); }
+}
+// 考古題的圖片轉成 dataURL，給 AI 看（只有網頁 App 版有題目圖）
+async function examImage(file) {
+  if (!file || !BETA3D) return null;
+  try {
+    const blob = await (await fetch('exam/' + file)).blob();
+    return await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ok(null); r.readAsDataURL(blob); });
+  } catch (e) { return null; }
+}
+async function reviewBottle(id) {
+  const b = bottles().find(x => x.id === id); if (!b || lightBusy) return;
+  lightBusy = true; render();
+  try {
+    await flush();
+    const src = b.item ? { q: b.item.q, o: b.item.o, a: b.item.a, ex: b.item.ex }
+      : b.rec.bank ? { img: await examImage(b.rec.img), ctx: await examImage(b.rec.ctx) } : {};
+    const fallback = await pickBank(b.tier, b.lane);
+    S = await call('reviewQuest', id, src, fallback); D = derive(S);
+  } catch (e) { toast('撿瓶子失敗：' + (e.message || e)); }
+  lightBusy = false; tab = 'light'; render();
+  const el = document.getElementById('xqCard'); if (el) el.scrollIntoView({ block: 'start' });
+}
+function openBottle(id) { draft = { bottle: id }; tab = 'bottle'; render(); window.scrollTo(0, 0); }
+function viewBottle() {
+  const b = bottles().find(x => x.id === draft.bottle);
+  if (!b) return `<div class="card">找不到這個瓶子。</div><div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button></div>`;
+  const q = b.rec, fam = isFamily(), hide = fam && !b.rv.share;
+  const f = draft.rv || (draft.rv = { why: b.rv.why || null, note: b.rv.note || '', share: !!b.rv.share });
+  const ABCD = 'ABCD';
+  let body;
+  if (q.bank) body = `<div class="exq">${q.ctx ? `<img src="exam/${esc(q.ctx)}" alt="題組文章">` : ''}<img src="exam/${esc(q.img)}" alt="題目"></div>
+      <div class="muted" style="font-size:12px">📜 ${q.year} 年會考第 ${q.qn} 題・試題來源：心測中心 國中教育會考歷屆試題</div>
+      <div style="margin-top:8px">你選了 (${ABCD.charAt(q.choice)})，正確答案是 <b>(${ABCD.charAt(q.a)})</b>。全國有 ${q.pass}% 的考生答對這題。</div>`;
+  else {
+    const it = b.item || q, ans = b.item ? b.item.a : q.a;
+    body = `<div style="margin:8px 0;font-weight:700;white-space:pre-wrap">${esc(it.q)}</div>
+      <div class="opts">${it.o.map((o, i) => `<button class="opt ${i === ans ? 'right' : i === q.choice ? 'wrong' : ''}" disabled>${esc(o)}</button>`).join('')}</div>
+      <div class="speech" style="margin-top:8px">${esc(it.ex || '')}</div>
+      <div class="muted" style="font-size:12px;margin-top:4px">${b.item ? '📖 故事任務的題目' : '🤖 這題是 AI 出的挑戰任務'}</div>`;
+  }
+  const tries = (b.rv.tries || []).map(t => `<span class="pill">${short(t.at)} ${t.ok ? '⭕' : '❌'}</span>`).join(' ');
+  return `<div class="card"><h2>${b.lantern ? '🏮 變成燈籠的瓶子' : '🍶 漂流瓶'}</h2>
+      <div class="muted">${esc(laneLabel(b.lane))}・${esc(b.label)}・${short(b.wrongAt)} 答錯</div>${body}
+      <div class="muted" style="margin-top:8px">${b.lantern ? '連續兩次答對類題，' + short(b.lantern) + ' 變成燈籠漂走了。' : b.due <= S.today ? '🌊 今天漂回來了，可以到燈塔海灘撿起來。' : '🌫️ ' + short(b.due) + ' 會再漂回來。'}${tries ? '　類題紀錄：' + tries : ''}</div></div>
+    ${hide ? '<div class="card"><div class="muted">她還沒把這個瓶子分享給家人，所以看不到她寫的原因和那一句話。</div></div>' : `<div class="card"><h3>📝 為什麼會錯？</h3>
+      <div class="row" style="gap:6px">${REASONS.map(r => `<button class="${f.why === r[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" ${fam ? 'disabled' : ''} onclick="bottleKeep();draft.rv.why=draft.rv.why==='${r[0]}'?null:'${r[0]}';render()">${r[1]}</button>`).join('')}</div>
+      <label>想對自己說的一句話（選填）</label><input id="rvNote" maxlength="120" value="${esc(f.note)}" ${fam ? 'disabled' : ''} placeholder="例如：單位要先換成公尺" oninput="draft.rv.note=this.value">
+      ${fam ? '' : `<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" style="width:auto" ${f.share ? 'checked' : ''} onchange="bottleKeep();draft.rv.share=this.checked"> 👀 給爸爸看（想問這題的時候打勾，家人才看得到你寫的原因和這句話）</label>
+      <button style="width:100%;margin-top:10px" onclick="saveBottle('${b.id}')">記下來</button>`}</div>`}
+    <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button></div>`;
+}
+function bottleKeep() { const n = document.getElementById('rvNote'); if (n) draft.rv.note = n.value; }
+async function saveBottle(id) {
+  bottleKeep();
+  try { await flush(); S = await call('saveReview', id, draft.rv); D = derive(S); }
+  catch (e) { return toast('儲存失敗：' + (e.message || e)); }
+  toast('📝 記在瓶子上了'); go('light');
+}
+// 跨科連結自動判斷：答完題後在背景請 AI 判斷，結果存在 xc:<題目 key>，會變成島民之間的好感度
+async function crossCheckLater(id, payload) {
+  if (isFamily() || !S.save[id] || S.save['xc:' + id] || S.save[id].review) return;
+  try {
+    const q = S.save[id], p = payload || (q.bank ? { img: await examImage(q.img), ctx: await examImage(q.ctx) } : {});
+    if (q.bank && !p.img) return;
+    const st = await call('crossCheck', id, p);
+    if (st && st.save && st.save['xc:' + id]) {
+      S.save['xc:' + id] = st.save['xc:' + id]; D = derive(S);
+      const x = S.save['xc:' + id];
+      if (x.lanes && x.lanes.length >= 2) toast('🔗 這題是跨科題（' + x.lanes.join(' × ') + '）' + (new Set(x.lanes.map(l => GROUP[l] || l)).size >= 2 ? '，島民的好感度上升了！' : '，記進跨科連結了'));
+    }
+  } catch (e) { /* 判斷失敗就算了，不打擾她 */ }
 }
 
 /* --- 挑戰任務（加碼任務）：每天最多 10 題，自己選難度，答對直接賺島幣 --- */
@@ -1060,28 +1241,31 @@ async function pickBank(tier, lane) {
   const list = b.items.filter(x => TIER_KEY[x.tier] === tier && (!lane || x.lane === lane) && !used.has(x.id));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
-function xqCard() {
+function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題目和結果，不顯示出新題的按鈕
   const all = extraQuests(), open = all.find(q => !q.done), last = all[all.length - 1];
   const today = todayChallenges(), left = Math.max(0, XQ_DAILY - today.length);
   const earned = today.filter(q => q.done).reduce((a, q) => a + (q.coins || 0), 0);
-  const tag = q => q.tier ? XQ_TIERS[q.tier].ic + ' ' + XQ_TIERS[q.tier].name : '🪙 加碼';
+  const tag = q => (q.review ? '🍶 漂流瓶・' : '') + (q.tier ? XQ_TIERS[q.tier].ic + ' ' + XQ_TIERS[q.tier].name : '🪙 加碼');
   const show = q => {
     const who = laneWho(q.lane), story = esc(q.story || '').replace(/\{who\}/g, `<b>${esc(who.name)}</b>`);
     return `<div class="row" style="flex-wrap:nowrap"><span class="avatar">${who.pic}</span><div class="grow"><b>⚔️ 挑戰任務・${esc(laneLabel(q.lane))}・${tag(q)}</b>
         <div class="speech" style="margin-top:6px">${story || esc(who.name) + '想請你幫忙解一題。'}</div></div></div>
       ${q.img ? `<div class="exq">${q.ctx ? `<img src="exam/${esc(q.ctx)}" alt="題組文章">` : ''}<img src="exam/${esc(q.img)}" alt="題目"></div>
         <div class="muted" style="font-size:12px;margin-bottom:6px">📜 ${q.year} 年會考第 ${q.qn} 題・試題來源：心測中心 國中教育會考歷屆試題</div>`
-      : `<div style="margin:12px 0 8px;font-weight:700;white-space:pre-wrap">${esc(q.q)}</div>`}`;
+      : `<div style="margin:12px 0 8px;font-weight:700;white-space:pre-wrap">${esc(q.q)}</div>`}
+      ${q.review ? `<div class="muted" style="font-size:12px;margin-bottom:6px">${q.variant === 'ai' ? '🤖 AI 類題・改編自 ' + esc(q.from) + (q.concept ? '・同一個觀念：' + esc(q.concept) : '') : '📜 考古題類題（AI 這次沒辦法改寫）・原題：' + esc(q.from)}</div>` : ''}`;
   };
   let html = '';
   if (open) {
     const t = XQ_TIERS[open.tier];
     html = show(open) + `<div class="opts${open.img ? ' abcd' : ''}">${open.o.map((o, i) => `<button class="opt" onclick="answerXq('${open.id}',${i})">${esc(o)}</button>`).join('')}</div>
-      <div class="muted" style="margin-top:6px">${t ? `答對 🪙 +${t.coins}、+${t.xp} 經驗值` : '答對 +10 經驗值'}；答錯 +${XQ_WRONG} 經驗值，會看到正確答案。</div>`;
+      <div class="muted" style="margin-top:6px">${open.review ? `答對 +${t.xp} 經驗值；連續兩次答對變成紙燈籠，那一次再給 🪙 +${t.coins}。答錯 +${XQ_WRONG} 經驗值，瓶子明天再漂回來。` : t ? `答對 🪙 +${t.coins}、+${t.xp} 經驗值` : '答對 +10 經驗值'}${open.review ? '' : `；答錯 +${XQ_WRONG} 經驗值，會看到正確答案。`}</div>`;
   } else {
     if (last && last.done && last.at === S.today) html = show(last) + `<div class="opts${last.img ? ' abcd' : ''}">${last.o.map((o, i) => `<button class="opt ${i === last.a ? 'right' : i === last.choice ? 'wrong' : ''}" disabled>${esc(o)}</button>`).join('')}</div>
       <div class="speech" style="margin-top:10px">${last.correct ? '⭕ 答對了！' : '❌ 這次沒答對。'}${esc(last.ex)}</div>
-      <div class="muted" style="margin:6px 0 12px">${last.coins ? '🪙 +' + last.coins + '、' : ''}+${last.xp} 經驗值</div>`;
+      <div class="muted" style="margin:6px 0 12px">${last.coins ? '🪙 +' + last.coins + '、' : ''}+${last.xp} 經驗值${last.lantern ? '・🏮 瓶子變成紙燈籠，漂到海上了！' : last.review ? (last.correct ? '・🍶 再答對一次就變成燈籠' : '・🍶 瓶子明天會再漂回來') : last.correct ? '' : '・🍶 這題漂到燈塔海灘了，明天會漂回來'}
+        ${last.review ? ` <a href="#" onclick="openBottle('${last.review}');return false">看原題</a>` : ''}</div>`;
+    if (inLight) return `<div class="card" id="xqCard">${html}</div>`;
     const opts = `<option value="">🎲 隨便一條</option>` + QLANES.map(l => `<option value="${l}"${l === xqLanePick ? ' selected' : ''}>${esc(laneLabel(l))}</option>`).join('');
     html += `<div class="row"><b class="grow">⚔️ 挑戰任務</b><span class="muted">今天還有 ${left}／${XQ_DAILY} 題${earned ? '・已賺 🪙 ' + earned : ''}</span></div>
       ${left ? `<select id="xqLane" style="width:100%;margin-top:8px" onchange="xqLanePick=this.value">${opts}</select>
@@ -1114,7 +1298,8 @@ async function answerXq(id, i) {
   document.querySelectorAll('#xqCard .opt').forEach(b => b.disabled = true);
   try {
     S = await call('answerQuest', id, i); D = derive(S);
-    const q = S.save[id]; toast(q.correct ? '答對了！' + (q.coins ? '🪙 +' + q.coins + '、' : '') + '+' + q.xp + ' 經驗值 🎉' : '+' + q.xp + ' 經驗值，看看解說吧');
+    const q = S.save[id]; toast(q.lantern ? '🏮 變成紙燈籠了！🪙 +' + q.coins + '、+' + q.xp + ' 經驗值' : q.correct ? '答對了！' + (q.coins ? '🪙 +' + q.coins + '、' : '') + '+' + q.xp + ' 經驗值 🎉' : '+' + q.xp + ' 經驗值，看看解說吧');
+    if (!q.review) crossCheckLater(id);
   } catch (e) { toast('送出失敗：' + (e.message || e)); }
   softRender();
 }
@@ -1311,7 +1496,8 @@ async function questAnswer(i) {
   const correct = i === q.item.a;
   try {
     S = await call('saveQuest', S.today, { qid: q.qid, lane: q.lane, choice: i, correct, rerolls: q.rerolls, done: true });
-    D = derive(S); toast(correct ? '答對了！+' + QUEST_XP.right + ' 經驗值 🎉' : '+' + QUEST_XP.wrong + ' 經驗值，看看解說吧'); render();
+    D = derive(S); toast(correct ? '答對了！+' + QUEST_XP.right + ' 經驗值 🎉' : '+' + QUEST_XP.wrong + ' 經驗值，這題漂到燈塔海灘了'); render();
+    crossCheckLater('quest:' + S.today, { q: q.item.q, o: q.item.o });
   } catch (e) { toast('送出失敗：' + (e.message || e)); document.querySelectorAll('#questCard .opt').forEach(b => b.disabled = false); }
 }
 async function questReroll() {
@@ -1368,6 +1554,7 @@ async function mount3D() {
       sig: JSON.stringify(D.weekPts), season: solarTerm(S.today), walk: D.exDays.length,
       home: homeOf() && { tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') },
       onHome: () => openHouse('me'),
+      light: (st => ({ name: lightTitle(), sea: st.sea, due: st.due, lanterns: st.lanterns }))(lightStats()), onLight: () => go('light'),
       grade: s => D.grades[s] && D.grades[s].level,
       onSelect: showInfo3D
     });
@@ -1497,13 +1684,13 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // 只更新需要變的部分，3D 小島不用重新載入
 function softRender() {
   if (tab === 'home') {
-    const parts = { hudCard: hud, todayCard: todayCard, habitCard: habitCard, xqCard: xqCard, guideCard: guideCard, dailyCard: dailyCard };
+    const parts = { hudCard: hud, todayCard: todayCard, habitCard: habitCard, xqCard: xqCard, lightCard: lightCard, guideCard: guideCard, dailyCard: dailyCard };
     Object.keys(parts).forEach(id => {
       const el = document.getElementById(id); if (!el) return;
       const tmp = document.createElement('div'); tmp.innerHTML = parts[id]();
       el.replaceWith(tmp.firstElementChild);
     });
-  } else if (tab === 'plan') render();
+  } else if (tab === 'plan' || tab === 'light') render();
 }
 function setLog(date, r, s) {
   const rows = Object.assign({}, logOf(date));
@@ -2228,6 +2415,7 @@ function viewMore() {
     <h3 style="margin-top:12px">💞 好感度</h3>${pairs.length ? pairs.map(([k, v]) =>
       `<div>${resident(k[0]).ipic} ${esc(resident(k[0]).name)} × ${resident(k[1]).ipic} ${esc(resident(k[1]).name)}：${'💗'.repeat(Math.min(v, 10))}</div>`).join('') : '<div class="muted">還沒有跨科連結，在「確認這週」頁可以記錄。</div>'}
     ${D.links.length ? `<h3 style="margin-top:12px">🔗 連結筆記</h3>` + D.links.slice().reverse().map(l => `<div class="muted">${esc(l.date)}・${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}：${esc(l.note)}</div>`).join('') : ''}
+    ${D.autoLinks.length ? `<h3 style="margin-top:12px">🤖 任務裡發現的跨科題</h3>` + D.autoLinks.slice().reverse().slice(0, 20).map(x => `<div class="muted">${esc(x.at)}・${x.lanes.map(esc).join(' × ')}：${esc(x.why)}</div>`).join('') : ''}
   </div>
   <div class="card"><h3>📈 每週達成率</h3>${D.rates.length ? D.rates.slice(-10).reverse().map(x => { const pc = Math.round(x.got / x.total * 100);
       return `<div class="row" style="margin-top:6px"><span style="width:84px" class="muted">${short(x.start)} 週</span>
@@ -2292,7 +2480,8 @@ function viewGuide() {
     p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。'))}
   ${sec('🔥', '連續週數和休息卡', p('每週有確認或有紀錄，連續週數就 +1。每累積 6 週紀錄會得到 1 張 🛌 休息卡。') +
     p('哪一週真的沒空，休息卡會自動幫你守住連續週數，不用擔心一斷就歸零。'))}
-  ${sec('💞', '跨科連結和好感度', p('發現兩科之間的關係時（例如數學的比例和理化的密度），在「確認這週」頁記下來。兩位島民的好感度會上升，可以在「更多」看到他們的關係。'))}
+  ${sec('💞', '跨科連結和好感度', p('發現兩科之間的關係時（例如數學的比例和理化的密度），在「確認這週」頁記下來。兩位島民的好感度會上升，可以在「更多」看到他們的關係。') +
+    p('你做過的挑戰任務和故事任務，島也會請 AI 看看是不是跨科題（例如理化題要列方程式，就是理化 × 數學）。是的話會跳出提示，兩條街的島民好感度也會上升，在「更多」的「任務裡發現的跨科題」看得到。自動發現的不加經驗值和島幣，自己寫下的連結才有。'))}
   ${sec('🎨', '打扮你的島', p('在「⚙️ 更多 → 修改島嶼設定」可以改島名、嚮導的說話風格、島民和室友的名字與個性，也可以上傳自己的圖片當頭像。'))}
   ${sec('🏠', '我的家', p('島中央的碼頭是你的家。按右上角的房子圖示（或在 3D 小島點中間的房子）就能回家。第一次回家先幫它取名字、選屋頂和牆壁的顏色，之後隨時可以改。') +
     p('島嶼升級時，房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓小屋（Lv.7）→ 海邊洋館（Lv.10）。房子越大，房間能擺的家具越多。') +
@@ -2304,8 +2493,14 @@ function viewGuide() {
     `<table><tr><th>連續達標</th><th>解鎖的家具</th></tr>${EX_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` +
     p('海邊步道可以有自己的管理員：在集章卡下面按「幫步道找一位陪跑夥伴」，取名字、選樣子、寫個性，他每天會用自己的口吻跟你聊運動。第一次見面時，他會先跟你打招呼，說明步道怎麼玩。') +
     p('斷掉了也沒關係：拿到的家具都會留著，重新累積就好。解鎖的家具在「我的家」的家具店最下面，可以擺出來。'))}
-  ${sec('⛵', '紙船碼頭（紙本檢討）', p('寫完紙本考卷或練習、檢討完錯題，到首頁按「去碼頭」放一艘船。選這次檢討了哪幾科，寫一句今天最大的收穫就好，大約 30 秒。想多記一點，可以填每科錯幾題、錯的原因，跳過也一樣有島幣。') +
+  ${sec('⛵', '紙船碼頭（紙本檢討）', p('寫完紙本考卷或練習、檢討完錯題，到首頁按「去碼頭」（或燈塔的小碼頭）放一艘船。選這次檢討了哪幾科，寫一句今天最大的收穫就好，大約 30 秒。想多記一點，可以填每科錯幾題、錯的原因，跳過也一樣有島幣。') +
     p('自己檢討是 ⛵ 紙船；爸爸陪你檢討是 🚢 親子船，要請爸爸在你的手機上蓋章。第一科 🪙 2 枚＋20 經驗值，每多一科再 +1 枚，一次最多 4 枚。紙船和親子船每天各算一次。'))}
+  ${sec('🗼', '燈塔（錯題的漂流瓶）', p('島的岬角上有一座燈塔。第一次去的時候先幫它取名字，再請一位守燈人：取名字、選樣子、寫個性，他每天會用自己的口吻跟你說話。首頁的燈塔卡片或 3D 小島上的燈塔都能進去。') +
+    p('挑戰任務或故事任務答錯的題，會變成 🍶 漂流瓶漂到燈塔海灘。<b>隔天</b>它會漂回來，按「撿起來」，守燈人會請 AI 出一題<b>類題</b>：考同一個觀念，但數字、情境或說法都換過，不會是一模一樣的題目。題目下面會寫「AI 類題・改編自 113 年會考自然第 10 題」這樣的來源。原題太依賴圖表、AI 改寫不了時，會改出一題同科同難度的考古題，也會標明。') +
+    `<table>${row('類題答錯', '+3 經驗值，隔 1 天再漂回來')}${row('類題答對', '+10／+15／+20 經驗值（看難度），隔 2 天再漂回來')}${row('連續兩次答對', '🏮 變成紙燈籠放到海上，🪙 +1／+2／+3')}</table>` +
+    p(`撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個；全國答對率高、你卻答錯的題會先漂回來，因為這種題最值得追回來。`) +
+    p('點一個瓶子可以看原題、記下為什麼會錯（粗心、觀念不熟、看不懂題目、用猜的），也可以寫一句想對自己說的話。這些只有你看得到；想問爸爸的題，勾「👀 給爸爸看」，家人才看得到你寫的原因和那句話。') +
+    p('紙本考卷檢討的紙船、親子船也停在燈塔的小碼頭。燈塔二樓的航海日誌（學習歷程）和頂樓的燈室（學習分析）還在整修，之後會開放。'))}
   ${sec('🍁', '二十四節氣', p('整座島會跟著節氣換季：立春到清明櫻花慢慢開、花瓣飄落；芒種到小暑的夜晚有螢火蟲；寒露到立冬楓葉轉紅、紅葉飄下；冬天換上深綠的冬裝。右上角會顯示今天的節氣，嚮導打招呼時也可能聊到。'))}
   ${sec('💡', '讓島順起來', p('這座島你也是設計師！在首頁嚮導卡下面按「💡 讓島順起來」，選一種類型（新玩法、卡卡的、想要的東西、其他），寫下你的想法，也可以附一張截圖。') +
     p('送出後爸爸會收到。他會把狀態改成「討論中」「做好了」或「先不做」，也可能寫一句回覆給你；有新回覆時，嚮導卡上的按鈕會提醒你。做好的點子會出現在之後的小島更新裡。'))}
