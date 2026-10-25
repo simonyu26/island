@@ -1,0 +1,2045 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#741b47">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="會考小島">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>會考小島</title>
+<style>
+  :root {
+    --plum: #741b47; --plum-mid: #c27ba0; --plum-light: #ead1dc;
+    --sea: #cfe8f3; --sand: #fdf6ec; --grass: #dff0d8; --ink: #3a2a33; --muted: #8a7480;
+    --card: #ffffff; --gold: #e3a21a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+         background: var(--sea); color: var(--ink); -webkit-tap-highlight-color: transparent; }
+  main { max-width: 720px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 96px; }
+  h1, h2, h3 { margin: 0 0 8px; }
+  h2 { font-size: 20px; } h3 { font-size: 16px; }
+  .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 14px;
+          box-shadow: 0 2px 0 rgba(116,27,71,.12); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; }
+  button { font: inherit; border: none; border-radius: 12px; padding: 10px 16px; cursor: pointer;
+           background: var(--plum); color: #fff; }
+  button.ghost { background: var(--plum-light); color: var(--plum); }
+  button:disabled { opacity: .5; cursor: default; }
+  input, select, textarea { font: inherit; padding: 8px 10px; border: 1.5px solid var(--plum-light);
+           border-radius: 10px; background: #fff; color: var(--ink); width: 100%; }
+  textarea { min-height: 60px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+
+  /* 頂部狀態列 */
+  .hud { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+  .hud b { display: block; font-size: 20px; color: var(--plum); }
+  .bar { height: 10px; background: var(--plum-light); border-radius: 6px; overflow: hidden; margin-top: 8px; }
+  .bar > i { display: block; height: 100%; background: var(--plum); }
+
+  /* 小島 */
+  .island { background: var(--grass); border: 10px solid var(--sand); padding: 14px; border-radius: 32px; }
+  .districts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+  .district { background: rgba(255,255,255,.85); border-radius: 14px; padding: 12px; }
+  .resident { display: flex; gap: 10px; align-items: center; }
+  .avatar { font-size: 34px; line-height: 1; }
+  .grade { margin-left: auto; font-weight: 700; color: #fff; background: var(--plum); border-radius: 8px; padding: 2px 8px; }
+  .grade.none { background: #bbb; }
+  .town { font-size: 20px; letter-spacing: 2px; margin-top: 8px; min-height: 26px; word-break: break-all; }
+  .lane { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .lane-name { flex: 0 0 72px; font-size: 13px; color: var(--plum); }
+  .lane-name small { display: block; color: var(--muted); font-size: 11px; }
+  .lane .town { margin-top: 0; font-size: 17px; min-height: 0; }
+  .speech { background: var(--sand); border-radius: 14px; padding: 10px 14px; position: relative; }
+
+  /* 結算 */
+  .subj { margin-top: 12px; font-weight: 700; color: var(--plum); }
+  .item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--plum-light); }
+  .item .name { flex: 1; }
+  .tag { font-size: 11px; background: var(--gold); color: #fff; border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+  .seg { display: flex; border-radius: 10px; overflow: hidden; border: 1.5px solid var(--plum-light); }
+  .seg button { border-radius: 0; padding: 6px 10px; background: #fff; color: var(--muted); }
+  .seg button[data-s="2"].on { background: var(--plum); color: #fff; }
+  .seg button[data-s="1"].on { background: var(--plum-mid); color: #fff; }
+  .seg button[data-s="0"].on { background: var(--plum-light); color: var(--plum); }
+  .check { width: 22px; height: 22px; accent-color: var(--plum); }
+
+  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .badge { text-align: center; padding: 10px 6px; border-radius: 12px; background: var(--sand); font-size: 12px; }
+  .badge .ic { font-size: 28px; display: block; }
+  .badge.locked { filter: grayscale(1); opacity: .45; }
+
+  td:first-child { white-space: nowrap; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--plum-light); }
+
+  /* 底部分頁 */
+  nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex;
+        box-shadow: 0 -2px 8px rgba(0,0,0,.08); padding-bottom: env(safe-area-inset-bottom); }
+  nav button { flex: 1; background: none; color: var(--muted); border-radius: 0; padding: 10px 0 8px; font-size: 12px; }
+  nav button span { display: block; font-size: 22px; }
+  nav button.on { color: var(--plum); font-weight: 700; }
+
+  .pic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; vertical-align: middle; background: #fff; }
+  .avatar .pic { width: 52px; height: 52px; }
+  .ipic { width: 1.4em; height: 1.4em; border-radius: 50%; object-fit: cover; vertical-align: -0.35em; background: #fff; }
+  .upl { margin-top: 6px; }
+  .upl label.btn { display: inline-block; margin: 0; font-size: 14px; background: var(--plum-light); color: var(--plum); padding: 6px 12px; border-radius: 10px; cursor: pointer; }
+  .upl button { font-size: 14px; padding: 6px 12px; }
+  .emojis { display: flex; flex-wrap: wrap; gap: 4px; }
+  .emojis button { background: #fff; border: 1.5px solid var(--plum-light); font-size: 22px; padding: 4px 6px; }
+  .emojis button.on { border-color: var(--plum); background: var(--plum-light); }
+
+  .toast { position: fixed; left: 50%; top: 20px; transform: translateX(-50%); background: var(--ink); color: #fff;
+           padding: 10px 18px; border-radius: 12px; z-index: 9; display: none; max-width: 90%; }
+  .loading { text-align: center; padding: 60px 0; color: var(--muted); }
+  .big { font-size: 40px; text-align: center; }
+
+  /* 計畫頁 */
+  .chips { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .chip { padding: 6px 0; background: var(--sand); color: var(--ink); border-radius: 10px; font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .chip small { display: block; font-size: 10px; font-weight: 400; color: var(--muted); }
+  .chip i { display: block; font-style: normal; font-size: 10px; font-weight: 400; color: var(--plum); min-height: 12px; }
+  .chip.today { box-shadow: inset 0 0 0 2px var(--gold); }
+  .chip.on { background: var(--plum); color: #fff; } .chip.on small, .chip.on i { color: #fde; }
+  button.x { background: none; color: var(--muted); padding: 4px 6px; }
+  label.btn { display: block; margin: 0; font-size: 16px; background: var(--plum); color: #fff; padding: 10px 16px; border-radius: 12px; cursor: pointer; }
+  .pill { display: inline-block; background: var(--plum-light); color: var(--plum); border-radius: 8px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 13px; }
+  .step { display: flex; align-items: center; gap: 4px; }
+  .step button { padding: 4px 10px; } .step b { min-width: 26px; text-align: center; }
+  /* 故事任務 */
+  .opts { display: grid; gap: 6px; }
+  .opt { background: #fff; color: var(--ink); border: 1.5px solid var(--plum-light); text-align: left; }
+  .opt.right { background: #dff3e3; border-color: #3f9a55; color: #1f5a2e; opacity: 1; }
+  .opt.wrong { background: #fbe0e0; border-color: #c0392b; color: #7a1f1f; opacity: 1; }
+  .env { font-size: 13px; color: var(--muted); }
+  /* 我的家 */
+  .room { display: flex; flex-direction: column; justify-content: space-between; min-height: 230px; padding: 12px 8px; border-radius: 14px; border: 2px solid var(--plum-light); }
+  .zone { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; min-height: 70px; align-items: flex-end; }
+  .slot { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 52px; }
+  .slot .pic { width: 40px; height: 40px; }
+  .slot span { font-size: 34px; line-height: 1.1; } .slot small { font-size: 10px; color: var(--muted); }
+  .furn { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 8px; }
+  .furn button { background: #fff; color: var(--ink); border: 1.5px solid var(--plum-light); padding: 8px 4px; font-size: 13px; }
+  .furn button span { display: block; font-size: 26px; } .furn button small { display: block; color: var(--muted); font-size: 11px; }
+  .greet { position: fixed; inset: 0; background: rgba(60, 20, 45, .35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; animation: fadeIn .3s; }
+  .greet-card { background: #fff; border-radius: 24px; padding: 22px 18px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.2); animation: popIn .45s cubic-bezier(.2,1.4,.4,1); }
+  .greet-pic { font-size: 64px; line-height: 1; } .greet-pic .pic { width: 84px; height: 84px; }
+  @keyframes fadeIn { from { opacity: 0; } } @keyframes popIn { from { transform: scale(.7); opacity: 0; } }
+  .exq img { display: block; width: 100%; height: auto; background: #fff; border: 1px solid var(--plum-light); border-radius: 10px; margin: 10px 0 6px; }
+  .opts.abcd { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; } .opts.abcd .opt { text-align: center; font-weight: 700; }
+  .tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  .tiers button { padding: 10px 4px; font-size: 14px; line-height: 1.4; } .tiers button small { display: block; font-size: 11px; opacity: .85; }
+  .furn button.on { border-color: var(--plum); background: var(--plum-light); } .furn button.has { background: var(--sand); }
+</style>
+</head>
+<body>
+<main id="app"><div class="loading">🏝️ 小島載入中…</div></main>
+<nav id="nav" style="display:none"></nav>
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+/* ===== 基本設定 ===== */
+const SUBJECTS = ['國', '英', '數', '自', '社'];
+const SUBJECT_NAME = { 國: '國文', 英: '英文', 數: '數學', 自: '自然', 社: '社會' };
+const GROUP = { 國: '國', 英: '英', 數: '數', 理化: '自', 生物: '自', 地科: '自', 自然: '自',
+                歷史: '社', 地理: '社', 公民: '社', 社會: '社' };
+// 自然、社會底下的分科，各自有一條小巷，房子分開蓋
+const SUBS = { 自: ['理化', '生物', '地科'], 社: ['歷史', '地理', '公民'] };
+const LEVELS = ['A++', 'A+', 'A', 'B++', 'B+', 'B', 'C'];
+const EMOJIS = ['🐱','🐶','🐰','🦊','🐻','🐼','🐨','🐸','🐧','🦉','🐙','🦄','🐹','🦝','🐳','🐯','🦁','🐮','🐷','🐤','🌸','⭐','🍀','🎧','⚾','🎮','📚','🔮'];
+// 每 2 點蓋一棟 🏠；5 棟合成 🏘️，4 個 🏘️ 合成 🏢，4 棟 🏢 合成 🏰
+const TIERS = [['🏰', 80], ['🏢', 20], ['🏘️', 5], ['🏠', 1]];
+const TONES = { 朋友: '像朋友一樣聊天', 學姊: '溫柔的學姊', 吐槽: '愛吐槽但很挺你', 中二: '中二熱血' };
+
+let S = null;          // 後端給的狀態
+let D = null;          // 計算後的遊戲數值
+let tab = 'home';
+let draft = {};        // 表單暫存
+
+/* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
+const APP_VERSION = '2.4';
+const CHANGELOG = [
+  { v: '2.4', date: '2026-10-24', items: ['💡 讓島順起來：在嚮導卡下面寫你對小島的想法，爸爸會收到，也會在這裡回覆你'] },
+  { v: '2.3', date: '2026-10-24', items: ['嚮導每天第一次見面會先跟你打招呼', '加碼任務改成「挑戰任務」：不用花島幣，自己選基礎／中級／進階，答對賺 1～3 枚島幣，每天最多 10 題', '挑戰任務的題目來自會考考古題（106～115 年，心測中心）', '我的家可以用 3D 走進房間看', '可以去島民家作客、送他們家具、幫他們換牆壁顏色'] },
+  { v: '2.2', date: '2026-10-24', items: ['🏠 我的家：在島中央蓋你的家，島嶼升級就會擴建', '🛋️ 家具店：用島幣買家具，擺進自己的房間', '📬 信箱：島民每天的信和嚮導的新聞都收在這裡', '🪙 加碼任務降價，1 枚島幣就能換一題'] },
+  { v: '2.1', date: '2026-10-24', items: ['🪙 加碼任務：用 3 枚島幣換一題新的會考題，島民每次出的都不一樣', '📮 島民每天都會寫一則訊息給你，語氣跟他的個性一樣，還會聊 Threads 上的熱門話題', '📰 嚮導每天會講一則昨天的國內外新聞，還會告訴你跟會考哪一科有關'] },
+  { v: '2.0', date: '2026-10-24', items: ['📅 新的「計畫」頁：一天一天排這週要做的項目，取代出戰名單', '📷 拍下手寫計畫，小島會幫你排進每一天，打勾的順便記成完成', '📖 我的寫法：教島民認你的縮寫，行程可以標成無關；一個寫法可以代表好幾項', '❓ 待定項目：還不知道是哪一科的先排著，上課後再選', '📝 任務清單：可以自己新增、改名，國文多了「成語」', '📝 首頁多了「今天」：做完就點完成，隨時記、週日一次補都可以', '✅ 週日結算變成「確認這週」：每天的紀錄自動帶進來，達成率照次數算', '📖 故事任務：島民遇到難題，幫他解一題會考題，答對 +15', '🌦️ 3D 小島跟著台北的時間和天氣變化，晚上會亮燈、下雨會下雨'] },
+  { v: '1.4', date: '2026-10-24', items: ['🗺️ 3D 小島：可以轉動、縮放，點一條街看島民和房子', '⏳ 成長回放：從 5 月第一週開始，看你的島一週一週長出來', '跨科連結會變成島民之間的粉紅色拱橋', '首頁可以在「3D 小島」和「清單」之間切換'] },
+  { v: '1.3', date: '2026-10-24', items: ['新增「玩法說明」：右上角的 ❓ 隨時可以打開', '說明「島民」和「室友」的差別', '每次更新後，首頁會告訴你這次多了什麼'] },
+  { v: '1.2', date: '2026-10-24', items: ['嚮導、島民、室友都可以換成自己的圖片'] },
+  { v: '1.1', date: '2026-10-24', items: ['自然街、社會街分成三條小巷，房子分開蓋', '可以替理化、生物、地科、歷史、地理、公民各取一位室友'] },
+  { v: '1.0', date: '2026-10-24', items: ['開島！小島、週日結算、出戰名單、Boss 戰、商店、休息卡'] }
+];
+// 3D 小島只在網頁 App 版提供（需要同資料夾的 three.js）；Apps Script 版沒有 config.js，維持清單畫面
+const BETA3D = !!window.ISLAND_API_URL;
+const local = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+/* ===== 後端呼叫（透過 Apps Script API 同步到 Google 試算表） ===== */
+const store = local;
+async function call(fn, ...args) {
+  let res;
+  try {
+    res = await fetch(window.ISLAND_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // 用 text/plain 避免跨網域預檢
+      body: JSON.stringify({ token: store.get('islandToken'), fn, args })
+    });
+  } catch (e) {
+    throw new Error('連不上小島伺服器，檢查一下網路再試一次');
+  }
+  const j = await res.json();
+  if (j.error === 'unauthorized') { store.del('islandToken'); showPair('配對碼不對或已經更換，請重新輸入'); throw new Error('需要重新配對'); }
+  if (j.error) throw new Error(j.error);
+  if (j.result && j.result.weeks) store.set('islandCache', JSON.stringify(j.result));
+  return j.result;
+}
+function showPair(msg) {
+  document.getElementById('nav').style.display = 'none';
+  document.getElementById('app').innerHTML = `<div class="card" style="margin-top:40px"><div class="big">🏝️</div>
+    <h2 style="text-align:center">登島配對</h2>
+    <div class="muted" style="text-align:center">第一次使用時，輸入爸爸給你的 8 碼配對碼。之後就不用再輸入了。</div>
+    ${msg ? `<div style="text-align:center;color:var(--plum);margin-top:8px">${esc(msg)}</div>` : ''}
+    <label>配對碼</label><input id="pairCode" autocomplete="off" autocapitalize="characters" placeholder="例如 K7MX2QPA" style="text-transform:uppercase;letter-spacing:4px;text-align:center;font-size:22px">
+    <div style="margin-top:12px"><button style="width:100%" id="pairGo">登島</button></div></div>`;
+  document.getElementById('pairGo').onclick = () => {
+    const v = document.getElementById('pairCode').value.trim().toUpperCase();
+    if (v.length < 6) return toast('配對碼是 8 個字');
+    store.set('islandToken', v);
+    document.getElementById('app').innerHTML = '<div class="loading">🏝️ 登島中…</div>';
+    load();
+  };
+}
+function boot() {
+  if (!window.ISLAND_API_URL || /請貼上/.test(window.ISLAND_API_URL)) {
+    document.getElementById('app').innerHTML = '<div class="card">還沒設定小島伺服器的網址（config.js）。</div>';
+    return;
+  }
+  if (!store.get('islandToken')) return showPair();
+  const cached = store.get('islandCache');
+  if (cached) { try { S = JSON.parse(cached); D = derive(S); render(); } catch (e) {} }
+  load();
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 2600);
+}
+async function load(fn, ...args) {
+  try {
+    S = await call(fn || 'getState', ...args);
+    D = derive(S);
+    render();
+    seedDefaults();
+  } catch (e) {
+    if (!store.get('islandToken')) return;              // 已經切到配對畫面
+    if (S) toast(e.message || String(e));             // 有離線資料就先顯示，提示同步失敗
+    else document.getElementById('app').innerHTML = '<div class="card">讀取失敗：' + esc(e.message || e) + '</div>';
+  }
+}
+
+/* ===== 日期 ===== */
+function parseD(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+function fmtD(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function addD(s, n) { const d = parseD(s); d.setDate(d.getDate() + n); return fmtD(d); }
+function mondayOf(s) { const d = parseD(s); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return fmtD(d); }
+function short(s) { const p = s.split('-'); return Number(p[1]) + '/' + Number(p[2]); }
+function assessDate(s) {
+  const m = String(s).match(/(\d{4})\D(\d{1,2})\D?(\d{1,2})?/);
+  return m ? new Date(+m[1], +m[2] - 1, +(m[3] || 1)) : new Date(0);
+}
+
+/* ===== 遊戲數值 ===== */
+function isBoss(name) { return /歷屆|模卷|會考|學測/.test(name); }
+
+function derive(S) {
+  const save = S.save || {};
+  const cfg = save.config || null;
+  const itemsByRow = {}; S.items.forEach(it => itemsByRow[it.row] = it);
+  let xp = 0, coinXp = 0;   // 島幣只從開島後的活動計算，過去的紀錄只換成經驗值和房子
+  const pts = { 國: 0, 英: 0, 數: 0, 自: 0, 社: 0 };
+  const ptsBy = {};   // 依試算表上的科目（理化、生物…）分開累計
+  let bossDone = 0, fullCombo = 0;
+  const log = [];
+
+  // 每週紀錄、連續週數與休息卡；一週做了幾次看 App 的紀錄，舊的週看試算表顏色
+  let streak = 0, best = 0, cards = 0, earned = 0, recordedWeeks = 0;
+  const rates = [];       // 確認過、有計畫的週：達成率
+  const weekPts = [];     // 每週各分科的點數，給 3D 成長回放用
+  const curMon = mondayOf(S.today);
+  weekList().forEach(start => {
+    if (start > S.today) return;
+    const wd = weekData(start), wp = {};
+    let any = false, wxp = 0;
+    Object.keys(wd.done).forEach(r => {
+      const it = itemsByRow[r], u = wd.done[r];
+      if (!it || !(u > 0)) return;
+      any = true;
+      const g = GROUP[it.subject] || it.subject;
+      wxp += u * 10 * (isBoss(it.name) ? 2 : 1);
+      if (pts[g] !== undefined) pts[g] += u;
+      ptsBy[it.subject] = (ptsBy[it.subject] || 0) + u;
+      wp[it.subject] = (wp[it.subject] || 0) + u;
+      if (u >= 1 && isBoss(it.name)) bossDone++;
+    });
+    weekPts.push({ start, pts: wp });
+    if (wd.settled) { any = true; wxp += 20; }
+    if (wd.settled && wd.total) {
+      const ratio = wd.got / wd.total;
+      if (ratio >= 1) { wxp += 40; fullCombo++; } else if (ratio >= .8) wxp += 25; else if (ratio >= .5) wxp += 10;
+      rates.push({ start, got: wd.got, total: wd.total });
+    }
+    const isCurrent = start === curMon;
+    if (any) {
+      recordedWeeks++; streak++; earned++;
+      if (earned % 6 === 0) cards++;
+    } else if (!isCurrent) {
+      if (cards > 0) { cards--; streak++; log.push('休息卡守住了 ' + short(start) + ' 那週'); }
+      else streak = 0;
+    }
+    best = Math.max(best, streak);
+    xp += wxp;
+    if (wd.settled || wd.daily) coinXp += wxp;
+  });
+  xp = Math.round(xp); coinXp = Math.round(coinXp);
+
+  const exams = S.assessments.length;
+  xp += exams * 50;
+  const links = save.links || [];
+  xp += links.length * 15;
+  coinXp += ((save.exams || []).length * 50) + links.length * 15;
+  const questsDone = Object.keys(save).filter(k => k.startsWith('quest:') && save[k] && save[k].done).map(k => save[k]);
+  const questsRight = questsDone.filter(q => q.correct).length;
+  const xqDone = Object.keys(save).filter(k => k.startsWith('xq:') && save[k] && save[k].done).map(k => save[k]);
+  const sumXp = list => list.reduce((a, q) => a + (q.xp || 0), 0);
+  // 挑戰任務（有難度的加碼任務）答對直接給島幣，經驗值只拿來升級；舊的付費加碼任務照舊換島幣
+  const xqCoins = xqDone.filter(q => q.tier).reduce((a, q) => a + (q.coins || 0), 0);
+  xp += sumXp(questsDone) + sumXp(xqDone);
+  coinXp += sumXp(questsDone) + sumXp(xqDone.filter(q => !q.tier));
+
+  const spent = (save.purchases || []).reduce((a, p) => a + p.price, 0);
+  const coins = 20 + Math.floor(coinXp / 10) + xqCoins - spent;   // 開島禮物 20 枚
+  const level = Math.floor(Math.sqrt(xp / 60)) + 1;
+  const lvBase = 60 * Math.pow(level - 1, 2), lvNext = 60 * Math.pow(level, 2);
+
+  // 每科最新一次試煉的等級
+  const grades = {};
+  SUBJECTS.concat(['文']).forEach(s => {
+    const rows = S.assessments.filter(a => a[s]).sort((a, b) => assessDate(b.date) - assessDate(a.date));
+    grades[s] = rows[0] ? { level: rows[0][s], date: rows[0].date, source: rows[0].source } : null;
+  });
+
+  // 島民之間的好感度（跨科連結）
+  const bond = {};
+  links.forEach(l => { const k = [l.a, l.b].sort().join(''); bond[k] = (bond[k] || 0) + 1; });
+
+  const settledCount = Object.keys(save).filter(k => k.startsWith('settled:')).length;
+  const badges = [
+    { ic: '🏝️', name: '開島紀念', ok: !!cfg },
+    { ic: '📝', name: '第一次確認', ok: settledCount >= 1 },
+    { ic: '🔥', name: '連續 4 週', ok: best >= 4 },
+    { ic: '🔥', name: '連續 12 週', ok: best >= 12 },
+    { ic: '🌋', name: '連續 24 週', ok: best >= 24 },
+    { ic: '⚔️', name: 'Boss 獵人 ×5', ok: bossDone >= 5 },
+    { ic: '🗡️', name: 'Boss 獵人 ×20', ok: bossDone >= 20 },
+    { ic: '🎵', name: 'Full Combo', ok: fullCombo >= 1 },
+    { ic: '🎶', name: 'Full Combo ×5', ok: fullCombo >= 5 },
+    { ic: '🔗', name: '跨科偵探', ok: links.length >= 3 },
+    { ic: '🧭', name: '試煉者 ×10', ok: exams >= 10 },
+    { ic: '🎯', name: '任務達人 ×10', ok: questsDone.length >= 10 },
+    { ic: '📖', name: '解題高手 ×20', ok: questsRight + xqDone.filter(q => q.correct).length >= 20 },
+    { ic: '🪙', name: '加碼挑戰 ×10', ok: xqDone.length >= 10 },
+    { ic: '🏰', name: '島嶼 Lv.10', ok: level >= 10 }
+  ];
+
+  return { cfg, xp, coins, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
+           links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts };
+}
+
+/* ===== 共用 ===== */
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+// 自訂圖片存在存檔的 img:<key>，沒有圖片時用 emoji
+function imgOf(key) { return S && S.save && S.save['img:' + key]; }
+function pic(key, emoji) { const src = imgOf(key); return src ? `<img class="pic" src="${src}" alt="">` : emoji; }
+function ipic(key, emoji) { const src = imgOf(key); return src ? `<img class="ipic" src="${src}" alt="">` : emoji; }
+function resident(s) {
+  const r = (D.cfg && D.cfg.residents && D.cfg.residents[s]) || {};
+  const emoji = r.emoji || '🙂';
+  return { name: r.name || SUBJECT_NAME[s] + '島民', emoji, pic: pic(s, emoji), ipic: ipic(s, emoji), personality: r.personality || '', relation: r.relation || '' };
+}
+function roommate(sub) {
+  const r = (D.cfg && D.cfg.roommates && D.cfg.roommates[sub]) || {};
+  return { name: r.name || '', emoji: r.emoji || '' };
+}
+function streets(s) {
+  if (!SUBS[s]) return `<div class="town">${town(D.pts[s])}</div>`;
+  const rows = SUBS[s].map(sub => {
+    const m = roommate(sub);
+    return `<div class="lane"><span class="lane-name">${imgOf('sub:' + sub) || m.emoji ? ipic('sub:' + sub, m.emoji) + ' ' : ''}${esc(m.name || sub)}<small>${m.name ? sub : ''}</small></span><span class="town">${town(D.ptsBy[sub] || 0)}</span></div>`;
+  });
+  const whole = s === '自' ? '自然' : '社會';
+  if (D.ptsBy[whole]) rows.push(`<div class="lane"><span class="lane-name">綜合廣場<small>模卷・歷屆</small></span><span class="town">${town(D.ptsBy[whole])}</span></div>`);
+  return rows.join('');
+}
+function guide() {
+  const g = (D.cfg && D.cfg.guide) || {}, emoji = g.emoji || '🦉';
+  return { name: g.name || '嚮導', emoji, pic: pic('guide', emoji), ipic: ipic('guide', emoji), tone: g.tone || '朋友' };
+}
+function town(p) {
+  let n = Math.floor(p / 2), out = '';
+  TIERS.forEach(([ic, size]) => { out += ic.repeat(Math.floor(n / size)); n %= size; });
+  return out || '🌱';
+}
+function daySeed() { return S.today.split('-').reduce((a, x) => a * 31 + Number(x), 7); }
+
+function guideLine() {
+  const g = guide(), t = g.tone, seed = daySeed();
+  const lines = {
+    朋友: ['今天想從哪一格開始都可以喔。', '慢慢來，蓋一棟也是蓋。', '我在碼頭等你，有空來聊聊。'],
+    學姊: ['累了就先休息，島不會跑掉的。', '你上週其實做得比你以為的多喔。', '今天挑一個最想做的就好。'],
+    吐槽: ['又在想「我好爛」了吧？資料可不是這樣說的。', '先做再說，煩惱留給 Boss。', '島民們說你再不來他們要罷工了。'],
+    中二: ['封印在歷屆試題裡的 Boss 正在甦醒…！', '今日的修行，開始吧！', '你的連擊數，就是你的力量。']
+  };
+  const arr = lines[t] || lines['朋友'];
+  if (env.weather === 'rain' || env.weather === 'storm') return '外面在下雨，正好窩在家裡。' + arr[seed % arr.length];
+  if (env.phase === 'night') return '晚上了，' + (env.hhmm >= '23' ? '記得早點睡喔。' : '今天辛苦了。') + arr[seed % arr.length];
+  return arr[seed % arr.length];
+}
+function residentEvent() {
+  const seed = daySeed();
+  const s = SUBJECTS[seed % 5], r = resident(s);
+  const evs = [
+    r.name + ' 在廣場貼了一張紙條：「今天要不要來找我一下？」',
+    r.name + ' 說昨晚夢到你一次 Full Combo。',
+    r.name + ' 正在整理' + SUBJECT_NAME[s] + '街的招牌，看起來心情不錯。',
+    r.name + ' 想考你一題，答不出來也沒關係，他會請你喝飲料。'
+  ];
+  return { r, text: evs[(seed >> 3) % evs.length] };
+}
+
+/* ===== 畫面 ===== */
+function render() {
+  const app = document.getElementById('app');
+  const nav = document.getElementById('nav');
+  if (!D.cfg || tab === 'setup') {
+    nav.style.display = 'none';
+    app.innerHTML = viewSetup();
+    bindSetup();
+    return;
+  }
+  nav.style.display = 'flex';
+  const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
+  const navOn = { pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home' }[tab] || tab;
+  nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
+  app.innerHTML = ({ home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  if (tab === 'home' && use3D()) mount3D();
+  if (tab === 'home') { ensureDaily(); maybeGreet(); }
+  if (tab === 'house') mountRoom();
+  if (tab === 'plan') bindPlan();
+  if (tab === 'pick') bindPicker();
+  if (tab === 'confirm') bindConfirm();
+}
+function go(t) { if (t === 'plan') { planWeek = null; planDay = null; } tab = t; draft = {}; render(); window.scrollTo(0, 0); }
+
+function hud() {
+  const pct = Math.round((D.xp - D.lvBase) / (D.lvNext - D.lvBase) * 100);
+  return `<div class="card" id="hudCard">
+    <div class="row"><h2 class="grow">${esc(D.cfg.islandName || '我的島')}</h2><span class="muted">島嶼 Lv.${D.level}</span>
+      <button class="ghost" style="padding:4px 10px" onclick="openHouse('me')" aria-label="我的家">${houseTier().ic}</button>
+      <button class="ghost" style="padding:4px 10px" onclick="go('guide')" aria-label="玩法說明">❓</button></div>
+    <div class="hud">
+      <div><b>${D.xp}</b><span class="muted">經驗值</span></div>
+      <div><b>${D.coins}</b><span class="muted">🪙 島幣</span></div>
+      <div><b>${D.streak}</b><span class="muted">🔥 連續週</span></div>
+      <div><b>${D.cards}</b><span class="muted">🛌 休息卡</span></div>
+    </div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="row" style="margin-top:4px"><span class="muted grow">距離 Lv.${D.level + 1} 還差 ${D.lvNext - D.xp} 經驗值</span><span class="env" id="envChip">${envText()}</span></div>
+  </div>`;
+}
+
+function viewHome() {
+  const g = guide(), ev = residentEvent();
+  const districts = SUBJECTS.map(s => {
+    const r = resident(s), gr = D.grades[s];
+    return `<div class="district">
+      <div class="resident"><span class="avatar">${r.pic}</span>
+        <div><b>${esc(r.name)}</b><div class="muted">${SUBJECT_NAME[s]}街</div></div>
+        <span class="grade ${gr ? '' : 'none'}" title="${gr ? esc(gr.source + ' ' + gr.date) : '還沒有試煉紀錄'}">${gr ? esc(gr.level) : '?'}</span></div>
+      ${streets(s)}
+      <div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div>
+    </div>`;
+  }).join('');
+  const w = D.grades['文'];
+  const seen = local.get('islandSeenVersion');
+  // 沒看過的版本都列出來；舊玩家第一次遇到更新提示時，只列最新一版
+  const seenAt = CHANGELOG.findIndex(c => c.v === seen);
+  const news = seen === APP_VERSION ? [] : CHANGELOG.slice(0, seenAt > 0 ? seenAt : 1);
+  const newsCard = news.length ? `<div class="card" style="border:2px solid var(--plum)"><h3>✨ 小島更新了（v${APP_VERSION}）</h3>
+    <ul style="margin:6px 0 10px;padding-left:20px">${news.flatMap(c => c.items).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+    <div class="row"><button onclick="local.set('islandSeenVersion', APP_VERSION); go('guide')">看玩法說明</button>
+    <button class="ghost" onclick="local.set('islandSeenVersion', APP_VERSION); render()">知道了</button></div></div>` : '';
+  const toggle = BETA3D ? `<div class="row" style="margin-bottom:10px">
+      <button class="${use3D() ? '' : 'ghost'}" onclick="local.set('islandView','3d'); render()">🗺️ 3D 小島</button>
+      <button class="${use3D() ? 'ghost' : ''}" onclick="local.set('islandView','list'); render()">📋 清單</button>
+</div>` : '';
+  const islandView = use3D() ? `<div id="i3d" style="height:min(62vh,520px);border-radius:24px;overflow:hidden;background:${env.phase === 'night' ? '#1b2440' : '#cfe8f3'};position:relative">
+        <div class="loading" style="padding-top:120px">🏝️ 小島浮出水面中…</div></div>
+      <div class="card" style="margin-top:12px" id="i3dTime">${timelineHtml()}</div>
+      <div class="card" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>`
+    : `<div class="island"><div class="districts">${districts}</div></div>`;
+  return hud() + newsCard + todayCard() + questCard() + xqCard() + guideCard() + `
+    ${toggle}${islandView}
+    ${dailyCard()}
+    <div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
+      `<div class="badge ${b.ok ? '' : 'locked'}"><span class="ic">${b.ic}</span>${esc(b.name)}</div>`).join('')}</div></div>`;
+}
+
+/* --- 島民的每日訊息、嚮導的昨日新聞（每天第一次打開時由 AI 寫好，存在 daily:日期） --- */
+let dailyState = 'idle';   // idle、loading、failed
+// 她多久沒碰這一科：看 App 的每日紀錄，沒有就看試算表最後一次有顏色的那週
+function daysAway(s) {
+  let last = null;
+  Object.keys(S.save).filter(k => k.startsWith('log:')).forEach(k => {
+    const d = k.slice(4), rows = (S.save[k] && S.save[k].rows) || {};
+    if (Object.keys(rows).some(r => D.itemsByRow[r] && (GROUP[D.itemsByRow[r].subject] || D.itemsByRow[r].subject) === s) && (!last || d > last)) last = d;
+  });
+  if (!last) S.weeks.forEach((w, i) => {
+    if (w.start > S.today) return;
+    if (S.items.some(it => (GROUP[it.subject] || it.subject) === s && (S.grid[it.row] || [])[i] >= 1)) last = w.end < S.today ? w.end : S.today;
+  });
+  return last ? Math.round((parseD(S.today) - parseD(last)) / 86400000) : null;
+}
+function dailyCtx() {
+  const g = guide();
+  return {
+    residents: SUBJECTS.map(s => { const r = resident(s);
+      return { key: s, name: r.name, personality: r.personality, relation: r.relation, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null }; }),
+    guide: { name: g.name, tone: TONES[g.tone] || g.tone },
+    weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '')
+  };
+}
+async function ensureDaily() {
+  if (!D.cfg || S.save['daily:' + S.today] || dailyState !== 'idle') return;
+  dailyState = 'loading';
+  try {
+    const st = await call('getDaily', S.today, dailyCtx());
+    S.save['daily:' + S.today] = st.save['daily:' + S.today];   // 只拿每日訊息，不蓋掉畫面上還沒存的改動
+    dailyState = 'idle';
+  } catch (e) { dailyState = 'failed'; }
+  if (tab === 'home') { softRender(); maybeGreet(); }
+}
+// 嚮導每天第一次見面的招呼：等島民的信寫好（AI 會順便寫招呼），寫不出來就用內建的
+function greetFallback() {
+  const h = taipeiClock().h, hi = h < 11 ? '早安' : h < 18 ? '午安' : '晚安', wd = '日一二三四五六'.charAt(parseD(S.today).getDay());
+  const w = env.temp != null ? '外面' + WEATHER_NAME[env.weather] + '，' + env.temp + ' 度' : '島上的風好舒服';
+  const lines = [
+    `${hi}呀～今天是星期${wd}，${w}。我已經把島上打掃好了，慢慢來就好喔 🌷`,
+    `${hi}！看到你上島我就好開心～${w}，記得喝水，今天也一起加油吧 ✨`,
+    `${hi}～島民們一早就在等你了！${w}，不管今天讀多少，我都在這裡陪你 🍀`,
+    `${hi}！星期${wd}的小島也很想你喔。${w}，先深呼吸一下，我們一步一步來 🐚`
+  ];
+  return lines[daySeed() % lines.length];
+}
+function maybeGreet() {
+  if (tab !== 'home' || !D.cfg || local.get('islandGreeted') === S.today || dailyState === 'loading' || document.getElementById('greet')) return;
+  const g = guide(), d = S.save['daily:' + S.today], h = taipeiClock().h;
+  const plan = (planOf(mondayOf(S.today)).days[dayIdx(S.today)] || []).length;
+  const box = document.createElement('div'); box.id = 'greet'; box.className = 'greet';
+  box.innerHTML = `<div class="greet-card"><div class="greet-pic">${g.pic}</div><div class="muted">${esc(envText())}</div>
+      <div class="speech" style="margin-top:10px;text-align:left"><b>${esc(g.name)}</b>：${esc((d && d.greeting) || greetFallback())}</div>
+      ${plan ? `<div class="muted" style="margin-top:8px">📝 今天的計畫有 ${plan} 項</div>` : ''}
+      <button style="margin-top:14px;width:100%">${h < 11 ? '早安！出發吧' : h < 18 ? '好～開始囉' : '晚安～來看看小島'} ✨</button></div>`;
+  box.querySelector('button').onclick = () => { local.set('islandGreeted', S.today); box.remove(); };
+  document.body.appendChild(box);
+}
+function dailyCard() {
+  const d = S.save['daily:' + S.today], w = D.grades['文'];
+  let body;
+  if (d && Object.keys(d.messages || {}).length) {
+    body = SUBJECTS.filter(s => d.messages[s]).map(s => { const r = resident(s);
+      return `<div class="row" style="align-items:flex-start;margin-top:10px;flex-wrap:nowrap"><span class="avatar" style="font-size:28px">${r.pic}</span>
+        <div class="speech grow"><b>${esc(r.name)}</b>：${esc(d.messages[s])}</div></div>`; }).join('');
+  } else {
+    const ev = residentEvent();
+    body = `<div>${ev.r.ipic} ${esc(ev.text)}</div>${dailyState === 'loading' ? '<div class="muted" style="margin-top:6px">✉️ 島民們正在寫信給你…</div>' : ''}`;
+  }
+  return `<div class="card" id="dailyCard" style="margin-top:14px"><h3>📮 今日島上消息</h3>${body}
+    ${w ? `<div class="muted" style="margin-top:8px">✍️ 作文：${esc(w.level)}（${esc(w.date)}）</div>` : ''}
+    ${D.log.length ? `<div class="muted" style="margin-top:6px">${D.log.map(esc).join('<br>')}</div>` : ''}</div>`;
+}
+function guideCard() {
+  const g = guide(), d = S.save['daily:' + S.today], n = d && d.news;
+  const news = n ? `<div style="margin-top:12px;border-top:1px dashed var(--plum-light);padding-top:10px">
+      <div class="muted">📰 ${short(n.date)} 的新聞</div><h3 style="margin:4px 0">${esc(n.title)}</h3>
+      <div style="line-height:1.7">${esc(n.summary)}</div>
+      ${n.link ? `<div style="margin-top:6px"><span class="pill">📚 會考關聯：${esc(n.link)}</span></div>` : ''}
+      ${n.talk ? `<div class="speech" style="margin-top:8px"><b>${esc(g.name)}</b>：${esc(n.talk)}</div>` : ''}
+      ${(n.sources || []).length ? `<div class="muted" style="margin-top:6px;font-size:12px">來源：${n.sources.map(x => `<a href="${esc(x.uri)}" target="_blank" rel="noopener">${esc(x.title || '連結')}</a>`).join('、')}</div>` : ''}</div>`
+    : dailyState === 'loading' ? `<div class="muted" style="margin-top:8px">📰 ${esc(g.name)}正在看昨天的新聞…</div>` : '';
+  return `<div class="card" id="guideCard"><div class="row" style="flex-wrap:nowrap"><span class="avatar">${g.pic}</span>
+      <div class="speech grow"><b>${esc(g.name)}</b>：${esc(guideLine())}</div></div>${news}
+    <button class="ghost" style="width:100%;margin-top:10px" onclick="go('wish')">💡 讓島順起來${wishNews() ? `<span class="pill" style="margin-left:6px">爸爸回覆了 ${wishNews()} 則</span>` : ''}</button></div>`;
+}
+
+/* --- 讓島順起來：她對遊戲設計的想法，寫進試算表的「讓島順起來」分頁，爸爸改狀態、寫回覆 --- */
+const WISH_KINDS = [['新玩法', '💡'], ['卡卡的', '🐢'], ['想要的東西', '🎁'], ['其他', '💬']];
+const WISH_PILL = { 新: '📮 寄出了', 討論中: '🗣️ 討論中', 做好了: '✅ 做好了', 先不做: '💤 先不做' };
+function wishSig(w) { return w.id + w.status + w.reply; }
+// 爸爸改了狀態或寫了回覆、她還沒看過的則數
+function wishNews() {
+  const seen = (local.get('islandWishSeen') || '').split('|');
+  return (S.wishes || []).filter(w => (w.status !== '新' || w.reply) && !seen.includes(wishSig(w))).length;
+}
+function viewWish() {
+  const g = guide(), w = draft.wish || (draft.wish = { kind: '新玩法', text: '', shot: null });
+  const list = (S.wishes || []).slice().reverse();
+  local.set('islandWishSeen', (S.wishes || []).map(wishSig).join('|'));
+  return `<div class="card"><div class="row" style="flex-wrap:nowrap"><span class="avatar">${g.pic}</span>
+      <div class="speech grow"><b>${esc(g.name)}</b>：這座島是你的，所以你也是島的設計師！哪裡好玩、哪裡卡卡的、想要什麼新東西，都寫給我，我會轉交給爸爸。</div></div></div>
+    <div class="card"><h3>💡 讓島順起來</h3>
+      <div class="row" style="margin-top:6px;gap:6px">${WISH_KINDS.map(k => `<button type="button" class="${w.kind === k[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" onclick="draft.wish.text=document.getElementById('wishText').value;draft.wish.kind='${k[0]}';render()">${k[1]} ${k[0]}</button>`).join('')}</div>
+      <textarea id="wishText" rows="5" style="width:100%;margin-top:10px" placeholder="例如：希望挑戰任務可以選年份、3D 房間想要能自己移動家具……" oninput="draft.wish.text=this.value">${esc(w.text)}</textarea>
+      <label style="margin-top:8px">附一張截圖（選填）</label>
+      <input type="file" accept="image/*" id="wishShot" onchange="wishPhoto(this)">
+      ${w.shot ? `<img src="${w.shot}" style="max-width:100%;max-height:200px;border-radius:10px;margin-top:6px" alt="截圖"><button class="ghost" style="padding:4px 10px" onclick="draft.wish.shot=null;render()">拿掉截圖</button>` : ''}
+      <button style="width:100%;margin-top:12px" id="wishGo" onclick="sendWish()">送出給爸爸 📮</button></div>
+    <div class="card"><h3>📜 我的願望清單</h3>${list.length ? list.map(x => `<div style="margin-top:10px;border-top:1px dashed var(--plum-light);padding-top:8px">
+        <div class="row"><b class="grow">${(WISH_KINDS.find(k => k[0] === x.kind) || ['', '💬'])[1]} ${esc(x.kind)}</b><span class="pill">${WISH_PILL[x.status] || x.status}</span></div>
+        <div style="margin-top:4px;white-space:pre-wrap">${esc(x.text)}</div>
+        <div class="muted" style="font-size:12px">${esc(x.date)}${x.shot ? '・有附截圖' : ''}</div>
+        ${x.reply ? `<div class="speech" style="margin-top:6px"><b>爸爸</b>：${esc(x.reply)}</div>` : ''}</div>`).join('')
+      : '<div class="muted">還沒有願望。你的第一個點子會是什麼呢？</div>'}</div>
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+async function wishPhoto(input) {
+  const f = input.files[0]; if (!f) return;
+  try {
+    draft.wish.text = document.getElementById('wishText').value;
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error('讀不到這張圖')); i.src = URL.createObjectURL(f); });
+    const k = Math.min(1, 1280 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+    cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height); c.drawImage(img, 0, 0, cv.width, cv.height);
+    draft.wish.shot = cv.toDataURL('image/jpeg', 0.8); render();
+  } catch (e) { toast(e.message || '讀不到這張圖'); }
+}
+async function sendWish() {
+  const w = draft.wish; w.text = document.getElementById('wishText').value;
+  if (!w.text.trim()) return toast('先寫下你的想法吧');
+  document.getElementById('wishGo').disabled = true;
+  try { await flush(); S = await call('addWish', w.kind, w.text, w.shot); D = derive(S); }
+  catch (e) { document.getElementById('wishGo').disabled = false; return toast('送出失敗：' + (e.message || e)); }
+  draft = {}; toast('📮 收到了！爸爸會看到你的想法'); render(); window.scrollTo(0, 0);
+}
+
+/* --- 我的家：蓋在島中央的碼頭，跟著島嶼等級擴建，可以買家具、收信、招待島民 --- */
+/* --- 島民的家：送家具給島民，幫他們布置；兩種家都可以用 3D 走進去看 --- */
+const HOUSE_TIERS = [
+  { lv: 1, key: 'tent', name: '帳篷', ic: '⛺', slots: 4 },
+  { lv: 4, key: 'cabin', name: '小木屋', ic: '🛖', slots: 8 },
+  { lv: 7, key: 'twostory', name: '兩層樓小屋', ic: '🏡', slots: 12 },
+  { lv: 10, key: 'manor', name: '海邊洋館', ic: '🏰', slots: 20 }
+];
+const ROOF_COLORS = ['#c0504d', '#741b47', '#3f7fb8', '#3f9a55', '#d08a1e', '#7a55b8', '#5b5b5b', '#e98fb3'];
+const WALL_COLORS = ['#fdf6ec', '#ead1dc', '#dfeefa', '#e3f3dc', '#fff1c9', '#ece3fa', '#f4e1d2', '#ffffff'];
+const FURNITURE = [
+  { id: 'desk', ic: '🪑', name: '書桌', price: 6 }, { id: 'lamp', ic: '💡', name: '檯燈', price: 3 },
+  { id: 'plant', ic: '🪴', name: '盆栽', price: 3 }, { id: 'bed', ic: '🛏️', name: '軟軟的床', price: 8 },
+  { id: 'books', ic: '📚', name: '書櫃', price: 6 }, { id: 'poster', z: 'wall', ic: '🖼️', name: '海報', price: 4 },
+  { id: 'headphone', z: 'wall', ic: '🎧', name: '耳機架', price: 5 }, { id: 'game', ic: '🎮', name: '遊戲機', price: 10 },
+  { id: 'violin', z: 'wall', ic: '🎻', name: '小提琴架', price: 8 }, { id: 'baseball', ic: '⚾', name: '棒球收藏櫃', price: 8 },
+  { id: 'fish', ic: '🐠', name: '魚缸', price: 10 }, { id: 'stars', z: 'wall', ic: '✨', name: '星星燈串', price: 5 },
+  { id: 'beanbag', ic: '🛋️', name: '懶骨頭', price: 7 }, { id: 'record', ic: '💿', name: '黑膠唱盤', price: 9 },
+  { id: 'cat', ic: '🐈', name: '貓咪抱枕', price: 4 }, { id: 'cake', ic: '🍰', name: '下午茶桌', price: 6 },
+  { id: 'flower', z: 'out', ic: '🌷', name: '門口花圃', price: 4 }, { id: 'telescope', ic: '🔭', name: '望遠鏡', price: 9 },
+  { id: 'globe', ic: '🌏', name: '地球儀', price: 5 }, { id: 'clock', z: 'wall', ic: '⏰', name: '會考倒數鐘', price: 5 }
+];
+// 每位島民喜歡的專屬家具（只能送給他）
+const RES_FURNITURE = {
+  國: [{ id: 'brush', ic: '🖌️', name: '書法桌', price: 6 }, { id: 'scroll', z: 'wall', ic: '📜', name: '詩詞掛軸', price: 5 }, { id: 'lantern', z: 'wall', ic: '🏮', name: '紅燈籠', price: 4 }],
+  英: [{ id: 'guitar', ic: '🎸', name: '吉他', price: 7 }, { id: 'nyc', z: 'wall', ic: '🗽', name: '紐約海報', price: 5 }, { id: 'tea', ic: '☕', name: '英式下午茶', price: 5 }],
+  數: [{ id: 'abacus', ic: '🧮', name: '算盤', price: 5 }, { id: 'ruler', z: 'wall', ic: '📐', name: '三角板掛飾', price: 4 }, { id: 'puzzle', ic: '🧩', name: '拼圖桌', price: 6 }],
+  自: [{ id: 'micro', ic: '🔬', name: '顯微鏡', price: 8 }, { id: 'dino', ic: '🦕', name: '恐龍模型', price: 7 }, { id: 'dna', z: 'wall', ic: '🧬', name: 'DNA 掛畫', price: 5 }],
+  社: [{ id: 'oldmap', z: 'wall', ic: '🗺️', name: '古地圖', price: 5 }, { id: 'vase', ic: '🏺', name: '古董花瓶', price: 7 }, { id: 'scale', ic: '⚖️', name: '正義天秤', price: 6 }]
+};
+const RES_WALL = { 國: '#fbe3ee', 英: '#e3f0fb', 數: '#fdf1d6', 自: '#e3f5e5', 社: '#eee6fb' };
+const RES_SLOTS = 8;
+let houseWho = 'me';   // 'me' 是自己的家，或島民的科目（國、英…）
+function openHouse(who) { houseWho = who || 'me'; go('house'); }
+function houseTier() { let t = HOUSE_TIERS[0]; HOUSE_TIERS.forEach(x => { if (D.level >= x.lv) t = x; }); return t; }
+function homeOf() { return S.save.home || null; }
+function catalogFor(who) { return who === 'me' ? FURNITURE : RES_FURNITURE[who].concat(FURNITURE.filter(f => f.z !== 'out')); }
+function furnOf(id) { return FURNITURE.find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
+function ownedFor(who) { return [...new Set((S.save.purchases || []).filter(p => p.furniture && (p.for || 'me') === who).map(p => p.furniture))]; }
+function ownedFurniture() { return ownedFor('me'); }
+function roomOf(who) { return who === 'me' ? homeOf() || {} : ((S.save.decor || {})[who] || {}); }
+function slotsFor(who) { return who === 'me' ? houseTier().slots : RES_SLOTS; }
+function shownFor(who) {
+  const own = ownedFor(who), h = roomOf(who);
+  return (Array.isArray(h.shown) ? h.shown.filter(id => own.includes(id)) : own).slice(0, slotsFor(who));
+}
+function shownFurniture() { return shownFor('me'); }
+function wallFor(who) { return who === 'me' ? (homeOf() || {}).wall || WALL_COLORS[0] : roomOf(who).wall || RES_WALL[who]; }
+// 今天來作客的島民：好感度（跨科連結）越高越常來
+function visitor() {
+  const w = SUBJECTS.map(s => 1 + Object.keys(D.bond).filter(k => k.includes(s)).reduce((a, k) => a + D.bond[k], 0));
+  const r = seeded(daySeed() * 13 + 5); r(); let t = r() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < 5; i++) { t -= w[i]; if (t <= 0) return SUBJECTS[i]; }
+  return SUBJECTS[4];
+}
+
+// 房間：網頁 App 版用 3D，Apps Script 版或手機開不了 3D 時用平面圖
+let roomOpts = null;
+function use3DRoom() { return BETA3D && local.get('islandRoomView') !== '2d'; }
+function roomHtml(who, guest) {
+  const fs = shownFor(who).map(furnOf).filter(Boolean), wall = wallFor(who);
+  const g = guest ? resident(guest) : null;
+  roomOpts = { wall, accent: who === 'me' ? (homeOf() || {}).roof || '#741b47' : '#741b47', night: env.phase === 'night',
+    items: fs.map(f => ({ ic: f.ic, z: f.z || 'floor' })), visitor: g && { emoji: g.emoji, img: imgOf(guest) || null } };
+  const toggle = BETA3D ? `<div class="row" style="margin-bottom:8px">
+      <button class="${use3DRoom() ? '' : 'ghost'}" style="padding:6px 12px" onclick="local.set('islandRoomView','3d');render()">🧊 3D 房間</button>
+      <button class="${use3DRoom() ? 'ghost' : ''}" style="padding:6px 12px" onclick="local.set('islandRoomView','2d');render()">🖼️ 平面</button></div>` : '';
+  if (use3DRoom()) return toggle + `<div id="r3d" style="height:min(56vh,400px);border-radius:14px;overflow:hidden;background:${env.phase === 'night' ? '#2a2440' : '#f6efe6'}">
+      <div class="loading" style="padding-top:120px">🛋️ 開門中…</div></div>
+    <div class="muted" style="margin-top:6px">👆 用手指拖曳可以轉動房間，兩指可以拉近。</div>`;
+  const zone = z => fs.filter(f => (f.z || 'floor') === z);
+  const put = list => list.map(f => `<div class="slot"><span>${f.ic}</span><small>${esc(f.name)}</small></div>`).join('');
+  return toggle + `<div class="room" style="background:linear-gradient(${esc(wall)} 50%, #d9b88f 50%)">
+      <div class="zone">${put(zone('wall')) || '<small class="muted">（牆上空空的）</small>'}</div>
+      <div class="zone floor">${put(zone('floor'))}${g ? `<div class="slot">${g.pic}<small>${esc(g.name)}</small></div>` : ''}</div></div>
+    ${zone('out').length ? `<div class="muted" style="margin-top:6px">門口：${zone('out').map(f => f.ic + ' ' + esc(f.name)).join('、')}</div>` : ''}`;
+}
+async function mountRoom() {
+  const el = document.getElementById('r3d'); if (!el || !roomOpts) return;
+  try {
+    if (!window.THREE) await loadScript('three.min.js');
+    if (!THREE.OrbitControls) await loadScript('OrbitControls.js');
+    if (!window.Room3D) await loadScript('room3d.js');
+    if (!document.getElementById('r3d')) return;
+    el.innerHTML = '';
+    Room3D.mount(el, roomOpts);
+  } catch (e) { local.set('islandRoomView', '2d'); toast('這支手機開不了 3D，先用平面圖'); render(); }
+}
+function furnShop(who) {
+  const own = ownedFor(who), shown = shownFor(who);
+  return `<div class="card"><div class="row"><h3 class="grow" style="margin:0">${who === 'me' ? '🛒 家具店' : '🎁 送他家具'}</h3><span class="muted">你有 🪙 ${D.coins}</span></div>
+    ${who === 'me' ? '' : `<div class="muted" style="margin-top:4px">前三件是${esc(resident(who).name)}最想要的。點已經送的家具可以收起來或擺出來。</div>`}
+    <div class="furn">${catalogFor(who).map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
+      return `<button class="${has ? (on ? 'on' : 'has') : ''}" onclick="${has ? `toggleFurniture('${who}','${f.id}')` : `buyFurniture('${who}','${f.id}')`}" ${!has && D.coins < f.price ? 'disabled' : ''}>
+        <span>${f.ic}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '🪙 ' + f.price}</small></button>`; }).join('')}</div></div>`;
+}
+function visitRow(except) {
+  return `<div class="card"><h3>🏘️ 去島民家作客</h3><div class="row" style="justify-content:space-around">${SUBJECTS.filter(s => s !== except).map(s => { const r = resident(s);
+    return `<button class="ghost" style="padding:6px 8px;display:flex;flex-direction:column;align-items:center;min-width:58px" onclick="openHouse('${s}')"><span style="font-size:28px">${r.ipic}</span><small>${esc(r.name)}</small></button>`; }).join('')}</div>
+    ${except && except !== 'me' ? `<button class="ghost" style="width:100%;margin-top:8px" onclick="openHouse('me')">🏠 回我的家</button>` : ''}</div>`;
+}
+function viewHouse() {
+  if (houseWho !== 'me' && RES_FURNITURE[houseWho]) return viewResHouse(houseWho);
+  const h = homeOf(), tier = houseTier();
+  if (!h || draft.editHome) return viewHouseSetup();
+  const next = HOUSE_TIERS.find(x => x.lv > D.level);
+  const vs = visitor(), vr = resident(vs), daily = S.save['daily:' + S.today];
+  const vline = daily && daily.messages && daily.messages[vs] ? daily.messages[vs] : '我來找你玩了，順便看看你的新家具。';
+  const letters = Object.keys(S.save).filter(k => k.startsWith('daily:') && S.save[k]).sort().reverse().slice(0, 14);
+  return `<div class="card" style="background:${esc(h.wall)};border:3px solid ${esc(h.roof)}">
+      <div class="row"><span style="font-size:44px">${tier.ic}</span><div class="grow"><h2 style="margin:0">${esc(h.name || '我的家')}</h2>
+        <div class="muted">${tier.name}・島嶼 Lv.${D.level}${next ? `・Lv.${next.lv} 會擴建成${next.name}` : '・已經是最大的房子了'}</div></div>
+        <button class="ghost" style="padding:6px 10px" onclick="draft.editHome=true;render()">🎨 改外觀</button></div></div>
+    <div class="card"><h3>🛋️ 房間</h3>${roomHtml('me', vs)}
+      <div class="speech" style="margin-top:10px"><b>${esc(vr.name)}</b>來作客：${esc(vline)}</div>
+      <div class="muted" style="margin-top:6px">房間可以擺 ${tier.slots} 件家具，房子越大擺越多。點下面的家具可以收起來或擺出來。</div></div>
+    ${furnShop('me')}
+    ${visitRow('me')}
+    <div class="card"><h3>📬 信箱</h3>${letters.length ? letters.map(k => { const d = S.save[k], date = k.slice(6);
+        return `<details style="margin-top:8px"${k === 'daily:' + S.today ? ' open' : ''}><summary><b>${short(date)}</b> 的信${d.news ? '・📰 ' + esc(d.news.title) : ''}</summary>
+          ${d.greeting ? `<div style="margin-top:6px">${guide().pic} <b>${esc(guide().name)}</b>：${esc(d.greeting)}</div>` : ''}
+          ${SUBJECTS.filter(s => d.messages && d.messages[s]).map(s => `<div style="margin-top:6px">${resident(s).ipic} <b>${esc(resident(s).name)}</b>：${esc(d.messages[s])}</div>`).join('')}
+          ${d.news ? `<div class="muted" style="margin-top:6px">📰 ${esc(d.news.summary)}</div>` : ''}</details>`; }).join('') : '<div class="muted">還沒有信。每天島民寫給你的訊息都會收在這裡。</div>'}</div>
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+// 島民的家：她送的家具越多，島民越開心
+function resThanks(s) {
+  const gifts = (S.save.purchases || []).filter(p => p.furniture && p.for === s);
+  if (!gifts.length) return '我家還空空的……你願意幫我布置一下嗎？送我一件家具，我會好好珍惜的！';
+  const f = furnOf(gifts[gifts.length - 1].furniture) || { ic: '🎁', name: '禮物' };
+  const lines = [`謝謝你送的${f.ic}${f.name}，我超喜歡！每天都會用喔。`, `我把你送的${f.name}擺在最顯眼的地方，大家來都會稱讚。`,
+    `有了${f.name}之後，家裡變得好溫馨，好像你也在這裡一樣。`, `你已經送我 ${gifts.length} 件家具了，我家是整座島最漂亮的家！`];
+  return lines[(daySeed() + gifts.length) % lines.length];
+}
+function viewResHouse(s) {
+  const r = resident(s), daily = S.save['daily:' + S.today], cur = wallFor(s);
+  const sw = `<div class="emojis">${[RES_WALL[s]].concat(WALL_COLORS).map(c => `<button type="button" class="${cur === c ? 'on' : ''}" style="width:34px;height:34px;background:${c}" onclick="setResWall('${s}','${c}')" aria-label="${c}"></button>`).join('')}</div>`;
+  return `<div class="card" style="background:${esc(cur)}"><div class="row" style="flex-wrap:nowrap"><span class="avatar">${r.pic}</span>
+      <div class="grow"><h2 style="margin:0">${esc(r.name)}的家</h2><div class="muted">${SUBJECT_NAME[s]}街${r.personality ? '・' + esc(r.personality) : ''}</div></div></div></div>
+    <div class="card"><h3>🛋️ 客廳</h3>${roomHtml(s, s)}
+      <div class="speech" style="margin-top:10px"><b>${esc(r.name)}</b>：${esc(resThanks(s))}</div>
+      ${daily && daily.messages && daily.messages[s] ? `<div class="muted" style="margin-top:6px">📮 今天的信：${esc(daily.messages[s])}</div>` : ''}
+      <label style="margin-top:10px">牆壁顏色</label>${sw}
+      <div class="muted" style="margin-top:6px">島民的客廳可以擺 ${RES_SLOTS} 件家具。送的家具是島民的，不會占你家的位置。</div></div>
+    ${furnShop(s)}
+    ${visitRow(s)}
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+function setResWall(s, c) {
+  const decor = Object.assign({}, S.save.decor || {});
+  decor[s] = Object.assign({}, decor[s] || {}, { wall: c });
+  S.save.decor = decor; queueSave('decor', 'saveDecor', decor); render();
+}
+function viewHouseSetup() {
+  const h = draft.home || (draft.home = Object.assign({ name: '', roof: ROOF_COLORS[0], wall: WALL_COLORS[0] }, homeOf() || {}));
+  const sw = (list, key) => `<div class="emojis">${list.map(c => `<button type="button" class="${h[key] === c ? 'on' : ''}" style="width:40px;height:40px;background:${c}" onclick="draft.home.${key}='${c}';render()" aria-label="${c}"></button>`).join('')}</div>`;
+  return `<div class="card"><div class="big">${houseTier().ic}</div><h2 style="text-align:center">${homeOf() ? '改造我的家' : '在島上蓋你的家'}</h2>
+      <div class="muted" style="text-align:center">家蓋在島中央的碼頭。島嶼升級時房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓（Lv.7）→ 海邊洋館（Lv.10）。</div>
+      <label>家的名字</label><input id="hmName" value="${esc(h.name)}" placeholder="例如：呱呱小屋" oninput="draft.home.name=this.value">
+      <label>屋頂顏色</label>${sw(ROOF_COLORS, 'roof')}
+      <label>牆壁顏色</label>${sw(WALL_COLORS, 'wall')}
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="saveHouse()">${homeOf() ? '儲存' : '蓋好了！'}</button>
+        ${homeOf() ? '<button class="ghost" onclick="draft={};render()">取消</button>' : ''}</div></div>`;
+}
+async function saveHouse() {
+  const h = draft.home; if (!h.name.trim()) return toast('幫你的家取個名字吧');
+  const first = !homeOf();
+  try { await flush(); S = await call('saveHome', Object.assign({}, h, { shown: (homeOf() && homeOf().shown) || ownedFurniture() })); D = derive(S); }
+  catch (e) { return toast('儲存失敗：' + (e.message || e)); }
+  draft = {}; toast(first ? '🏠 ' + h.name + ' 蓋好了！' : '外觀改好了'); render();
+}
+async function buyFurniture(who, id) {
+  const f = furnOf(id), r = who === 'me' ? null : resident(who);
+  if (D.coins < f.price || !confirm(r ? '用 ' + f.price + ' 枚島幣買「' + f.name + '」送給' + r.name + '？' : '用 ' + f.price + ' 枚島幣買「' + f.name + '」？')) return;
+  try {
+    await flush();
+    S = await call('buy', { name: (r ? '送' + r.name + '・' : '家具・') + f.name, price: f.price, furniture: f.id, for: r ? who : undefined }); D = derive(S);
+    const h = roomOf(who);
+    if (Array.isArray(h.shown) && shownFor(who).length < slotsFor(who)) {
+      if (who === 'me') { S = await call('saveHome', Object.assign({}, h, { shown: h.shown.concat([id]) })); }
+      else { const decor = Object.assign({}, S.save.decor); decor[who] = Object.assign({}, h, { shown: h.shown.concat([id]) }); S = await call('saveDecor', decor); }
+      D = derive(S);
+    }
+    toast(r ? f.ic + ' ' + r.name + '收到了，好開心！' : f.ic + ' ' + f.name + ' 搬進來了！'); render();
+  } catch (e) { toast('購買失敗：' + (e.message || e)); }
+}
+function toggleFurniture(who, id) {
+  const h = Object.assign({}, roomOf(who)), cur = shownFor(who);
+  if (!ownedFor(who).includes(id)) return;
+  if (cur.includes(id)) h.shown = cur.filter(x => x !== id);
+  else { if (cur.length >= slotsFor(who)) return toast('房間滿了，先收起一件' + (who === 'me' ? '，或等房子擴建' : '')); h.shown = cur.concat([id]); }
+  if (who === 'me') { S.save.home = h; queueSave('home', 'saveHome', h); }
+  else { const decor = Object.assign({}, S.save.decor || {}); decor[who] = h; S.save.decor = decor; queueSave('decor', 'saveDecor', decor); }
+  render();
+}
+
+/* --- 挑戰任務（加碼任務）：每天最多 10 題，自己選難度，答對直接賺島幣 --- */
+const XQ_DAILY = 10, XQ_WRONG = 3;
+const XQ_TIERS = {
+  basic: { name: '基礎', ic: '🌱', xp: 10, coins: 1 },
+  mid: { name: '中級', ic: '🔥', xp: 15, coins: 2 },
+  adv: { name: '進階', ic: '💎', xp: 20, coins: 3 }
+};
+let xqBusy = false, xqLanePick = '';   // 記住她上次選的科目
+function laneLabel(l) { return SUBS[GROUP[l]] ? l + '巷' : SUBJECT_NAME[l] + '街'; }
+function extraQuests() { return Object.keys(S.save).filter(k => k.startsWith('xq:') && S.save[k]).sort().map(k => Object.assign({ id: k }, S.save[k])); }
+function todayChallenges() { return extraQuests().filter(q => q.tier && q.date === S.today); }
+// 會考考古題題庫（網頁 App 版的 exam/ 資料夾）；拿不到時改由 AI 出題
+const TIER_KEY = { 基礎: 'basic', 中級: 'mid', 進階: 'adv' };
+let examBank = null;
+function loadBank() {
+  if (!examBank) examBank = BETA3D ? fetch('exam/bank.json').then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null);
+  return examBank;
+}
+async function pickBank(tier, lane) {
+  const b = await loadBank(); if (!b || !b.items) return null;
+  const used = new Set(extraQuests().map(q => q.bank).filter(Boolean));
+  const list = b.items.filter(x => TIER_KEY[x.tier] === tier && (!lane || x.lane === lane) && !used.has(x.id));
+  return list.length ? list[Math.floor(Math.random() * list.length)] : null;
+}
+function xqCard() {
+  const all = extraQuests(), open = all.find(q => !q.done), last = all[all.length - 1];
+  const today = todayChallenges(), left = Math.max(0, XQ_DAILY - today.length);
+  const earned = today.filter(q => q.done).reduce((a, q) => a + (q.coins || 0), 0);
+  const tag = q => q.tier ? XQ_TIERS[q.tier].ic + ' ' + XQ_TIERS[q.tier].name : '🪙 加碼';
+  const show = q => {
+    const who = laneWho(q.lane), story = esc(q.story || '').replace(/\{who\}/g, `<b>${esc(who.name)}</b>`);
+    return `<div class="row" style="flex-wrap:nowrap"><span class="avatar">${who.pic}</span><div class="grow"><b>⚔️ 挑戰任務・${esc(laneLabel(q.lane))}・${tag(q)}</b>
+        <div class="speech" style="margin-top:6px">${story || esc(who.name) + '想請你幫忙解一題。'}</div></div></div>
+      ${q.img ? `<div class="exq">${q.ctx ? `<img src="exam/${esc(q.ctx)}" alt="題組文章">` : ''}<img src="exam/${esc(q.img)}" alt="題目"></div>
+        <div class="muted" style="font-size:12px;margin-bottom:6px">📜 ${q.year} 年會考第 ${q.qn} 題・試題來源：心測中心 國中教育會考歷屆試題</div>`
+      : `<div style="margin:12px 0 8px;font-weight:700;white-space:pre-wrap">${esc(q.q)}</div>`}`;
+  };
+  let html = '';
+  if (open) {
+    const t = XQ_TIERS[open.tier];
+    html = show(open) + `<div class="opts${open.img ? ' abcd' : ''}">${open.o.map((o, i) => `<button class="opt" onclick="answerXq('${open.id}',${i})">${esc(o)}</button>`).join('')}</div>
+      <div class="muted" style="margin-top:6px">${t ? `答對 🪙 +${t.coins}、+${t.xp} 經驗值` : '答對 +10 經驗值'}；答錯 +${XQ_WRONG} 經驗值，會看到正確答案。</div>`;
+  } else {
+    if (last && last.done && last.at === S.today) html = show(last) + `<div class="opts${last.img ? ' abcd' : ''}">${last.o.map((o, i) => `<button class="opt ${i === last.a ? 'right' : i === last.choice ? 'wrong' : ''}" disabled>${esc(o)}</button>`).join('')}</div>
+      <div class="speech" style="margin-top:10px">${last.correct ? '⭕ 答對了！' : '❌ 這次沒答對。'}${esc(last.ex)}</div>
+      <div class="muted" style="margin:6px 0 12px">${last.coins ? '🪙 +' + last.coins + '、' : ''}+${last.xp} 經驗值</div>`;
+    const opts = `<option value="">🎲 隨便一條</option>` + QLANES.map(l => `<option value="${l}"${l === xqLanePick ? ' selected' : ''}>${esc(laneLabel(l))}</option>`).join('');
+    html += `<div class="row"><b class="grow">⚔️ 挑戰任務</b><span class="muted">今天還有 ${left}／${XQ_DAILY} 題${earned ? '・已賺 🪙 ' + earned : ''}</span></div>
+      ${left ? `<select id="xqLane" style="width:100%;margin-top:8px" onchange="xqLanePick=this.value">${opts}</select>
+      <div class="tiers">${Object.keys(XQ_TIERS).map(k => { const t = XQ_TIERS[k];
+        return `<button onclick="challengeXq('${k}')" ${xqBusy ? 'disabled' : ''}>${t.ic} ${t.name}<small>答對 🪙 +${t.coins}</small></button>`; }).join('')}</div>
+      <div class="muted" style="margin-top:6px">${xqBusy ? '✍️ 島民出題中…' : '題目來自會考考古題。基礎：七成以上的考生答對；中級：四到七成；進階：不到四成。難度越高，島幣越多。'}</div>`
+      : '<div class="muted" style="margin-top:6px">今天的挑戰都完成了，明天島民還會再來找你 🌙</div>'}`;
+  }
+  return `<div class="card" id="xqCard">${html}</div>`;
+}
+async function challengeXq(tier) {
+  if (xqBusy || todayChallenges().length >= XQ_DAILY) return;
+  const sel = document.getElementById('xqLane'), chosen = sel && sel.value;
+  xqBusy = true; softRender();
+  try {
+    await flush();
+    const item = await pickBank(tier, chosen);   // 先從考古題挑，挑不到（題庫用完或沒有題庫）才請 AI 出
+    if (item) S = await call('challengeBank', item);
+    else {
+      const lane = chosen || pickQuest(S.today, 50 + extraQuests().length).lane;
+      const who = laneWho(lane), r = resident(GROUP[lane] || lane);
+      S = await call('challengeQuest', lane, { name: who.name, personality: r.personality }, tier);
+    }
+    D = derive(S);
+  } catch (e) { toast('出題失敗：' + (e.message || e)); }
+  xqBusy = false; softRender();
+  const el = document.getElementById('xqCard'); if (el) el.scrollIntoView({ block: 'start' });
+}
+async function answerXq(id, i) {
+  document.querySelectorAll('#xqCard .opt').forEach(b => b.disabled = true);
+  try {
+    S = await call('answerQuest', id, i); D = derive(S);
+    const q = S.save[id]; toast(q.correct ? '答對了！' + (q.coins ? '🪙 +' + q.coins + '、' : '') + '+' + q.xp + ' 經驗值 🎉' : '+' + q.xp + ' 經驗值，看看解說吧');
+  } catch (e) { toast('送出失敗：' + (e.message || e)); }
+  softRender();
+}
+
+/* --- 故事任務：島民遇到難題，請你幫忙解一題 --- */
+// 題庫：九條小巷各 5 題，a 是正確選項的位置（從 0 開始）
+const QLANES = ['國', '英', '數', '理化', '生物', '地科', '歷史', '地理', '公民'];
+const QUESTS = {
+  國: [
+    { q: '下列哪一個詞語沒有錯別字？', o: ['再接再勵', '言簡意賅', '迫不急待', '一股作氣'], a: 1, ex: '正確寫法是「再接再厲」「迫不及待」「一鼓作氣」。' },
+    { q: '「學而不思則罔，思而不學則殆」出自哪一本書？', o: ['孟子', '大學', '論語', '中庸'], a: 2, ex: '出自《論語・為政》，孔子提醒學習和思考要並重。' },
+    { q: '下列哪一句的成語用得正確？', o: ['他的演講內容空洞，真是不刊之論', '兩隊實力旗鼓相當，比賽非常精采', '這部電影太精采了，看得我差強人意', '他做事三心二意，令人刮目相看'], a: 1, ex: '「不刊之論」是無法修改的正確言論；「差強人意」是勉強令人滿意；「刮目相看」用在別人進步時。' },
+    { q: '「白日依山盡，黃河入海流」的作者是誰？', o: ['李白', '杜甫', '王維', '王之渙'], a: 3, ex: '出自王之渙〈登鸛雀樓〉，後兩句是「欲窮千里目，更上一層樓」。' },
+    { q: '下列哪一句使用了「借代」修辭？', o: ['何以解憂？唯有杜康', '她的笑容像春天的陽光', '時間是最好的老師', '風在樹梢輕輕唱歌'], a: 0, ex: '杜康是傳說中造酒的人，用來代替「酒」。第二句是明喻，第三句是暗喻，第四句是轉化。' }
+  ],
+  英: [
+    { q: 'My sister ___ to school by bus every day.', o: ['go', 'goes', 'going', 'is go'], a: 1, ex: '主詞是第三人稱單數，現在簡單式表示習慣，動詞加 -es。' },
+    { q: 'Look at those dark clouds. It ___ soon.', o: ['rains', 'rained', 'is going to rain', 'has rained'], a: 2, ex: '看到烏雲這種「眼前的跡象」來預測，用 be going to。' },
+    { q: 'I have lived in Taipei ___ 2015.', o: ['for', 'since', 'in', 'at'], a: 1, ex: '現在完成式接「時間點」用 since，接「一段時間」用 for。' },
+    { q: 'This book ___ by many students every year.', o: ['reads', 'is reading', 'read', 'is read'], a: 3, ex: '書是「被」讀的，用被動語態 be + 過去分詞，主詞單數所以是 is read。' },
+    { q: 'Mount Jade is higher than ___ mountain in Taiwan.', o: ['any', 'any other', 'all', 'other'], a: 1, ex: '玉山本身也在台灣，比較時要排除自己，用 any other + 單數名詞。' }
+  ],
+  數: [
+    { q: '若 2x + 5 = 17，則 x = ？', o: ['4', '6', '8', '11'], a: 1, ex: '2x = 17 − 5 = 12，所以 x = 6。' },
+    { q: '直角三角形的兩股長是 6 和 8，斜邊長是多少？', o: ['10', '12', '14', '√28'], a: 0, ex: '6² + 8² = 36 + 64 = 100，斜邊 = √100 = 10。' },
+    { q: '等差數列 3, 7, 11, … 的第 10 項是多少？', o: ['36', '39', '40', '43'], a: 1, ex: '公差是 4，第 10 項 = 3 + 9 × 4 = 39。' },
+    { q: '二次函數 y = (x − 2)² + 3 的頂點是？', o: ['(−2, 3)', '(2, −3)', '(2, 3)', '(3, 2)'], a: 2, ex: 'y = a(x − h)² + k 的頂點是 (h, k)，所以是 (2, 3)。' },
+    { q: '擲一顆公正的骰子，出現偶數點的機率是？', o: ['1/6', '1/3', '1/2', '2/3'], a: 2, ex: '偶數有 2、4、6 三種，3/6 = 1/2。' }
+  ],
+  理化: [
+    { q: '一個物體質量 200 g、體積 50 cm³，密度是多少？', o: ['0.25 g/cm³', '4 g/cm³', '150 g/cm³', '10000 g/cm³'], a: 1, ex: '密度 = 質量 ÷ 體積 = 200 ÷ 50 = 4 g/cm³。' },
+    { q: '電阻 10 Ω 的兩端加上 5 V 的電壓，電流是多少？', o: ['50 A', '2 A', '0.5 A', '15 A'], a: 2, ex: '歐姆定律 I = V ÷ R = 5 ÷ 10 = 0.5 A。' },
+    { q: '下列哪一個是化學變化？', o: ['冰塊融化', '鐵生鏽', '酒精揮發', '糖溶於水'], a: 1, ex: '鐵生鏽產生了新的物質（氧化鐵），是化學變化；其他只是狀態改變或溶解。' },
+    { q: '25°C 時，純水的 pH 值是多少？', o: ['0', '1', '7', '14'], a: 2, ex: '純水是中性，25°C 時 pH = 7。' },
+    { q: '汽車以 20 m/s 等速行駛 5 秒，移動了多遠？', o: ['4 m', '25 m', '100 m', '400 m'], a: 2, ex: '距離 = 速率 × 時間 = 20 × 5 = 100 m。' }
+  ],
+  生物: [
+    { q: '植物進行光合作用的胞器是？', o: ['粒線體', '葉綠體', '細胞核', '液胞'], a: 1, ex: '葉綠體含有葉綠素，能吸收光能製造養分；粒線體負責呼吸作用。' },
+    { q: '人體在肺部進行氣體交換的構造是？', o: ['氣管', '支氣管', '肺泡', '橫膈'], a: 2, ex: '肺泡壁很薄、外面布滿微血管，氧氣和二氧化碳在這裡交換。' },
+    { q: '高莖（T）對矮莖（t）是顯性。Tt × Tt 的子代中，矮莖大約占多少？', o: ['0', '1/4', '1/2', '3/4'], a: 1, ex: '子代 TT : Tt : tt = 1 : 2 : 1，只有 tt 是矮莖，占 1/4。' },
+    { q: '生態系中，下列哪一種是分解者？', o: ['草', '兔子', '老鷹', '細菌'], a: 3, ex: '細菌和真菌把生物遺體分解成無機物，讓養分回到環境。' },
+    { q: '胰島素的主要作用是？', o: ['降低血糖', '升高血糖', '消化蛋白質', '促進長高'], a: 0, ex: '胰島素由胰臟分泌，幫助細胞吸收葡萄糖，讓血糖下降。' }
+  ],
+  地科: [
+    { q: '北半球颱風在地面的氣流方向是？', o: ['順時針向外', '逆時針向內', '順時針向內', '逆時針向外'], a: 1, ex: '颱風是低氣壓，北半球的低氣壓氣流以逆時針方向往中心吹。' },
+    { q: '從新月到滿月，大約要幾天？', o: ['7 天', '15 天', '30 天', '365 天'], a: 1, ex: '月相變化一輪約 29.5 天，新月到滿月約一半，大約 15 天。' },
+    { q: '台灣位在哪兩個板塊的交界？', o: ['太平洋板塊與北美板塊', '歐亞板塊與菲律賓海板塊', '印澳板塊與歐亞板塊', '非洲板塊與歐亞板塊'], a: 1, ex: '菲律賓海板塊與歐亞板塊互相擠壓，造就台灣的高山和頻繁的地震。' },
+    { q: '下列哪一種是火成岩？', o: ['砂岩', '石灰岩', '玄武岩', '大理岩'], a: 2, ex: '玄武岩是岩漿冷卻形成的（澎湖很多）；砂岩、石灰岩是沉積岩，大理岩是變質岩。' },
+    { q: '地球有四季變化，主要原因是？', o: ['地球離太陽忽遠忽近', '地軸傾斜，又繞著太陽公轉', '月球繞著地球轉', '地球自轉'], a: 1, ex: '地軸傾斜約 23.5 度，公轉時太陽直射的位置南北移動，才有四季。' }
+  ],
+  歷史: [
+    { q: '鄭成功打敗荷蘭人、取得台灣是在哪一年？', o: ['1624 年', '1662 年', '1683 年', '1895 年'], a: 1, ex: '1661 年鄭成功攻台，1662 年荷蘭人投降。1624 荷蘭來台，1683 清朝統治，1895 日本統治。' },
+    { q: '清朝把台灣割讓給日本的條約是？', o: ['南京條約', '天津條約', '馬關條約', '北京條約'], a: 2, ex: '甲午戰爭後，1895 年簽訂《馬關條約》。' },
+    { q: '秦始皇統一天下後推行的政策是？', o: ['獨尊儒術', '書同文、車同軌', '實施科舉', '推行均田制'], a: 1, ex: '秦統一文字、車軌和度量衡。獨尊儒術是漢武帝，科舉從隋朝開始。' },
+    { q: '工業革命最早發生在哪個國家？', o: ['法國', '德國', '英國', '美國'], a: 2, ex: '18 世紀的英國有煤鐵資源、殖民市場，又改良了蒸汽機，最早工業化。' },
+    { q: '第二次世界大戰在哪一年結束？', o: ['1918 年', '1939 年', '1945 年', '1949 年'], a: 2, ex: '1945 年德國、日本先後投降。1918 是一戰結束，1939 是二戰開始。' }
+  ],
+  地理: [
+    { q: '台灣最高的山是？', o: ['雪山', '玉山', '合歡山', '阿里山'], a: 1, ex: '玉山主峰海拔約 3952 公尺，是台灣第一高峰。' },
+    { q: '赤道通過下列哪一個國家？', o: ['日本', '印度', '印尼', '澳洲'], a: 2, ex: '赤道穿過印尼的蘇門答臘、婆羅洲等島嶼。' },
+    { q: '0 度經線（本初子午線）通過哪一個城市？', o: ['巴黎', '紐約', '倫敦', '東京'], a: 2, ex: '本初子午線通過英國倫敦的格林威治天文台。' },
+    { q: '冬天吹東北季風時，台灣哪裡最多雨？', o: ['西南部', '東北部', '中部山區', '澎湖'], a: 1, ex: '東北季風從海上帶來水氣，迎風的東北部（基隆、宜蘭）冬天多雨。' },
+    { q: '比例尺 1:50,000 的地圖上量到 2 公分，實際距離是？', o: ['100 公尺', '500 公尺', '1 公里', '10 公里'], a: 2, ex: '2 × 50,000 = 100,000 公分 = 1 公里。' }
+  ],
+  公民: [
+    { q: '接受國民教育，在憲法上是人民的？', o: ['只有權利', '只有義務', '權利也是義務', '都不是'], a: 2, ex: '憲法第 21 條：人民有受國民教育之權利與義務。' },
+    { q: '其他條件不變，需求增加、供給不變時，價格會？', o: ['上升', '下降', '不變', '變成零'], a: 0, ex: '需求增加，需求曲線往右移，均衡價格和數量都上升。' },
+    { q: '立法院最主要的職權是？', o: ['審判案件', '制定法律', '任命行政院長', '舉辦考試'], a: 1, ex: '立法院議決法律案和預算案。行政院長由總統任命，審判是司法院，考試是考試院。' },
+    { q: '「機會成本」指的是？', o: ['買東西花掉的錢', '放棄的選項中價值最高的那一個', '所有選項加起來的價值', '未來可能賺到的錢'], a: 1, ex: '做選擇時，被放棄的選項裡價值最高的那一個，就是機會成本。' },
+    { q: '總統大選時，幾歲以上的國民有投票權？', o: ['16 歲', '18 歲', '20 歲', '22 歲'], a: 2, ex: '憲法規定年滿 20 歲才有選舉權。2022 年下修到 18 歲的修憲案沒有通過，不過公投已經是 18 歲可以投。' }
+  ]
+};
+// 每一題的小故事，{who} 會換成負責那條巷子的島民或室友
+const STORY = {
+  國: ['{who}在圖書館的舊書堆裡翻到一張紙條，上面好幾個詞寫錯了。「你幫我挑出寫對的那一個好嗎？」',
+       '廣場的石碑被青苔蓋住了出處，{who}蹲在旁邊研究半天。「這句話到底出自哪本書啊……」',
+       '島上的小報社請{who}審稿，他卡在一句話上：「這個成語到底用得對不對？」',
+       '{who}在碼頭撿到一把扇子，上面題了兩句詩，卻沒有署名。「你認得這是誰寫的嗎？」',
+       '島上要辦詩詞大會，{who}負責出修辭題，想先拿你試試看。'],
+  英: ['一位外國旅人在碼頭問路，{who}想用英文回答，卻卡在一個動詞上。',
+       '天邊飄來一大片烏雲，{who}想用英文提醒大家收衣服，但不確定時態怎麼用。',
+       '{who}在寫英文自我介紹，想說自己從 2015 年就住在這裡。',
+       '島上的英文書店要寫推薦卡，{who}卡在被動語態，請你幫忙。',
+       '{who}想寫一張明信片，向外國筆友介紹台灣最高的山。'],
+  數: ['{who}在雜貨店結帳時算錯了，帳本上留下一條方程式。「你幫我解解看？」',
+       '{who}要在兩條路之間搭一條斜坡，想知道斜坡要多長。',
+       '{who}每天在海邊排貝殼，排出一串有規律的數字。「第 10 天會是多少？」',
+       '島上要建一座拋物線形狀的拱門，{who}想先找出最高點在哪裡。',
+       '{who}和朋友擲骰子決定今晚誰洗碗，他想先算算自己的勝算。'],
+  理化: ['{who}在海邊撿到一顆奇怪的石頭，量了質量和體積，想知道它的密度。',
+         '燈塔的燈泡忽明忽暗，{who}拿著電表檢查，算不出電流是多少。',
+         '{who}的腳踏車放在海邊一個月，發生了奇怪的變化……',
+         '{who}在實驗室整理試劑，標籤掉了一張，只剩下「純水」兩個字。',
+         '島上的接駁車出發了，{who}想知道它 5 秒後會開到哪裡。'],
+  生物: ['{who}照顧的盆栽長得特別好，他想知道葉子裡哪個構造在偷偷工作。',
+         '{who}爬完島上的小山，喘得上氣不接下氣：「空氣到底在哪裡交換的啊？」',
+         '{who}在花圃種了高莖和矮莖的豌豆，想預測下一代的樣子。',
+         '森林步道上的落葉越堆越少，{who}很好奇是誰在幫忙清理。',
+         '{who}吃完一大塊蛋糕，想知道身體怎麼讓血糖降回來。'],
+  地科: ['氣象站說颱風要來了，{who}在白板上畫風向，卻畫不出來。',
+         '{who}晚上在沙灘看月亮，今天是彎彎的新月。「要等幾天才會變成滿月呢？」',
+         '島上昨晚又搖了一下，{who}很好奇台灣為什麼這麼多地震。',
+         '{who}在海岸撿到一塊黑色、有小孔的石頭，想知道它是怎麼形成的。',
+         '{who}在寫島上的四季日記，突然想到：為什麼會有四季？'],
+  歷史: ['{who}在古堡的牆上發現一塊石碑，記載著荷蘭人離開的那一年。',
+         '博物館要辦一場特展，{who}負責寫條約的說明牌。',
+         '{who}在讀秦朝的故事，想知道秦始皇統一天下後做了什麼。',
+         '{who}在舊工廠裡找到一台蒸汽機模型，好奇工業革命從哪裡開始。',
+         '島上的老爺爺說起他小時候戰爭結束的那一年，{who}想確認是哪一年。'],
+  地理: ['{who}想安排一趟登山旅行，目標是台灣最高的山。',
+         '{who}在地球儀上沿著赤道畫線，想找出它經過哪些國家。',
+         '{who}在研究時區，想知道 0 度經線經過哪裡。',
+         '冬天到了，{who}要寫島上的旅遊建議：「哪裡記得帶傘？」',
+         '{who}拿著登山地圖量距離，想算出實際要走多遠。'],
+  公民: ['島上的學校在開家長會，{who}想弄清楚受教育到底是權利還是義務。',
+         '最近島上流行珍珠奶茶，{who}發現價格好像變了。',
+         '{who}去參觀立法院，回來想寫一篇心得。',
+         '{who}週末只能選一個活動，他在想「放棄的那個」值多少。',
+         '島上的哥哥姊姊在討論選舉，{who}想知道幾歲才可以投票。']
+};
+const QUEST_OUTRO = {
+  right: ['「果然問你就對了！」', '「太好了，這下我懂了！」', '「你好厲害，我要記在筆記本上。」'],
+  wrong: ['「沒關係，我一開始也搞錯了。」', '「原來是這樣！我們一起記住吧。」', '「差一點點，下次一定可以。」']
+};
+const QUEST_XP = { right: 15, wrong: 5 };
+
+function seeded(n) { let x = n >>> 0; return () => (x = (x * 1664525 + 1013904223) >>> 0) / 4294967296; }
+// 負責這條巷子的角色：國英數是島民；理化、歷史…有室友就是室友，沒有就是那條街的島民
+function laneWho(l) {
+  const s = GROUP[l] || l, r = resident(s);
+  if (SUBS[s]) {
+    const m = roommate(l);
+    if (m.name || imgOf('sub:' + l)) return { name: m.name || l + '室友', pic: pic('sub:' + l, m.emoji || r.emoji) };
+    return { name: r.name, pic: r.pic };
+  }
+  return { name: r.name, pic: r.pic };
+}
+function questHistory() {
+  return Object.keys(S.save).filter(k => k.startsWith('quest:') && S.save[k] && S.save[k].done && S.save[k].qid).map(k => S.save[k]);
+}
+// 依日期和換題次數抽一條巷子：比較少讀的巷子、最近沒出過題的巷子比較容易被抽到
+function pickQuest(date, rerolls, avoid) {
+  const vals = QLANES.map(l => D.ptsBy[l] || 0).sort((a, b) => a - b), median = vals[Math.floor(vals.length / 2)];
+  const recent = questHistory().filter(q => q.at >= addD(date, -3)).map(q => q.lane);
+  const cands = QLANES.filter(l => l !== avoid).map(l => {
+    let w = 1;
+    if ((D.ptsBy[l] || 0) < median) w *= 2.5;
+    if (recent.includes(l)) w *= 0.3;
+    return { l, w };
+  });
+  const total = cands.reduce((a, c) => a + c.w, 0);
+  const r = seeded(date.split('-').reduce((a, x) => a * 37 + Number(x), 11) + rerolls * 7919);
+  r(); let t = r() * total, lane = cands[cands.length - 1].l;
+  for (const c of cands) { t -= c.w; if (t <= 0) { lane = c.l; break; } }
+  // 這條巷子還沒答對的題目先出；全部答對過就從頭再輪
+  const right = questHistory().filter(q => q.lane === lane && q.correct).map(q => q.qid);
+  const bank = QUESTS[lane];
+  let idx = bank.findIndex((_, i) => !right.includes(lane + ':' + i));
+  if (idx < 0) idx = right.length % bank.length;
+  return { lane, idx, qid: lane + ':' + idx, chapter: right.length + 1 };
+}
+function todayQuest() {
+  const saved = S.save['quest:' + S.today];
+  const rerolls = saved ? saved.rerolls || 0 : 0;
+  let p;
+  if (saved && saved.qid && QUESTS[saved.lane]) {
+    const idx = Number(saved.qid.split(':')[1]);
+    p = { lane: saved.lane, idx, qid: saved.qid, chapter: questHistory().filter(q => q.lane === saved.lane && q.correct && q.at < S.today).length + 1 };
+  } else p = pickQuest(S.today, rerolls);
+  return Object.assign(p, { item: QUESTS[p.lane][p.idx], story: STORY[p.lane][p.idx], rerolls, saved: saved && saved.qid ? saved : null });
+}
+function questCard() {
+  const q = todayQuest(), who = laneWho(q.lane), it = q.item;
+  const story = esc(q.story).replace('{who}', `<b>${esc(who.name)}</b>`);
+  const head = `<div class="row"><span class="avatar">${who.pic}</span><div class="grow"><b>📖 ${esc(SUBS[GROUP[q.lane]] ? q.lane + '巷' : SUBJECT_NAME[q.lane] + '街')}的故事・第 ${q.chapter} 章</b>
+      <div class="speech" style="margin-top:6px">${story}</div></div></div>
+    <div style="margin:12px 0 8px;font-weight:700">${esc(it.q)}</div>`;
+  if (q.saved && q.saved.done) {
+    const ok = q.saved.correct, pick = q.saved.choice;
+    const outro = (ok ? QUEST_OUTRO.right : QUEST_OUTRO.wrong)[daySeed() % 3];
+    return `<div class="card" id="questCard">${head}
+      <div class="opts">${it.o.map((o, i) => `<button class="opt ${i === it.a ? 'right' : i === pick ? 'wrong' : ''}" disabled>${esc(o)}</button>`).join('')}</div>
+      <div class="speech" style="margin-top:10px">${ok ? '⭕ 答對了！' : '❌ 這次沒答對。'}${esc(it.ex)}<br><b>${esc(who.name)}</b>：${esc(outro)}</div>
+      <div class="muted" style="margin-top:6px">+${ok ? QUEST_XP.right : QUEST_XP.wrong} 經驗值。明天島上會有新的故事。</div></div>`;
+  }
+  return `<div class="card" id="questCard" style="border:2px dashed var(--gold)">${head}
+    <div class="opts">${it.o.map((o, i) => `<button class="opt" onclick="questAnswer(${i})">${esc(o)}</button>`).join('')}</div>
+    <div class="row" style="margin-top:10px"><span class="muted grow">答對 +${QUEST_XP.right}、答錯也有 +${QUEST_XP.wrong}，不會寫進試算表。</span>
+      <button class="ghost" onclick="questReroll()" ${q.rerolls >= 1 ? 'disabled' : ''}>🎲 ${q.rerolls >= 1 ? '今天換過了' : '換一個'}</button></div></div>`;
+}
+async function questAnswer(i) {
+  const q = todayQuest();
+  document.querySelectorAll('#questCard .opt').forEach(b => b.disabled = true);
+  const correct = i === q.item.a;
+  try {
+    S = await call('saveQuest', S.today, { qid: q.qid, lane: q.lane, choice: i, correct, rerolls: q.rerolls, done: true });
+    D = derive(S); toast(correct ? '答對了！+' + QUEST_XP.right + ' 經驗值 🎉' : '+' + QUEST_XP.wrong + ' 經驗值，看看解說吧'); render();
+  } catch (e) { toast('送出失敗：' + (e.message || e)); document.querySelectorAll('#questCard .opt').forEach(b => b.disabled = false); }
+}
+async function questReroll() {
+  const q = todayQuest(); if (q.rerolls >= 1) return;
+  const next = pickQuest(S.today, q.rerolls + 1, q.lane);
+  try { S = await call('saveQuest', S.today, { qid: next.qid, lane: next.lane, rerolls: q.rerolls + 1, done: false }); D = derive(S); render(); }
+  catch (e) { toast('換任務失敗：' + (e.message || e)); }
+}
+
+/* --- 3D 小島（原型） --- */
+let replay = { idx: null, timer: null };
+function use3D() { return BETA3D && local.get('islandView') !== 'list'; }
+function pastWeeks() { return S.weeks.filter(w => w.start <= S.today).length; }
+function timelineHtml() {
+  const n = pastWeeks(), i = replay.idx == null ? n - 1 : replay.idx, w = S.weeks[i];
+  return `<div class="row"><b class="grow">⏳ 成長回放</b><span class="muted" id="tlLabel">${w ? `第 ${i + 1} 週・${short(w.start)}–${short(w.end)}` : ''}${replay.idx == null ? '（現在）' : ''}</span></div>
+    <input type="range" id="tlRange" min="0" max="${n - 1}" value="${i}" style="margin-top:8px;accent-color:var(--plum)" oninput="tlSet(+this.value)">
+    <div class="row" style="margin-top:8px"><button id="tlPlay" onclick="tlPlay()">${replay.timer ? '⏸ 暫停' : '▶️ 從第一週播放'}</button>
+      <button class="ghost" onclick="tlSet(${n - 1})">回到現在</button></div>`;
+}
+function tlRefresh() { const el = document.getElementById('i3dTime'); if (el) el.innerHTML = timelineHtml(); }
+function tlSet(i, animate) {
+  const n = pastWeeks();
+  replay.idx = i >= n - 1 ? null : i;
+  if (window.Island3D) Island3D.setWeek(replay.idx, animate);
+  const w = S.weeks[i], lab = document.getElementById('tlLabel');
+  if (lab && w) lab.textContent = `第 ${i + 1} 週・${short(w.start)}–${short(w.end)}${replay.idx == null ? '（現在）' : ''}`;
+  if (window.Island3D && Island3D.selected) showInfo3D(Island3D.selected);
+}
+function tlPlay() {
+  if (replay.timer) { clearInterval(replay.timer); replay.timer = null; tlRefresh(); return; }
+  let i = 0; tlSet(0, true);
+  replay.timer = setInterval(() => {
+    i++;
+    if (i >= pastWeeks() || !document.getElementById('i3d')) { clearInterval(replay.timer); replay.timer = null; tlRefresh(); return; }
+    tlSet(i, true);
+    const r = document.getElementById('tlRange'); if (r) r.value = i;
+  }, 650);
+  tlRefresh();
+}
+function loadScript(src) {
+  return new Promise((ok, bad) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = () => bad(new Error('載入失敗：' + src)); document.head.appendChild(el); });
+}
+async function mount3D() {
+  const el = document.getElementById('i3d'); if (!el) return;
+  try {
+    if (!window.THREE) await loadScript('three.min.js');
+    if (!THREE.OrbitControls) await loadScript('OrbitControls.js');
+    if (!window.Island3D) await loadScript('island3d.js');
+    if (!document.getElementById('i3d')) return;
+    el.innerHTML = '';
+    Island3D.mount(el, {
+      S, bond: D.bond, resident, roommate, imgOf, subjectName: SUBJECT_NAME, pointsUntil: pointsUntil,
+      sig: JSON.stringify(D.weekPts),
+      home: homeOf() && { tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') },
+      onHome: () => openHouse('me'),
+      grade: s => D.grades[s] && D.grades[s].level,
+      onSelect: showInfo3D
+    });
+    if (replay.idx != null) Island3D.setWeek(replay.idx, false);
+    updateEnv();
+  } catch (e) {
+    local.set('islandView', 'list'); toast('這支手機開不了 3D，先用清單模式'); render();
+  }
+}
+// 到第 i 週（S.weeks 的位置）為止各分科的累積點數；null 代表到現在
+function pointsUntil(i) {
+  const end = i == null ? null : S.weeks[i] && S.weeks[i].start, pts = {};
+  D.weekPts.forEach(w => { if (end && w.start > end) return; Object.keys(w.pts).forEach(k => pts[k] = (pts[k] || 0) + w.pts[k]); });
+  return pts;
+}
+function showInfo3D(s) {
+  const box = document.getElementById('i3dInfo'); if (!box) return;
+  const r = resident(s), gr = D.grades[s];
+  const pts = Island3D.pointsUntil(replay.idx);
+  const lanes = SUBS[s] ? SUBS[s].concat(s === '自' ? ['自然'] : ['社會']) : [s === '國' ? '國' : s === '英' ? '英' : '數'];
+  const n = pastWeeks();
+  const recent = D.weekPts.slice(-4).map(w => {
+    const done = Object.keys(w.pts).filter(k => (GROUP[k] || k) === s).reduce((a, k) => a + w.pts[k], 0);
+    return `<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--plum)">${done}</div><div class="muted">${short(w.start)}</div></div>`;
+  }).join('');
+  box.innerHTML = `<div class="resident"><span class="avatar">${r.pic}</span>
+      <div><b>${esc(r.name)}</b><div class="muted">${SUBJECT_NAME[s]}街${r.personality ? '・' + esc(r.personality) : ''}</div></div>
+      <span class="grade ${gr ? '' : 'none'}">${gr ? esc(gr.level) : '?'}</span></div>
+    <div style="margin-top:10px">${lanes.map(l => { const m = SUBS[s] ? roommate(l) : null;
+      const name = l === '自然' || l === '社會' ? '綜合廣場' : (m && m.name ? m.name + '（' + l + '）' : (SUBS[s] ? l : SUBJECT_NAME[s] + '街'));
+      return `<div class="lane"><span class="lane-name" style="flex-basis:110px">${esc(name)}</span><span class="town">${town(pts[l] || 0)}</span></div>`; }).join('')}</div>
+    <div class="muted" style="margin-top:10px">最近四週完成次數</div>
+    <div class="row" style="justify-content:space-around;margin-top:4px">${recent}</div>
+    <button class="ghost" style="width:100%;margin-top:10px" onclick="openHouse('${s}')">🏠 去${esc(r.name)}家作客</button>`;
+}
+
+/* --- 每週計畫與每日紀錄 --- */
+const DAYS = ['一', '二', '三', '四', '五', '六', '日'];
+let planWeek = null, planDay = null;
+function dayIdx(date) { return (parseD(date).getDay() + 6) % 7; }
+function planOf(wk) {
+  const p = S.save['plan:' + wk];
+  if (p) return { days: DAYS.map((_, i) => ((p.days || [])[i] || []).slice()), tray: (p.tray || []).slice() };
+  // v1.x 的出戰名單：當作這週要做、還沒排哪天的項目
+  return { days: DAYS.map(() => []), tray: (S.save['lineup:' + wk] || []).slice() };
+}
+function logOf(date) { const l = S.save['log:' + date]; return (l && l.rows) || {}; }
+// 待定項目：計畫裡寫成 "?17,21"（例如魏老師的功課，上課後才知道是數學還是理化）
+function isPending(x) { return typeof x === 'string' && x.charAt(0) === '?'; }
+function pendingRows(x) { return x.slice(1).split(',').map(Number).filter(r => D.itemsByRow[r]); }
+function pendingName(x) { return pendingRows(x).map(r => D.itemsByRow[r].subject + '・' + D.itemsByRow[r].name).join(' 或 '); }
+function pendingList(rows, wk, day, removable) {
+  return rows.filter(isPending).map(x => `<div class="item"><div class="name">❓ <b>待定</b>：${esc(pendingName(x))}<div class="muted">知道是哪一科了就點一下</div></div>
+    ${pendingRows(x).map(r => `<button class="ghost" style="padding:6px 10px" onclick="resolvePending('${wk}',${day},'${x}',${r})">${esc(D.itemsByRow[r].subject)}</button>`).join('')}
+    ${removable ? `<button class="x" onclick="planRemove('${x}')" aria-label="移除">✕</button>` : ''}</div>`).join('');
+}
+function resolvePending(wk, day, x, r) {
+  const plan = planOf(wk), list = day === 7 ? plan.tray : plan.days[day], i = list.indexOf(x);
+  if (i < 0) return;
+  list[i] = r; setPlan(wk, plan);
+  toast('改成「' + D.itemsByRow[r].subject + '・' + D.itemsByRow[r].name + '」');
+  tab === 'home' ? softRender() : render();
+}
+// 一週的計畫次數、完成次數（完成 1、部分 0.5）與達成率；沒有 App 紀錄的舊週改看試算表顏色
+function weekData(wk) {
+  const plan = planOf(wk), planned = {}, done = {}, add = (o, r, v) => o[r] = (o[r] || 0) + v;
+  plan.days.forEach(d => d.forEach(r => add(planned, r, 1)));
+  plan.tray.forEach(r => add(planned, r, 1));
+  const settled = S.save['settled:' + wk];
+  let daily = false;
+  if (settled && settled.counts) {
+    daily = true;
+    Object.keys(settled.counts).forEach(r => done[r] = Number(settled.counts[r]));
+  } else {
+    for (let i = 0; i < 7; i++) { const lg = logOf(addD(wk, i)); Object.keys(lg).forEach(r => { daily = true; add(done, r, lg[r] === 2 ? 1 : 0.5); }); }
+  }
+  if (!daily) {
+    const gi = S.weeks.findIndex(w => w.start === wk);
+    if (gi >= 0) S.items.forEach(it => { const s = (S.grid[it.row] || [])[gi]; if (s === 2) done[it.row] = 1; else if (s === 1) done[it.row] = 0.5; });
+  }
+  let total = 0, got = 0;
+  Object.keys(planned).forEach(r => { total += planned[r]; got += Math.min(done[r] || 0, planned[r]); });
+  return { plan, planned, done, daily, settled, total, got };
+}
+// 遊戲計算用的週列表：試算表上的週，再補上試算表還沒有欄位、但已經有紀錄的這週
+function weekList() {
+  const list = S.weeks.map(w => w.start);
+  const cur = mondayOf(S.today);
+  if (!list.includes(cur) && list.length && cur > list[list.length - 1]) list.push(cur);
+  return list;
+}
+
+/* --- 同步：改動先顯示在畫面上，稍後在背景寫回試算表 --- */
+const pending = {};
+let syncTimer = null, syncChain = Promise.resolve();
+function queueSave(key, fn, ...args) {
+  pending[key] = { fn, args };
+  setSync('同步中…');
+  clearTimeout(syncTimer); syncTimer = setTimeout(() => flush().catch(() => {}), 1200);
+}
+// 一次只送一批，送完才送下一批；回傳的 Promise 在這一批寫好後才完成
+function flush() { clearTimeout(syncTimer); syncChain = syncChain.then(doFlush, doFlush); return syncChain; }
+async function doFlush() {
+  const jobs = Object.entries(pending);
+  if (!jobs.length) return;
+  jobs.forEach(([k]) => delete pending[k]);
+  try {
+    let st = null;
+    for (const [, j] of jobs) st = await call(j.fn, ...j.args);
+    const mine = S.save;
+    S = st;
+    Object.keys(pending).forEach(k => S.save[k] = mine[k]);   // 送出後又改的部分，以畫面上的為準
+    D = derive(S);
+    setSync(Object.keys(pending).length ? '同步中…' : '✓ 已存到試算表');
+    softRender();
+  } catch (e) {
+    jobs.forEach(([k, j]) => { if (!pending[k]) pending[k] = j; });
+    setSync('⚠️ 還沒存到，稍後重試');
+    clearTimeout(syncTimer); syncTimer = setTimeout(() => flush().catch(() => {}), 8000);
+    throw e;
+  }
+}
+function setSync(t) { syncState = t; document.querySelectorAll('.syncState').forEach(el => el.textContent = t); }
+let syncState = '';
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush().catch(() => {}); });
+// 只更新需要變的部分，3D 小島不用重新載入
+function softRender() {
+  if (tab === 'home') {
+    const parts = { hudCard: hud, todayCard: todayCard, xqCard: xqCard, guideCard: guideCard, dailyCard: dailyCard };
+    Object.keys(parts).forEach(id => {
+      const el = document.getElementById(id); if (!el) return;
+      const tmp = document.createElement('div'); tmp.innerHTML = parts[id]();
+      el.replaceWith(tmp.firstElementChild);
+    });
+  } else if (tab === 'plan') render();
+}
+function setLog(date, r, s) {
+  const rows = Object.assign({}, logOf(date));
+  if (rows[r] === s) delete rows[r]; else rows[r] = s;
+  S.save['log:' + date] = { rows };
+  D = derive(S);
+  queueSave('log:' + date, 'logDay', date, rows);
+  softRender();
+}
+function setPlan(wk, plan) {
+  S.save['plan:' + wk] = { days: plan.days, tray: plan.tray };
+  D = derive(S);
+  queueSave('plan:' + wk, 'savePlan', wk, { days: plan.days, tray: plan.tray });
+}
+// 完成／部分按鈕（首頁「今天」和計畫頁共用）
+function seg(date, r) {
+  const s = logOf(date)[r];
+  return `<div class="seg" data-date="${date}" data-row="${r}"><button data-s="2" class="${s === 2 ? 'on' : ''}">完成</button><button data-s="1" class="${s === 1 ? 'on' : ''}">部分</button></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.seg[data-date] button'); if (!b) return;
+  const g = b.parentElement;
+  setLog(g.dataset.date, Number(g.dataset.row), Number(b.dataset.s));
+});
+
+function todayCard() {
+  const di = dayIdx(S.today), rows = planOf(mondayOf(S.today)).days[di], lg = logOf(S.today);
+  const extra = Object.keys(lg).map(Number).filter(r => !rows.includes(r));
+  const doneN = rows.filter(r => lg[r]).length;
+  return `<div class="card" id="todayCard"><div class="row"><h3 class="grow">📝 今天・週${DAYS[di]} ${short(S.today)}</h3><span class="muted syncState">${syncState}</span></div>
+    ${rows.length ? `<div class="muted">計畫 ${rows.length} 項，已記錄 ${doneN} 項</div>` + itemList(rows, r => seg(S.today, r)) + pendingList(rows, mondayOf(S.today), di, false) : '<div class="muted">今天沒有排計畫。可以到「📅 計畫」排這週，或直接記下今天做了什麼。</div>'}
+    ${extra.length ? `<div class="subj">計畫外</div>` + itemList(extra, r => seg(S.today, r)) : ''}
+    <div class="row" style="margin-top:10px"><button class="ghost" onclick="openPicker('log', S.today)">＋ 記錄計畫外的項目</button></div>
+    <div class="muted" style="margin-top:6px">點「完成」或「部分」就會自動存好。不一定要每天記，週日一次補也可以。</div></div>`;
+}
+
+/* --- 計畫頁 --- */
+function viewPlan() {
+  const thisMon = mondayOf(S.today);
+  if (!planWeek) planWeek = thisMon;
+  const wk = planWeek, wd = weekData(wk), plan = wd.plan;
+  if (planDay == null) planDay = wk === thisMon ? dayIdx(S.today) : 0;
+  const rel = wk === thisMon ? '這週' : wk === addD(thisMon, 7) ? '下週' : wk === addD(thisMon, -7) ? '上週' : '';
+  const chips = DAYS.map((d, i) => { const date = addD(wk, i), n = plan.days[i].length, lg = Object.keys(logOf(date)).length;
+      return `<button class="chip ${planDay === i ? 'on' : ''} ${date === S.today ? 'today' : ''}" onclick="planDay=${i};render()">${d}<small>${short(date)}</small><i>${n ? n + '項' : ''}${lg ? '・✓' + lg : ''}</i></button>`; }).join('')
+    + `<button class="chip ${planDay === 7 ? 'on' : ''}" onclick="planDay=7;render()">📦<small>沒排天</small><i>${plan.tray.length ? plan.tray.length + '項' : ''}</i></button>`;
+  const isTray = planDay === 7, date = isTray ? null : addD(wk, planDay);
+  const rows = isTray ? plan.tray : plan.days[planDay];
+  const canLog = date && date <= S.today;
+  const extra = canLog ? Object.keys(logOf(date)).map(Number).filter(r => !rows.includes(r)) : [];
+  const prevPlan = S.save['plan:' + addD(wk, -7)];
+  const empty = !plan.days.some(d => d.length) && !plan.tray.length;
+  const pct = wd.total ? Math.round(wd.got / wd.total * 100) : 0;
+  const doneUnits = Object.values(wd.done).reduce((a, b) => a + b, 0);
+  return (draft.after || '') + `<div class="card"><div class="row">
+      <button class="ghost" onclick="planWeek=addD(planWeek,-7);planDay=null;draft={};render()" aria-label="上一週">◀</button>
+      <h2 class="grow" style="text-align:center;margin:0">📅 ${rel ? rel + '・' : ''}${short(wk)}–${short(addD(wk, 6))}</h2>
+      <button class="ghost" onclick="planWeek=addD(planWeek,7);planDay=null;draft={};render()" aria-label="下一週" ${wk > thisMon ? 'disabled' : ''}>▶</button></div>
+    <div class="row" style="margin-top:10px">
+      <label class="btn grow" style="text-align:center">📷 拍手寫計畫<input type="file" accept="image/*" id="scanFile" hidden></label>
+      ${empty && prevPlan ? '<button class="ghost" onclick="copyLastWeek()">📋 照上週排</button>' : ''}</div>
+    <div class="muted" style="margin-top:6px">拍下這週的手寫計畫，小島會幫你排進每一天，打勾的也會記成完成，你再檢查一下就好。也可以點下面的日子自己加。島民認不得的寫法可以到 <a href="#" onclick="go('abbr');return false">📖 我的寫法</a> 教他。</div></div>
+  <div class="card"><div class="chips">${chips}</div>
+    <div class="row" style="margin-top:12px"><h3 class="grow" style="margin:0">${isTray ? '📦 這週要做、還沒排哪天' : '週' + DAYS[planDay] + ' ' + short(date)}${date === S.today ? '（今天）' : ''}</h3><span class="muted syncState">${syncState}</span></div>
+    ${rows.length ? itemList(rows, r => (canLog ? seg(date, r) : '') + `<button class="x" onclick="planRemove(${r})" aria-label="移除">✕</button>`) + pendingList(rows, wk, planDay, true) : `<div class="muted" style="margin-top:6px">${isTray ? '確定這週要做、但還沒決定哪天的項目可以放這裡。' : '這天還沒排項目。'}</div>`}
+    ${extra.length ? `<div class="subj">計畫外</div>` + itemList(extra, r => seg(date, r)) : ''}
+    <div class="row" style="margin-top:10px"><button class="ghost" onclick="openPicker('plan', ${planDay})">＋ 排項目</button>
+      ${canLog ? `<button class="ghost" onclick="openPicker('log', '${date}')">＋ 記錄計畫外的項目</button>` : ''}</div>
+    ${canLog && rows.length ? '<div class="muted" style="margin-top:6px">做完就點「完成」或「部分」，會自動存好。</div>' : ''}</div>
+  <div class="card"><h3>這週進度</h3>
+    ${wd.total ? `<div class="row"><div class="bar grow" style="margin-top:0"><i style="width:${pct}%"></i></div><b>${pct}%</b></div>
+      <div class="muted" style="margin-top:4px">計畫 ${wd.total} 次，完成 ${wd.got} 次${doneUnits > wd.got ? `，另外多做了 ${doneUnits - wd.got} 次` : ''}</div>` : `<div class="muted">${doneUnits ? '這週記錄了 ' + doneUnits + ' 次。' : '這週還沒有計畫或紀錄。'}</div>`}
+    ${wk <= thisMon ? `<div class="row" style="margin-top:10px"><button class="grow" onclick="openConfirm('${wk}')">${wd.settled ? '🔁 重新確認這週' : '✅ 確認這週（週日結算）'}</button></div>
+      <div class="muted" style="margin-top:6px">${wd.settled ? '這週已經確認過了，' + esc(wd.settled.at || '') + '。' : '週末打開這裡，把漏記的補上就完成這週了。'}</div>` : ''}</div>`;
+}
+function bindPlan() {
+  const f = document.getElementById('scanFile');
+  if (f) f.onchange = e => { const file = e.target.files[0]; if (file) scanPlanPhoto(file); };
+}
+function planRemove(r) {
+  const plan = planOf(planWeek);
+  if (planDay === 7) plan.tray = plan.tray.filter(x => String(x) !== String(r)); else plan.days[planDay] = plan.days[planDay].filter(x => String(x) !== String(r));
+  setPlan(planWeek, plan); render();
+}
+function copyLastWeek() {
+  const prev = planOf(addD(planWeek, -7));
+  setPlan(planWeek, prev); toast('照上週的計畫排好了，再依這週的行程調整'); render();
+}
+
+/* --- 挑項目：排進某一天，或記錄計畫外做了什麼 --- */
+function openPicker(mode, target) {
+  pickFrom = tab;
+  draft = { pick: { mode, target, sel: new Set(), q: '' } };
+  tab = 'pick'; render(); window.scrollTo(0, 0);
+}
+function viewPicker() {
+  const p = draft.pick;
+  const title = p.mode === 'log' ? `今天（${short(p.target)}）還做了什麼？` : (p.target === 7 ? '這週要做、還沒排哪天的項目' : `排進週${DAYS[p.target]} ${short(addD(planWeek, p.target))}`);
+  const already = p.mode === 'log' ? Object.keys(logOf(p.target)).map(Number) : (p.target === 7 ? planOf(planWeek).tray : planOf(planWeek).days[p.target]);
+  // 最近兩週排過的項目放最上面
+  const recent = [...new Set([0, -7].flatMap(k => { const pl = planOf(addD(mondayOf(S.today), k)); return pl.days.flat().concat(pl.tray); }))]
+    .filter(r => D.itemsByRow[r] && !already.includes(r)).sort((a, b) => a - b);
+  const all = S.items.map(i => i.row).filter(r => !already.includes(r));
+  const box = r => `<input type="checkbox" class="check" data-row="${r}" ${p.sel.has(r) ? 'checked' : ''}>`;
+  return `<div class="card"><h2>${esc(title)}</h2>
+      <div class="muted">${p.mode === 'log' ? '勾選後會記成「完成」，之後可以改成「部分」。' : '可以一次勾好幾項。'}</div>
+      <input id="pickQ" placeholder="🔍 搜尋項目，例如：講義、歷屆" value="${esc(p.q)}" style="margin-top:8px"></div>
+    ${recent.length ? `<div class="card pickList"><h3>最近常排的</h3>${itemList(recent, box)}</div>` : ''}
+    <div class="card pickList"><h3>全部項目</h3>${itemList(all, box)}</div>
+    <div class="row" style="position:sticky;bottom:76px"><button id="pickGo" class="grow">加入 <b id="pickN">${p.sel.size}</b> 項</button><button class="ghost" onclick="pickBack()">取消</button></div>`;
+}
+function bindPicker() {
+  const p = draft.pick;
+  document.querySelectorAll('.pickList .check').forEach(c => c.onchange = () => {
+    const r = Number(c.dataset.row); c.checked ? p.sel.add(r) : p.sel.delete(r);
+    document.querySelectorAll(`.pickList .check[data-row="${r}"]`).forEach(x => x.checked = c.checked);
+    document.getElementById('pickN').textContent = p.sel.size;
+  });
+  const q = document.getElementById('pickQ');
+  q.oninput = () => {
+    p.q = q.value.trim();
+    document.querySelectorAll('.pickList .item').forEach(el => el.style.display = !p.q || el.textContent.includes(p.q) || (D.itemsByRow[el.querySelector('.check').dataset.row].subject || '').includes(p.q) ? '' : 'none');
+    // 底下沒有項目的科目標題也藏起來
+    document.querySelectorAll('.pickList .subj').forEach(h => {
+      let n = h.nextElementSibling, any = false;
+      while (n && !n.classList.contains('subj')) { if (n.classList.contains('item') && n.style.display !== 'none') any = true; n = n.nextElementSibling; }
+      h.style.display = any ? '' : 'none';
+    });
+  };
+  document.getElementById('pickGo').onclick = () => {
+    const rows = [...p.sel].sort((a, b) => a - b);
+    if (p.mode === 'log') {
+      const cur = Object.assign({}, logOf(p.target)); rows.forEach(r => cur[r] = 2);
+      S.save['log:' + p.target] = { rows: cur }; D = derive(S);
+      queueSave('log:' + p.target, 'logDay', p.target, cur);
+      if (rows.length) toast('記好了！');
+    } else {
+      const plan = planOf(planWeek);
+      if (p.target === 7) plan.tray = plan.tray.concat(rows); else plan.days[p.target] = plan.days[p.target].concat(rows);
+      setPlan(planWeek, plan);
+    }
+    pickBack();
+  };
+}
+function pickBack() { draft = {}; tab = pickFrom; render(); }
+let pickFrom = 'home';
+
+/* --- 拍照讀手寫計畫 --- */
+function shrinkPhoto(file) {
+  return new Promise((ok, bad) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 2000 / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+      ok(cv.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => bad(new Error('讀不到這張照片'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+// 她的寫法字典：縮寫 → 項目，以及跟讀書無關的行程。拍照辨識時會先參考這本字典
+// 第一次拍照前，先放進從她計畫本看到的固定寫法（找不到的項目會略過）
+const DEFAULT_ABBR = {
+  map: { '理複': '理化・複講-1回', '歷圖': '歷史・圖表集', '地主': '地理・主題式全攻略', '英藍': '英・藍文法', '英dragon': '英・龍-文法',
+         '國3688': '國・3688', '英3688': '英・3688', '社3688': '社會・模卷／３６８８', '自3688': '自然・3688-1回', '數3688': '數・3688-1單元',
+         'Wei M': '數・wei', 'Wei S': '理化・wei', 'online': '國・online-2單元', '地科': '地科・講義', 'S英': '英・空英',
+         '國三': { mode: 'all', names: ['國・online-2單元', '國・閱策', '國・成語'] },
+         'Wei H': { mode: 'pick', names: ['數・wei', '理化・wei'] } },
+  ignore: ['violin', '運動']
+};
+// 字典的一筆統一成 { rows, mode }：mode 'all' 是全部都要做，'pick' 是其中一項、之後才知道
+function abbrEntry(v) { return typeof v === 'object' && v ? { rows: (v.rows || []).slice(), mode: v.mode || 'all' } : { rows: [Number(v)], mode: 'all' }; }
+function abbrName(v) {
+  const e = abbrEntry(v), names = e.rows.map(r => D.itemsByRow[r]).map(it => it ? it.subject + '・' + it.name : '（找不到）');
+  return names.join(e.mode === 'pick' ? ' 或 ' : ' ＋ ') + (e.mode === 'pick' && names.length > 1 ? '（上課後再選）' : '');
+}
+function abbrOf() {
+  if (S.save.abbr) return JSON.parse(JSON.stringify({ map: S.save.abbr.map || {}, ignore: S.save.abbr.ignore || [] }));
+  const find = n => { const [sub, name] = n.split('・'), it = S.items.find(i => i.subject === sub && i.name === name); return it && it.row; };
+  const map = {};
+  Object.keys(DEFAULT_ABBR.map).forEach(k => {
+    const v = DEFAULT_ABBR.map[k];
+    if (typeof v === 'string') { const r = find(v); if (r) map[k] = r; }
+    else { const rows = v.names.map(find).filter(Boolean); if (rows.length) map[k] = rows.length > 1 ? { rows, mode: v.mode } : rows[0]; }
+  });
+  return { map, ignore: DEFAULT_ABBR.ignore.slice() };
+}
+// 第一次用 v2：國文加上「成語」這一項，再存好預設的寫法字典
+let seeding = false;
+async function seedDefaults() {
+  if (seeding || !S || S.save.abbr || !D.cfg) return;
+  seeding = true;
+  try {
+    await flush();
+    if (S.items.some(i => i.subject === '國') && !S.items.some(i => i.subject === '國' && i.name === '成語')) { S = await call('addItem', '國', '成語'); D = derive(S); }
+    S = await call('saveAbbr', abbrOf()); D = derive(S);
+    if (tab === 'home') softRender(); else if (tab === 'abbr' || tab === 'items' || tab === 'plan') render();
+  } catch (e) { /* 下次打開再試 */ } finally { seeding = false; }
+}
+function setAbbr(a) { S.save.abbr = a; queueSave('abbr', 'saveAbbr', a); }
+function itemSelect(id) {
+  let html = `<select id="${id}"><option value="">選一個項目…</option>`, last = '';
+  S.items.forEach(it => {
+    if (it.subject !== last) { html += (last ? '</optgroup>' : '') + `<optgroup label="${esc(it.subject)}">`; last = it.subject; }
+    html += `<option value="${it.row}">${esc(it.subject)}・${esc(it.name)}</option>`;
+  });
+  return html + '</optgroup></select>';
+}
+
+async function scanPlanPhoto(file) {
+  const wk = planWeek;
+  document.getElementById('app').insertAdjacentHTML('afterbegin', '<div class="card" id="scanWait"><div class="big">🔍</div><h3 style="text-align:center">島民正在讀你的計畫…</h3><div class="muted" style="text-align:center">大約 10 到 30 秒</div></div>');
+  window.scrollTo(0, 0);
+  try {
+    const photo = await shrinkPhoto(file);
+    if (!S.save.abbr) await seedDefaults(); else await flush();
+    const res = await call('scanPlan', wk, photo);
+    draft = { scan: res, week: wk, markDone: true }; tab = 'scan'; render(); window.scrollTo(0, 0);
+  } catch (e) {
+    const w = document.getElementById('scanWait'); if (w) w.remove();
+    toast('讀不出來：' + (e.message || e));
+  }
+}
+function viewScan() {
+  const r = draft.scan, wk = draft.week, n = r.days.flat().length + r.tray.length;
+  const cur = planOf(wk), hasPlan = cur.days.some(d => d.length) || cur.tray.length;
+  const weekNums = DAYS.map((_, i) => parseD(addD(wk, i)).getDate());
+  const wrongWeek = r.dates && r.dates.length && !r.dates.some(d => weekNums.includes(d));
+  const pills = (rows, i) => rows.map(x => {
+      const label = isPending(x) ? '❓ ' + pendingName(x) : D.itemsByRow[x] ? D.itemsByRow[x].subject + '・' + D.itemsByRow[x].name : '';
+      if (!label) return '';
+      const done = i >= 0 && r.done[i].includes(x);
+      return `<span class="pill">${done ? '✓ ' : ''}${esc(label)}<button class="x" style="padding:0 0 0 6px;color:inherit" onclick="scanDrop(${i},'${x}')" aria-label="移除">✕</button></span>`; }).join('')
+    || '<span class="muted">（沒有）</span>';
+  const struckOf = i => r.struck[i].filter(x => !isPending(x) && D.itemsByRow[x]).map(x => D.itemsByRow[x]);
+  const anyDone = r.done.flat().length;
+  const dayName = d => d < 0 ? '沒寫哪天' : '週' + DAYS[d];
+  return `<div class="card"><h2>📷 讀到的計畫</h2>
+      <div class="muted">${short(wk)}–${short(addD(wk, 6))}，一共 ${n} 項。讀錯的按 ✕ 拿掉，套用之後還可以在計畫頁一天一天改。</div>
+      ${wrongWeek ? `<div style="color:#c0392b;margin-top:6px">⚠️ 照片上的日期（${r.dates.join('、')} 日）好像不是這一週，確定要套用嗎？</div>` : ''}</div>
+    <div class="card">${r.days.map((d, i) => `<div class="item" style="display:block"><b>週${DAYS[i]} ${short(addD(wk, i))}</b><div style="margin-top:4px">${pills(d, i)}</div>
+        ${struckOf(i).length ? `<div class="muted" style="margin-top:4px">劃掉（取消）：<s>${struckOf(i).map(it => esc(it.subject + '・' + it.name)).join('、')}</s></div>` : ''}</div>`).join('')}
+      ${r.tray.length ? `<div class="item" style="display:block"><b>📦 沒寫哪天</b><div style="margin-top:4px">${pills(r.tray, -1)}</div></div>` : ''}
+      ${anyDone ? `<label class="row" style="margin-top:10px;color:var(--ink)"><input type="checkbox" class="check" ${draft.markDone ? 'checked' : ''} onchange="draft.markDone=this.checked"> 打勾（✓）的項目，順便記成「完成」</label>` : ''}
+</div>
+    ${r.unknown.length ? `<div class="card"><h3>🤔 這些看不懂</h3>
+      <div class="muted">告訴島民它是哪一項，下次就認得了。不是讀書的行程，按「無關」以後就會略過。</div>
+      ${r.unknown.map((u, k) => `<div class="item" style="display:block"><div><b>「${esc(u.text)}」</b> <span class="muted">${dayName(u.day)}${u.done ? '・有打勾' : ''}</span></div>
+        <div class="row" style="margin-top:6px">${itemSelect('unk' + k)}<button onclick="scanTeach(${k})">記住</button><button class="ghost" onclick="scanIgnore(${k})">無關</button></div></div>`).join('')}</div>` : ''}
+    <div class="row"><button class="grow" onclick="applyScan(false)">${hasPlan ? '用這份取代原本的計畫' : '✅ 用這份計畫'}</button>
+      ${hasPlan ? '<button class="ghost grow" onclick="applyScan(true)">加進原本的計畫</button>' : ''}
+      <button class="ghost" onclick="draft={};tab=\'plan\';render()">取消</button></div>`;
+}
+function scanDrop(i, x) {
+  const r = draft.scan;
+  const keep = y => String(y) !== String(x);
+  if (i < 0) r.tray = r.tray.filter(keep);
+  else { r.days[i] = r.days[i].filter(keep); r.done[i] = r.done[i].filter(keep); }
+  render();
+}
+// 教島民一個新寫法：記進字典，並把這一項排進那天
+function scanTeach(k) {
+  const r = draft.scan, u = r.unknown[k], row = Number(document.getElementById('unk' + k).value);
+  if (!row) return toast('先選它是哪一項');
+  const a = abbrOf(); a.map[u.text] = row; setAbbr(a);
+  if (u.day >= 0) { if (!r.days[u.day].includes(row)) r.days[u.day].push(row); if (u.done && !r.done[u.day].includes(row)) r.done[u.day].push(row); }
+  else if (!r.tray.includes(row)) r.tray.push(row);
+  r.unknown.splice(k, 1);
+  toast('記住了！下次看到「' + u.text + '」就知道'); render();
+}
+function scanIgnore(k) {
+  const r = draft.scan, u = r.unknown[k], a = abbrOf();
+  if (!a.ignore.includes(u.text)) a.ignore.push(u.text);
+  setAbbr(a); r.unknown.splice(k, 1);
+  toast('好，以後看到「' + u.text + '」就略過'); render();
+}
+function applyScan(merge) {
+  const r = draft.scan, wk = draft.week, cur = planOf(wk);
+  const uniq = a => [...new Set(a)];
+  const plan = merge ? { days: cur.days.map((d, i) => uniq(d.concat(r.days[i]))), tray: uniq(cur.tray.concat(r.tray)) } : { days: r.days.map(uniq), tray: uniq(r.tray) };
+  setPlan(wk, plan);
+  // 照片上打勾（或劃掉）的項目，今天以前的日子直接記成完成
+  let logged = 0;
+  DAYS.forEach((_, i) => {
+    const date = addD(wk, i); if (date > S.today) return;
+    const rows = (draft.markDone ? r.done[i] : []).filter(x => !isPending(x) && r.days[i].includes(x));
+    if (!rows.length) return;
+    const lg = Object.assign({}, logOf(date)); rows.forEach(x => { lg[x] = 2; logged++; });
+    S.save['log:' + date] = { rows: lg }; queueSave('log:' + date, 'logDay', date, lg);
+  });
+  D = derive(S); flush().catch(() => {});
+  planWeek = wk; planDay = null; draft = {}; tab = 'plan';
+  toast(logged ? '計畫排好了，也記下 ' + logged + ' 個打勾的項目！' : '計畫排好了！'); render(); window.scrollTo(0, 0);
+}
+
+/* --- 我的寫法（字典） --- */
+function viewAbbr() {
+  const a = abbrOf(), keys = Object.keys(a.map).sort(), pick = draft.abRows || [];
+  return `<div class="card"><h2>📖 我的寫法</h2>
+      <div class="muted">拍計畫時，島民會先查這本字典。左邊是你在計畫本上的寫法，右邊是週檢討表上的項目。拍照時遇到看不懂的字，教過一次也會記在這裡。</div></div>
+    <div class="card"><h3>寫法對照</h3>
+      ${keys.length ? keys.map(k => `<div class="item"><div class="name"><b>${esc(k)}</b> → ${esc(abbrName(a.map[k]))}</div><button class="x" onclick="abbrDel('map', ${esc(JSON.stringify(k))})" aria-label="刪除">✕</button></div>`).join('') : '<div class="muted">還沒有。</div>'}
+      <h3 style="margin-top:14px">新增一個寫法</h3>
+      <label>計畫本上的寫法</label><input id="abK" placeholder="例如：理複、Wei M" value="${esc(draft.abK || '')}">
+      <label>對應到哪一項（一個寫法可以對到好幾項）</label>
+      <div class="row">${itemSelect('abR')}<button class="ghost" onclick="abbrPush()">＋ 加這項</button></div>
+      ${pick.length ? `<div style="margin-top:6px">${pick.map((r, k) => `<span class="pill">${esc(D.itemsByRow[r].subject + '・' + D.itemsByRow[r].name)}<button class="x" style="padding:0 0 0 6px;color:inherit" onclick="draft.abRows.splice(${k},1);abbrKeep();render()">✕</button></span>`).join('')}</div>` : ''}
+      ${pick.length > 1 ? `<label>這幾項是</label><select id="abM"><option value="all" ${draft.abM !== 'pick' ? 'selected' : ''}>全部都要做（例如「國三」＝online、閱策、成語）</option><option value="pick" ${draft.abM === 'pick' ? 'selected' : ''}>其中一項，上課後才知道（例如「Wei H」）</option></select>` : ''}
+      <div style="margin-top:8px"><button onclick="abbrAdd()">存進字典</button></div></div>
+    <div class="card"><h3>跟讀書無關的行程</h3><div class="muted">看到這些寫法就略過，例如才藝課、運動。</div>
+      <div style="margin-top:6px">${a.ignore.map(x => `<span class="pill">${esc(x)}<button class="x" style="padding:0 0 0 6px;color:inherit" onclick="abbrDel('ignore', ${esc(JSON.stringify(x))})" aria-label="刪除">✕</button></span>`).join('') || '<span class="muted">還沒有。</span>'}</div>
+      <div class="row" style="margin-top:8px"><input id="abI" class="grow" placeholder="例如：violin"><button class="ghost" onclick="abbrIgnore()">加入</button></div></div>
+    <div class="row"><span class="muted syncState grow">${syncState}</span><button class="ghost" onclick="go('items')">📝 任務清單</button><button class="ghost" onclick="go('more')">返回</button></div>`;
+}
+function abbrKeep() {
+  const k = document.getElementById('abK'), m = document.getElementById('abM');
+  if (k) draft.abK = k.value; if (m) draft.abM = m.value;
+}
+function abbrPush() {
+  const r = Number(document.getElementById('abR').value); if (!r) return toast('先選一個項目');
+  abbrKeep(); draft.abRows = draft.abRows || [];
+  if (!draft.abRows.includes(r)) draft.abRows.push(r);
+  render();
+}
+function abbrAdd() {
+  abbrKeep();
+  const k = (draft.abK || '').trim(), rows = (draft.abRows || []).slice(), cur = Number(document.getElementById('abR').value);
+  if (cur && !rows.includes(cur)) rows.push(cur);
+  if (!k || !rows.length) return toast('寫法和項目都要填');
+  const a = abbrOf();
+  a.map[k] = rows.length === 1 ? rows[0] : { rows, mode: draft.abM === 'pick' ? 'pick' : 'all' };
+  setAbbr(a); draft = {}; toast('記住「' + k + '」了'); render();
+}
+function abbrIgnore() {
+  const x = document.getElementById('abI').value.trim(); if (!x) return;
+  const a = abbrOf(); if (!a.ignore.includes(x)) a.ignore.push(x); abbrKeep(); setAbbr(a); render();
+}
+function abbrDel(kind, k) {
+  const a = abbrOf();
+  if (kind === 'map') delete a.map[k]; else a.ignore = a.ignore.filter(x => x !== k);
+  abbrKeep(); setAbbr(a); render();
+}
+
+/* --- 任務清單：週檢討表上的項目，可以新增、改名 --- */
+function viewItems() {
+  const subs = [...new Set(S.items.map(i => i.subject))];
+  return `<div class="card"><h2>📝 任務清單</h2>
+      <div class="muted">這裡就是爸爸週檢討表上的項目。新增會在那一科最後面多一列，改名會直接改表上的名字，以前的紀錄都會保留。</div></div>
+    ${subs.map(sub => `<div class="card"><div class="row"><h3 class="grow" style="margin:0">${esc(sub)}</h3><button class="ghost" style="padding:6px 12px" onclick="itemAdd(${esc(JSON.stringify(sub))})">＋ 新增</button></div>
+      ${S.items.filter(i => i.subject === sub).map(it => `<div class="item"><div class="name">${esc(it.name)}${isBoss(it.name) ? '<span class="tag">Boss</span>' : ''}</div><button class="ghost" style="padding:6px 12px" onclick="itemRename(${it.row})">✏️ 改名</button></div>`).join('')}</div>`).join('')}
+    <div class="row"><button class="ghost" onclick="go('more')">返回</button></div>`;
+}
+async function itemAdd(sub) {
+  const n = (prompt('在「' + sub + '」新增一個項目：') || '').trim(); if (!n) return;
+  try { await flush(); toast('新增中…'); S = await call('addItem', sub, n); D = derive(S); toast('新增好了，週檢討表也多了一列'); render(); }
+  catch (e) { toast('新增失敗：' + (e.message || e)); }
+}
+async function itemRename(row) {
+  const it = D.itemsByRow[row], n = (prompt('把「' + it.name + '」改成：', it.name) || '').trim();
+  if (!n || n === it.name) return;
+  try { await flush(); S = await call('renameItem', row, n); D = derive(S); toast('改好了'); render(); }
+  catch (e) { toast('改名失敗：' + (e.message || e)); }
+}
+
+/* --- 週日確認：帶入每天的紀錄，補上漏記的，再寫回週檢討 --- */
+function openConfirm(wk) {
+  const wd = weekData(wk);
+  draft = { week: wk, counts: Object.assign({}, wd.done), showAll: !wd.total && !Object.keys(wd.done).length };
+  tab = 'confirm'; render(); window.scrollTo(0, 0);
+}
+function viewConfirm() {
+  const wk = draft.week, wd = weekData(wk), c = draft.counts;
+  const rows = draft.showAll ? S.items.map(i => i.row)
+    : [...new Set(Object.keys(wd.planned).concat(Object.keys(c)).map(Number))].filter(r => D.itemsByRow[r]).sort((a, b) => a - b);
+  const fmt = v => String(v).replace('.5', '½').replace(/^0½$/, '½');
+  let total = 0, got = 0; Object.keys(wd.planned).forEach(r => { total += wd.planned[r]; got += Math.min(c[r] || 0, wd.planned[r]); });
+  const pct = total ? Math.round(got / total * 100) : 0;
+  return `<div class="card"><h2>✅ 確認 ${short(wk)}–${short(addD(wk, 6))}</h2>
+      <div class="muted">每一項做了幾次，已經從每天的紀錄帶進來了。漏記的用 ＋／－ 補上，做了一半就按「½」。${wd.settled ? '<br>這週確認過了，再送出會覆蓋。' : ''}</div>
+      ${total ? `<div class="row" style="margin-top:10px"><div class="bar grow" style="margin-top:0"><i id="cfBar" style="width:${pct}%"></i></div><b id="cfPct">${pct}%</b></div>` : ''}
+      <div style="margin-top:8px"><button class="ghost" onclick="draft.showAll=!draft.showAll;draft.note=document.getElementById('note').value;render()">${draft.showAll ? '只看這週的計畫和紀錄' : '顯示全部項目'}</button></div></div>
+    ${(() => { const p = wd.plan, blocks = p.days.map((d, i) => [i, d]).concat([[7, p.tray]]).filter(([, d]) => d.some(isPending));
+      return blocks.length ? `<div class="card"><h3>❓ 還沒決定是哪一項</h3>${blocks.map(([i, d]) => `<div class="subj">${i === 7 ? '沒排天' : '週' + DAYS[i]}</div>` + pendingList(d, wk, i, false)).join('')}</div>` : ''; })()}
+    <div class="card">${rows.length ? itemList(rows, r => `<div class="step" data-row="${r}"><button data-d="-1">－</button><b>${fmt(c[r] || 0)}</b><span class="muted">/${wd.planned[r] || '－'}</span><button data-d="1">＋</button><button data-d="half" class="ghost">½</button></div>`) : '<div class="muted">這週沒有計畫也沒有紀錄。按「顯示全部項目」補記，或直接確認，當作休息週。</div>'}
+      <label>這週一句話（只會存在島上）</label><textarea id="note" placeholder="例如：數學卡在二次函數，但歷史影片看完了">${esc(draft.note != null ? draft.note : (wd.settled && wd.settled.note) || '')}</textarea>
+      <div class="row" style="margin-top:12px"><button id="doConfirm" class="grow">確認這週 ✨</button><button class="ghost" onclick="draft={};tab='plan';render()">返回</button></div></div>
+    ${viewLinkForm()}`;
+}
+function bindConfirm() {
+  const $ = id => document.getElementById(id), c = draft.counts;
+  document.querySelectorAll('.step').forEach(st => st.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const r = Number(st.dataset.row), v = c[r] || 0;
+    let n = b.dataset.d === 'half' ? (v % 1 ? v - 0.5 : v + 0.5) : Math.max(0, v + Number(b.dataset.d));
+    n = Math.min(n, 14);
+    if (n > 0) c[r] = n; else delete c[r];
+    draft.note = $('note').value; render();
+  });
+  $('doConfirm').onclick = async () => {
+    $('doConfirm').disabled = true; $('doConfirm').textContent = '寫回試算表中…';
+    const wk = draft.week, before = D.xp;
+    try {
+      await flush();
+      S = await call('confirmWeek', wk, c, $('note').value);
+      D = derive(S);
+      const wd = weekData(wk), g = guide(), units = Object.values(wd.done).reduce((a, b) => a + b, 0);
+      const pc = wd.total ? Math.round(wd.got / wd.total * 100) : null;
+      const rateLine = pc != null ? `<div style="text-align:center;margin:8px 0"><div style="font-size:34px;font-weight:800;color:var(--plum)">${pc}%</div>
+        <div class="muted">計畫完成 ${wd.got}／${wd.total} 次${pc >= 100 ? '・FULL COMBO 🎵' : pc >= 80 ? '・GREAT' : pc >= 50 ? '・CLEAR' : ''}</div></div>` : '';
+      draft = { after: `<div class="card"><div class="big">🎉</div><h2 style="text-align:center">這週確認完成！+${D.xp - before} 經驗值</h2>${rateLine}
+        <div style="text-align:center">這週一共做了 ${units} 次。${g.ipic} ${esc(g.name)}：「${units > 0 ? '這些都是真的蓋起來的房子喔。' : '這週休息也沒關係，島還在。'}」</div>
+        <div class="muted" style="text-align:center;margin-top:8px">接著排下週的計畫吧：拍手寫計畫，或點日子自己加。</div></div>` };
+      planWeek = addD(wk, 7); planDay = 0; tab = 'plan'; render(); window.scrollTo(0, 0);
+    } catch (e) { toast('寫入失敗：' + (e.message || e)); $('doConfirm').disabled = false; $('doConfirm').textContent = '確認這週 ✨'; }
+  };
+  $('addLink').onclick = async () => {
+    const a = $('la').value, b = $('lb').value, n = $('ln').value.trim();
+    if (a === b) return toast('選兩個不同的科目喔');
+    if (!n) return toast('寫一句話說明它們怎麼連在一起');
+    draft.note = $('note').value;
+    S = await call('saveLink', { a, b, note: n }); D = derive(S);
+    toast(resident(a).name + ' 和 ' + resident(b).name + ' 的好感度上升了！'); render();
+  };
+}
+
+function itemList(rows, right) {
+  let html = '', last = '';
+  rows.forEach(r => {
+    const it = D.itemsByRow[r]; if (!it) return;
+    if (it.subject !== last) { html += `<div class="subj">${esc(it.subject)}</div>`; last = it.subject; }
+    html += `<div class="item"><div class="name">${esc(it.name)}${isBoss(it.name) ? '<span class="tag">Boss</span>' : ''}</div>${right(r)}</div>`;
+  });
+  return html;
+}
+function viewLinkForm() {
+  const opts = SUBJECTS.map(s => `<option value="${s}">${resident(s).emoji} ${SUBJECT_NAME[s]}</option>`).join('');
+  return `<div class="card"><h3>🔗 發現跨科連結（選填）</h3>
+    <div class="muted">例如數學的比例和理化的密度其實是同一件事。每發現一條 +15 經驗值，兩位島民好感度上升。</div>
+    <div class="row" style="margin-top:8px"><select id="la" class="grow">${opts}</select><span>×</span><select id="lb" class="grow">${opts.replace('value="英"', 'value="英" selected')}</select></div>
+    <label>它們怎麼連在一起？</label><input id="ln" placeholder="一句話就好">
+    <div style="margin-top:8px"><button class="ghost" id="addLink">記下這條連結</button></div></div>`;
+}
+/* --- 大考紀錄 --- */
+function viewExam() {
+  const sel = s => `<select data-sub="${s}"><option value="">沒考</option>${LEVELS.map(l => `<option>${l}</option>`).join('')}</select>`;
+  const rows = S.assessments.slice().sort((a, b) => assessDate(b.date) - assessDate(a.date)).map(a =>
+    `<tr><td>${esc(a.date)}</td>${SUBJECTS.map(s => `<td>${esc(a[s])}</td>`).join('')}<td>${esc(String(a['文']).replace('級分', ''))}</td><td>${esc(a.source)}</td></tr>`).join('');
+  return `<div class="card"><h2>⚔️ Boss 戰紀錄</h2>
+    <div class="muted">模擬考或寫完一整份考古題後填這裡。只有試煉結果會更新島民等級，每場 +50 經驗值。</div>
+    <label>日期</label><input type="date" id="exDate" value="${S.today}">
+    <label>考卷來源</label><input id="exSrc" placeholder="例如：115北模#1、113考古題">
+    <div class="row" style="margin-top:4px">${SUBJECTS.map(s => `<div class="grow"><label>${resident(s).ipic} ${SUBJECT_NAME[s]}</label>${sel(s)}</div>`).join('')}</div>
+    <label>作文級分</label><select id="exW"><option value="">沒考</option>${[6, 5, 4, 3, 2, 1].map(n => `<option>${n}</option>`).join('')}</select>
+    <div style="margin-top:12px"><button id="exGo" onclick="submitExam()">記錄這場 Boss 戰</button></div></div>
+    <div class="card"><h3>歷次試煉</h3><div style="overflow-x:auto"><table><tr><th>日期</th>${SUBJECTS.map(s => `<th>${s}</th>`).join('')}<th>文</th><th>來源</th></tr>${rows}</table></div></div>`;
+}
+async function submitExam() {
+  const levels = {}; document.querySelectorAll('[data-sub]').forEach(x => levels[x.dataset.sub] = x.value);
+  const rec = { date: document.getElementById('exDate').value, source: document.getElementById('exSrc').value.trim(), levels, writing: document.getElementById('exW').value };
+  if (!Object.values(levels).some(Boolean) && !rec.writing) return toast('至少選一科的等級');
+  if (!rec.source) return toast('寫一下考卷來源');
+  document.getElementById('exGo').disabled = true;
+  try {
+    S = await call('addAssessment', rec); D = derive(S);
+    toast('Boss 戰結果已記錄，島民等級更新！'); go('home');
+  } catch (e) { toast('寫入失敗：' + (e.message || e)); document.getElementById('exGo').disabled = false; }
+}
+
+/* --- 商店 --- */
+function viewShop() {
+  const shop = (D.cfg.shop || []).filter(x => x.name);
+  const bought = (S.save.purchases || []).slice().reverse();
+  return `<div class="card"><h2>🛍️ 島嶼商店</h2><div class="muted">你有 <b>${D.coins}</b> 枚島幣。一般一週大約可以賺 10 到 15 枚，挑戰任務可以再多賺一些。商品可以在「更多 → 修改島嶼設定」新增。</div></div>
+    <div class="card"><div class="item" style="border:none"><div class="name"><b>🏠 家具店</b><div class="muted">幫你的家買家具，也可以送家具給島民布置他們的家</div></div>
+      <button onclick="openHouse('me')">去逛逛</button></div></div>
+    <div class="card"><div class="item" style="border:none"><div class="name"><b>⚔️ 挑戰任務</b><div class="muted">每天最多 ${XQ_DAILY} 題，自己選難度，答對賺 🪙 1～3 枚</div></div>
+      <button onclick="go('home');setTimeout(()=>{const e=document.getElementById('xqCard');if(e)e.scrollIntoView()},50)">去解題</button></div></div>
+    <div class="card">${shop.length ? shop.map((x, i) => `<div class="item"><div class="name">${esc(x.name)}</div><span>🪙 ${x.price}</span>
+      <button ${D.coins < x.price ? 'disabled' : ''} onclick="buyItem(${i})">兌換</button></div>`).join('') : '<div class="muted">商店還是空的。</div>'}</div>
+    ${bought.length ? `<div class="card"><h3>兌換紀錄</h3>${bought.map(p => `<div class="item"><div class="name">${esc(p.name)}</div><span class="muted">${esc(p.date)}・🪙${p.price}</span></div>`).join('')}</div>` : ''}`;
+}
+async function buyItem(i) {
+  const x = D.cfg.shop.filter(x => x.name)[i];
+  if (!confirm('用 ' + x.price + ' 枚島幣兌換「' + x.name + '」？')) return;
+  S = await call('buy', x); D = derive(S);
+  toast('兌換成功！記得跟爸媽說一聲 🎁'); render();
+}
+
+/* --- 更多 --- */
+function viewMore() {
+  const pairs = Object.entries(D.bond).sort((a, b) => b[1] - a[1]);
+  return `<div class="card"><h2>👥 島民關係</h2>${SUBJECTS.map(s => { const r = resident(s);
+      return `<div class="item"><span class="avatar">${r.pic}</span><div class="name"><b>${esc(r.name)}</b>（${SUBJECT_NAME[s]}）<div class="muted">${esc(r.personality)}${r.relation ? '・' + esc(r.relation) : ''}</div></div></div>`; }).join('')}
+    <h3 style="margin-top:12px">💞 好感度</h3>${pairs.length ? pairs.map(([k, v]) =>
+      `<div>${resident(k[0]).ipic} ${esc(resident(k[0]).name)} × ${resident(k[1]).ipic} ${esc(resident(k[1]).name)}：${'💗'.repeat(Math.min(v, 10))}</div>`).join('') : '<div class="muted">還沒有跨科連結，在「確認這週」頁可以記錄。</div>'}
+    ${D.links.length ? `<h3 style="margin-top:12px">🔗 連結筆記</h3>` + D.links.slice().reverse().map(l => `<div class="muted">${esc(l.date)}・${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}：${esc(l.note)}</div>`).join('') : ''}
+  </div>
+  <div class="card"><h3>📈 每週達成率</h3>${D.rates.length ? D.rates.slice(-10).reverse().map(x => { const pc = Math.round(x.got / x.total * 100);
+      return `<div class="row" style="margin-top:6px"><span style="width:84px" class="muted">${short(x.start)} 週</span>
+        <div class="bar grow" style="margin-top:0"><i style="width:${pc}%"></i></div><span style="width:92px;text-align:right">${pc}%（${x.got}/${x.total}）</span></div>`; }).join('')
+      : '<div class="muted">排好一週的計畫、週末按「確認這週」後，這裡會開始記錄每週達成率。</div>'}</div>
+  <div class="card"><h3>📊 紀錄</h3><div>有紀錄的週數：${D.recordedWeeks}　最長連續：${D.best} 週</div>
+    <div>Boss 項目達成：${D.bossDone} 次　Full Combo：${D.fullCombo} 次</div>
+    <div>故事任務：解了 ${D.questsDone.length} 題</div>
+    <div class="muted" style="margin-top:6px">每累積 6 週紀錄會得到 1 張休息卡，某週沒記錄時會自動使用，連續週數不會中斷。</div></div>
+  <div class="card"><div class="row"><button class="ghost" onclick="go('guide')">❓ 玩法說明</button>
+    <button class="ghost" onclick="go('abbr')">📖 我的寫法</button>
+    <button class="ghost" onclick="go('items')">📝 任務清單</button>
+    <button class="ghost" onclick="go('wish')">💡 讓島順起來</button>
+    <button class="ghost" onclick="tab='setup'; draft={}; render()">修改島嶼設定（島民、嚮導、商店）</button></div>
+    <div class="muted" style="margin-top:8px">版本 v${APP_VERSION}</div></div>`;
+}
+
+/* --- 玩法說明（改版時一起更新） --- */
+function viewGuide() {
+  const g = guide();
+  const sec = (ic, title, body) => `<div class="card"><h3>${ic} ${title}</h3>${body}</div>`;
+  const p = t => `<p style="margin:6px 0;line-height:1.7">${t}</p>`;
+  const row = (a, b) => `<tr><td style="text-align:left">${a}</td><td>${b}</td></tr>`;
+  return `<div class="card"><div class="row"><span class="avatar">${g.pic}</span>
+      <div class="speech grow"><b>${esc(g.name)}</b>：歡迎來到${esc(D.cfg.islandName || '你的島')}！我來帶你看看這座島怎麼玩。</div></div></div>
+  ${sec('🏝️', '這座島是什麼', p('你讀過的每一項，都會變成島上的房子。島上有五條街，各住著一位島民，代表會考的五科。你讀哪一科，就是在幫那條街蓋房子、培養那位島民。') +
+    p('手寫計畫書照常寫。小島幫你做三件事：把計畫排進每一天、記下你做了什麼、週末確認這週，並自動寫回爸爸的週檢討表。'))}
+  ${sec('👥', '島民和室友有什麼不一樣', `<table>
+      <tr><th></th><th>島民</th><th>室友</th></tr>
+      <tr><td>幾位</td><td>5 位，一科一位</td><td>最多 6 位（選填）</td></tr>
+      <tr><td>代表</td><td>會考的一整科：國、英、數、自然、社會</td><td>自然和社會底下的分科：理化、生物、地科、歷史、地理、公民</td></tr>
+      <tr><td>住在</td><td>自己那條街</td><td>自然街或社會街裡的小巷</td></tr>
+      <tr><td>等級</td><td>有，跟著 Boss 戰的成績</td><td>沒有，因為會考只給自然、社會一個總等級</td></tr>
+      <tr><td>房子</td><td>國英數直接蓋在街上</td><td>理化、生物…各自的房子蓋在自己的小巷</td></tr></table>` +
+    p('簡單說：<b>島民是街長，室友是巷長</b>。例如自然街的島民負責自然科的等級，街裡住著理化、生物、地科三位室友，各自看守自己的小巷。') +
+    p('室友可以不設定，小巷就直接顯示科目名稱。'))}
+  ${sec('📅', '排計畫', p('到「📅 計畫」頁。最快的方法是按「📷 拍手寫計畫」：拍下這週的計畫書，島民會讀出每天排了什麼，對應到週檢討表的項目，你檢查一下再按「用這份計畫」。') +
+    p('也可以點上面的「一、二、三…日」，按「＋ 排項目」自己加。同一項可以排在好幾天，例如英文單字排五天，就算五次。確定這週要做、但還沒想好哪天的，放在「📦 沒排天」。') +
+    p('計畫本上打勾（✓）的項目，套用時可以順便記成「完成」；劃掉的當作取消，不會排進計畫。所以只在週末拍一次照片，也能把整週排好、記好。') +
+    p('一個寫法可以代表好幾項，例如「國三」＝online、閱策、成語三項一起排。還不知道是哪一科的（例如「Wei H」，要等上課才知道是數學還是理化），會先排成 ❓ 待定，知道了再點一下選科目。') +
+    p('看不懂的字，島民會列出來問你：選它是哪一項按「記住」，下次就認得了；不是讀書的行程（才藝課、運動）按「無關」，以後就會略過。這些都存在「⚙️ 更多 → 📖 我的寫法」，可以自己新增或刪除。') +
+    p('週檢討表上沒有的項目，到「⚙️ 更多 → 📝 任務清單」新增；名字想改也在那裡改，以前的紀錄都會保留。') +
+    p('上週排過的項目會出現在「最近常排的」，自己加的時候找起來比較快。'))}
+  ${sec('📝', '記錄你做了什麼', p('首頁的「📝 今天」會列出今天排的項目，做完就點「完成」，做了一半就點「部分」，再點一次可以取消。按了就會自動存好，右上角會顯示「✓ 已存到試算表」。') +
+    p('做了計畫外的項目？按「＋ 記錄計畫外的項目」。忘了記也沒關係，到計畫頁點那一天就能補，或週末確認時一次補。<b>想每天記、或只在週日記都可以</b>，小島兩種都接受。'))}
+  ${sec('✅', '週末確認這週', `<ol style="padding-left:20px;line-height:1.8;margin:6px 0">
+      <li>到「📅 計畫」頁，按「✅ 確認這週」。</li>
+      <li>每一項做了幾次，已經從每天的紀錄帶進來了。漏記的用 ＋／－ 補，做一半就按「½」。</li>
+      <li>（選填）寫一句這週的心得，或記下一條跨科連結。</li>
+      <li>按「確認這週」，看看達成率和蓋了幾棟房子。</li>
+      <li>接著排下週的計畫，拍照或自己加都可以。</li></ol>` +
+    p('<b>達成率</b>＝計畫的次數裡完成了幾次。例如英文單字排了 5 次、做了 4 次，就是 4/5；計畫外多做的不會拉低達成率，還是照樣蓋房子。') +
+    p('週檢討表的顏色會自動塗好：排了幾次就做滿幾次是深色，做了一部分是中間色，沒做是淺色。計畫外做過的項目也會塗上。'))}
+  ${sec('⭐', '經驗值怎麼算', `<table>${row('完成一次', '+10')}${row('部分完成一次', '+5')}${row('Boss 項目（歷屆、模卷、學測題）', '雙倍')}
+      ${row('週末確認這週', '+20')}${row('計畫達成一半／80%／全部', '+10／+25／+40')}${row('故事任務答對／答錯', '+15／+5')}${row('挑戰任務答對（基礎／中級／進階）', '+10／+15／+20')}${row('記錄一場 Boss 戰', '+50')}${row('發現一條跨科連結', '+15')}</table>` +
+    p('同一項做幾次就算幾次，例如英文單字做了 5 天就是 5 × 10 = 50。') +
+    p('經驗值會讓島嶼升級。全部達成就是 <b>FULL COMBO</b>！'))}
+  ${sec('⚔️', 'Boss 戰', p('寫完模擬考或一整份考古題後，到「⚔️ 大考」記錄各科等級。島民頭上的等級，只看最近一次 Boss 戰的結果。') +
+    p('就像音遊重打同一首歌，你只跟上一次的自己比。'))}
+  ${sec('🪙', '島幣和商店', p('每 10 點經驗值換 1 枚島幣，開島送 20 枚，一般一週大約賺 10 到 15 枚。挑戰任務答對另外直接給 1～3 枚。') +
+    p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。'))}
+  ${sec('🔥', '連續週數和休息卡', p('每週有確認或有紀錄，連續週數就 +1。每累積 6 週紀錄會得到 1 張 🛌 休息卡。') +
+    p('哪一週真的沒空，休息卡會自動幫你守住連續週數，不用擔心一斷就歸零。'))}
+  ${sec('💞', '跨科連結和好感度', p('發現兩科之間的關係時（例如數學的比例和理化的密度），在「確認這週」頁記下來。兩位島民的好感度會上升，可以在「更多」看到他們的關係。'))}
+  ${sec('🎨', '打扮你的島', p('在「⚙️ 更多 → 修改島嶼設定」可以改島名、嚮導的說話風格、島民和室友的名字與個性，也可以上傳自己的圖片當頭像。'))}
+  ${sec('🏠', '我的家', p('島中央的碼頭是你的家。按右上角的房子圖示（或在 3D 小島點中間的房子）就能回家。第一次回家先幫它取名字、選屋頂和牆壁的顏色，之後隨時可以改。') +
+    p('島嶼升級時，房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓小屋（Lv.7）→ 海邊洋館（Lv.10）。房子越大，房間能擺的家具越多。') +
+    p('房間可以用 <b>3D</b> 看：一根手指拖曳轉動、兩指拉近；手機比較舊的話按「🖼️ 平面」。') +
+    p('家具在「家具店」用島幣買，買了就是你的，可以隨時收起來或擺出來。每天會有一位島民來作客，跟你越要好（跨科連結越多）的島民越常來。島民寫給你的信和嚮導的新聞，都收在家裡的 📬 信箱，可以翻舊信。') +
+    p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。'))}
+  ${sec('💡', '讓島順起來', p('這座島你也是設計師！在首頁嚮導卡下面按「💡 讓島順起來」，選一種類型（新玩法、卡卡的、想要的東西、其他），寫下你的想法，也可以附一張截圖。') +
+    p('送出後爸爸會收到。他會把狀態改成「討論中」「做好了」或「先不做」，也可能寫一句回覆給你；有新回覆時，嚮導卡上的按鈕會提醒你。做好的點子會出現在之後的小島更新裡。'))}
+  ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
+  ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊 Threads 上最近的熱門話題，有的會關心你；很久沒去找他，他可能會抱怨或想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性。') +
+    p('嚮導會講一則<b>昨天</b>的國內外新聞，附上跟會考哪一科有關，下面也有新聞來源可以點開看。新聞是 AI 用 Google 搜尋整理的，偶爾可能不精確，有疑問就點來源確認。'))}
+  ${sec('📖', '故事任務', p('每天打開小島，會有一位島民（或室友）遇到難題來找你幫忙：可能是石碑上的詩句、燈塔的電路、或是颱風的風向。幫他解一題會考範圍的選擇題，就是今天的任務。') +
+    p(`答對 +${QUEST_XP.right} 經驗值；答錯也有 +${QUEST_XP.wrong}，而且會看到解說。每天可以按「🎲 換一個」一次，換成別條巷子的故事。`) +
+    p('比較少讀的巷子比較常來求救。每條巷子的故事有好幾章，答對一章，下次就會遇到下一章。任務是額外加分，不會動到你的計畫，也不會寫進試算表。') +
+    p('如果覺得題目或答案怪怪的，跟爸爸說。'))}
+  ${sec('⚔️', '挑戰任務（賺島幣）', p(`故事任務下面是「挑戰任務」：先選科目（或讓島民隨便挑），再選難度，島民就會拿一題<b>會考考古題</b>（106～115 年）來問你，題目和通過率來自心測中心。每天最多 ${XQ_DAILY} 題，三種難度可以自由搭配；上一題答完才能再挑下一題。`) +
+    `<table><tr><th>難度</th><th>大概多少人答得對</th><th>答對</th></tr>${Object.keys(XQ_TIERS).map(k => { const t = XQ_TIERS[k];
+      return row(t.ic + ' ' + t.name, ({ basic: '七成以上', mid: '四到七成', adv: '不到四成' })[k]).replace('</tr>', `<td>🪙 +${t.coins}、+${t.xp} 經驗值</td></tr>`); }).join('')}</table>` +
+    p('考古題的難度看全國考生的通過率決定。同一題不會出第二次；某個難度的題目用完了，就改由島民（AI）出一題同樣難度的新題。') +
+    p(`答錯也有 +${XQ_WRONG} 經驗值，而且會看到正確答案和全國答對率。每一題的答案都會記下來，之後會變成「錯題島」的材料。`) +
+    p('挑戰任務賺的島幣是直接給的，不會再從經驗值換一次。每天有上限，是為了讓島幣保值，不會越來越不值錢。'))}
+  ${BETA3D ? sec('🗺️', '3D 小島和成長回放', p('首頁預設是 3D 小島：一根手指拖曳可以轉動，兩根手指可以縮放。點一塊街區，下面會出現島民、每條小巷的房子和最近四週的成績。') +
+    p('按「▶️ 從第一週播放」，可以看到島從 5 月開始一週一週長出來；也可以拖動進度條跳到任何一週。跨科連結會變成島民之間的粉紅色拱橋，好感度越高橋越粗。') +
+    p('小島會跟著<b>台北現在的時間和天氣</b>變化：清晨和傍晚天空是橘色的，晚上會有星星、房子會亮燈；台北下雨，島上也會下雨，打雷時還會閃電。右上角的小字會顯示台北現在的時間和氣溫。') +
+    p('手機比較舊、覺得卡的話，按「📋 清單」就會回到原本的畫面。')) : ''}
+  ${sec('🏘️', '房子怎麼長大', p('每 2 個達成點蓋一棟 🏠，5 棟變成 🏘️，4 個 🏘️ 變成 🏢，4 棟 🏢 變成 🏰。自然街和社會街還分成小巷，哪條巷子比較空，一眼就看得到。'))}
+  <div class="card"><h3>📜 更新紀錄</h3>${CHANGELOG.map(c => `<div style="margin-top:8px"><b>v${c.v}</b> <span class="muted">${c.date}</span>
+    <ul style="margin:4px 0;padding-left:20px">${c.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}</div>
+  <div class="row"><button class="grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+
+/* --- 自訂圖片：裁成正方形並縮小，才能存進試算表的一格 --- */
+function shrinkImage(file) {
+  return new Promise((ok, bad) => {
+    const img = new Image();
+    img.onload = () => {
+      const tryEncode = (size, type, q) => {
+        const cv = document.createElement('canvas'); cv.width = cv.height = size;
+        const ctx = cv.getContext('2d');
+        if (type === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size); }
+        const m = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, size, size);
+        return cv.toDataURL(type, q);
+      };
+      const tries = [[160, 'image/webp', .85], [160, 'image/png'], [128, 'image/webp', .7], [128, 'image/jpeg', .8], [96, 'image/jpeg', .7]];
+      for (const t of tries) {
+        const url = tryEncode(...t);
+        if (url.startsWith('data:' + t[1]) && url.length < 45000) return ok(url);
+      }
+      bad(new Error('圖片太複雜了，換一張試試'));
+    };
+    img.onerror = () => bad(new Error('讀不到這張圖片'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/* --- 開島設定 --- */
+function viewSetup() {
+  if (!draft.cfg) draft.cfg = JSON.parse(JSON.stringify(D.cfg || { islandName: '', guide: { name: '', emoji: '🦉', tone: '朋友' }, residents: {}, shop: [{ name: '', price: 10 }] }));
+  const c = draft.cfg; SUBJECTS.forEach(s => c.residents[s] = c.residents[s] || { name: '', emoji: '', personality: '', relation: '' });
+  c.roommates = c.roommates || {};
+  Object.values(SUBS).flat().forEach(sub => c.roommates[sub] = c.roommates[sub] || { name: '', emoji: '' });
+  const upl = key => { const src = imgOf(key);
+    return `<div class="row upl" data-img="${key}">${src ? `<img class="pic" src="${src}" alt="">` : ''}
+      <label class="btn">${src ? '換一張圖片' : '或上傳自己的圖片'}<input type="file" accept="image/*" hidden></label>
+      ${src ? '<button type="button" class="ghost" data-del>改回 emoji</button>' : ''}</div>`; };
+  const pick = (key, cur) => `<div class="emojis" data-key="${key}">${EMOJIS.map(e => `<button type="button" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}</div>`;
+  return `<div class="card"><div class="big">🏝️</div><h2 style="text-align:center">${D.cfg ? '修改島嶼設定' : '歡迎來到你的島'}</h2>
+    <div class="muted" style="text-align:center">這座島會跟著你一路到會考。島上的一切都由你決定。</div>
+    ${D.cfg ? '' : `<div class="muted" style="text-align:center;margin-top:6px">你過去 ${D.recordedWeeks} 週的週檢討已經變成島上的房子了 🏠</div>`}</div>
+  <div class="card"><h3>1. 島的名字</h3><input data-f="islandName" value="${esc(c.islandName)}" placeholder="例如：呱呱島"></div>
+  <div class="card"><h3>2. 你的嚮導夥伴</h3><div class="muted">每天在島上跟你說話的角色。</div>
+    <label>名字</label><input data-f="guide.name" value="${esc(c.guide.name)}">
+    <label>長相</label>${pick('guide.emoji', c.guide.emoji)}${upl('guide')}
+    <label>說話風格</label><select data-f="guide.tone">${Object.entries(TONES).map(([k, v]) => `<option value="${k}" ${c.guide.tone === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+  <div class="card"><h3>3. 五位島民</h3><div class="muted">每一科住著一位島民。你讀那一科，就是在培養他。</div>
+    ${SUBJECTS.map(s => { const r = c.residents[s]; return `<div style="border-top:1px dashed var(--plum-light);margin-top:12px;padding-top:8px">
+      <b>${SUBJECT_NAME[s]}街</b>
+      <label>名字</label><input data-f="residents.${s}.name" value="${esc(r.name)}">
+      <label>長相</label>${pick('residents.' + s + '.emoji', r.emoji)}${upl(s)}
+      <label>個性</label><input data-f="residents.${s}.personality" value="${esc(r.personality)}" placeholder="例如：嘴硬心軟">
+      <label>和其他島民的關係</label><input data-f="residents.${s}.relation" value="${esc(r.relation)}" placeholder="例如：跟數學是青梅竹馬">
+      ${SUBS[s] ? `<label>室友（選填）：島民是${SUBJECT_NAME[s]}街的街長；${SUBS[s].join('、')}各有一條小巷，可以各住一位室友當巷長。不填就顯示科目名稱。</label>
+        ${SUBS[s].map(sub => `<div class="row" style="margin-top:4px"><span style="width:40px">${sub}</span>
+          <select style="width:72px" data-f="roommates.${sub}.emoji"><option value="">－</option>${EMOJIS.map(e => `<option ${c.roommates[sub].emoji === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
+          <input class="grow" data-f="roommates.${sub}.name" value="${esc(c.roommates[sub].name)}" placeholder="名字"></div>${upl('sub:' + sub)}`).join('')}` : ''}</div>`; }).join('')}</div>
+  <div class="card"><h3>4. 島嶼商店</h3><div class="muted">你想用島幣換什麼？價格你自己訂，再跟爸媽討論。一般一週大約賺 10 到 15 枚。</div>
+    <div id="shopRows">${c.shop.map((x, i) => `<div class="row" style="margin-top:6px"><input class="grow" data-f="shop.${i}.name" value="${esc(x.name)}" placeholder="例如：追劇一集"><input style="width:80px" type="number" min="1" data-f="shop.${i}.price" value="${x.price}"></div>`).join('')}</div>
+    <div style="margin-top:8px"><button class="ghost" type="button" id="addShop">＋ 新增商品</button></div></div>
+  <div class="row"><button id="saveCfg" class="grow">${D.cfg ? '儲存' : '開島！'}</button>${D.cfg ? `<button class="ghost" onclick="go('more')">取消</button>` : ''}</div>`;
+}
+function setPath(obj, path, val) {
+  const k = path.split('.'); let o = obj;
+  for (let i = 0; i < k.length - 1; i++) o = o[k[i]];
+  o[k[k.length - 1]] = val;
+}
+function bindSetup() {
+  const c = draft.cfg;
+  document.querySelectorAll('[data-f]').forEach(el => el.oninput = el.onchange = () =>
+    setPath(c, el.dataset.f, el.type === 'number' ? Number(el.value) : el.value));
+  document.querySelectorAll('.emojis').forEach(box => box.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    setPath(c, box.dataset.key, b.textContent);
+    box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  });
+  document.querySelectorAll('.upl').forEach(box => {
+    const key = box.dataset.img;
+    box.querySelector('input').onchange = async e => {
+      const f = e.target.files[0]; if (!f) return;
+      toast('圖片處理中…');
+      try { S = await call('saveImage', key, await shrinkImage(f)); D = derive(S); toast('圖片換好了！'); render(); }
+      catch (err) { toast('圖片上傳失敗：' + (err.message || err)); }
+    };
+    const del = box.querySelector('[data-del]');
+    if (del) del.onclick = async () => { S = await call('saveImage', key, ''); D = derive(S); render(); };
+  });
+  document.getElementById('addShop').onclick = () => { c.shop.push({ name: '', price: 10 }); render(); };
+  document.getElementById('saveCfg').onclick = async () => {
+    if (!c.islandName.trim()) return toast('先幫島取個名字吧');
+    c.shop = c.shop.filter(x => x.name.trim());
+    document.getElementById('saveCfg').disabled = true;
+    const first = !D.cfg;
+    S = await call('saveConfig', c); D = derive(S);
+    toast(first ? '🏝️ ' + c.islandName + ' 開島成功！' : '設定已儲存');
+    if (first) local.set('islandSeenVersion', APP_VERSION);
+    go(first ? 'guide' : 'home');
+  };
+}
+
+/* --- 台北的即時時間與天氣（Open-Meteo，免金鑰）：讓小島跟著天色和天氣變化 --- */
+const env = { phase: 'day', hhmm: '', weather: null, temp: null };
+const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=25.03&longitude=121.56&current=temperature_2m,weather_code,is_day&timezone=Asia%2FTaipei';
+const WEATHER_ICON = { clear: '☀️', cloudy: '⛅', fog: '🌫️', rain: '🌧️', storm: '⛈️' };
+const WEATHER_NAME = { clear: '晴', cloudy: '多雲', fog: '起霧', rain: '下雨', storm: '雷雨' };
+const PHASE_ICON = { dawn: '🌅', day: '🏝️', dusk: '🌇', night: '🌙' };
+function taipeiClock() {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+  const h = Number(parts.find(p => p.type === 'hour').value) % 24, m = parts.find(p => p.type === 'minute').value;
+  return { h, hhmm: String(h).padStart(2, '0') + ':' + m };
+}
+function phaseOf(h) { return h >= 19 || h < 5 ? 'night' : h < 7 ? 'dawn' : h < 17 ? 'day' : 'dusk'; }
+function weatherKind(code) {
+  if (code >= 95) return 'storm';
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 71 && code <= 77) || code === 85 || code === 86) return 'rain';
+  if (code === 45 || code === 48) return 'fog';
+  if (code >= 2) return 'cloudy';
+  return 'clear';
+}
+function envText() {
+  const ph = env.phase === 'night' && env.weather === 'clear' ? '🌙' : (env.weather ? WEATHER_ICON[env.weather] : PHASE_ICON[env.phase]);
+  return `${ph} 台北 ${env.hhmm}${env.temp != null ? '・' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : ''}`;
+}
+function updateEnv() {
+  const t = taipeiClock();
+  env.hhmm = t.hhmm; env.phase = phaseOf(t.h);
+  const chip = document.getElementById('envChip'); if (chip) chip.textContent = envText();
+  if (window.Island3D && Island3D.setEnvironment) Island3D.setEnvironment({ phase: env.phase, weather: env.weather || 'clear' });
+}
+async function fetchWeather() {
+  try {
+    const j = await (await fetch(WEATHER_URL)).json();
+    env.temp = Math.round(j.current.temperature_2m);
+    env.weather = weatherKind(Number(j.current.weather_code));
+  } catch (e) { /* 沒網路就只跟著時間變化 */ }
+  updateEnv();
+}
+updateEnv(); fetchWeather();
+setInterval(updateEnv, 60 * 1000);
+setInterval(fetchWeather, 10 * 60 * 1000);
+
+boot();
+</script>
+</body>
+</html>
