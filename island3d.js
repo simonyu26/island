@@ -16,6 +16,8 @@
   let running = false, signature = '', weekIdx = null;
   // 天色與天氣
   let homeLayer, homeSig = '', walkLayer, walkSig = '';
+  // 燈塔（學習中心）：岬角上的燈塔、海灘的漂流瓶、海上的紙燈籠
+  let lightLayer, lightSig = null, lamp = null, beam = null, floats = [];
   // 節氣：草地、樹葉的顏色與飄落的花瓣／楓葉／螢火蟲
   let grassMat, leafMats = [], seasonFx, seasonNow = null;
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
@@ -180,6 +182,7 @@
     buildSky();
     homeLayer = new THREE.Group(); root.add(homeLayer);
     walkLayer = new THREE.Group(); root.add(walkLayer);
+    lightLayer = new THREE.Group(); root.add(lightLayer);
     buildLayer = new THREE.Group(); root.add(buildLayer);
     linkLayer = new THREE.Group(); root.add(linkLayer);
   }
@@ -280,6 +283,8 @@
     wallMat.emissive.setHex(night ? 0xffb347 : wet && ph !== 'day' ? 0xffb347 : 0x000000);
     wallMat.emissiveIntensity = night ? 0.8 : 0.35;
     homeLayer && homeLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0; });
+    if (lamp) lamp.emissiveIntensity = night ? 1.4 : ph === 'dusk' || wet ? 0.9 : 0.4;
+    if (beam) beam.visible = night || ph === 'dusk' || w === 'fog';
     stars.visible = night && !wet && w !== 'fog';
     stars.material.opacity = w === 'cloudy' ? 0.4 : 1;
     rain.visible = wet;
@@ -317,6 +322,8 @@
         c.position.x = Math.cos(c.userData.a) * c.userData.d; c.position.z = Math.sin(c.userData.a) * c.userData.d;
       });
     }
+    if (beam && beam.visible) beam.rotation.y += dt * 0.7;
+    if (floats.length) { const t = performance.now() / 1000; floats.forEach(f => { f.position.y = -0.55 + Math.sin(t * 1.2 + f.userData.phase) * 0.06; f.rotation.y = Math.sin(t * 0.4 + f.userData.phase) * 0.3; }); }
     // 雷雨偶爾閃電
     if (envNow.weather === 'storm') {
       if (flash <= 0 && Math.random() < dt * 0.15) flash = 0.35;
@@ -404,6 +411,7 @@
     buildLinks();
     buildHome();
     buildWalk();
+    buildLight();
   }
 
   // 她的家：蓋在中央碼頭，跟著島嶼等級擴建
@@ -470,6 +478,67 @@
     }
   }
 
+  // 燈塔：蓋在島左後方的岬角（社會街和國文街中間的空隙，直式手機也看得到），白塔紅帶、晚上燈會轉；瓶子數＝海灘上的錯題，燈籠＝變成燈籠的錯題
+  const CAPE = -Math.PI * 0.62;
+  function buildLight() {
+    const L = ctx.light || null, sig = JSON.stringify(L);
+    if (sig === lightSig) return;
+    lightSig = sig;
+    while (lightLayer.children.length) lightLayer.remove(lightLayer.children[0]);
+    floats = []; lamp = null; beam = null;
+    const at = (r, da) => new THREE.Vector3(Math.cos(CAPE + (da || 0)) * r, 0, Math.sin(CAPE + (da || 0)) * r);
+    const c = at(14.6);
+    const sand = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.6, 0.78, 24), std(0xe6c98e)); sand.position.set(c.x, -0.41, c.z); lightLayer.add(sand);
+    const grass = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.7, 0.5, 20), grassMat); const g0 = at(14.0); grass.position.set(g0.x, -0.06, g0.z); lightLayer.add(grass);
+    const tower = new THREE.Group(); tower.userData.light = true;
+    const white = std(0xfdfaf2), red = std(0xc0392b);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.58, 2.6, 16), white); body.position.y = 1.5; tower.add(body);
+    [0.8, 1.7].forEach(y => { const band = new THREE.Mesh(new THREE.CylinderGeometry(0.53 - y * 0.06, 0.55 - y * 0.06, 0.32, 16), red); band.position.y = y; tower.add(band); });
+    const deck = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 16), std(0x3a2a33)); deck.position.y = 2.84; tower.add(deck);
+    lamp = std(0xfff1c2, { emissive: 0xffd36b, emissiveIntensity: 0.5 });
+    const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.45, 12), lamp); glass.position.y = 3.1; tower.add(glass);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.46, 0.45, 12), red); cap.position.y = 3.55; tower.add(cap);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.42, 0.05), std(0x8a5a3c)); door.position.set(0, 0.42, 0.53); tower.add(door);
+    // 守燈人的小屋（暖簾的日式小屋）
+    const hut = new THREE.Group(); hut.userData.light = true;
+    const hw = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.6), std(0xf3e6cf)); hw.position.y = 0.5; hut.add(hw);
+    const hr = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.35, 4), std(0x4a5d73)); hr.position.y = 0.92; hr.rotation.y = Math.PI / 4; hut.add(hr);
+    const noren = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.02), std(0x2f5f8a)); noren.position.set(0, 0.62, 0.31); hut.add(noren);
+    // 晚上的光束
+    beam = new THREE.Mesh(new THREE.ConeGeometry(0.9, 7, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff1b0, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }));
+    beam.geometry.translate(0, -3.5, 0); beam.rotation.z = Math.PI / 2;
+    const pivot = new THREE.Group(); pivot.position.y = 3.1; pivot.add(beam); tower.add(pivot); beam = pivot; beam.visible = false;
+    const tp = at(14.9), hp = at(13.7, -0.1);
+    tower.position.set(tp.x, 0.05, tp.z); tower.rotation.y = -CAPE + Math.PI / 2; tower.scale.setScalar(1.1);
+    hut.position.set(hp.x, 0.05, hp.z); hut.rotation.y = -CAPE - Math.PI / 2;
+    lightLayer.add(tower, hut);
+    if (L) {
+      const lb = labelSprite('🗼 ' + (L.name || '燈塔'), L.due ? '🍶 今天漂回 ' + L.due + ' 個' : null, { scale: 1.0, color: '#3a2a33' });
+      lb.position.set(tp.x, 4.9, tp.z); lb.userData.light = true; lightLayer.add(lb);
+      // 海灘上的瓶子（最多 14 個），今天漂回來的會發亮
+      const n = Math.min(L.sea || 0, 14), glow = std(0x7fd3c3, { emissive: 0x7fd3c3, emissiveIntensity: 0.6, transparent: true, opacity: 0.9 }), dull = std(0x8fbfa8, { transparent: true, opacity: 0.85 });
+      for (let i = 0; i < n; i++) {
+        const p = at(15.9 + (i % 2) * 0.5, -0.3 + i * 0.045), b = new THREE.Group(); b.userData.light = true;
+        const m = i < (L.due || 0) ? glow : dull;
+        const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.3, 8), m); bottle.position.y = 0.15; b.add(bottle);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 6), m); neck.position.y = 0.36; b.add(neck);
+        b.position.set(p.x, 0.02, p.z); b.rotation.z = 1.2 + (i % 3) * 0.2; b.rotation.y = i;
+        lightLayer.add(b);
+      }
+      // 海上的紙燈籠（最多 40 盞），慢慢上下漂
+      const k = Math.min(L.lanterns || 0, 40), paper = std(0xfff1d6, { emissive: 0xffa94d, emissiveIntensity: 0.8 }), base = std(0x7a5236);
+      for (let i = 0; i < k; i++) {
+        const r = 17.6 + (i % 5) * 1.3 + Math.floor(i / 10) * 0.6, da = ((i * 0.618) % 1 - 0.5) * 1.1, p = at(r, da);
+        const lt = new THREE.Group();
+        const box = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, 0.26), paper); box.position.y = 0.2; lt.add(box);
+        const raft = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.05, 0.34), base); lt.add(raft);
+        lt.position.set(p.x, -0.55, p.z); lt.userData.phase = i * 1.7;
+        lightLayer.add(lt); floats.push(lt);
+      }
+    }
+    setEnvironment(envNow);
+  }
+
   function buildLinks() {
     while (linkLayer.children.length) linkLayer.remove(linkLayer.children[0]);
     const bond = ctx.bond || {};
@@ -497,6 +566,8 @@
       let o = h.object; while (o && !o.userData.subject) o = o.parent; return !!o;
     });
     if (homeHit && (!hit || homeHit.distance <= hit.distance)) { if (ctx.onHome) ctx.onHome(); return; }
+    const lightHit = hits.find(h => { let o = h.object; while (o && !o.userData.light && !o.userData.subject) o = o.parent; return o && o.userData.light; });
+    if (lightHit && ctx.onLight && (!hit || lightHit.distance <= hit.distance)) { ctx.onLight(); return; }
     if (!hit) return;
     let o = hit.object; while (!o.userData.subject) o = o.parent;
     select(o.userData.subject);
@@ -561,7 +632,7 @@
     if (ctx.season && ctx.season !== seasonNow) setSeason(ctx.season);
     el.appendChild(renderer.domElement);
     resize();
-    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home]) + weekIdx;
+    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light]) + weekIdx;
     if (sig !== signature) { signature = sig; buildDynamic(false); }
     if (selected && ctx.onSelect) ctx.onSelect(selected);
     if (!running) { running = true; clock.getDelta(); loop(); }
