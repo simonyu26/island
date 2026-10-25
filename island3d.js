@@ -44,6 +44,8 @@
   let gardenLayer, gardenSig = null;
   // 獨立書店（v2.17）：碼頭左前方的巷口小書店
   let bookLayer, bookSig = null;
+  // 智慧島的渡船碼頭（v2.24）：島左前方的海邊
+  let ferryLayer, ferrySig = null, ferryBoat = null;
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
   // v2.22 畫質：高畫質開陰影、海浪細一點（舊手機可以在「更多」關掉）；色調映射和圓角方塊都開
   const HQ = (() => { try { const v = localStorage.getItem('island3dHQ'); if (v) return v === '1'; } catch (e) {} return !(navigator.deviceMemory && navigator.deviceMemory < 4); })();
@@ -236,7 +238,7 @@
       const a = rand() * Math.PI * 2, r = 4 + rand() * 8.6;
       const p = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
       if (SUBJECTS.some((s, j) => p.distanceTo(districtPos(j)) < 4.1)) continue;
-      if (GARDEN_SLOTS.some(q => Math.hypot(q.x - p.x, q.z - p.z) < 0.9) || Math.hypot(HUT.x - p.x, HUT.z - p.z) < 1.2 || Math.hypot(BOOK.x - p.x, BOOK.z - p.z) < 1.3) continue;
+      if (GARDEN_SLOTS.some(q => Math.hypot(q.x - p.x, q.z - p.z) < 0.9) || Math.hypot(HUT.x - p.x, HUT.z - p.z) < 1.2 || Math.hypot(BOOK.x - p.x, BOOK.z - p.z) < 1.3 || Math.hypot(FERRY.x - p.x, FERRY.z - p.z) < 1.4) continue;
       if (SUBJECTS.some((s, j) => MARK_SLOTS.some(([mr, da]) => { const a = -Math.PI / 2 + j * (Math.PI * 2 / 5) + da; return Math.hypot(Math.cos(a) * mr - p.x, Math.sin(a) * mr - p.z) < 0.9; }))) continue;
       const h = 0.7 + rand() * 0.6;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4, 5), std(0x9a6b4a)); trunk.position.set(p.x, 0.4, p.z);
@@ -254,6 +256,7 @@
     linkLayer = new THREE.Group(); root.add(linkLayer);
     gardenLayer = new THREE.Group(); root.add(gardenLayer);
     bookLayer = new THREE.Group(); root.add(bookLayer);
+    ferryLayer = new THREE.Group(); root.add(ferryLayer);
     markLayer = new THREE.Group(); root.add(markLayer);
   }
 
@@ -355,6 +358,7 @@
     wallMat.emissiveIntensity = night ? 0.8 : 0.35;
     homeLayer && homeLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0; });
     bookLayer && bookLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0.15; });
+    ferryLayer && ferryLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0.15; });
     if (lamp) lamp.emissiveIntensity = night ? 1.4 : ph === 'dusk' || wet ? 0.9 : 0.4;
     if (beam) beam.visible = night || ph === 'dusk' || w === 'fog';
     stars.visible = night && !wet && w !== 'fog';
@@ -510,6 +514,7 @@
     buildLight();
     buildGarden();
     buildBook();
+    buildFerry();
     buildMarks();
   }
 
@@ -527,6 +532,7 @@
   const GARDEN_SLOTS = Array.from({ length: 40 }, (_, i) => gardenSlot(i));
   const HUT = { x: Math.cos(Math.PI / 10) * 3.2, z: Math.sin(Math.PI / 10) * 3.2 };   // 植木屋：碼頭右前方
   const BOOK = { x: Math.cos(Math.PI * 9 / 10) * 3.2, z: Math.sin(Math.PI * 9 / 10) * 3.2 };   // 獨立書店：碼頭左前方（和植木屋對稱）
+  const FERRY = { a: Math.PI * 0.9, x: Math.cos(Math.PI * 0.9) * 13.2, z: Math.sin(Math.PI * 0.9) * 13.2 };   // 智慧島渡船碼頭：島左前方的海邊（v2.24）
   const TERM_ORDER = ['立春', '雨水', '驚蟄', '春分', '清明', '穀雨', '立夏', '小滿', '芒種', '夏至', '小暑', '大暑',
     '立秋', '處暑', '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'];
 
@@ -674,6 +680,52 @@
     bookLayer.add(shop);
     const lb = labelSprite('📚 ' + (B.name || '獨立書店'), B.sub || null, { scale: 0.75, color: '#3a2a33' });
     lb.position.set(BOOK.x, 1.95, BOOK.z); lb.userData.book = true; bookLayer.add(lb);
+  }
+
+  // ---------- 智慧島的渡船碼頭（v2.24） ----------
+  // ctx.ferry = { open }：碼頭在島左前方的海邊（理化…和社會街之間的空隙，植樹空地格的外側），木棧橋伸進海裡、停一艘小渡船；
+  // 遠方海上的霧裡看得到智慧島。點碼頭、渡船或木牌就呼叫 ctx.onFerry
+  function buildFerry() {
+    const F = ctx.ferry || null, sig = JSON.stringify(F);
+    if (sig === ferrySig) return;
+    ferrySig = sig;
+    while (ferryLayer.children.length) ferryLayer.remove(ferryLayer.children[0]);
+    ferryBoat = null;
+    if (!F) return;
+    const pier = new THREE.Group(); pier.userData.ferry = true;
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m.isMaterial ? m : std(m)); o.position.set(x, y, z); pier.add(o); return o; };
+    const plank = std(0xb08356), post = std(0x7a5236);
+    for (let i = 0; i < 9; i++) add(bx(1.1, 0.07, 0.5), plank, 0, 0.18, -i * 0.52);   // 往海裡（-z）鋪
+    for (let i = 0; i < 5; i++) [-0.52, 0.52].forEach(x => add(new THREE.CylinderGeometry(0.06, 0.07, 0.9, 6), post, x, -0.2, -i * 1.05 - 0.3));
+    // 岸邊的鳥居和木牌
+    const red = std(0xc0392b);
+    [-0.62, 0.62].forEach(x => add(new THREE.CylinderGeometry(0.05, 0.06, 1.1, 8), red, x, 0.7, 0.5));
+    add(bx(1.6, 0.09, 0.12), red, 0, 1.28, 0.5); add(bx(1.4, 0.07, 0.1), red, 0, 1.1, 0.5);
+    add(bx(0.06, 0.6, 0.06), post, 0.95, 0.45, 0.3); add(bx(0.5, 0.3, 0.04), 0xfbf4e4, 0.95, 0.7, 0.32);
+    // 小渡船：白船身、紅腰帶、藍色船艙頂
+    const boat = new THREE.Group(); boat.userData.ferry = true;
+    const hull = new THREE.Mesh(bx(0.9, 0.3, 1.9), std(0xfdfaf2)); hull.position.y = 0.05; boat.add(hull);
+    const belt = new THREE.Mesh(bx(0.92, 0.07, 1.92), red); belt.position.y = 0.12; boat.add(belt);
+    const cab = new THREE.Mesh(bx(0.6, 0.35, 0.7), std(0xf1e6d2)); cab.position.set(0, 0.38, -0.15); boat.add(cab);
+    const glass = std(0xfff1c2, { emissive: 0xffc46b, emissiveIntensity: 0.15 });
+    const win = new THREE.Mesh(bx(0.62, 0.12, 0.5), glass); win.position.set(0, 0.42, -0.15); boat.add(win);
+    const top = new THREE.Mesh(bx(0.7, 0.06, 0.8), std(0x2f6fae)); top.position.set(0, 0.59, -0.15); boat.add(top);
+    boat.position.set(1.05, -0.45, -3.4); pier.add(boat); ferryBoat = boat;
+    pier.position.set(FERRY.x, 0, FERRY.z);
+    pier.rotation.y = -FERRY.a - Math.PI / 2;   // -z 朝外海
+    pier.userData.glass = glass;
+    ferryLayer.add(pier);
+    const lb = labelSprite('⛴️ 智慧島渡船', F.open ? '今日開航' : '今天的課上完了', { scale: 0.75, color: '#3a2a33' });
+    lb.position.set(FERRY.x, 2.2, FERRY.z); lb.userData.ferry = true; ferryLayer.add(lb);
+    // 遠方霧裡的智慧島：小山丘、松樹、四間小屋的屋頂
+    const far = new THREE.Group(); far.userData.ferry = true;
+    const fa = (geo, c, x, y, z) => { const o = new THREE.Mesh(geo, std(c)); o.position.set(x, y, z); far.add(o); return o; };
+    fa(new THREE.CylinderGeometry(4.2, 5, 1.2, 18), 0xe6c98e, 0, -0.3, 0); fa(new THREE.CylinderGeometry(3.6, 4.1, 0.8, 18), 0x8cc56c, 0, 0.4, 0);
+    fa(new THREE.ConeGeometry(2.4, 1.6, 10), 0x9fd27e, 0, 1.4, 0);
+    [[-2, 1.3, 0xb38a4f], [1.9, 1.1, 0x4a4f5a], [-1.2, -2, 0xc0392b], [1.4, -1.8, 0xdfe6ee]].forEach(([x, z, c]) => { fa(bx(0.9, 0.6, 0.8), 0xf3ead6, x, 1.1, z); fa(new THREE.ConeGeometry(0.75, 0.5, 4), c, x, 1.65, z).rotation.y = Math.PI / 4; });
+    [[0, 2.6], [-0.8, 2.1], [0.9, 2.3]].forEach(([x, y]) => fa(new THREE.ConeGeometry(0.45, 1.3, 6), 0x3f7a45, x, y, -0.3));
+    far.position.set(Math.cos(FERRY.a) * 34, 0, Math.sin(FERRY.a) * 34); ferryLayer.add(far);
+    setEnvironment(envNow);
   }
 
   // ---------- 讀完書長出的地標（v2.19） ----------
@@ -1331,6 +1383,8 @@
     if (mHit && ctx.onMark && (!hit || mHit.distance <= hit.distance)) { let o = mHit.object; while (o.userData.mark == null) o = o.parent; ctx.onMark(o.userData.mark); return; }
     const bHit = hits.find(h => { let o = h.object; while (o && !o.userData.book && !o.userData.subject) o = o.parent; return o && o.userData.book; });
     if (bHit && ctx.onBook && (!hit || bHit.distance <= hit.distance)) { ctx.onBook(); return; }
+    const fHit = hits.find(h => { let o = h.object; while (o && !o.userData.ferry && !o.userData.subject) o = o.parent; return o && o.userData.ferry; });
+    if (fHit && ctx.onFerry && (!hit || fHit.distance <= hit.distance)) { ctx.onFerry(); return; }
     const gHit = hits.find(h => { let o = h.object; while (o && !o.userData.garden && !o.userData.plant && !o.userData.subject) o = o.parent; return o && (o.userData.garden || o.userData.plant); });
     if (gHit && (!hit || gHit.distance <= hit.distance)) {
       let o = gHit.object; while (!o.userData.garden && !o.userData.plant) o = o.parent;
@@ -1368,6 +1422,7 @@
     animateSea(now);
     if (HQ && (shadowDirty || popping.length || now - lastShadow > 1)) { if (shadowDirty) shadowize(); renderer.shadowMap.needsUpdate = true; lastShadow = now; shadowDirty = false; }
     spinners.forEach(sp => { sp.m.rotation[sp.axis] += sp.v * dt; });
+    if (ferryBoat) { ferryBoat.position.y = -0.45 + Math.sin(now * 1.3) * 0.05; ferryBoat.rotation.z = Math.sin(now * 0.9) * 0.03; }
     popping = popping.filter(p => {
       p.t += dt / 0.45;
       const t = Math.min(p.t, 1);

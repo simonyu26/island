@@ -184,6 +184,17 @@
   .tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
   .tiers button { padding: 10px 4px; font-size: 14px; line-height: 1.4; } .tiers button small { display: block; font-size: 11px; opacity: .85; }
   .furn button.on { border-color: var(--plum); background: var(--plum-light); } .furn button.has { background: var(--sand); }
+  /* 智慧島（v2.24）：渡船靠岸的小島插畫、導師小屋、上課、集章冊 */
+  .wscene { border-radius: 14px; overflow: hidden; margin-top: 6px; } .wscene svg { display: block; width: 100%; height: auto; }
+  .whut { cursor: pointer; } .whut:hover rect:first-of-type, .whut:active rect:first-of-type { filter: brightness(1.05); }
+  .whcard { cursor: pointer; }
+  .wstamps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 6px; }
+  .wstamp { aspect-ratio: 1; border: 2px dashed var(--plum-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; background: none; padding: 0; }
+  .wstamp.on { border-style: solid; background: #fff5f3; font-weight: 700; font-size: 14px; transform: rotate(-8deg); }
+  .opt.mine { background: var(--plum-light); border-color: var(--plum); opacity: 1; }
+  .wnote { background: var(--sand); border-radius: 12px; padding: 10px 12px; margin-top: 8px; line-height: 1.7; }
+  .wwidget { text-align: center; background: var(--sand); border-radius: 14px; padding: 14px 10px; margin: 8px 0; }
+  .wbubble { width: 70px; height: 70px; margin: 26px auto; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #bfe6f0); display: flex; align-items: center; justify-content: center; font-size: 30px; }
   /* 獨立書店（v2.17）：台灣巷弄書店的店內插畫，店貓在幾個點之間走動 */
   .bscene { position: relative; width: 100%; aspect-ratio: 400 / 280; border-radius: 18px; overflow: hidden; background: #f1ead9; box-shadow: inset 0 0 0 1px rgba(90,60,30,.15); margin-top: 10px; user-select: none; -webkit-user-select: none; }
   .bscene .keeper { position: absolute; left: 86%; top: 63%; transform: translate(-50%, -100%); font-size: 34px; z-index: 2; line-height: 1; cursor: pointer; }
@@ -663,10 +674,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -800,6 +811,267 @@ const BOARD = [
     st() { const n = newCards().length, fb = freshBooks().length; return fb && bookName() && keeperOf('bookstore') ? { t: '🎁 家人送東西來了', c: 'info' } : !bookName() ? { t: '巷口開了一間書店', c: 'info' } : !keeperOf('bookstore') ? { t: '還缺一位店長', c: 'info' } : n ? { t: '📮 ' + n + ' 張新明信片', c: 'info' } : { t: '去坐坐', c: 'info' }; },
     todo() { return false; } }
 ];
+/* --- 智慧島（v2.24 第一版）：四位導師的課。從本島海邊的渡船碼頭坐船過去 ---
+   規則（Simon，2026-10-25）：每天只能上一講、同一位導師每週一講（週一重算）；教案由 Claude 事先寫好、Simon 審閱打勾才放進 wisdom/<書>.json；
+   Gemini 只回她寫的那一句（後端 Wisdom.gs 的 takeLesson）。存檔 wisdom.lessons.<書>.<講> = { at, choice, note, reply }，書店的書架也讀這一筆。
+   開關 WISDOM_OPEN：Simon 決定哪天開島才改成 true；之前可以用網址加 ?wisdom=1 預覽（只有那支手機看得到） */
+const WISDOM_OPEN = false;
+function wisdomOn() {
+  if (!window.ISLAND_API_URL || isFamily()) return false;   // 第一版只有網頁 App 版、只有她自己能上課（訪客、家人上課是第二版）
+  if (WISDOM_OPEN) return true;
+  if (/[?&]wisdom=1\b/.test(location.search)) local.set('wisdomPreview', '1');
+  if (/[?&]wisdom=0\b/.test(location.search)) local.del('wisdomPreview');
+  return local.get('wisdomPreview') === '1';
+}
+const WISDOM_T = {
+  kongming: { name: '孔明', ic: '🪶', place: '隆中草廬', color: '#8C2F2B',
+    first: '來了？坐。此處名曰草廬，我在此候你多時。兵法十三篇，一週一篇，不必急。先喝口茶，我們慢慢說。',
+    hello: ['又見面了。上回所算，可曾依計而行？', '坐。茶方沏好，趁熱。', '今日風靜，宜讀兵書。'],
+    today: '今日已上過一講。貪多嚼不爛，回去把今日所學用上，明日再來。',
+    week: '本週此課已畢。兵貴勝，不貴久；書貴熟，不貴多。下週一再來。',
+    wait: '下一篇我還在推敲，稍候幾日。',
+    after: '今日到此。回去之後，不妨把今日寫的那句兵書貼在桌前。' },
+  xiaomiao: { name: '小苗', ic: '♨️', place: '湯屋', color: '#7FA88A',
+    first: '歡迎來到湯屋～鞋子脫在門口就好。這裡沒有考試，只有讓你好好休息、好好把東西記住的小方法。先泡個腳吧。',
+    hello: ['你來啦。今天累不累？先深呼吸一次，我們再開始。', '水剛燒好，溫溫的，剛剛好。', '外面有點涼吧？進來坐。'],
+    today: '今天已經學過一個小方法了，剩下的時間就好好休息吧。明天見。',
+    week: '這週的放鬆筆記已經寫好一章了，下週一再來泡湯喔。',
+    wait: '下一章我還在寫，再等我幾天。',
+    after: '今天就到這裡。累的時候，記得回來這裡坐一下。' },
+  alu: { name: '阿律', ic: '📰', place: '巷口柑仔店', color: '#3B5B8C',
+    first: '歡迎光臨柑仔店！彈珠汽水在冰箱自己拿（記得付錢）。我每週出一期《巷口小報》，教你看新聞不被騙。',
+    hello: ['來來來，今天的報紙剛送到。', '今天的頭條很精采（我是說標題，內文還沒查）。', '坐坐坐，板凳給你。'],
+    today: '今天的份已經讀完了，再讀下去眼睛會抗議（我就是這樣近視的）。明天見。',
+    week: '這期小報你看過了，下一期週一出刊。我再說一次：週一。',
+    wait: '下一期還在排版，再等我幾天。',
+    after: '今天就到這裡。下次滑到很聳動的標題，記得想起柑仔店。' },
+  einstein: { name: '愛因斯坦', ic: '🔭', place: 'NASA 分站', color: '#2E3A59',
+    first: 'Hello！歡迎來到 NASA 分站。我是愛因斯坦，對對對，就是那個頭髮很亂的。這裡每週翻一頁科學筆記，看很厲害的人和很厲害的發現。',
+    hello: ['你來了！今天的星星很好看，very nice。', '我剛剛又算錯一題，哈哈，沒關係，再算一次就好。', '來來來，筆記在這裡。'],
+    today: '今天已經學很多了，大腦也要休息，OK？明天見。',
+    week: '這週的筆記翻過了，下週一再來，我會準備新的故事。',
+    wait: '下一頁我還在寫，再等我幾天，OK？',
+    after: '今天就到這裡。想像力比知識更重要，記得喔。' }
+};
+const WISDOM_ORDER = ['kongming', 'xiaomiao', 'alu', 'einstein'];
+const wisdomFull = {};   // wisdom/<書>.json 的完整內容（書架的 wisdomJson 只留書名、顏色、章名）
+function wisdomLoad(key) {
+  if (wisdomFull[key]) return wisdomFull[key].then ? wisdomFull[key] : Promise.resolve(wisdomFull[key]);
+  const p = fetch('wisdom/' + key + '.json').then(r => r.ok ? r.json() : null).catch(() => null)
+    .then(j => { wisdomFull[key] = j || { lessons: [] }; return wisdomFull[key]; });
+  wisdomFull[key] = p; return p;
+}
+function wisdomBook(key) { const j = wisdomFull[key]; return j && !j.then ? j : null; }
+function wisdomLessons() { return (S.save.wisdom && S.save.wisdom.lessons) || {}; }
+function wisdomDone(book) { return wisdomLessons()[book] || {}; }
+function wisdomCount(teacher) { return [teacher, teacher + '2'].reduce((n, b) => n + Object.keys(wisdomDone(b)).length, 0); }
+function wisdomTodayDone() { const ls = wisdomLessons(); return Object.keys(ls).some(b => Object.values(ls[b] || {}).some(x => x && x.at === S.today)); }
+function wisdomWeekDone(teacher) { const ls = wisdomLessons(), mon = mondayOf(S.today); return [teacher, teacher + '2'].some(b => Object.values(ls[b] || {}).some(x => x && x.at >= mon)); }
+/** 這位導師下一講的狀態：book 第幾本、n 第幾講、L 教案（還沒載入是 undefined、沒寫好是 null）、why 不能上的原因 */
+function wisdomNext(teacher) {
+  const one = Object.keys(wisdomDone(teacher)).length, book = one >= 13 ? teacher + '2' : teacher;
+  const n = Object.keys(wisdomDone(book)).length + 1, j = wisdomBook(book);
+  const L = j ? (j.lessons || []).find(x => x.n === n && x.reviewed) || null : undefined;
+  const why = n > 13 ? 'end' : L === null ? 'wait' : wisdomTodayDone() ? 'today' : wisdomWeekDone(teacher) ? 'week' : L === undefined ? 'load' : '';
+  return { book, n, L, why };
+}
+function wisdomStatus(teacher) {
+  const x = wisdomNext(teacher), t = WISDOM_T[teacher];
+  return { end: '🎓 兩本書都上完了', wait: '⏳ 下一講準備中', today: '🌙 今天上過課了', week: '📅 本週已上課，下週見', load: '…', '': '✨ 可以上第 ' + x.n + ' 講' }[x.why] || t.name;
+}
+function wisdomSay(teacher) {
+  const t = WISDOM_T[teacher], x = wisdomNext(teacher);
+  if (!wisdomCount(teacher)) return t.first;
+  if (x.why === 'today') return t.today;
+  if (x.why === 'week') return t.week;
+  if (x.why === 'wait') return t.wait;
+  return t.hello[(dayIdx(S.today) + teacher.length) % t.hello.length];
+}
+
+// ---------- 智慧島：渡船靠岸，島上四間導師小屋 ----------
+function wisdomScene() {
+  const ph = env.phase, night = ph === 'night', wet = env.weather === 'rain' || env.weather === 'storm', lit = night ? 1 : ph === 'dusk' ? 0.7 : 0.25;
+  const sky = night ? ['#141c36', '#2a3560'] : ph === 'dusk' ? ['#e9875a', '#f5c48f'] : ph === 'dawn' ? ['#f1b48f', '#fbe0c2'] : wet ? ['#8b97a5', '#b9c2cc'] : ['#8fcbea', '#e3f3fa'];
+  const sea = night ? '#22325a' : wet ? '#6f8797' : '#5fa8cf', win = `fill="#ffd27a" opacity="${lit}"`;
+  const hut = (key, x, y, body) => `<g class="whut" onclick="openWisdomHut('${key}')" transform="translate(${x} ${y})">${body}
+      <rect x="-30" y="34" width="60" height="15" rx="7" fill="#fffaf0" opacity=".92"/><text x="0" y="45" text-anchor="middle" font-size="9" font-weight="700" fill="${WISDOM_T[key].color}">${WISDOM_T[key].name}</text></g>`;
+  return `<div class="wscene"><svg viewBox="0 0 400 270" preserveAspectRatio="xMidYMid slice" aria-label="智慧島">
+    <defs><linearGradient id="wSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient>
+      <radialGradient id="wMist"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+    <rect width="400" height="270" fill="url(#wSky)"/>
+    ${night ? '<circle cx="330" cy="34" r="9" fill="#fdf3c8"/>' + Array.from({ length: 14 }, (_, i) => `<circle cx="${(i * 67) % 390 + 6}" cy="${(i * 29) % 70 + 8}" r=".9" fill="#fff"/>`).join('') : wet ? '' : '<circle cx="336" cy="36" r="13" fill="#fff6c9" opacity=".95"/>'}
+    <path d="M0 96 Q 60 70 120 88 T 230 80 T 400 92 V120 H0Z" fill="${night ? '#33406a' : '#b9cfd9'}" opacity=".7"/>
+    <rect y="104" width="400" height="166" fill="${sea}"/>
+    ${Array.from({ length: 10 }, (_, i) => `<path d="M${(i * 83) % 380} ${118 + (i * 37) % 140} q6 -3 12 0" stroke="#fff" stroke-width="1" fill="none" opacity=".45"/>`).join('')}
+    <!-- 島 -->
+    <ellipse cx="200" cy="168" rx="178" ry="58" fill="#e6c98e"/><ellipse cx="200" cy="160" rx="166" ry="50" fill="${night ? '#4f7a4a' : '#8cc56c'}"/>
+    <path d="M60 150 Q 120 98 200 104 Q 280 98 340 150" fill="${night ? '#5f8a55' : '#9fd27e'}"/>
+    <!-- 松樹與石燈籠 -->
+    ${[[96, 112], [312, 110], [200, 98]].map(([x, y]) => `<path d="M${x} ${y - 22} l-11 14 h6 l-9 11 h28 l-9 -11 h6 z" fill="${night ? '#2f5a3a' : '#3f7a45'}"/><rect x="${x - 1.5}" y="${y + 3}" width="3" height="6" fill="#6b4a2b"/>`).join('')}
+    <g transform="translate(200 150)"><rect x="-3" y="-2" width="6" height="12" fill="#a9a39a"/><rect x="-7" y="-10" width="14" height="8" fill="#bdb6aa"/><rect x="-4" y="-8" width="8" height="4" ${win}/><path d="M-9 -10 L0 -16 L9 -10Z" fill="#8f897f"/></g>
+    ${hut('kongming', 112, 114, `<!-- 孔明：茅草屋頂的草廬、竹林 -->
+      ${[-30, -25, 27].map(x => `<path d="M${x} 30 V-8" stroke="#6f9a4a" stroke-width="2.5"/><path d="M${x} 0 l7 -5 M${x} 12 l-7 -5" stroke="#7fb062" stroke-width="2"/>`).join('')}
+      <rect x="-19" y="8" width="38" height="22" fill="#e9dcc0"/><rect x="-6" y="14" width="12" height="16" fill="#6b4a2b"/><circle cx="-12" cy="17" r="3.5" ${win}/><circle cx="12" cy="17" r="3.5" ${win}/>
+      <path d="M-27 10 Q 0 -16 27 10 Z" fill="#b38a4f"/><path d="M-22 6 Q 0 -10 22 6 M-16 1 Q 0 -8 16 1" stroke="#8f6a38" stroke-width="1" fill="none"/>`)}
+    ${hut('xiaomiao', 290, 112, `<!-- 小苗：和風湯屋，暖簾和熱氣 -->
+      ${[-10, 0, 10].map((x, i) => `<path d="M${x} -14 q4 -6 0 -12 q-4 -6 0 -12" stroke="#fff" stroke-width="2" fill="none" opacity=".75"><animate attributeName="opacity" values=".2;.8;.2" dur="${2.4 + i * 0.5}s" repeatCount="indefinite"/></path>`).join('')}
+      <rect x="-24" y="6" width="48" height="24" fill="#f3ead6"/><rect x="-24" y="6" width="48" height="3" fill="#7a5a48"/>
+      <rect x="-8" y="12" width="16" height="12" fill="#2f5f8a"/><text x="0" y="22" text-anchor="middle" font-size="9" fill="#fff">♨</text>
+      <rect x="-20" y="12" width="9" height="8" ${win}/><rect x="11" y="12" width="9" height="8" ${win}/>
+      <path d="M-31 8 L-22 -6 H22 L31 8Z" fill="#4a4f5a"/><path d="M-22 -6 L-26 -10 M22 -6 L26 -10" stroke="#4a4f5a" stroke-width="3"/>`)}
+    ${hut('alu', 82, 176, `<!-- 阿律：台灣的柑仔店，紅招牌、報紙架 -->
+      <rect x="-24" y="2" width="48" height="28" fill="#efe2c8"/><rect x="-26" y="-6" width="52" height="10" fill="#c0392b"/>
+      <text x="0" y="2" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff4c9">柑仔店</text>
+      <rect x="-18" y="9" width="36" height="16" fill="${night ? '#ffd27a' : '#8a7a62'}" opacity="${night ? 0.9 : 0.5}"/>
+      ${[0, 1, 2, 3].map(i => `<circle cx="${-13 + i * 8}" cy="23" r="2.4" fill="${['#2f9e8f', '#e98fb3', '#f1c40f', '#7fb3e6'][i]}"/>`).join('')}
+      <rect x="27" y="10" width="10" height="20" fill="#6b4a2b"/><rect x="28" y="12" width="8" height="5" fill="#fdfaf2"/><rect x="28" y="19" width="8" height="5" fill="#fdfaf2"/>`)}
+    ${hut('einstein', 318, 176, `<!-- 愛因斯坦：白色圓頂的 NASA 分站、天線 -->
+      <rect x="-20" y="10" width="40" height="20" fill="#f4f6f8"/><path d="M-20 10 A20 20 0 0 1 20 10Z" fill="#dfe6ee"/><rect x="-3" y="-9" width="6" height="19" fill="#2e3a59" transform="rotate(-20)"/>
+      <rect x="-6" y="18" width="12" height="12" fill="#2e3a59"/><rect x="-16" y="16" width="7" height="6" ${win}/><rect x="9" y="16" width="7" height="6" ${win}/>
+      <text x="0" y="28" text-anchor="middle" font-size="5" font-weight="700" fill="#fff">NASA</text>
+      <path d="M27 30 V12" stroke="#8a8a8a" stroke-width="1.5"/><path d="M19 8 Q 27 18 35 8" fill="#cfd6de" stroke="#8a8a8a" stroke-width="1"/>`)}
+    <!-- 碼頭和渡船 -->
+    <path d="M176 206 L170 252 M224 206 L230 252" stroke="#7a5236" stroke-width="3"/>
+    <path d="M178 204 H222 L226 246 H174Z" fill="#b08356"/>${[0, 1, 2, 3, 4].map(i => `<path d="M${176 - i * 0.5} ${212 + i * 8} H${224 + i * 0.5}" stroke="#8f6640" stroke-width="1"/>`).join('')}
+    <rect x="185" y="186" width="30" height="13" rx="2" fill="#fbf4e4" stroke="#6b4a2b" stroke-width="1.5"/><text x="200" y="196" text-anchor="middle" font-size="7" font-weight="700" fill="#5b3a1e">智慧島</text>
+    <path d="M190 199 V206 M210 199 V206" stroke="#6b4a2b" stroke-width="1.5"/>
+    <g transform="translate(262 234)"><path d="M-30 0 H30 L22 12 H-22Z" fill="#fdfaf2"/><path d="M-27 4 H27" stroke="#c0392b" stroke-width="2"/>
+      <rect x="-12" y="-10" width="22" height="10" fill="#f1e6d2"/><rect x="-9" y="-7" width="5" height="4" ${win}/><rect x="1" y="-7" width="5" height="4" ${win}/><rect x="-14" y="-12" width="26" height="3" fill="#2f6fae"/>
+      <animateTransform attributeName="transform" type="translate" values="262 234;262 236;262 234" dur="3s" repeatCount="indefinite"/></g>
+    <ellipse cx="200" cy="120" rx="220" ry="26" fill="url(#wMist)"/>
+  </svg></div>`;
+}
+function viewWisdom() {
+  if (!wisdomOn()) return `<div class="card">智慧島還在霧裡，等開島那天再來吧。</div><div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+  WISDOM_ORDER.forEach(k => [...new Set([k, wisdomNext(k).book])].forEach(b => {   // 第二本書等第一本上完才載入
+    if (!wisdomFull[b]) wisdomLoad(b).then(() => { if (tab === 'wisdom' || tab === 'whut') render(); }); }));
+  const today = wisdomTodayDone();
+  return `<div class="card"><h2>⛴️ 智慧島</h2>${wisdomScene()}
+      <div class="speech" style="margin-top:8px">${today ? '🌙 今天的課上完了。渡船照樣開，想回看筆記可以進小屋坐坐，明天再來上下一講。' : '⛴️ 小船靠岸了。霧散開，四間小屋的燈都亮著。今天想去哪一間上課？'}</div>
+      <div class="muted" style="margin-top:6px;font-size:13px">點小屋就能進去。每天可以上一講，同一位老師每週一講。</div></div>
+    ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k);
+      return `<div class="card whcard" style="border-left:5px solid ${t.color}" onclick="openWisdomHut('${k}')"><div class="row" style="flex-wrap:nowrap">
+        <span style="font-size:30px">${t.ic}</span><div class="grow"><b>${esc(t.place)}</b>・${esc(t.name)}<div class="muted" style="font-size:13px">《${esc((wisdomBook(x.book) || {}).title || '')}》${wisdomCount(k)}／13 講</div></div>
+        <span class="st ${x.why ? 'info' : 'todo'}">${wisdomStatus(k)}</span></div></div>`; }).join('')}
+    ${wisdomStampBook()}
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+/** 集章冊：四位導師各 13 格，上完一講蓋一個章；上完的書也會擺到書店的書架 */
+function wisdomStampBook() {
+  return `<div class="card"><h3 style="margin-top:0">📜 集章冊</h3>
+    ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], book = wisdomCount(k) >= 13 ? k + '2' : k, d = wisdomDone(book);
+      return `<div style="margin-top:8px"><b style="color:${t.color}">${t.ic} ${esc((wisdomBook(book) || {}).title || t.name)}</b>
+        <div class="wstamps">${Array.from({ length: 13 }, (_, i) => d[i + 1] ? `<button class="wstamp on" style="border-color:${t.color};color:${t.color}" onclick="openWisdomLesson('${book}',${i + 1})">${i + 1}</button>` : `<span class="wstamp">${i + 1}</span>`).join('')}</div></div>`; }).join('')}
+    <div class="muted" style="margin-top:8px;font-size:13px">點蓋好的章可以回看那一講。上過的書也會擺在書店的「你的書架」上。</div></div>`;
+}
+let wisdomHut = 'kongming';
+function openWisdomHut(k) { wisdomHut = k; draft = {}; tab = 'whut'; render(); window.scrollTo(0, 0); }
+function viewWisdomHut() {
+  const k = wisdomHut, t = WISDOM_T[k], x = wisdomNext(k);
+  if (!wisdomFull[x.book]) wisdomLoad(x.book).then(() => { if (tab === 'whut') render(); });
+  const j = wisdomBook(x.book) || {}, past = [k, k + '2'].flatMap(b => Object.keys(wisdomDone(b)).map(Number).sort((p, q) => p - q).map(n => ({ b, n })));
+  const titleOf = (b, n) => { const L = ((wisdomBook(b) || {}).lessons || []).find(y => y.n === n); return L ? L.title : ''; };
+  return `<div class="card"><h2>${t.ic} ${esc(t.place)}</h2>
+      <div class="row" style="flex-wrap:nowrap"><span style="font-size:34px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(wisdomSay(k))}</div></div>
+      ${x.why ? `<div class="muted" style="margin-top:10px">${wisdomStatus(k)}</div>`
+        : `<button style="width:100%;margin-top:12px;background:${t.color}" onclick="openWisdomLesson('${x.book}',${x.n})">📖 上第 ${x.n} 講：${esc(x.L.title)}</button>`}</div>
+    ${past.length ? `<div class="card"><h3 style="margin-top:0">📚 上過的課</h3>${past.map(p => `<button class="opt" style="width:100%;margin-top:6px" onclick="openWisdomLesson('${p.b}',${p.n})">第 ${p.n} 講　${esc(titleOf(p.b, p.n))}<span class="muted" style="float:right;font-size:12px">${short(wisdomDone(p.b)[p.n].at)}</span></button>`).join('')}</div>` : ''}
+    <div class="row"><button class="ghost grow" onclick="go('wisdom')">回到碼頭 ⛴️</button></div>`;
+}
+
+// ---------- 上課：聽故事 → 你來選 → 搬到你的生活 → 寫一句 ----------
+async function openWisdomLesson(book, n) {
+  const j = await wisdomLoad(book), L = (j.lessons || []).find(x => x.n === n && x.reviewed);
+  const rec = wisdomDone(book)[n], teacher = book.replace(/2$/, '');
+  if (!L) return toast('這一講還在準備中');
+  if (!rec) {
+    const x = wisdomNext(teacher);
+    if (x.book !== book || x.n !== n) return toast('要照順序上喔');
+    if (x.why === 'today') return toast(WISDOM_T[teacher].today);
+    if (x.why === 'week') return toast(WISDOM_T[teacher].week);
+  }
+  wisdomHut = teacher;
+  draft = { wl: { book, n, step: rec ? L.sections.length - 1 : 0, pick: {}, shown: {}, note: '', review: !!rec } };
+  if (rec) { L.sections.forEach((s, i) => { draft.wl.shown[i] = true; }); if (rec.choice >= 0) draft.wl.pick[1] = [rec.choice]; }
+  tab = 'wlesson'; render(); window.scrollTo(0, 0);
+}
+function wisdomLessonNow() { const w = draft.wl, j = w && wisdomBook(w.book); return j && (j.lessons || []).find(x => x.n === w.n); }
+function viewWisdomLesson() {
+  const w = draft.wl, L = wisdomLessonNow();
+  if (!L) return `<div class="card">找不到這一講。</div><div class="row"><button class="ghost grow" onclick="go('wisdom')">回到碼頭 ⛴️</button></div>`;
+  const teacher = w.book.replace(/2$/, ''), t = WISDOM_T[teacher], j = wisdomBook(w.book), rec = wisdomDone(w.book)[w.n], last = L.sections.length - 1;
+  const p = s => `<p style="margin:6px 0;line-height:1.8">${esc(s)}</p>`;
+  const secHtml = (s, i) => {
+    const picked = w.pick[i] || [], shown = w.shown[i], many = s.pick > 1;
+    let opts = '';
+    if (s.opts.length && s.steps) opts = `<ol style="margin:6px 0;padding-left:22px;line-height:1.8">${s.opts.map(o => `<li>${esc(o)}</li>`).join('')}</ol>`;
+    else if (s.opts.length) opts = `<div class="opts">${s.opts.map((o, k) => {
+        const cls = shown ? (s.ans === k ? 'right' : picked.includes(k) ? (s.ans == null ? 'mine' : 'wrong') : '') : picked.includes(k) ? 'mine' : '';
+        return `<button class="opt ${cls}" ${shown ? 'disabled' : `onclick="wisdomPick(${i},${k})"`}>${s.ans != null || !many ? 'ABCDE'.charAt(k) + '. ' : ''}${esc(o)}</button>`; }).join('')}</div>
+      ${!shown && many ? `<button style="width:100%;margin-top:8px" ${picked.length ? '' : 'disabled'} onclick="draft.wl.shown[${i}]=true;render()">選好了（${picked.length}／${s.pick}）</button>` : ''}`;
+    const needShow = (s.opts.length && !s.steps) || s.after.length;
+    const reveal = !shown && !s.opts.length && s.after.length ? `<button class="ghost" style="width:100%;margin-top:8px" onclick="draft.wl.shown[${i}]=true;render()">看${t.name}怎麼說</button>` : '';
+    const after = (shown || s.steps) ? s.after.map(p).join('') : '';
+    const widget = i === 2 && L.widget ? wisdomWidget(L.widget) : '';
+    const next = i === w.step && i < last ? `<button style="width:100%;margin-top:10px;background:${t.color}" ${needShow && !shown && !s.steps ? 'disabled' : ''} onclick="draft.wl.step++;render();setTimeout(()=>{const e=document.getElementById('wsec${i + 1}');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},30)">繼續 →</button>` : '';
+    return `<div class="card" id="wsec${i}"><h3 style="margin-top:0;color:${t.color}">${esc(s.h)}</h3>${s.q.map(p).join('')}${widget}${opts}${reveal}${after}${i === last ? wisdomNoteHtml(L, t, rec) : next}</div>`;
+  };
+  return `<div class="card" style="border-top:5px solid ${t.color}"><div class="muted" style="font-size:13px">${t.ic} ${esc(t.place)}・《${esc(j.title)}》</div>
+      <h2 style="margin:4px 0">第 ${w.n} 講　${esc(L.title)}</h2><div class="muted" style="font-size:13px">${esc(L.stamp)}</div>
+      ${L.article ? `<div style="margin-top:8px;font-size:14px">📰 這講對應的文章：<a href="${esc(L.article.url)}" target="_blank" rel="noopener">${esc(L.article.title)}</a>${esc(L.article.note || '')}</div>` : ''}</div>
+    ${L.sections.slice(0, w.step + 1).map(secHtml).join('')}
+    <div class="row"><button class="ghost grow" onclick="openWisdomHut('${teacher}')">回到${esc(t.place)}</button><button class="ghost grow" onclick="go('wisdom')">回到碼頭 ⛴️</button></div>`;
+}
+function wisdomPick(i, k) {
+  const w = draft.wl, s = wisdomLessonNow().sections[i], cur = w.pick[i] || [];
+  if (s.pick > 1) { w.pick[i] = cur.includes(k) ? cur.filter(x => x !== k) : cur.length < s.pick ? cur.concat(k) : cur; }
+  else { w.pick[i] = [k]; w.shown[i] = true; }
+  render();
+}
+/** 最後一步：寫一句交給老師，老師（Gemini）回一句；上過的課顯示她寫的和老師的回話 */
+function wisdomNoteHtml(L, t, rec) {
+  const w = draft.wl, done = rec;
+  const tail = `${L.closing ? `<div class="row" style="flex-wrap:nowrap;margin-top:10px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(L.closing.replace(/^「|」$/g, ''))}</div></div>` : ''}
+    <div class="row" style="margin-top:10px;align-items:center"><span class="hanko" style="border-color:${t.color};color:${t.color}">${w.n}</span><span class="muted grow" style="font-size:13px">集章冊蓋好第 ${w.n} 個章了</span></div>
+    ${L.source ? `<div class="muted" style="margin-top:8px;font-size:12px">出處：${esc(L.source)}</div>` : ''}`;
+  if (done) return `<div class="wnote"><b>你寫的：</b>${esc(done.note)}</div>
+    ${done.reply ? `<div class="row" style="flex-wrap:nowrap;margin-top:8px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(done.reply)}</div></div>` : ''}${tail}`;
+  return `<textarea id="wNote" rows="3" maxlength="200" placeholder="寫一句就好" style="width:100%;margin-top:8px" oninput="draft.wl.note=this.value">${esc(w.note)}</textarea>
+    <button id="wGo" style="width:100%;margin-top:8px;background:${t.color}" onclick="wisdomSubmit()">交給${esc(t.name)} ✉️</button>`;
+}
+async function wisdomSubmit() {
+  const w = draft.wl, L = wisdomLessonNow(), note = String(w.note || '').trim();
+  if (!note) return toast('寫一句再交給老師吧');
+  const btn = document.getElementById('wGo'); if (btn) { btn.disabled = true; btn.textContent = '老師正在看你寫的…'; }
+  const choice = ((w.pick[1] || [])[0]);
+  try { await flush(); S = await call('takeLesson', w.book, w.n, choice == null ? -1 : choice, note, { title: L.title, ask: L.sections[L.sections.length - 1].q.join('') }); D = derive(S); }
+  catch (e) { if (btn) { btn.disabled = false; btn.textContent = '再交一次'; } return toast(String(e.message || e)); }
+  w.review = false; toast('📜 蓋好章了！'); render();
+}
+/** 小苗的呼吸泡泡、計時器：教案裡寫的「跟著做」 */
+let wisdomTimer = null;
+function wisdomWidget(g) {
+  return `<div class="wwidget"><div class="wbubble" id="wBub">${g.kind === 'breathe' ? g.ic : '⏳'}</div><div id="wCue" class="muted" style="min-height:1.5em;margin-top:6px">${g.kind === 'breathe' ? '吸 ' + g.inhale + ' 下、吐 ' + g.exhale + ' 下，一共 ' + g.times + ' 次' : g.steps.map(s => s[0] + ' ' + s[1] + ' 秒').join('、') + (g.times > 1 ? '，做 ' + g.times + ' 次' : '')}</div>
+    <button class="ghost" style="margin-top:6px" onclick='wisdomRun(${JSON.stringify(g)})'>跟著做 ▶</button></div>`;
+}
+function wisdomRun(g) {
+  clearInterval(wisdomTimer);
+  const seq = []; for (let r = 0; r < g.times; r++) (g.kind === 'breathe' ? [['吸', g.inhale, 1.6], ['吐', g.exhale, 1]] : g.steps.map(s => [s[0], s[1], 1])).forEach(x => seq.push(x));
+  let i = 0, left = 0;
+  const tick = () => {
+    const bub = document.getElementById('wBub'), cue = document.getElementById('wCue');
+    if (!bub || !cue) return clearInterval(wisdomTimer);
+    if (left <= 0) { if (i >= seq.length) { cue.textContent = '做完了，慢慢回到這裡。'; bub.style.transform = 'scale(1)'; return clearInterval(wisdomTimer); }
+      const [label, sec, sc] = seq[i++]; left = sec; bub.style.transition = `transform ${sec}s ease-in-out`; bub.style.transform = `scale(${sc})`; cue.dataset.label = label; }
+    cue.textContent = cue.dataset.label + '… ' + (left >= 60 ? Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') : left); left--;
+  };
+  tick(); wisdomTimer = setInterval(tick, 1000);
+}
+
+// おつとめ板：智慧島開島後多一行（可選，不算未完成）
+BOARD.push({ key: 'wisdom', ic: '⛴️', name: '智慧島', go: 'wisdom', on: () => wisdomOn(),
+  st() { return wisdomTodayDone() ? { t: '今天上過課了', c: 'done' } : { t: '⛴️ 今日開航', c: 'info' }; },
+  todo() { return false; } });
 function todayPlan() {
   const di = dayIdx(S.today), rows = planOf(mondayOf(S.today)).days[di], lg = logOf(S.today);
   return { rows, done: rows.filter(r => lg[r]).length, extra: Object.keys(lg).filter(r => !rows.includes(Number(r))).length };
@@ -809,7 +1081,7 @@ function boardCard() {
   const open = boardOpen;
   return `<div class="card board" id="boardCard"><div class="row"><h3 class="grow" style="margin:0">📋 今日のおつとめ</h3><span class="muted">週${DAYS[di]} ${short(S.today)}</span></div>
     ${todo.length ? '' : '<div class="speech" style="margin-top:8px">🎉 今天的おつとめ都完成了！去島上逛逛吧～</div>'}
-    <div style="margin-top:4px">${BOARD.map(b => { const st = b.st(), on = !b.go && open === b.key;
+    <div style="margin-top:4px">${BOARD.filter(b => !b.on || b.on()).map(b => { const st = b.st(), on = !b.go && open === b.key;
       return `<button class="brow" onclick="boardTap('${b.key}')" aria-expanded="${on}"><span class="ic">${b.ic}</span><span class="nm">${b.name}</span><span class="st ${st.c}${st.clock ? (st.clock === 'move' ? ' moveClock' : ' focusClock') : ''}">${esc(st.t)}</span><span class="chev">${b.go ? '›' : on ? '▴' : '▾'}</span></button>`
         + (on ? `<div class="bbody">${b.body()}</div>` : ''); }).join('')}</div></div>`;
 }
@@ -2388,6 +2660,7 @@ async function mount3D() {
       onHome: () => openHouse('me'),
       light: (st => ({ name: lightTitle(), sea: st.sea, due: st.due, lanterns: st.lanterns }))(lightStats()), onLight: () => go('light'),
       garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),
+      ferry: wisdomOn() ? { open: !wisdomTodayDone() } : null, onFerry: () => go('wisdom'),
       book: { name: bookTitle(), sub: newCards().length ? '📮 ' + newCards().length + ' 張新明信片' : null }, onBook: () => go('bookstore'),
       marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })), onMark: id => { const m = landmarkList().find(x => x.id === id); if (m) openBook(m.key); },
       grade: s => D.grades[s] && D.grades[s].level,
@@ -3443,7 +3716,7 @@ async function shareVisit(code) {
 const WISDOM_BOOKS = [
   { key: 'kongming', title: '孫子兵法', color: '#8C2F2B' }, { key: 'xiaomiao', title: '湯屋的放鬆筆記', color: '#7FA88A' },
   { key: 'alu', title: '巷口小報', color: '#3B5B8C' }, { key: 'einstein', title: '愛因斯坦的科學筆記', color: '#2E3A59' },
-  { key: 'xiaomiao2', title: '湯屋的放鬆筆記・下冊', color: '#7FA88A' }, { key: 'alu2', title: '巷口小報・下冊', color: '#3B5B8C' },
+  { key: 'kongming2', title: '三十六計', color: '#8C2F2B' }, { key: 'xiaomiao2', title: '湯屋的放鬆筆記・下冊', color: '#7FA88A' }, { key: 'alu2', title: '巷口小報・下冊', color: '#3B5B8C' },
   { key: 'einstein2', title: '愛因斯坦的科學筆記・下冊', color: '#2E3A59' }];
 const wisdomJson = {};
 // 店名：她自己取（存在 keeper:bookname 的 name，沿用 saveKeeper，後端不用改）
@@ -4273,6 +4546,9 @@ function viewGuide() {
     p('你也可以送家人一本書：在書店按「🎁 送家人一本書」，選一位家人，從書單挑一本（讀過的書排在最前面），寫一句為什麼想送。店長會在他們下次來書店時轉交，他們讀完可以回你一個表情。每位家人每週可以送一本，送過的書收在「我送出的書」。') +
     p('讀完一本書，島上就會長出一個地標：每本書依內容對應國、英、數、自、社其中一條街，例如《銀河鐵道之夜》讀完，自然街靠海的草地會長出觀星丘。家人送的書按「📖 讀過了」、智慧島的書 13 章都蓋完章就會長出來。點地標可以打開那本書；點一條街，也看得到這條街長了哪些地標。打開還沒讀完的書，會告訴你讀完後會長出什麼。') +
     p('家人能挑的書單會自己補書：每次只剩十本還沒讀，就再上架三十本，都從國高中推薦閱讀清單挑，新上架的書會標「🆕」。'))}
+  ${wisdomOn() ? sec('⛴️', '智慧島', p('海邊有一座渡船碼頭，坐船就能到智慧島。島上住著四位老師：隆中草廬的孔明教《孫子兵法》、湯屋的小苗教放鬆和好好記住東西的方法、巷口柑仔店的阿律教你讀新聞、NASA 分站的愛因斯坦講數學和科學家的故事。') +
+    p('每一講都是四步：聽故事、你來選、搬到你的生活、寫一句。最後寫的那一句交給老師，老師會回你一句話，集章冊就蓋一個章。') +
+    p('<b>每天可以上一講</b>，同一位老師<b>每週一講</b>（週一重新算），所以四位老師剛好一週各上一次，不用急。上過的課可以在小屋或集章冊回看，也會擺到書店的「你的書架」上。')) : ''}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
   ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊 Threads 上最近的熱門話題，有的會關心你；很久沒去找他，他可能會抱怨或想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性。') +
     p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
