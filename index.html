@@ -129,6 +129,21 @@
   .furn { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 8px; }
   .furn button { background: #fff; color: var(--ink); border: 1.5px solid var(--plum-light); padding: 8px 4px; font-size: 13px; }
   .furn button span { display: block; font-size: 26px; } .furn button small { display: block; color: var(--muted); font-size: 11px; }
+  /* 今日のおつとめ板 */
+  .board .brow { display: flex; align-items: center; gap: 8px; width: 100%; background: none; color: var(--ink); padding: 10px 2px; border-radius: 0; border-top: 1px dashed var(--plum-light); text-align: left; }
+  .board .brow:first-of-type { border-top: 0; }
+  .board .brow .ic { font-size: 20px; width: 26px; text-align: center; }
+  .board .brow .nm { flex: 1; font-weight: 700; }
+  .board .brow .chev { color: var(--muted); font-size: 13px; width: 14px; text-align: center; }
+  .st { font-size: 12px; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .st.done { background: #dcebd3; color: #35562a; }
+  .st.todo { background: #fbe9c4; color: #7a5507; }
+  .st.info { background: var(--plum-light); color: var(--plum); }
+  .board .bbody { background: var(--sand); border-radius: 14px; padding: 12px; margin: 0 0 10px; }
+  .board .bbody .card { background: transparent; box-shadow: none; border: none !important; padding: 0; margin: 0; border-radius: 0; }
+  .board .bbody .speech { background: #fff; }
+  .mailbtn { position: relative; padding: 4px 10px; }
+  .mailbtn .dot { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; border-radius: 9px; background: #d9534f; color: #fff; font-size: 11px; line-height: 18px; text-align: center; padding: 0 4px; }
   .stamps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
   .stamp { aspect-ratio: 1; border: 2px dashed var(--plum-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
   .stamp.today { border-color: var(--plum); }
@@ -171,8 +186,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.7';
+const APP_VERSION = '2.8';
 const CHANGELOG = [
+  { v: '2.8', date: '2026-10-25', items: ['📋 首頁變清爽了：最上面是「今日のおつとめ」，今天要做的事一行一件，右邊標好做了沒，點一下就展開', '📮 右上角多了郵便受け：小島更新、家人寄的明信片、邀請、爸爸的回覆都收在這裡，有新東西會亮紅點', '🏃 運動集章卡搬到海邊步道自己的頁面，管理員在那裡等你；首頁那一行也能直接蓋章', '🏝️ 3D 小島往上移，打開就看得到；島民的信和新聞收進嚮導的回覧板', '🏅 徽章搬到我的家'] },
   { v: '2.7', date: '2026-10-25', items: ['🗼 島的岬角上蓋了一座燈塔：先幫它取名字，再請一位你自己設定的守燈人', '🍶 答錯的題會變成漂流瓶漂到燈塔海灘，隔天漂回來時換成 AI 類題（同一個觀念、換了數字和情境），上面會寫是改編自哪一題', '🏮 類題連續兩次答對，瓶子就變成紙燈籠放到海上，那一次照難度給 1～3 枚島幣', '📝 可以在瓶子上記下為什麼錯、寫一句話；想問爸爸的題按「給爸爸看」，家人才看得到', '🔗 做過的任務題如果用到兩科的觀念，島會自動發現這條跨科連結，島民的好感度也會上升', '⛵ 紙船碼頭搬到燈塔的小碼頭了'] },
   { v: '2.6.1', date: '2026-10-25', items: ['👋 第一次來到一個地方時，那裡的管理員會先跟你打招呼，說明這裡可以做什麼（海邊步道先開始）'] },
   { v: '2.6', date: '2026-10-25', items: ['🎟️ 邀請朋友來島上：發一張乘船券（連結或 QR code），朋友就能來逛你的 3D 小島和房間，你決定給他們看什麼、什麼時候收回', '✍️ 先寫一句歡迎詞，嚮導會在碼頭唸給訪客聽', '📮 明信片冊：家人來島上逛過，可以寄一張世界各地的風景明信片給你', '👀 家人可以用自己的家人碼看你的小島，但不會改到任何東西；家人想邀請別人，要你同意才算數'] },
@@ -499,10 +515,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + ({ visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + ({ walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -518,6 +534,7 @@ function hud() {
   const pct = Math.round((D.xp - D.lvBase) / (D.lvNext - D.lvBase) * 100);
   return `<div class="card" id="hudCard">
     <div class="row"><h2 class="grow">${esc(D.cfg.islandName || '我的島')}</h2><span class="muted">島嶼 Lv.${D.level}</span>
+      ${isFamily() ? '' : `<button class="ghost mailbtn" onclick="go('mail')" aria-label="郵便受け">📮${mailCount() ? `<span class="dot">${mailCount()}</span>` : ''}</button>`}
       <button class="ghost" style="padding:4px 10px" onclick="openHouse('me')" aria-label="我的家">${houseTier().ic}</button>
       <button class="ghost" style="padding:4px 10px" onclick="go('guide')" aria-label="玩法說明">❓</button></div>
     <div class="hud">
@@ -543,29 +560,104 @@ function viewHome() {
       <div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div>
     </div>`;
   }).join('');
-  const w = D.grades['文'];
-  const seen = local.get('islandSeenVersion');
-  // 沒看過的版本都列出來；舊玩家第一次遇到更新提示時，只列最新一版
-  const seenAt = CHANGELOG.findIndex(c => c.v === seen);
-  const news = seen === APP_VERSION ? [] : CHANGELOG.slice(0, seenAt > 0 ? seenAt : 1);
-  const newsCard = news.length ? `<div class="card" style="border:2px solid var(--plum)"><h3>✨ 小島更新了（v${APP_VERSION}）</h3>
-    <ul style="margin:6px 0 10px;padding-left:20px">${news.flatMap(c => c.items).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
-    <div class="row"><button onclick="local.set('islandSeenVersion', APP_VERSION); go('guide')">看玩法說明</button>
-    <button class="ghost" onclick="local.set('islandSeenVersion', APP_VERSION); render()">知道了</button></div></div>` : '';
   const toggle = BETA3D ? `<div class="row" style="margin-bottom:10px">
       <button class="${use3D() ? '' : 'ghost'}" onclick="local.set('islandView','3d'); render()">🗺️ 3D 小島</button>
       <button class="${use3D() ? 'ghost' : ''}" onclick="local.set('islandView','list'); render()">📋 清單</button>
 </div>` : '';
   const islandView = use3D() ? `<div id="i3d" style="height:min(62vh,520px);border-radius:24px;overflow:hidden;background:${env.phase === 'night' ? '#1b2440' : '#cfe8f3'};position:relative">
         <div class="loading" style="padding-top:120px">🏝️ 小島浮出水面中…</div></div>
-      <div class="card" style="margin-top:12px" id="i3dTime">${timelineHtml()}</div>
-      <div class="card" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>`
+      <div class="card" style="margin-top:12px" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子；點燈塔、中間的家可以走進去。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>
+      <details class="card" ${replay.idx != null || replay.timer ? 'open' : ''}><summary><b>⏳ 成長回放</b><span class="muted">・看小島一週一週長大</span></summary><div id="i3dTime" style="margin-top:10px">${timelineHtml()}</div></details>`
     : `<div class="island"><div class="districts">${districts}</div></div>`;
-  return hud() + newsCard + visitCards() + todayCard() + habitCard() + questCard() + xqCard() + lightCard() + guideCard() + `
+  return hud() + boardCard() + `
     ${toggle}${islandView}
-    ${dailyCard()}
-    <div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
-      `<div class="badge ${b.ok ? '' : 'locked'}"><span class="ic">${b.ic}</span>${esc(b.name)}</div>`).join('')}</div></div>`;
+    ${kairanCard()}`;
+}
+
+/* --- 首頁的「今日のおつとめ板」：今天要做的事一行一件，右邊標狀態，點一下展開 --- */
+// 以後新增地方（書店、智慧島…），在 BOARD 加一行就好：ic、name、st()＝{ t: 文字, c: done／todo／info }、todo()＝還沒做完、body()＝展開的內容，或 go＝直接換頁
+let boardOpen = '';   // 展開的那一行；'' 是全部收起來（打開 App 時先收起來，3D 小島才看得到）
+const BOARD = [
+  { key: 'plan', ic: '📝', name: '讀書計畫',
+    st() { const p = todayPlan(); return !p.rows.length ? { t: p.extra ? '計畫外 ' + p.extra + ' 項' : '今天沒排', c: 'info' } : { t: (p.done >= p.rows.length ? '✓ ' : '') + p.done + '／' + p.rows.length, c: p.done >= p.rows.length ? 'done' : 'todo' }; },
+    todo() { const p = todayPlan(); return p.rows.length > 0 && p.done < p.rows.length; },
+    body() { return todayCard(true); } },
+  { key: 'walk', ic: '🏃', name: '運動',
+    st() { const n = D.exWeeks[mondayOf(S.today)] || 0; return exToday() ? { t: '今天蓋章了', c: 'done' } : n >= EX_GOAL ? { t: '本週達標 ' + n + '／' + EX_GOAL, c: 'done' } : { t: '本週 ' + n + '／' + EX_GOAL + ' 章', c: 'todo' }; },
+    todo() { return !exToday() && (D.exWeeks[mondayOf(S.today)] || 0) < EX_GOAL; },
+    body() { return exerciseMini(); } },
+  { key: 'quest', ic: '📖', name: '故事任務',
+    st() { const q = todayQuest(); return q.saved && q.saved.done ? { t: q.saved.correct ? '⭕ 答對了' : '做完了', c: 'done' } : { t: '還沒做', c: 'todo' }; },
+    todo() { const q = todayQuest(); return !(q.saved && q.saved.done); },
+    body() { return questCard(); } },
+  { key: 'xq', ic: '⚔️', name: '挑戰任務',
+    st() { const open = extraQuests().find(q => !q.done); return open ? { t: '有一題在等你', c: 'todo' } : { t: '今天 ' + todayChallenges().length + '／' + XQ_DAILY + ' 題', c: 'info' }; },
+    todo() { return !!extraQuests().find(q => !q.done); },
+    body() { return xqCard(); } },
+  { key: 'light', ic: '🍶', name: '漂流瓶',
+    st() { const st = lightStats(); return !lighthouseName() ? { t: '燈塔還沒取名', c: 'info' } : st.due ? { t: '漂回 ' + st.due + ' 個', c: 'todo' } : { t: '海灘 ' + st.sea + ' 個・🏮 ' + st.lanterns, c: 'info' }; },
+    todo() { return lighthouseName() && lightStats().due > 0 && reviewsToday().length < REVIEW_DAILY; },
+    body() { return lightCard(); } },
+  { key: 'paper', ic: '⛵', name: '紙本檢討', go: 'paper',
+    st() { const n = D.paperSessions.filter(x => x.date === S.today); return n.length ? { t: '今天放了 ' + n.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、'), c: 'done' } : { t: '檢討完放一艘', c: 'info' }; },
+    todo() { return false; } }
+];
+function todayPlan() {
+  const di = dayIdx(S.today), rows = planOf(mondayOf(S.today)).days[di], lg = logOf(S.today);
+  return { rows, done: rows.filter(r => lg[r]).length, extra: Object.keys(lg).filter(r => !rows.includes(Number(r))).length };
+}
+function boardCard() {
+  const di = dayIdx(S.today), todo = BOARD.filter(b => b.todo());
+  const open = boardOpen;
+  return `<div class="card board" id="boardCard"><div class="row"><h3 class="grow" style="margin:0">📋 今日のおつとめ</h3><span class="muted">週${DAYS[di]} ${short(S.today)}</span></div>
+    ${todo.length ? '' : '<div class="speech" style="margin-top:8px">🎉 今天的おつとめ都完成了！去島上逛逛吧～</div>'}
+    <div style="margin-top:4px">${BOARD.map(b => { const st = b.st(), on = !b.go && open === b.key;
+      return `<button class="brow" onclick="boardTap('${b.key}')" aria-expanded="${on}"><span class="ic">${b.ic}</span><span class="nm">${b.name}</span><span class="st ${st.c}">${esc(st.t)}</span><span class="chev">${b.go ? '›' : on ? '▴' : '▾'}</span></button>`
+        + (on ? `<div class="bbody">${b.body()}</div>` : ''); }).join('')}</div></div>`;
+}
+function boardTap(key) {
+  const b = BOARD.find(x => x.key === key);
+  if (b.go) return go(b.go);
+  boardOpen = boardOpen === key ? '' : key;
+  softRender();
+}
+// 首頁那一行的運動：蓋章、管理員一句話；完整的集章卡在海邊步道頁
+function exerciseMini() {
+  const wk = mondayOf(S.today), on = exToday(), kp = keeperOf('walk'), daily = S.save['daily:' + S.today];
+  const stamps = DAYS.map((d, i) => { const date = addD(wk, i), got = !!S.save['ex:' + date];
+    return `<div class="stamp ${got ? 'on' : ''} ${date === S.today ? 'today' : ''}"><span>${got ? '済' : d}</span></div>`; }).join('');
+  return `<div class="stamps" style="margin-top:0">${stamps}</div>
+    <div class="row" style="margin-top:10px;flex-wrap:nowrap">${on ? `<div class="grow muted">${kp ? esc(kp.emoji) + ' ' + esc(kp.name) + '陪你跑完了！' : '🏮 海邊步道又多了一段'}</div><button class="ghost" style="padding:6px 10px;font-size:13px" onclick="toggleExercise()">按錯了</button>`
+      : `<button class="grow" onclick="toggleExercise()">🏃 今天運動了！</button>`}</div>
+    ${kp ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:24px">${esc(kp.emoji)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>：${esc((daily && daily.messages && daily.messages.walk) || keeperLine('walk', on, D.exWeeks[wk] || 0))}</div></div>` : ''}
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="go('walk')">去海邊步道 ›</button>`;
+}
+
+/* --- 郵便受け：小島更新、家人的明信片、邀請、爸爸的回覆都寄到這裡，首頁右上角亮紅點 --- */
+function newsItems() {
+  const seen = local.get('islandSeenVersion');
+  // 沒看過的版本都列出來；舊玩家第一次遇到更新提示時，只列最新一版
+  const seenAt = CHANGELOG.findIndex(c => c.v === seen);
+  return seen === APP_VERSION ? [] : CHANGELOG.slice(0, seenAt > 0 ? seenAt : 1);
+}
+function freshCards() { const seen = Number(S.save.cardsSeen || 0); return cardList().filter(c => c.ts > seen); }
+function mailCount() {
+  if (isFamily()) return 0;
+  return (newsItems().length ? 1 : 0) + (freshCards().length ? 1 : 0) + visitList().filter(v => v.status === 'pending').length + (wishNews() ? 1 : 0);
+}
+function viewMail() {
+  const g = guide(), news = newsItems(), n = mailCount();
+  const newsCard = news.length ? `<div class="card" style="border:2px solid var(--plum)"><h3>✨ 小島更新了（v${APP_VERSION}）</h3>
+    <ul style="margin:6px 0 10px;padding-left:20px">${news.flatMap(c => c.items).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+    <div class="row"><button onclick="local.set('islandSeenVersion', APP_VERSION); go('guide')">看玩法說明</button>
+    <button class="ghost" onclick="local.set('islandSeenVersion', APP_VERSION); render()">知道了</button></div></div>` : '';
+  const wish = wishNews() ? `<div class="card" style="border:2px solid var(--gold);cursor:pointer" onclick="go('wish')"><b>💡 爸爸回覆了你的 ${wishNews()} 則想法</b><div class="muted">點開「讓島順起來」看看</div></div>` : '';
+  return `<div class="card"><div class="row" style="flex-wrap:nowrap"><span class="avatar">${g.pic}</span>
+      <div class="speech grow"><b>${esc(g.name)}</b>：${n ? '有新的東西寄來了！我都幫你收好了，一封一封看吧 ✉️' : '郵便受け現在空空的。有人寄東西來，右上角的 📮 會亮紅點喔。'}</div></div></div>
+    ${newsCard}${visitCards()}${wish}
+    <div class="row" style="margin-bottom:14px"><button class="ghost grow" onclick="go('cards')">📮 明信片冊${cardList().length ? '（' + cardList().length + '）' : ''}</button>
+      <button class="ghost grow" onclick="openHouse('me')">📬 以前的信</button></div>
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 
 /* --- 島民的每日訊息、嚮導的昨日新聞（每天第一次打開時由 AI 寫好，存在 daily:日期） --- */
@@ -623,6 +715,7 @@ function maybeGreet() {
   box.innerHTML = `<div class="greet-card"><div class="greet-pic">${g.pic}</div><div class="muted">${esc(envText())}</div>
       <div class="speech" style="margin-top:10px;text-align:left"><b>${esc(g.name)}</b>：${esc((d && d.greeting) || greetFallback())}</div>
       ${plan ? `<div class="muted" style="margin-top:8px">📝 今天的計畫有 ${plan} 項</div>` : ''}
+      ${mailCount() ? `<div class="muted" style="margin-top:4px">📮 郵便受け有 ${mailCount()} 件新東西</div>` : ''}
       <button style="margin-top:14px;width:100%">${h < 11 ? '早安！出發吧' : h < 18 ? '好～開始囉' : '晚安～來看看小島'} ✨</button></div>`;
   box.querySelector('button').onclick = () => { local.set('islandGreeted', S.today); box.remove(); };
   document.body.appendChild(box);
@@ -638,22 +731,33 @@ function dailyCard() {
     const ev = residentEvent();
     body = `<div>${ev.r.ipic} ${esc(ev.text)}</div>${dailyState === 'loading' ? '<div class="muted" style="margin-top:6px">✉️ 島民們正在寫信給你…</div>' : ''}`;
   }
-  return `<div class="card" id="dailyCard" style="margin-top:14px"><h3>📮 今日島上消息</h3>${body}
+  return `<div id="dailyCard"><h3 style="margin-top:10px">📮 今日島上消息</h3>${body}
     ${w ? `<div class="muted" style="margin-top:8px">✍️ 作文：${esc(w.level)}（${esc(w.date)}）</div>` : ''}
     ${D.log.length ? `<div class="muted" style="margin-top:6px">${D.log.map(esc).join('<br>')}</div>` : ''}</div>`;
 }
+let kairanOpen = false;
+function kairanCard() {
+  const d = S.save['daily:' + S.today], letters = d ? SUBJECTS.filter(s => d.messages && d.messages[s]).length : 0;
+  const what = [letters ? '島民的信 ' + letters + ' 封' : '島上消息', d && d.news ? '昨天的新聞' : ''].filter(Boolean).join('・');
+  return `<div class="card" id="kairanCard">${guideCard()}
+    <details style="margin-top:10px" ${kairanOpen ? 'open' : ''} ontoggle="kairanOpen=this.open"><summary><b>📰 回覧板</b><span class="muted">・${what}${dailyState === 'loading' ? '（寫信中…）' : ''}</span></summary>
+      ${guideNews()}${dailyCard()}</details>
+    <button class="ghost" style="width:100%;margin-top:10px" onclick="go('wish')">💡 讓島順起來${wishNews() ? `<span class="pill" style="margin-left:6px">爸爸回覆了 ${wishNews()} 則</span>` : ''}</button></div>`;
+}
 function guideCard() {
+  const g = guide();
+  return `<div class="row" style="flex-wrap:nowrap"><span class="avatar">${g.pic}</span>
+      <div class="speech grow"><b>${esc(g.name)}</b>：${esc(guideLine())}</div></div>`;
+}
+function guideNews() {
   const g = guide(), d = S.save['daily:' + S.today], n = d && d.news;
-  const news = n ? `<div style="margin-top:12px;border-top:1px dashed var(--plum-light);padding-top:10px">
+  return n ? `<div style="margin-top:12px;border-top:1px dashed var(--plum-light);padding-top:10px">
       <div class="muted">📰 ${short(n.date)} 的新聞</div><h3 style="margin:4px 0">${esc(n.title)}</h3>
       <div style="line-height:1.7">${esc(n.summary)}</div>
       ${n.link ? `<div style="margin-top:6px"><span class="pill">📚 會考關聯：${esc(n.link)}</span></div>` : ''}
       ${n.talk ? `<div class="speech" style="margin-top:8px"><b>${esc(g.name)}</b>：${esc(n.talk)}</div>` : ''}
       ${(n.sources || []).length ? `<div class="muted" style="margin-top:6px;font-size:12px">來源：${n.sources.map(x => `<a href="${esc(x.uri)}" target="_blank" rel="noopener">${esc(x.title || '連結')}</a>`).join('、')}</div>` : ''}</div>`
     : dailyState === 'loading' ? `<div class="muted" style="margin-top:8px">📰 ${esc(g.name)}正在看昨天的新聞…</div>` : '';
-  return `<div class="card" id="guideCard"><div class="row" style="flex-wrap:nowrap"><span class="avatar">${g.pic}</span>
-      <div class="speech grow"><b>${esc(g.name)}</b>：${esc(guideLine())}</div></div>${news}
-    <button class="ghost" style="width:100%;margin-top:10px" onclick="go('wish')">💡 讓島順起來${wishNews() ? `<span class="pill" style="margin-left:6px">爸爸回覆了 ${wishNews()} 則</span>` : ''}</button></div>`;
 }
 
 /* --- 讓島順起來：她對遊戲設計的想法，寫進試算表的「讓島順起來」分頁，爸爸改狀態、寫回覆 --- */
@@ -835,6 +939,8 @@ function viewHouse() {
           ${d.greeting ? `<div style="margin-top:6px">${guide().pic} <b>${esc(guide().name)}</b>：${esc(d.greeting)}</div>` : ''}
           ${SUBJECTS.filter(s => d.messages && d.messages[s]).map(s => `<div style="margin-top:6px">${resident(s).ipic} <b>${esc(resident(s).name)}</b>：${esc(d.messages[s])}</div>`).join('')}
           ${d.news ? `<div class="muted" style="margin-top:6px">📰 ${esc(d.news.summary)}</div>` : ''}</details>`; }).join('') : '<div class="muted">還沒有信。每天島民寫給你的訊息都會收在這裡。</div>'}</div>
+    <div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
+      `<div class="badge ${b.ok ? '' : 'locked'}"><span class="ic">${b.ic}</span>${esc(b.name)}</div>`).join('')}</div></div>
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 島民的家：她送的家具越多，島民越開心
@@ -926,7 +1032,6 @@ function habitCard() {
   const kp = keeperOf('walk'), daily = S.save['daily:' + S.today];
   const stamps = DAYS.map((d, i) => { const date = addD(wk, i), got = !!S.save['ex:' + date];
     return `<div class="stamp ${got ? 'on' : ''} ${date === S.today ? 'today' : ''}"><span>${got ? '済' : d}</span></div>`; }).join('');
-  const paperToday = D.paperSessions.filter(x => x.date === S.today);
   return `<div class="card" id="habitCard">
     <div class="row"><h3 class="grow" style="margin:0">🏃 運動集章卡</h3><span class="muted">本週 ${n}／${EX_GOAL} 章${n >= EX_GOAL ? '・🪙 +3 達成！' : ''}</span></div>
     <div class="stamps">${stamps}</div>
@@ -936,14 +1041,16 @@ function habitCard() {
     ${placeIntro('walk') || (kp ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('walk')"><span style="font-size:28px">${esc(kp.emoji)}</span>
         <div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.walk) || keeperLine('walk', on, n))}</div></div>`
       : `<button class="ghost" style="width:100%;margin-top:8px;font-size:14px" onclick="openKeeper('walk')">🧢 海邊步道還沒有管理員，幫步道找一位陪跑夥伴</button>`)}
-    <div class="muted" style="margin-top:6px">${D.exStreak ? `已經連續 ${D.exStreak} 週達標 🔥` : '一週運動 3 天就達標'}${next ? `・連續 ${next.weeks} 週可以拿到 ${next.ic} ${next.name}` : '・所有運動家具都拿到了！'}</div>
-    <div class="row" style="margin-top:12px;border-top:1px dashed var(--plum-light);padding-top:10px;flex-wrap:nowrap">
-      <div class="grow"><b>⛵ 紙本檢討</b><div class="muted">${paperToday.length ? '今天放了 ' + paperToday.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、') : '寫完考卷、檢討完錯題，放一艘紙船'}</div></div>
-      <button class="ghost" onclick="go('paper')">去碼頭</button></div></div>`;
+    <div class="muted" style="margin-top:6px">${D.exStreak ? `已經連續 ${D.exStreak} 週達標 🔥` : '一週運動 3 天就達標'}${next ? `・連續 ${next.weeks} 週可以拿到 ${next.ic} ${next.name}` : '・所有運動家具都拿到了！'}</div></div>`;
+}
+function viewWalk() {
+  return `<div class="card"><h2 style="margin:0">🏃 海邊步道</h2><div class="muted">今天有運動就來蓋一章。步道一章鋪一段木棧道，每三章多一盞燈籠，在 3D 小島的海邊看得到。</div></div>
+    ${habitCard()}
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 地方的管理角色：她自己取名、選樣子、寫個性；每天的訊息由 AI 依個性寫（getDaily 的 keepers）
-const PLACES = { walk: { name: '海邊步道', ic: '🏃', about: ['今天有運動就按「今天運動了」蓋一章，一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️'] },
-  lighthouse: { name: '燈塔', ic: '🗼', about: ['挑戰任務和故事任務答錯的題，會變成漂流瓶漂到燈塔海灘', '瓶子隔天漂回來，撿起來會出一題 AI 類題：同一個觀念，換了數字和情境，也會寫是改編自哪一題', '類題連續兩次答對，瓶子就變成紙燈籠放到海上，還有島幣', '在瓶子上記下為什麼錯；想問爸爸的題按「給爸爸看」', '紙本考卷檢討完，可以在燈塔的小碼頭放紙船'], roles: ['守燈的老爺爺', '燈塔的貓', '退休的船長', '海鷗郵差'], emojis: ['👴', '👵', '🧓', '👩‍✈️', '🧑‍🎨', '🐈', '🐈‍⬛', '🦉', '🐢', '🦭', '🐙', '🦀'] } };
+const PLACES = { walk: { name: '海邊步道', ic: '🏃', tab: 'walk', about: ['今天有運動就按「今天運動了」蓋一章，一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️'] },
+  lighthouse: { name: '燈塔', ic: '🗼', tab: 'light', about: ['挑戰任務和故事任務答錯的題，會變成漂流瓶漂到燈塔海灘', '瓶子隔天漂回來，撿起來會出一題 AI 類題：同一個觀念，換了數字和情境，也會寫是改編自哪一題', '類題連續兩次答對，瓶子就變成紙燈籠放到海上，還有島幣', '在瓶子上記下為什麼錯；想問爸爸的題按「給爸爸看」', '紙本考卷檢討完，可以在燈塔的小碼頭放紙船'], roles: ['守燈的老爺爺', '燈塔的貓', '退休的船長', '海鷗郵差'], emojis: ['👴', '👵', '🧓', '👩‍✈️', '🧑‍🎨', '🐈', '🐈‍⬛', '🦉', '🐢', '🦭', '🐙', '🦀'] } };
 function keeperOf(place) { return S.save['keeper:' + place] || null; }
 // 第一次來到這個地方：管理員先打招呼、說明這裡的玩法（每個地方只出現一次）
 function placeIntro(place) {
@@ -972,7 +1079,7 @@ function viewKeeper() {
       <label>身分</label><div class="row" style="gap:6px">${pl.roles.map(r => `<button type="button" class="${k.role === r ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="keeperKeep();draft.keeper.role='${r}';render()">${r}</button>`).join('')}</div>
       <input id="kpRole" style="margin-top:6px" value="${esc(k.role)}" maxlength="20" placeholder="也可以自己寫" oninput="draft.keeper.role=this.value">
       <label>個性</label><input id="kpPers" value="${esc(k.personality)}" maxlength="60" placeholder="例如：開朗、很會鼓勵人，喜歡排球和冰淇淋" oninput="draft.keeper.personality=this.value">
-      <div class="row" style="margin-top:14px"><button class="grow" onclick="saveKeeperForm('${place}')">${cur ? '儲存' : '請他來上班！'}</button><button class="ghost" onclick="go('${place === 'lighthouse' ? 'light' : 'home'}')">取消</button></div></div>`;
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="saveKeeperForm('${place}')">${cur ? '儲存' : '請他來上班！'}</button><button class="ghost" onclick="go('${PLACES[place].tab || 'home'}')">取消</button></div></div>`;
 }
 function keeperKeep() { ['kpName', 'kpRole', 'kpPers'].forEach((id, i) => { const el = document.getElementById(id); if (el) draft.keeper[['name', 'role', 'personality'][i]] = el.value; }); }
 async function saveKeeperForm(place) {
@@ -980,7 +1087,7 @@ async function saveKeeperForm(place) {
   if (!k.name.trim()) return toast('幫他取個名字吧');
   try { await flush(); S = await call('saveKeeper', place, k); D = derive(S); }
   catch (e) { return toast('儲存失敗：' + (e.message || e)); }
-  toast(k.emoji + ' ' + k.name + ' 來' + PLACES[place].name + '上班了！'); go(place === 'lighthouse' ? 'light' : 'home');
+  toast(k.emoji + ' ' + k.name + ' 來' + PLACES[place].name + '上班了！'); go(PLACES[place].tab || 'home');
 }
 function toggleExercise() {
   const on = !exToday(), wk = mondayOf(S.today), before = D.exWeeks[wk] || 0;
@@ -1684,13 +1791,13 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // 只更新需要變的部分，3D 小島不用重新載入
 function softRender() {
   if (tab === 'home') {
-    const parts = { hudCard: hud, todayCard: todayCard, habitCard: habitCard, xqCard: xqCard, lightCard: lightCard, guideCard: guideCard, dailyCard: dailyCard };
+    const parts = { hudCard: hud, boardCard: boardCard, kairanCard: kairanCard };
     Object.keys(parts).forEach(id => {
       const el = document.getElementById(id); if (!el) return;
       const tmp = document.createElement('div'); tmp.innerHTML = parts[id]();
       el.replaceWith(tmp.firstElementChild);
     });
-  } else if (tab === 'plan' || tab === 'light') render();
+  } else if (tab === 'plan' || tab === 'light' || tab === 'walk') render();
 }
 function setLog(date, r, s) {
   const rows = Object.assign({}, logOf(date));
@@ -1716,12 +1823,12 @@ document.addEventListener('click', e => {
   setLog(g.dataset.date, Number(g.dataset.row), Number(b.dataset.s));
 });
 
-function todayCard() {
+function todayCard(inBoard) {
   const di = dayIdx(S.today), rows = planOf(mondayOf(S.today)).days[di], lg = logOf(S.today);
   const extra = Object.keys(lg).map(Number).filter(r => !rows.includes(r));
   const doneN = rows.filter(r => lg[r]).length;
-  return `<div class="card" id="todayCard"><div class="row"><h3 class="grow">📝 今天・週${DAYS[di]} ${short(S.today)}</h3><span class="muted syncState">${syncState}</span></div>
-    ${rows.length ? `<div class="muted">計畫 ${rows.length} 項，已記錄 ${doneN} 項</div>` + itemList(rows, r => seg(S.today, r)) + pendingList(rows, mondayOf(S.today), di, false) : '<div class="muted">今天沒有排計畫。可以到「📅 計畫」排這週，或直接記下今天做了什麼。</div>'}
+  return `<div class="card" id="todayCard">${inBoard ? '' : `<div class="row"><h3 class="grow">📝 今天・週${DAYS[di]} ${short(S.today)}</h3><span class="muted syncState">${syncState}</span></div>`}
+    ${rows.length ? `<div class="row"><span class="muted grow">計畫 ${rows.length} 項，已記錄 ${doneN} 項</span>${inBoard ? `<span class="muted syncState">${syncState}</span>` : ''}</div>` + itemList(rows, r => seg(S.today, r)) + pendingList(rows, mondayOf(S.today), di, false) : '<div class="muted">今天沒有排計畫。可以到「📅 計畫」排這週，或直接記下今天做了什麼。</div>'}
     ${extra.length ? `<div class="subj">計畫外</div>` + itemList(extra, r => seg(S.today, r)) : ''}
     <div class="row" style="margin-top:10px"><button class="ghost" onclick="openPicker('log', S.today)">＋ 記錄計畫外的項目</button></div>
     <div class="muted" style="margin-top:6px">點「完成」或「部分」就會自動存好。不一定要每天記，週日一次補也可以。</div></div>`;
@@ -2444,6 +2551,9 @@ function viewGuide() {
       <div class="speech grow"><b>${esc(g.name)}</b>：歡迎來到${esc(D.cfg.islandName || '你的島')}！我來帶你看看這座島怎麼玩。</div></div></div>
   ${sec('🏝️', '這座島是什麼', p('你讀過的每一項，都會變成島上的房子。島上有五條街，各住著一位島民，代表會考的五科。你讀哪一科，就是在幫那條街蓋房子、培養那位島民。') +
     p('手寫計畫書照常寫。小島幫你做三件事：把計畫排進每一天、記下你做了什麼、週末確認這週，並自動寫回爸爸的週檢討表。'))}
+  ${sec('📋', '首頁怎麼看', p('打開小島，最上面是「<b>今日のおつとめ</b>」：讀書計畫、運動、故事任務、挑戰任務、漂流瓶、紙本檢討，一行一件。右邊的小標籤告訴你做了沒：黃色是還沒做，綠色是完成了。點一行就會展開，直接在裡面記錄、答題，再點一次就收起來。') +
+    p('下面是 3D 小島，再往下是嚮導的「📰 回覧板」，島民的信和昨天的新聞點開就看得到。') +
+    p('右上角的 📮 是<b>郵便受け</b>：小島更新、家人寄的明信片、有人想邀請朋友來島上、爸爸回覆你的想法，都會寄到這裡，有新東西時會亮紅點。'))}
   ${sec('👥', '島民和室友有什麼不一樣', `<table>
       <tr><th></th><th>島民</th><th>室友</th></tr>
       <tr><td>幾位</td><td>5 位，一科一位</td><td>最多 6 位（選填）</td></tr>
@@ -2460,7 +2570,7 @@ function viewGuide() {
     p('看不懂的字，島民會列出來問你：選它是哪一項按「記住」，下次就認得了；不是讀書的行程（才藝課、運動）按「無關」，以後就會略過。這些都存在「⚙️ 更多 → 📖 我的寫法」，可以自己新增或刪除。') +
     p('週檢討表上沒有的項目，到「⚙️ 更多 → 📝 任務清單」新增；名字想改也在那裡改，以前的紀錄都會保留。') +
     p('上週排過的項目會出現在「最近常排的」，自己加的時候找起來比較快。'))}
-  ${sec('📝', '記錄你做了什麼', p('首頁的「📝 今天」會列出今天排的項目，做完就點「完成」，做了一半就點「部分」，再點一次可以取消。按了就會自動存好，右上角會顯示「✓ 已存到試算表」。') +
+  ${sec('📝', '記錄你做了什麼', p('首頁「今日のおつとめ」的「📝 讀書計畫」會列出今天排的項目，做完就點「完成」，做了一半就點「部分」，再點一次可以取消。按了就會自動存好，右上角會顯示「✓ 已存到試算表」。') +
     p('做了計畫外的項目？按「＋ 記錄計畫外的項目」。忘了記也沒關係，到計畫頁點那一天就能補，或週末確認時一次補。<b>想每天記、或只在週日記都可以</b>，小島兩種都接受。'))}
   ${sec('✅', '週末確認這週', `<ol style="padding-left:20px;line-height:1.8;margin:6px 0">
       <li>到「📅 計畫」頁，按「✅ 確認這週」。</li>
@@ -2487,30 +2597,32 @@ function viewGuide() {
     p('島嶼升級時，房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓小屋（Lv.7）→ 海邊洋館（Lv.10）。房子越大，房間能擺的家具越多。') +
     p('房間可以用 <b>3D</b> 看：一根手指拖曳轉動、兩指拉近；手機比較舊的話按「🖼️ 平面」。') +
     p('家具在「家具店」用島幣買，買了就是你的，可以隨時收起來或擺出來。每天會有一位島民來作客，跟你越要好（跨科連結越多）的島民越常來。島民寫給你的信和嚮導的新聞，都收在家裡的 📬 信箱，可以翻舊信。') +
-    p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。'))}
-  ${sec('🏃', '運動集章卡', p('首頁的「運動集章卡」就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
+    p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
+    p('拿到的 🏅 徽章也掛在家裡，在信箱下面。'))}
+  ${sec('🏃', '運動集章卡', p('首頁「今日のおつとめ」的「🏃 運動」那一行，或海邊步道頁的集章卡，就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
     p('每蓋一章 +5 經驗值，島的海邊會多鋪一段木棧道，每三章多一盞燈籠。一週（週一到週日）集滿 3 章，🪙 +3。') +
     `<table><tr><th>連續達標</th><th>解鎖的家具</th></tr>${EX_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` +
-    p('海邊步道可以有自己的管理員：在集章卡下面按「幫步道找一位陪跑夥伴」，取名字、選樣子、寫個性，他每天會用自己的口吻跟你聊運動。第一次見面時，他會先跟你打招呼，說明步道怎麼玩。') +
+    p('點運動那一行的「去海邊步道」，就是步道自己的頁面。步道可以有自己的管理員：在集章卡下面按「幫步道找一位陪跑夥伴」，取名字、選樣子、寫個性，他每天會用自己的口吻跟你聊運動。第一次見面時，他會先跟你打招呼，說明步道怎麼玩。') +
     p('斷掉了也沒關係：拿到的家具都會留著，重新累積就好。解鎖的家具在「我的家」的家具店最下面，可以擺出來。'))}
-  ${sec('⛵', '紙船碼頭（紙本檢討）', p('寫完紙本考卷或練習、檢討完錯題，到首頁按「去碼頭」（或燈塔的小碼頭）放一艘船。選這次檢討了哪幾科，寫一句今天最大的收穫就好，大約 30 秒。想多記一點，可以填每科錯幾題、錯的原因，跳過也一樣有島幣。') +
+  ${sec('⛵', '紙船碼頭（紙本檢討）', p('寫完紙本考卷或練習、檢討完錯題，點首頁「今日のおつとめ」的「⛵ 紙本檢討」（或燈塔的小碼頭）放一艘船。選這次檢討了哪幾科，寫一句今天最大的收穫就好，大約 30 秒。想多記一點，可以填每科錯幾題、錯的原因，跳過也一樣有島幣。') +
     p('自己檢討是 ⛵ 紙船；爸爸陪你檢討是 🚢 親子船，要請爸爸在你的手機上蓋章。第一科 🪙 2 枚＋20 經驗值，每多一科再 +1 枚，一次最多 4 枚。紙船和親子船每天各算一次。'))}
-  ${sec('🗼', '燈塔（錯題的漂流瓶）', p('島的岬角上有一座燈塔。第一次去的時候先幫它取名字，再請一位守燈人：取名字、選樣子、寫個性，他每天會用自己的口吻跟你說話。首頁的燈塔卡片或 3D 小島上的燈塔都能進去。') +
+  ${sec('🗼', '燈塔（錯題的漂流瓶）', p('島的岬角上有一座燈塔。第一次去的時候先幫它取名字，再請一位守燈人：取名字、選樣子、寫個性，他每天會用自己的口吻跟你說話。首頁「今日のおつとめ」的「🍶 漂流瓶」或 3D 小島上的燈塔都能進去。') +
     p('挑戰任務或故事任務答錯的題，會變成 🍶 漂流瓶漂到燈塔海灘。<b>隔天</b>它會漂回來，按「撿起來」，守燈人會請 AI 出一題<b>類題</b>：考同一個觀念，但數字、情境或說法都換過，不會是一模一樣的題目。題目下面會寫「AI 類題・改編自 113 年會考自然第 10 題」這樣的來源。原題太依賴圖表、AI 改寫不了時，會改出一題同科同難度的考古題，也會標明。') +
     `<table>${row('類題答錯', '+3 經驗值，隔 1 天再漂回來')}${row('類題答對', '+10／+15／+20 經驗值（看難度），隔 2 天再漂回來')}${row('連續兩次答對', '🏮 變成紙燈籠放到海上，🪙 +1／+2／+3')}</table>` +
     p(`撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個；全國答對率高、你卻答錯的題會先漂回來，因為這種題最值得追回來。`) +
     p('點一個瓶子可以看原題、記下為什麼會錯（粗心、觀念不熟、看不懂題目、用猜的），也可以寫一句想對自己說的話。這些只有你看得到；想問爸爸的題，勾「👀 給爸爸看」，家人才看得到你寫的原因和那句話。') +
     p('紙本考卷檢討的紙船、親子船也停在燈塔的小碼頭。燈塔二樓的航海日誌（學習歷程）和頂樓的燈室（學習分析）還在整修，之後會開放。'))}
   ${sec('🍁', '二十四節氣', p('整座島會跟著節氣換季：立春到清明櫻花慢慢開、花瓣飄落；芒種到小暑的夜晚有螢火蟲；寒露到立冬楓葉轉紅、紅葉飄下；冬天換上深綠的冬裝。右上角會顯示今天的節氣，嚮導打招呼時也可能聊到。'))}
-  ${sec('💡', '讓島順起來', p('這座島你也是設計師！在首頁嚮導卡下面按「💡 讓島順起來」，選一種類型（新玩法、卡卡的、想要的東西、其他），寫下你的想法，也可以附一張截圖。') +
-    p('送出後爸爸會收到。他會把狀態改成「討論中」「做好了」或「先不做」，也可能寫一句回覆給你；有新回覆時，嚮導卡上的按鈕會提醒你。做好的點子會出現在之後的小島更新裡。'))}
+  ${sec('💡', '讓島順起來', p('這座島你也是設計師！在首頁回覧板（嚮導那張卡）下面按「💡 讓島順起來」，選一種類型（新玩法、卡卡的、想要的東西、其他），寫下你的想法，也可以附一張截圖。') +
+    p('送出後爸爸會收到。他會把狀態改成「討論中」「做好了」或「先不做」，也可能寫一句回覆給你；有新回覆時，右上角的 📮 郵便受け會亮紅點，嚮導卡上的按鈕也會提醒你。做好的點子會出現在之後的小島更新裡。'))}
   ${sec('🎟️', '邀請朋友來島上', p('在「我的家」按「🎟️ 邀請朋友來島上」。第一次要先寫一句歡迎詞，嚮導會在碼頭唸給每位訪客聽，之後隨時可以改。') +
     p('按「發一張乘船券」會產生一個連結和 QR code，用 LINE 傳給朋友就好。朋友打開後可以轉動你的 3D 小島、點街道看島民、走進你和島民的家，逛完每個地方還能集章、下載一張登島紀念明信片。') +
     p('訪客看到的是你發券那一刻的「快照」，而且<b>看不到</b>成績、計畫、錯題、信箱和你上傳的圖片。要不要給他們看「連續週數、這週完成幾項」，由你在發券時勾選，預設不給看。小島長大了，可以按「📸 重拍」更新；不想給看了，按「收回」連結就立刻失效。') +
-    p('家人也可以替你邀請別人（例如奶奶），但會先出現在你的首頁，你看過、按同意之後連結才會生效。'))}
-  ${sec('📮', '明信片冊', p('家人有自己的「家人碼」，可以進來看看你的小島，但只能看、不會改到任何東西。家人來逛過的那天，可能會挑一張世界各地的風景或文化照片寄給你，附上一句話和一段小知識。收到時首頁會通知你，所有明信片都收在「我的家 → 📮 明信片冊」。'))}
+    p('家人也可以替你邀請別人（例如奶奶），但會先寄到你的 📮 郵便受け，你看過、按同意之後連結才會生效。'))}
+  ${sec('📮', '明信片冊', p('家人有自己的「家人碼」，可以進來看看你的小島，但只能看、不會改到任何東西。家人來逛過的那天，可能會挑一張世界各地的風景或文化照片寄給你，附上一句話和一段小知識。收到時右上角的 📮 郵便受け會亮紅點，所有明信片都收在「我的家 → 📮 明信片冊」。'))}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
   ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊 Threads 上最近的熱門話題，有的會關心你；很久沒去找他，他可能會抱怨或想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性。') +
+    p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
     p('嚮導會講一則<b>昨天</b>的國內外新聞，附上跟會考哪一科有關，下面也有新聞來源可以點開看。新聞是 AI 用 Google 搜尋整理的，偶爾可能不精確，有疑問就點來源確認。'))}
   ${sec('📖', '故事任務', p('每天打開小島，會有一位島民（或室友）遇到難題來找你幫忙：可能是石碑上的詩句、燈塔的電路、或是颱風的風向。幫他解一題會考範圍的選擇題，就是今天的任務。') +
     p(`答對 +${QUEST_XP.right} 經驗值；答錯也有 +${QUEST_XP.wrong}，而且會看到解說。每天可以按「🎲 換一個」一次，換成別條巷子的故事。`) +
