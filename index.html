@@ -290,8 +290,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.22';
+const APP_VERSION = '2.23';
 const CHANGELOG = [
+  { v: '2.23', date: '2026-10-26', items: ['🎁 你也可以送家人一本書了：在書店按「送家人一本書」，選一位家人、從書單挑一本、寫一句為什麼想送，店長會在他們下次來書店時轉交', '😊 家人讀完可以回你一個表情，書店的「我送出的書」看得到'] },
   { v: '2.22', date: '2026-10-26', items: ['🙋 考古題可以請島民講解了：答錯的考古題（挑戰任務或漂流瓶）按「請島民講解」，島民會看題目，一步一步說明怎麼想', '🌊 小島周圍有海浪了，岸邊有一圈浪花湧上沙灘；海面一天漲退兩次潮', '🌞 3D 小島有影子了，顏色更有層次，房子變成圓角，像模型玩具。手機變慢的話，可以在「更多」關掉高畫質'] },
   { v: '2.21', date: '2026-10-26', items: ['🗼 燈塔的話：每週按「確認這週」之後，守燈人會寫三句話給你：這週做得好的、值得照亮的、下週一件小事，還會回應你寫的「這週一句話」。上週已經確認過的，按「🔁 重新確認這週」就能補寫', '🏮 放走的紙燈籠累積到 30、100、300 盞，會解鎖燈塔風格的家具：紙燈籠吊燈、燈塔模型、岬角的航海燈'] },
   { v: '2.20', date: '2026-10-25', items: ['📚 書店的書單會自己補書了：每次只剩十本還沒讀，就會再上架三十本，都從國高中推薦閱讀清單挑', '🆕 這次先上架的第二批有《安妮日記》《老人與海》《魯冰花》《數學女孩》《昆蟲記》等三十本，每本讀完也會在島上長出地標'] },
@@ -382,7 +383,7 @@ function boot() {
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 /* ===== 家人碼（v2.6）：家人看到的畫面和她一樣，但只能做這幾件事；後端也會再擋一次 ===== */
-const FAMILY_FNS = ['getState', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks'];
+const FAMILY_FNS = ['getState', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks', 'answerBack'];
 function isFamily() { return !!(S && S.who && S.who.role === 'family'); }
 let familyBase = null;   // 家人模式下最後一次從伺服器拿到的狀態，誤按時用來還原畫面
 const callAsOwner = call;
@@ -661,10 +662,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -3632,6 +3633,7 @@ function bookShelfHtml() {
 // 打開一本書
 function openBook(key) { bookKey = key; draft = {}; tab = 'book'; render(); window.scrollTo(0, 0); }
 function viewBook() {
+  if (bookKey.startsWith('back:')) return viewBackBook();
   const back = `<button class="ghost" onclick="go('bookstore')">放回書架</button>`;
   if (bookKey.startsWith('w:')) {
     const b = myBooks().find(x => x.key === bookKey.slice(2));
@@ -3743,6 +3745,90 @@ function bookFreshHtml() {
       ${gifts.map(g => { const bk = catalogOf(g.book); return `<div class="item" style="cursor:pointer" onclick="openBook('${g.key}')"><span class="bkmini" style="background:${bk.color}">${bk.ic}</span><div class="name grow"><b>${esc(bk.title)}</b><div class="muted">${esc(g.from)}送的・點開看看</div></div><span>›</span></div>`; }).join('')}
       ${cheers.map(cheerCard).join('')}</div>`;
 }
+/* --- v2.23 她送家人一本書：從書單挑一本、寫一句，店長在家人下次進書店時轉交；家人可以回表情、按讀過了 ---
+   存檔（後端 Bookstore.gs）：back:時間戳 = { to, at, book, note, emoji, readAt }；送同一位家人每週一本，同一本不重送給同一個人 */
+let bookFamilyNames = null;
+function backList() { return Object.keys(S.save).filter(k => k.startsWith('back:') && S.save[k] && catalogOf(S.save[k].book)).map(k => Object.assign({ key: k, ts: Number(k.slice(5)) }, S.save[k])).sort((a, b) => b.ts - a.ts); }
+function backForMe() { return isFamily() ? backList().filter(b => b.to === S.who.name) : []; }
+function gaveThisWeek(to) { const mon = mondayOf(S.today); return backList().some(b => b.to === to && b.at >= mon); }
+function giveNames() {
+  if (bookFamilyNames === null) {
+    bookFamilyNames = [];
+    call('bookFamily').then(r => { bookFamilyNames = (r && r.names) || []; if (tab === 'giveBook') render(); }).catch(() => { bookFamilyNames = undefined; });
+  }
+  const seen = Object.keys(S.save).filter(k => /^(gift|cheer|card):/.test(k) && S.save[k] && S.save[k].from).map(k => S.save[k].from);   // 讀不到名單時，用來過書店的家人
+  return [...new Set((bookFamilyNames || []).concat(bookFamilyNames && bookFamilyNames.length ? [] : seen))];
+}
+function viewGiveBook() {
+  if (isFamily()) return viewBookstore();
+  const back = `<div class="row"><button class="ghost grow" onclick="go('bookstore')">回到書店 📚</button></div>`;
+  const to = draft.to, names = giveNames();
+  if (!to) return `<div class="card"><h2>🎁 送家人一本書</h2><div class="muted">讀到喜歡的書，也挑一本送給家人吧。寫一句為什麼想送，店長會包好，在他們下次來書店時轉交。他們讀完可以回你一個表情。每位家人每週可以送一本。</div>
+      ${names.length ? `<div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">${names.map(n => gaveThisWeek(n) ? `<button class="ghost" disabled style="opacity:.5">${esc(n)}（這週送過了）</button>` : `<button onclick="draft.to='${esc(n)}';render()">${esc(n)}</button>`).join('')}</div>`
+        : `<div class="muted" style="margin-top:12px">${bookFamilyNames === undefined ? '讀不到家人名單，等一下再試。' : '正在讀家人名單…'}</div>`}</div>${back}`;
+  const sent = new Set(backList().filter(b => b.to === to).map(b => b.book)), pick = draft.pick && catalogOf(draft.pick);
+  if (pick) return `<div class="card"><div class="row" style="flex-wrap:nowrap;gap:12px;align-items:flex-start"><div class="bkcv" style="background:${pick.color}"><span>${pick.ic}</span><div class="a">${esc(pick.author)}</div><div class="t">${esc(pick.title.replace(/（.*）/, ''))}</div></div>
+      <div><h2 class="bkh">${esc(pick.title)}</h2><div class="muted">${esc(pick.author)}</div><div>${pick.tags.map(t => `<span class="bktag">${esc(t)}</span>`).join('')}</div></div></div>
+      <div class="bksec" style="margin-top:14px">為什麼值得讀</div><div class="bkvalue"><p class="bkp">${esc(pick.value)}</p></div>
+      <label style="margin-top:14px">寫一句為什麼想送${esc(to)}這本（60 字內）</label>
+      <textarea id="gvNote" maxlength="60" rows="3" placeholder="例如：這本我讀完一直想到你，你應該會喜歡裡面的阿嬤。" oninput="draft.gnote=this.value">${esc(draft.gnote || '')}</textarea>
+      <div class="row" style="margin-top:12px"><button class="grow" id="gvGo" onclick="sendBack()">🎁 請店長包好送給${esc(to)}</button><button class="ghost" onclick="draft.pick='';render()">換一本</button></div></div>`;
+  const readIds = new Set(giftList().filter(g => g.readAt).map(g => g.book));
+  const item = b => `<div class="item" style="cursor:${sent.has(b.id) ? 'default' : 'pointer'};${sent.has(b.id) ? 'opacity:.45' : ''}" ${sent.has(b.id) ? '' : `onclick="draft.pick='${b.id}';render();window.scrollTo(0,0)"`}>
+      <span class="bkmini" style="background:${b.color}">${b.ic}</span><div class="name grow"><b>${esc(b.title)}</b> <span class="muted">${esc(b.author)}</span><div class="muted" style="font-size:12px">${sent.has(b.id) ? '已經送過' + esc(to) + '了' : esc(b.value.length > 40 ? b.value.slice(0, 38) + '…' : b.value)}</div></div></div>`;
+  const mine = shelfBooks().filter(b => readIds.has(b.id)), rest = shelfBooks().filter(b => !readIds.has(b.id));
+  return `<div class="card"><h2>🎁 送${esc(to)}一本書</h2><div class="muted">挑一本，寫一句為什麼想送。<a href="javascript:void(0)" onclick="draft={};render()">換一個人</a></div></div>
+    ${mine.length ? `<div class="card"><h3>📖 我讀過的</h3>${mine.map(item).join('')}</div>` : ''}
+    ${BOOK_CATS.map(([c, name]) => { const list = rest.filter(b => b.cat === c); return list.length ? `<div class="card"><h3>${name}</h3>${list.map(item).join('')}</div>` : ''; }).join('')}${back}`;
+}
+async function sendBack() {
+  const el = document.getElementById('gvNote'), note = (el ? el.value : draft.gnote || '').trim();
+  if (!note) return toast('寫一句為什麼想送這本吧');
+  const btn = document.getElementById('gvGo'); if (btn) btn.disabled = true;
+  const to = draft.to;
+  try { await flush(); S = await call('giveBook', to, draft.pick, note); D = derive(S); }
+  catch (e) { if (btn) btn.disabled = false; return toast(e.message || String(e)); }
+  draft = {}; toast('🎁 交給店長了！' + to + '下次來書店就會收到'); go('bookstore');
+}
+// 書店裡：她看自己送出的書；家人看她送給自己的書
+function backShelfHtml() {
+  const fam = isFamily(), list = fam ? backForMe() : backList(), kp = keeperOf('bookstore');
+  if (!list.length) return '';
+  const fresh = fam ? list.filter(b => !b.emoji && !b.readAt) : [];
+  const line = b => { const bk = catalogOf(b.book);
+    const st = fam ? (b.readAt ? '🎀 讀完了' : b.emoji ? '你回了 ' + b.emoji : '🆕 點開看看') : (b.emoji || b.readAt ? esc(b.to) + (b.emoji ? '回了 ' + esc(b.emoji) : '') + (b.readAt ? '・讀完了 🎀' : '') : esc(b.to) + '還沒回');
+    return `<div class="item" style="cursor:pointer" onclick="openBook('${b.key}')"><span class="bkmini" style="background:${bk.color}">${bk.ic}</span><div class="name grow"><b>${esc(bk.title)}</b><div class="muted" style="font-size:12px">${fam ? '她' : '送給' + esc(b.to)}・${esc(short(b.at))}${fam ? ' 送你的' : ''}</div></div><span class="muted" style="font-size:12px;text-align:right">${st}</span></div>`; };
+  return `<div class="card"${fresh.length ? ' style="border:2px solid var(--gold)"' : ''}>${fam && fresh.length && kp ? `<div class="row" style="flex-wrap:nowrap;align-items:flex-start;margin-bottom:6px"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow"><b>${esc(kp.name)}</b>：她挑了一本書要送你，還寫了一句話，我幫你包好了。</div></div>` : ''}
+    <h3>🎁 ${fam ? '她送給你的書' : '我送出的書'}</h3>${list.map(line).join('')}</div>`;
+}
+// 打開她送出的書（她和收到的家人都能打開）
+function viewBackBook() {
+  const g = S.save[bookKey], bk = g && catalogOf(g.book), fam = isFamily(), mine = fam && g && g.to === S.who.name, kp = keeperOf('bookstore');
+  const back = `<button class="ghost" onclick="go('bookstore')">放回書架</button>`;
+  if (!bk) return `<div class="card">找不到這本書。</div><div class="row">${back}</div>`;
+  const hrs = bk.hours < 1 ? '十幾分鐘就能讀完' : '約 ' + bk.hours + ' 小時讀完';
+  return `<div class="bkdesk"><div class="bkbook">
+    <div class="bkpage">${g.readAt ? '<div class="bkrib"></div>' : ''}<div class="row" style="align-items:flex-start;flex-wrap:nowrap;gap:14px">
+      <div class="bkcv" style="background:${bk.color}"><span>${bk.ic}</span><div class="a">${esc(bk.author)}</div><div class="t">${esc(bk.title.replace(/（.*）/, ''))}</div></div>
+      <div><h2 class="bkh">${esc(bk.title)}</h2><div class="muted" style="margin-top:4px">${esc(bk.author)}</div>
+        <div>${bk.tags.map(t => `<span class="bktag">${esc(t)}</span>`).join('')}<span class="bktag">${hrs}</span></div>
+        <div class="muted" style="margin-top:8px">${esc(g.at.replace(/-/g, '/'))} ${fam ? '她送的' : '送給' + esc(g.to)}${g.readAt ? '・' + esc(short(g.readAt)) + ' 讀完' : ''}</div></div></div></div>
+    <div class="bkpage"><div class="bksec">在講什麼</div><p class="bkp">${esc(bk.about)}</p>
+      <div class="bksec" style="margin-top:16px">為什麼值得讀</div><div class="bkvalue"><p class="bkp">${esc(bk.value)}</p></div></div>
+    <div class="bkpage" style="padding-top:22px"><div class="bknote"><div class="tape"></div>${esc(g.note)}<div class="who">—— ${fam ? '她' : '我'}</div></div>
+      ${kp ? `<div class="row" style="margin-top:12px;flex-wrap:nowrap;align-items:flex-start"><span style="font-size:26px">${kpPic(kp)}</span><div class="speech grow" style="font-size:13.5px"><b>${esc(kp.name)}</b>：${fam ? '這本是她親自挑的，挑了好久呢。' : '包好了，' + esc(g.to) + '下次來店裡我就交給他們。'}</div></div>` : ''}</div>
+    <div class="bkpage">${mine ? `<div class="muted">回她一個表情（她看得到）</div>
+      <div class="row" style="margin-top:8px;gap:6px">${BOOK_EMOJIS.map(e => `<button class="bkemo${g.emoji === e ? ' on' : ''}" onclick="answerBack('${bookKey}', '${g.emoji === e ? '' : e}')">${e}</button>`).join('')}</div>
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="answerBack('${bookKey}', null, ${g.readAt ? 'false' : 'true'})">${g.readAt ? '↩️ 還沒讀完' : '📖 讀過了'}</button>${back}</div>`
+      : `<div class="muted">${g.emoji ? esc(g.to) + '回了 <span style="font-size:22px">' + esc(g.emoji) + '</span>' : esc(g.to) + '還沒回表情'}${g.readAt ? '・已經讀完了 🎀' : ''}</div><div class="row" style="margin-top:12px">${back}</div>`}</div>
+  </div></div>`;
+}
+async function answerBack(key, emoji, read) {
+  try { S = await call('answerBack', key, emoji, read == null ? null : read); D = derive(S); }
+  catch (e) { return toast(e.message || String(e)); }
+  if (read === true) toast('🎀 讀完了！她會看到');
+  render();
+}
 // 店內插畫（v2.17.1 重畫）：台灣巷弄獨立書店。viewBox 400×280；店貓與店長疊在上面（CAT_SPOTS 用同一套百分比）
 const BK_COLORS = ['#8c2f2b', '#c8963e', '#2f5d62', '#2e3a59', '#efe4cf', '#6b7f3a', '#b5653a', '#c98a8a', '#5b6c7d', '#d9c08a', '#7a4b6b', '#3f6e8c'];
 function bkRand(seed) { let x = seed >>> 0; return () => (x = (x * 1664525 + 1013904223) >>> 0) / 4294967296; }
@@ -3853,7 +3939,7 @@ function viewBookstore() {
       <button style="width:100%;margin-top:12px" onclick="openKeeper('bookstore')">請一位店長 🧑‍🦱</button></div>
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
   const daily = S.save['daily:' + S.today], intro = fam ? '' : placeIntro('bookstore');
-  const say = fam ? 'いらっしゃいませ～歡迎來書店坐坐！要不要送她一本書，或寫一張鼓勵卡給她？' : (daily && daily.messages && daily.messages.bookstore) || bookKeeperLine();
+  const say = fam ? (backForMe().some(b => !b.emoji && !b.readAt) ? 'いらっしゃいませ～她挑了一本書要送你，我放在下面了！' : 'いらっしゃいませ～歡迎來書店坐坐！要不要送她一本書，或寫一張鼓勵卡給她？') : (daily && daily.messages && daily.messages.bookstore) || bookKeeperLine();
   return `<div class="card"><h2>📚 ${esc(bookTitle())}</h2>
       ${bookScene()}
       <div id="bcatSay" class="muted" style="min-height:1.4em;margin-top:6px;font-size:13px">${cat ? '🐾 ' + esc(cat.name) + catMood() : ''}</div>
@@ -3862,12 +3948,14 @@ function viewBookstore() {
       ${!fam && kp && !cat && !intro ? `<button class="ghost" style="width:100%;margin-top:10px" onclick="openKeeper('bookcat')">🐾 ${esc(kp.name)}：「店裡好像少了一隻貓……要不要幫我們養一隻？」</button>` : ''}</div>
     ${bookFreshHtml()}
     ${fam ? `<div class="row" style="margin-bottom:10px"><button class="grow" onclick="go('giftPick')">📚 送她一本書${giftedThisWeek() ? '（這週送過了）' : ''}</button>
-      <button class="grow" onclick="go('cheerWrite')">💌 寫鼓勵卡${cheeredToday() ? '（今天寫過了）' : ''}</button></div>` : ''}
+      <button class="grow" onclick="go('cheerWrite')">💌 寫鼓勵卡${cheeredToday() ? '（今天寫過了）' : ''}</button></div>` : kp ? `<div class="row" style="margin-bottom:10px"><button class="grow" onclick="go('giveBook')">🎁 送家人一本書</button></div>` : ''}
+    ${fam ? backShelfHtml() : ''}
     <div class="row" style="margin-bottom:14px">
       <button class="ghost grow" onclick="go('cards')">📮 明信片冊${n ? '（' + n + '）' : ''}${fresh && !fam ? ' 🔴' : ''}</button>
       ${fam ? `<button class="ghost grow" onclick="go('postcard')">✉️ 寄明信片</button>`
         : `<button class="ghost grow" onclick="go('visits')">🎟️ 邀請朋友</button>`}</div>
     ${bookShelfHtml()}
+    ${fam ? '' : backShelfHtml()}
     <div class="row">${fam ? '' : `<button class="ghost" onclick="draft.renameBook=true;render()">✏️ 改店名</button>`}${!fam && cat ? `<button class="ghost" onclick="openKeeper('bookcat')">${kpPic(cat)} 店貓</button>` : ''}<button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 店貓：在幾個點之間走、坐、洗臉、睡覺；晚上多睡、雨天坐窗邊；點牠有反應
@@ -3954,7 +4042,7 @@ function familyBar() {
     <div class="row"><b class="grow">👀 家人觀看中・${esc(S.who.name)}</b><span style="font-size:12px;opacity:.85">只能看，不會改到她的東西</span></div>
     <div class="row" style="margin-top:8px"><button style="background:#fff;color:#2f4a7a;padding:6px 12px" onclick="go('postcard')">📮 寄明信片</button>
       <button style="background:#fff;color:#2f4a7a;padding:6px 12px" onclick="go('finvite')">🎟️ 邀請訪客</button>
-      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="go('bookstore')">📚 書店</button></div></div>`;
+      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="go('bookstore')">📚 書店${backForMe().some(b => !b.emoji && !b.readAt) ? ' 🔴' : ''}</button></div></div>`;
 }
 function sentToday() { return cardList().some(c => c.from === S.who.name && c.at === S.today); }
 function viewPostcard() {
@@ -4140,6 +4228,7 @@ function viewGuide() {
     p('店裡可以養一隻店貓，取名字、選花色和個性。牠會在書架、平台桌、窗邊和櫃台之間走走、坐坐、洗臉、睡覺；晚上比較愛睡，下雨天會坐在窗邊看雨，點牠一下會有反應。') +
     p('📮 明信片冊、🎟️ 邀請朋友都在書店裡。店裡還有一座你的書架：上層擺智慧島的書，點開看目錄和蓋過章的章節，點一章看那天寫的心得；下層擺家人送的書。') +
     p('家人用家人碼進書店，每人每週可以挑一本書送你，寫一句為什麼想送你；也可以每天寫一張鼓勵卡（40 字內）。店長會在你進書店時交給你，右上角的 📮 也會亮紅點。打開書可以看「在講什麼」和「為什麼值得讀」，讀完按「📖 讀過了」會掛上紅絲帶。書和鼓勵卡都可以回一個表情，家人下次來就看得到。鼓勵卡收在明信片冊的「💌 鼓勵卡」那一頁。') +
+    p('你也可以送家人一本書：在書店按「🎁 送家人一本書」，選一位家人，從書單挑一本（讀過的書排在最前面），寫一句為什麼想送。店長會在他們下次來書店時轉交，他們讀完可以回你一個表情。每位家人每週可以送一本，送過的書收在「我送出的書」。') +
     p('讀完一本書，島上就會長出一個地標：每本書依內容對應國、英、數、自、社其中一條街，例如《銀河鐵道之夜》讀完，自然街靠海的草地會長出觀星丘。家人送的書按「📖 讀過了」、智慧島的書 13 章都蓋完章就會長出來。點地標可以打開那本書；點一條街，也看得到這條街長了哪些地標。打開還沒讀完的書，會告訴你讀完後會長出什麼。') +
     p('家人能挑的書單會自己補書：每次只剩十本還沒讀，就再上架三十本，都從國高中推薦閱讀清單挑，新上架的書會標「🆕」。'))}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
