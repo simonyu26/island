@@ -1,0 +1,249 @@
+/**
+ * 會考小島：訪客參觀頁（visit.html?c=邀請碼）
+ * 訪客只拿得到島主確認過的快照，沒有配對碼，也不能改任何東西。
+ * 參觀進度（暱稱、集到的章）只存在訪客自己的瀏覽器。
+ */
+(function () {
+  const SUBJECTS = ['國', '英', '數', '自', '社'];
+  const SUBJECT_NAME = { 國: '國文', 英: '英文', 數: '數學', 自: '自然', 社: '社會' };
+  const SUBS = { 自: ['理化', '生物', '地科'], 社: ['歷史', '地理', '公民'] };
+  const TIERS = [['🏰', 80], ['🏢', 20], ['🏘️', 5], ['🏠', 1]];
+  const STAMPS = SUBJECTS.map(s => ({ key: s, name: SUBJECT_NAME[s] + '街' })).concat([{ key: 'home', name: '島主的家', ic: '🏡' }]);
+  const app = document.getElementById('app');
+  const code = (new URLSearchParams(location.search).get('c') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  let V = null;   // 後端給的 { snapshot, welcome, expires, by, stats }
+  let snap = null;
+
+  const local = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function toast(msg) {
+    const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 2600);
+  }
+  function town(p) {
+    let n = Math.floor(p / 2), out = '';
+    TIERS.forEach(([ic, size]) => { out += ic.repeat(Math.floor(n / size)); n %= size; });
+    return out || '🌱';
+  }
+  function short(s) { const p = String(s || '').split('-'); return p.length === 3 ? Number(p[1]) + '/' + Number(p[2]) : s; }
+  function taipeiHour() { return Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }).format(new Date())) % 24; }
+  function phaseOf(h) { return h >= 19 || h < 5 ? 'night' : h < 7 ? 'dawn' : h < 17 ? 'day' : 'dusk'; }
+  function resident(s) {
+    const r = (snap.residents && snap.residents[s]) || {};
+    return { name: r.name || SUBJECT_NAME[s] + '島民', emoji: r.emoji || '🙂', personality: r.personality || '' };
+  }
+  function roommate(sub) { const r = (snap.roommates && snap.roommates[sub]) || {}; return { name: r.name || '', emoji: r.emoji || '' }; }
+  function guide() { const g = snap.guide || {}; return { name: g.name || '嚮導', emoji: g.emoji || '🦉' }; }
+  function islandName() { return snap.title || '會考小島'; }
+
+  // 參觀紀錄：每張邀請各自一份
+  const progKey = 'visit:' + code;
+  function prog() { try { return JSON.parse(local.get(progKey) || '{}'); } catch (e) { return {}; } }
+  function saveProg(p) { local.set(progKey, JSON.stringify(p)); }
+  function stamp(key) {
+    const p = prog(); p.stamps = p.stamps || [];
+    if (p.stamps.includes(key)) return;
+    p.stamps.push(key); saveProg(p);
+    const st = STAMPS.find(x => x.key === key);
+    toast('🔴 蓋章：' + (st ? st.name : key) + (p.stamps.length === STAMPS.length ? '，集滿了！' : ''));
+    renderPassport();
+  }
+
+  // ---------- 後端 ----------
+  async function fetchVisit() {
+    let res;
+    try {
+      res = await fetch(window.ISLAND_API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ fn: 'visit', code }) });
+    } catch (e) { throw new Error('連不上小島，檢查一下網路再試一次'); }
+    const j = await res.json();
+    if (j.error) throw new Error(j.error);
+    return j.result;
+  }
+
+  function fail(msg) {
+    app.innerHTML = `<div class="card" style="margin-top:40px;text-align:center"><div style="font-size:48px">🌫️</div>
+      <h2>今天渡船沒有開</h2><div class="muted">${esc(msg)}</div></div>`;
+  }
+
+  // ---------- 碼頭：乘船券與歡迎詞 ----------
+  function viewDock() {
+    const g = guide(), p = prog();
+    app.innerHTML = `<div class="boat">⛴️</div>
+      <div class="ticket">
+        <div class="head"><b>${esc(islandName())}</b><small>乘船券</small></div>
+        <dl><dt>航線</dt><dd>本島碼頭 → ${esc(islandName())}</dd>
+          <dt>有效至</dt><dd>${esc(short(V.expires))}</dd>
+          <dt>邀請人</dt><dd>${V.by === 'me' ? '島主' : esc(V.by) + '（島主已同意）'}</dd></dl>
+      </div>
+      <div class="card"><div class="guide"><span class="who">${esc(g.emoji)}</span>
+        <div class="grow"><b>${esc(g.name)}</b><div class="speech">${esc(V.welcome || '歡迎來到我的小島！')}</div></div></div>
+        <label>你的暱稱（只存在這支手機，用來寫在紀念明信片上）</label>
+        <input id="nick" maxlength="12" placeholder="例如：小美" value="${esc(p.nick || '')}">
+        <button style="width:100%;margin-top:12px" id="board">🪧 登島參觀</button>
+        <div class="muted" style="margin-top:8px">這是島主確認過、願意分享的樣子。你可以自由逛，但不會改到任何東西。</div></div>`;
+    document.getElementById('board').onclick = () => {
+      const q = prog(); q.nick = document.getElementById('nick').value.trim().slice(0, 12); saveProg(q);
+      viewIsland();
+    };
+  }
+
+  // ---------- 島上：自由參觀 ----------
+  function viewIsland() {
+    const stats = snap.stats;
+    app.innerHTML = `<div class="ticket" style="padding:12px 18px">
+        <div class="row"><b class="grow" style="color:var(--indigo);letter-spacing:2px">${esc(islandName())}</b>
+          <span class="muted">Lv.${esc(snap.level || 1)}${snap.season ? '・' + esc(snap.season) : ''}</span></div></div>
+      <div id="i3d"><span class="chip">👆 點一條街、或點島主的家</span><div class="loading">🏝️ 小島浮出海面中…</div></div>
+      <div class="card" id="info"><div class="muted">點小島上的街道，看看島民和他們的房子。房子越多，代表島主在那一科花的心力越多。</div></div>
+      ${stats ? `<div class="card"><h3>📋 島主的努力看板</h3><div class="board">
+        <div><b>${esc(stats.streakWeeks || 0)}</b><span class="muted">連續有讀書的週數</span></div>
+        <div><b>${esc(stats.weekDone || 0)}</b><span class="muted">這週完成的項目</span></div></div></div>` : ''}
+      <div class="card" id="passport"></div>
+      <div class="card"><h3>🏘️ 去島民家作客</h3><div class="row" style="justify-content:space-around">
+        <button class="ghost" style="padding:6px 8px;min-width:58px" data-room="me">🏡<br><small>島主</small></button>
+        ${SUBJECTS.map(s => `<button class="ghost" style="padding:6px 8px;min-width:58px" data-room="${s}">${esc(resident(s).emoji)}<br><small>${esc(resident(s).name)}</small></button>`).join('')}
+      </div></div>
+      <div class="muted" style="text-align:center">快照拍攝於 ${esc(short(snap.at))}・照片與資料由島主分享</div>`;
+    app.querySelectorAll('[data-room]').forEach(b => b.onclick = () => openRoom(b.dataset.room));
+    renderPassport();
+    mount3D();
+  }
+
+  function renderPassport() {
+    const box = document.getElementById('passport'); if (!box) return;
+    const got = prog().stamps || [], done = got.length === STAMPS.length;
+    box.innerHTML = `<div class="row"><h3 class="grow" style="margin:0">🎫 登島集章</h3><span class="muted">${got.length} / ${STAMPS.length}</span></div>
+      <div class="muted">逛過一個地方就蓋一個章，點章可以直接過去。</div>
+      <div class="stamps">${STAMPS.map(st => `<div class="stamp ${got.includes(st.key) ? 'on' : ''}" data-go="${st.key}">
+        <span>${esc(st.ic || resident(st.key).emoji)}</span>${esc(st.name)}</div>`).join('')}</div>
+      ${done ? `<button style="width:100%;margin-top:12px" id="souvenir">🎴 下載登島紀念明信片</button>` : ''}`;
+    box.querySelectorAll('[data-go]').forEach(el => el.onclick = () => {
+      const k = el.dataset.go;
+      if (k === 'home') openRoom('me');
+      else if (window.Island3D && Island3D.select) { Island3D.select(k); document.getElementById('i3d').scrollIntoView({ behavior: 'smooth' }); }
+      else showInfo(k);
+    });
+    const sv = document.getElementById('souvenir'); if (sv) sv.onclick = souvenir;
+  }
+
+  function showInfo(s) {
+    stamp(s);
+    const box = document.getElementById('info'); if (!box) return;
+    const r = resident(s), pts = snap.pts || {};
+    const lanes = SUBS[s] ? SUBS[s].concat(s === '自' ? ['自然'] : ['社會']) : [s];
+    box.innerHTML = `<div class="resident"><span class="avatar">${esc(r.emoji)}</span>
+        <div><b>${esc(r.name)}</b><div class="muted">${SUBJECT_NAME[s]}街${r.personality ? '・' + esc(r.personality) : ''}</div></div></div>
+      <div style="margin-top:10px">${lanes.map(l => {
+        const m = SUBS[s] ? roommate(l) : null;
+        const name = l === '自然' || l === '社會' ? '綜合廣場' : (m && m.name ? m.name + '（' + l + '）' : (SUBS[s] ? l : SUBJECT_NAME[s] + '街'));
+        return `<div class="lane"><span class="lane-name">${esc(name)}</span><span class="town">${town(pts[l] || 0)}</span></div>`; }).join('')}</div>
+      <button class="ghost" style="width:100%;margin-top:10px" data-room="${s}">🏠 去${esc(r.name)}家作客</button>`;
+    box.querySelector('[data-room]').onclick = () => openRoom(s);
+  }
+
+  function loadScript(src) {
+    return new Promise((ok, bad) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = () => bad(new Error(src)); document.head.appendChild(el); });
+  }
+  async function mount3D() {
+    const el = document.getElementById('i3d'); if (!el) return;
+    try {
+      if (!window.THREE) await loadScript('three.min.js');
+      if (!THREE.OrbitControls) await loadScript('OrbitControls.js');
+      if (!window.Island3D) await loadScript('island3d.js');
+      el.querySelector('.loading').remove();
+      const holder = document.createElement('div'); holder.style.cssText = 'position:absolute;inset:0'; el.appendChild(holder);
+      Island3D.mount(holder, {
+        S: { grid: {}, assessments: [], save: {}, weeks: [] },
+        bond: snap.bond || {}, resident, roommate, imgOf: () => null, subjectName: SUBJECT_NAME,
+        pointsUntil: () => snap.pts || {}, sig: JSON.stringify(snap.pts || {}), season: snap.season, walk: snap.walk || 0,
+        home: snap.home || null, onHome: () => openRoom('me'), grade: () => null, onSelect: showInfo
+      });
+      Island3D.setEnvironment({ phase: phaseOf(taipeiHour()), weather: 'clear' });
+    } catch (e) {
+      el.innerHTML = `<div style="padding:16px">${SUBJECTS.map(s => `<div class="card" style="cursor:pointer" data-s="${s}">
+        <div class="resident"><span class="avatar">${esc(resident(s).emoji)}</span><b>${SUBJECT_NAME[s]}街</b></div></div>`).join('')}</div>`;
+      el.style.overflow = 'auto';
+      el.querySelectorAll('[data-s]').forEach(c => c.onclick = () => showInfo(c.dataset.s));
+    }
+  }
+
+  // ---------- 房間（唯讀） ----------
+  async function openRoom(who) {
+    const room = (snap.rooms || {})[who] || { wall: '#f6efe6', items: [] };
+    if (who === 'me') stamp('home');
+    const title = who === 'me' ? (snap.home && snap.home.name) || '島主的家' : resident(who).name + '的家';
+    const sheet = document.createElement('div'); sheet.className = 'sheet';
+    sheet.innerHTML = `<div class="card"><div class="row"><h3 class="grow" style="margin:0">🏠 ${esc(title)}</h3><button class="ghost" id="closeRoom">關上門</button></div>
+      <div id="r3d" style="margin-top:10px"><div class="loading" style="padding-top:120px">🛋️ 開門中…</div></div>
+      <div class="muted" style="margin-top:6px">👆 拖曳可以轉動房間，兩指可以拉近。</div></div>`;
+    document.body.appendChild(sheet);
+    const close = () => sheet.remove();
+    sheet.querySelector('#closeRoom').onclick = close;
+    sheet.onclick = e => { if (e.target === sheet) close(); };
+    const el = sheet.querySelector('#r3d');
+    try {
+      if (!window.THREE) await loadScript('three.min.js');
+      if (!THREE.OrbitControls) await loadScript('OrbitControls.js');
+      if (!window.Room3D) await loadScript('room3d.js');
+      el.innerHTML = '';
+      Room3D.mount(el, { wall: room.wall, accent: room.accent || '#741b47', night: phaseOf(taipeiHour()) === 'night', items: room.items || [], visitor: null });
+    } catch (e) {
+      const zone = z => (room.items || []).filter(f => (f.z || 'floor') === z).map(f => esc(f.ic)).join(' ');
+      el.outerHTML = `<div class="room" style="background:linear-gradient(${esc(room.wall)} 50%, #d9b88f 50%);margin-top:10px">
+        <div class="zone">${zone('wall') || '<small class="muted">（牆上空空的）</small>'}</div><div class="zone">${zone('floor')}</div></div>`;
+    }
+  }
+
+  // ---------- 集滿章：紀念明信片 ----------
+  function souvenir() {
+    const W = 1200, H = 800, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), p = prog();
+    const font = (px, w) => `${w || ''} ${px}px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`;
+    const emoji = px => `${px}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    g.fillStyle = '#fffaf0'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#b98a5e'; g.lineWidth = 10; g.strokeRect(24, 24, W - 48, H - 48);
+    // 左半：海與小島
+    g.fillStyle = '#cfe8f3'; g.fillRect(60, 60, 560, H - 120);
+    g.fillStyle = '#dff0d8'; g.beginPath(); g.ellipse(340, 470, 230, 120, 0, 0, Math.PI * 2); g.fill();
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = emoji(64); SUBJECTS.forEach((s, i) => g.fillText(resident(s).emoji, 180 + i * 80, 450 + (i % 2) * 40));
+    g.font = emoji(90); g.fillText('🏡', 340, 330);
+    g.font = emoji(70); g.fillText('⛴️', 520, 640);
+    // 右半：文字
+    g.textAlign = 'left'; g.fillStyle = '#2f4a7a'; g.font = font(54, 'bold'); g.fillText(islandName(), 660, 140);
+    g.fillStyle = '#3a2a33'; g.font = font(30);
+    g.fillText((p.nick || '一位旅人') + ' 到此一遊', 660, 230);
+    g.fillText(new Date().toLocaleDateString('zh-TW'), 660, 285);
+    g.fillStyle = '#8a7480'; g.font = font(24);
+    wrap(g, '「' + (V.welcome || '歡迎來到我的小島！') + '」', 660, 360, 480, 36, 5);
+    // 郵戳
+    g.strokeStyle = '#c0392b'; g.lineWidth = 5; g.beginPath(); g.arc(1030, 640, 80, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#c0392b'; g.textAlign = 'center'; g.font = font(26, 'bold'); g.fillText('登島紀念', 1030, 625);
+    g.font = font(20); g.fillText('集章 ' + STAMPS.length + ' / ' + STAMPS.length, 1030, 662);
+    const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = islandName() + '_登島紀念.png'; a.click();
+  }
+  function wrap(g, text, x, y, maxW, lh, maxLines) {
+    let line = '', n = 0;
+    for (const ch of text) {
+      if (g.measureText(line + ch).width > maxW) { g.fillText(line, x, y + n * lh); line = ch; if (++n >= maxLines) return; }
+      else line += ch;
+    }
+    if (line) g.fillText(line, x, y + n * lh);
+  }
+
+  // ---------- 開始 ----------
+  async function boot() {
+    if (!window.ISLAND_API_URL || /請貼上/.test(window.ISLAND_API_URL)) return fail('小島伺服器還沒設定好。');
+    if (!code) return fail('連結裡沒有邀請碼，請跟島主要一個完整的連結。');
+    try {
+      V = await fetchVisit(); snap = V.snapshot || {};
+      document.title = islandName() + '・登島參觀';
+      viewDock();
+    } catch (e) { fail(e.message || String(e)); }
+  }
+  boot();
+})();
