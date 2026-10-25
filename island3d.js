@@ -196,6 +196,7 @@
       const p = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
       if (SUBJECTS.some((s, j) => p.distanceTo(districtPos(j)) < 4.1)) continue;
       if (GARDEN_SLOTS.some(q => Math.hypot(q.x - p.x, q.z - p.z) < 0.9) || Math.hypot(HUT.x - p.x, HUT.z - p.z) < 1.2 || Math.hypot(BOOK.x - p.x, BOOK.z - p.z) < 1.3) continue;
+      if (SUBJECTS.some((s, j) => MARK_SLOTS.some(([mr, da]) => { const a = -Math.PI / 2 + j * (Math.PI * 2 / 5) + da; return Math.hypot(Math.cos(a) * mr - p.x, Math.sin(a) * mr - p.z) < 0.9; }))) continue;
       const h = 0.7 + rand() * 0.6;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4, 5), std(0x9a6b4a)); trunk.position.set(p.x, 0.4, p.z);
       rand(); const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.42, h, 6), leafMats[ti++ % 3]); leaf.position.set(p.x, 0.6 + h / 2, p.z);
@@ -212,6 +213,7 @@
     linkLayer = new THREE.Group(); root.add(linkLayer);
     gardenLayer = new THREE.Group(); root.add(gardenLayer);
     bookLayer = new THREE.Group(); root.add(bookLayer);
+    markLayer = new THREE.Group(); root.add(markLayer);
   }
 
   // ---------- 天色與天氣：跟著台北的時間和天氣 ----------
@@ -443,6 +445,7 @@
     buildLight();
     buildGarden();
     buildBook();
+    buildMarks();
   }
 
   // ---------- 植樹 ----------
@@ -608,6 +611,288 @@
     lb.position.set(BOOK.x, 1.95, BOOK.z); lb.userData.book = true; bookLayer.add(lb);
   }
 
+  // ---------- 讀完書長出的地標（v2.19） ----------
+  // ctx.marks = [{ id, s, at }]：id 是書（書單 id 或智慧島的 key），s 是哪一區（國英數自社），at 是讀完的日期
+  // 每區最多 8 個位置，在街區外圈靠海的草地上（避開植樹的空地格和燈塔岬角）；照讀完的先後排
+  const MARK_SLOTS = [[11.75, 0.17], [11.75, -0.17], [11.75, 0.33], [11.75, -0.33], [12.75, 0.09], [12.75, -0.09], [12.75, 0.25], [12.75, -0.25]];
+  let markLayer, markSig = null, spinners = [];
+  function markMesh(id) {
+    const g = new THREE.Group();
+    const add = (geo, c, x, y, z, extra) => { const m = new THREE.Mesh(geo, c && c.isMaterial ? c : std(c, extra)); m.position.set(x, y, z); g.add(m); return m; };
+    const box = (w, h, d, c, x, y, z, extra) => add(new THREE.BoxGeometry(w, h, d), c, x, y, z, extra);
+    const cyl = (rt, rb, h, c, x, y, z, seg, extra) => add(new THREE.CylinderGeometry(rt, rb, h, seg || 8), c, x, y, z, extra);
+    const cone = (r, h, c, x, y, z, seg) => add(new THREE.ConeGeometry(r, h, seg || 6), c, x, y, z);
+    const ball = (r, c, x, y, z, extra) => add(new THREE.IcosahedronGeometry(r, 1), c, x, y, z, extra);
+    const tree = (x, z, h, c) => { cyl(0.04, 0.06, h * 0.4, 0x8a5f42, x, h * 0.2, z, 5); cone(0.18 + h * 0.1, h * 0.8, c || 0x4f8a4a, x, h * 0.75, z); };
+    const glow = c => std(c, { emissive: c, emissiveIntensity: 0.7 });
+    const R = 0xc0392b, WOOD = 0x9a6b4a, DARK = 0x5b3a1e, WHITE = 0xfdfaf2, STONE = 0xa9a39a;
+    switch (id) {
+      // 自然區
+      case 'ginga': {   // 銀河鐵道之夜：觀星丘，天上有一列小火車沿著星星的軌道跑
+        cyl(0.45, 0.8, 0.35, 0x7fb062, 0, 0.17, 0, 10);
+        cyl(0.025, 0.025, 0.4, DARK, 0.1, 0.5, 0, 5); const t = cyl(0.05, 0.07, 0.4, 0x2e3a59, 0.1, 0.78, 0, 8); t.rotation.z = -0.9;
+        const train = new THREE.Group();
+        [[0xe8442e, 0.22], [0x2f6fae, 0], [0xf1c40f, -0.22]].forEach(([c, x]) => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.12), glow(c)); b.position.x = x; train.add(b); });
+        train.position.set(0, 1.55, 0); train.rotation.z = 0.25; g.add(train);
+        for (let i = 0; i < 9; i++) { const a = -1.1 + i * 0.28; ball(0.035, 0xfff3b0, Math.sin(a) * 0.95, 1.05 + Math.cos(a) * 0.55, -0.1, { emissive: 0xffe08a, emissiveIntensity: 0.9 }); }
+        break;
+      }
+      case 'kaze': {    // 風又三郎：山坡上的風車和芒草，葉片會轉
+        cyl(0.1, 0.18, 1.3, WHITE, 0, 0.65, 0, 6); cone(0.17, 0.25, 0x8a5a3c, 0, 1.42, 0, 6);
+        const hub = new THREE.Group(); hub.position.set(0, 1.25, 0.16);
+        for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.62, 0.02), std(0xf6efe0)); b.position.y = 0.3; const arm = new THREE.Group(); arm.rotation.z = i * Math.PI / 2; arm.add(b); hub.add(arm); }
+        g.add(hub); spinners.push({ m: hub, axis: 'z', v: 1.4 });
+        for (let i = 0; i < 7; i++) { const a = i * 0.9; const s = cone(0.05, 0.45, 0xd9c79a, Math.cos(a) * 0.45, 0.22, Math.sin(a) * 0.38 + 0.15, 4); s.rotation.z = 0.25 * Math.sin(i); }
+        break;
+      }
+      case 'chumon': {  // 要求很多的餐廳：森林裡的「山貓軒」
+        box(0.6, 0.4, 0.45, 0xf1e6d2, 0, 0.2, 0); const r = cone(0.48, 0.32, 0x7a2e2a, 0, 0.56, 0, 4); r.rotation.y = Math.PI / 4;
+        box(0.14, 0.24, 0.02, DARK, 0, 0.12, 0.23); box(0.26, 0.08, 0.02, 0xfff6d6, 0, 0.32, 0.235);
+        tree(-0.48, -0.2, 0.9, 0x3f7a45); tree(0.5, -0.25, 1.1, 0x356b3c); tree(0.42, 0.3, 0.7, 0x4f8a4a);
+        break;
+      }
+      case 'natsu': {   // 夏之庭：老爺爺的院子，開滿波斯菊
+        for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; box(0.04, 0.16, 0.04, WOOD, Math.cos(a) * 0.55, 0.08, Math.sin(a) * 0.55); }
+        for (let i = 0; i < 16; i++) { const a = i * 2.4, r = 0.12 + (i % 4) * 0.1; cyl(0.008, 0.008, 0.22, 0x5f9a4a, Math.cos(a) * r, 0.11, Math.sin(a) * r, 4); ball(0.045, [0xf4a6c4, WHITE, 0xe86a9a, 0xf9d3e0][i % 4], Math.cos(a) * r, 0.24, Math.sin(a) * r); }
+        box(0.3, 0.26, 0.24, 0xd9c3a0, 0.62, 0.13, -0.42); box(0.34, 0.03, 0.28, 0x6b4a2b, 0.62, 0.28, -0.42);
+        break;
+      }
+      case 'einstein': {   // 愛因斯坦的科學筆記：白色圓頂的小天文台
+        cyl(0.36, 0.38, 0.5, WHITE, 0, 0.25, 0, 12);
+        const dome = add(new THREE.SphereGeometry(0.37, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0xdfe6ee, 0, 0.5, 0);
+        box(0.1, 0.36, 0.02, 0x2e3a59, 0, 0.66, 0.3).rotation.x = -0.6;
+        const t = cyl(0.04, 0.05, 0.34, 0x2e3a59, 0, 0.8, 0.22, 8); t.rotation.x = 0.9; box(0.12, 0.2, 0.02, DARK, 0, 0.1, 0.38);
+        break;
+      }
+      case 'einstein2': {  // 下冊：氣象站（百葉箱和會轉的風杯）
+        [-0.12, 0.12].forEach(x => [-0.1, 0.1].forEach(z => box(0.03, 0.45, 0.03, WHITE, x, 0.22, z)));
+        box(0.34, 0.3, 0.3, WHITE, 0, 0.58, 0); for (let i = 0; i < 4; i++) box(0.35, 0.015, 0.31, 0xe2e2dc, 0, 0.47 + i * 0.07, 0);
+        cyl(0.015, 0.015, 0.9, 0x8a8a8a, 0.42, 0.45, 0, 5);
+        const cups = new THREE.Group(); cups.position.set(0.42, 0.92, 0);
+        for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3, arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.01, 0.01), std(0x8a8a8a)); arm.position.set(Math.cos(a) * 0.1, 0, Math.sin(a) * 0.1); arm.rotation.y = -a; cups.add(arm);
+          const c = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 4), std(R)); c.position.set(Math.cos(a) * 0.2, 0, Math.sin(a) * 0.2); cups.add(c); }
+        g.add(cups); spinners.push({ m: cups, axis: 'y', v: 3 });
+        break;
+      }
+      case 'xiaomiao': {   // 湯屋的放鬆筆記：冒著熱氣的露天溫泉
+        add(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 16), std(0x8fd3e0, { emissive: 0x5fb3c8, emissiveIntensity: 0.25 }), 0, 0.06, 0);
+        for (let i = 0; i < 14; i++) { const a = i * Math.PI / 7; ball(0.1 + (i % 3) * 0.02, STONE, Math.cos(a) * 0.55, 0.08, Math.sin(a) * 0.55); }
+        for (let i = 0; i < 4; i++) ball(0.09 + i * 0.02, WHITE, -0.1 + i * 0.07, 0.3 + i * 0.18, 0.05 * (i % 2), { transparent: true, opacity: 0.45 });
+        box(0.5, 0.04, 0.04, 0x2f5f8a, 0.15, 0.62, -0.55); box(0.03, 0.62, 0.03, WOOD, -0.1, 0.31, -0.55); box(0.03, 0.62, 0.03, WOOD, 0.4, 0.31, -0.55);
+        box(0.18, 0.2, 0.01, 0x2f5f8a, 0.15, 0.5, -0.55);
+        break;
+      }
+      case 'xiaomiao2': {  // 下冊：竹筒添水（ししおどし）和小石盆
+        box(0.9, 0.5, 0.04, 0xc9b27a, 0, 0.25, -0.3); for (let i = 0; i < 9; i++) box(0.02, 0.5, 0.05, 0xa8904f, -0.4 + i * 0.1, 0.25, -0.29);
+        cyl(0.2, 0.24, 0.16, STONE, 0.2, 0.08, 0.1, 10); add(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 10), 0x8fd3e0, 0.2, 0.16, 0.1);
+        box(0.03, 0.26, 0.03, 0x7fa86a, -0.15, 0.13, 0.1); box(0.03, 0.26, 0.03, 0x7fa86a, -0.15, 0.13, 0.2);
+        const bam = cyl(0.035, 0.035, 0.5, 0x8fbf6a, -0.08, 0.3, 0.15, 6); bam.rotation.z = 1.2;
+        ball(0.06, 0x6b8f5a, 0.45, 0.06, 0.3); ball(0.08, 0x7a7a72, -0.45, 0.07, 0.25);
+        break;
+      }
+      // 國文區
+      case 'rashomon': {   // 羅生門：朱紅的古城門
+        [-0.35, 0.35].forEach(x => cyl(0.06, 0.06, 0.9, R, x, 0.45, 0, 8));
+        box(0.95, 0.08, 0.2, R, 0, 0.82, 0); box(1.15, 0.1, 0.45, 0x4a4a4a, 0, 0.95, 0);
+        box(0.6, 0.2, 0.3, R, 0, 1.1, 0); box(0.85, 0.08, 0.42, 0x4a4a4a, 0, 1.24, 0);
+        cyl(0.02, 0.02, 0.4, 0xb9a07a, 0.55, 0.2, 0.25, 4);   // 蜘蛛之絲：門邊垂下來的一條細絲
+        break;
+      }
+      case 'izu': {    // 伊豆的舞孃：山路的茶屋，紅毯長凳和紅傘
+        box(0.55, 0.4, 0.4, 0xe9dcc4, -0.15, 0.2, -0.15); const r = cone(0.45, 0.25, 0x5a6b4a, -0.15, 0.52, -0.15, 4); r.rotation.y = Math.PI / 4;
+        box(0.5, 0.06, 0.18, R, 0.2, 0.18, 0.32); [-0.02, 0.42].forEach(x => box(0.04, 0.15, 0.14, WOOD, x, 0.08, 0.32));
+        cyl(0.012, 0.012, 0.7, WOOD, 0.45, 0.35, 0.15, 4); cone(0.32, 0.14, R, 0.45, 0.72, 0.15, 12);
+        tree(-0.6, 0.3, 0.8, 0x3f7a45);
+        break;
+      }
+      case 'botchan': {   // 少爺：木造的老校舍和小鐘樓
+        box(1.0, 0.38, 0.36, 0xd9b98a, 0, 0.19, 0); for (let i = 0; i < 5; i++) box(0.12, 0.12, 0.02, 0x6b7f8f, -0.4 + i * 0.2, 0.22, 0.185);
+        const r = box(1.08, 0.04, 0.44, 0x4a5d73, 0, 0.42, 0);
+        box(0.18, 0.25, 0.18, 0xd9b98a, 0, 0.56, 0); cone(0.16, 0.18, 0x4a5d73, 0, 0.77, 0, 4).rotation.y = Math.PI / 4; ball(0.04, 0xe3a21a, 0, 0.6, 0.1);
+        break;
+      }
+      case 'taiyo': {    // 小太陽：曬滿陽光的小院，竹椅、晾衣繩和向日葵
+        box(0.24, 0.04, 0.24, 0xc9b27a, -0.2, 0.2, 0.1); box(0.24, 0.24, 0.03, 0xc9b27a, -0.2, 0.32, -0.02); [-0.3, -0.1].forEach(x => [0, 0.2].forEach(z => box(0.02, 0.2, 0.02, 0xa8904f, x, 0.1, z)));
+        [-0.5, 0.5].forEach(x => cyl(0.015, 0.015, 0.6, WOOD, x, 0.3, -0.35, 4)); box(1.0, 0.01, 0.01, 0xeeeeee, 0, 0.58, -0.35);
+        [0xe8b84a, 0x8dbde6, WHITE, 0xf4a6c4].forEach((c, i) => box(0.14, 0.18, 0.01, c, -0.3 + i * 0.2, 0.48, -0.35));
+        [[0.35, 0.2], [0.5, 0.05]].forEach(([x, z]) => { cyl(0.012, 0.012, 0.5, 0x5f9a4a, x, 0.25, z, 4); cyl(0.09, 0.09, 0.03, 0xf1c40f, x, 0.52, z + 0.02, 10).rotation.x = 1.2; });
+        break;
+      }
+      case 'magician': {   // 天橋上的魔術師：中華商場前的小天橋（橋上有一頂魔術帽）
+        [-0.45, 0.45].forEach(x => { box(0.2, 0.7, 0.3, 0xb5b0a5, x, 0.35, 0); });
+        box(1.1, 0.06, 0.3, 0x9a958a, 0, 0.72, 0); [-0.14, 0.14].forEach(z => box(1.1, 0.12, 0.02, 0x2f7f6a, 0, 0.82, z));
+        cyl(0.07, 0.07, 0.12, 0x222222, 0.1, 0.81, 0, 10); cyl(0.11, 0.11, 0.015, 0x222222, 0.1, 0.755, 0, 10); box(0.14, 0.02, 0.02, R, 0.1, 0.78, 0.06);
+        break;
+      }
+      case 'colorful': {   // 多彩的黑：畫架上的畫，用很多顏色畫成
+        [[-0.15, -0.1], [0.15, -0.1], [0, 0.15]].forEach(([x, z]) => { const l = box(0.03, 0.9, 0.03, WOOD, x, 0.42, z); l.rotation.x = z > 0 ? -0.2 : 0.1; });
+        box(0.5, 0.4, 0.03, WHITE, 0, 0.62, -0.12);
+        [0x2a2a2a, 0x8dbde6, 0xe98fb3, 0xf1c40f, 0x6b9a52].forEach((c, i) => box(0.08, 0.3, 0.01, c, -0.18 + i * 0.09, 0.62, -0.1));
+        cyl(0.14, 0.14, 0.02, 0xd9b98a, 0.4, 0.05, 0.25, 10);
+        break;
+      }
+      case 'doukyusei': {  // 同級生：櫻花樹下的長椅和一把吉他
+        cyl(0.06, 0.09, 0.6, 0x7a5236, -0.3, 0.3, -0.2, 6); ball(0.32, 0xf6c6d6, -0.3, 0.75, -0.2); ball(0.22, 0xf9d8e3, -0.1, 0.7, -0.05); ball(0.2, 0xf3b6ca, -0.5, 0.68, -0.05);
+        box(0.6, 0.04, 0.18, WOOD, 0.2, 0.18, 0.15); box(0.6, 0.16, 0.03, WOOD, 0.2, 0.3, 0.07); [-0.05, 0.45].forEach(x => box(0.03, 0.16, 0.16, 0x4a4a4a, x, 0.08, 0.15));
+        const gb = ball(0.08, 0xc98a4a, 0.36, 0.3, 0.2); gb.scale.set(1, 1.3, 0.4); const nk = box(0.03, 0.25, 0.02, DARK, 0.36, 0.5, 0.2); nk.rotation.z = 0.1;
+        break;
+      }
+      case 'totto': {    // 窗邊的小荳荳：巴學園的電車教室
+        box(0.9, 0.36, 0.32, 0xf3ead2, 0, 0.3, 0); box(0.9, 0.1, 0.33, 0x3f7a55, 0, 0.17, 0);
+        for (let i = 0; i < 5; i++) box(0.12, 0.12, 0.33, 0x8fbcd8, -0.32 + i * 0.16, 0.36, 0);
+        add(new THREE.CylinderGeometry(0.17, 0.17, 0.9, 10, 1, false, 0, Math.PI), 0x6b7f8f, 0, 0.48, 0).rotation.z = Math.PI / 2;
+        [-0.12, 0.12].forEach(z => box(1.1, 0.03, 0.03, 0x7a7a7a, 0, 0.03, z));
+        tree(0.65, -0.3, 0.8, 0x6fb36a);
+        break;
+      }
+      // 英文區
+      case 'prince': {   // 小王子：小小的星球，玻璃罩裡一朵玫瑰，還有兩座小火山
+        cyl(0.03, 0.05, 0.45, WOOD, 0, 0.22, 0, 6); ball(0.42, 0xf0d58a, 0, 0.82, 0);
+        cyl(0.01, 0.01, 0.16, 0x3f7a45, 0, 1.3, 0, 4); ball(0.05, R, 0, 1.39, 0);
+        add(new THREE.SphereGeometry(0.12, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(0xffffff, { transparent: true, opacity: 0.3 }), 0, 1.24, 0).scale.y = 1.6;
+        const v1 = cone(0.08, 0.12, 0x8a5a3c, 0.3, 1.1, 0.15, 6); v1.lookAt(0.6, 1.4, 0.3); const v2 = cone(0.07, 0.1, 0x8a5a3c, -0.3, 1.08, 0.18, 6); v2.lookAt(-0.6, 1.36, 0.36);
+        break;
+      }
+      case 'wonder': {   // 奇蹟男孩：發射台上的小火箭（奧吉最喜歡太空）
+        box(0.6, 0.06, 0.6, 0x9a958a, 0, 0.03, 0);
+        cyl(0.13, 0.13, 0.7, WHITE, 0, 0.45, 0, 10); cone(0.13, 0.28, R, 0, 0.94, 0, 10); ball(0.05, 0x8dbde6, 0, 0.6, 0.12);
+        for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3, f = box(0.02, 0.2, 0.14, R, Math.cos(a) * 0.15, 0.2, Math.sin(a) * 0.15); f.rotation.y = -a; }
+        box(0.04, 0.9, 0.04, 0x7a7a7a, -0.3, 0.45, 0);
+        break;
+      }
+      case 'henshaw': {   // 親愛的漢修先生：一綠一紅的郵筒，信寄出去也會有人回
+        [[-0.16, 0x2f8a4a], [0.16, R]].forEach(([x, c]) => { box(0.24, 0.5, 0.2, c, x, 0.25, 0); cyl(0.12, 0.12, 0.2, c, x, 0.5, 0, 12).rotation.x = Math.PI / 2; box(0.14, 0.02, 0.01, 0x222222, x, 0.38, 0.105); });
+        box(0.16, 0.1, 0.01, WHITE, 0.4, 0.12, 0.15).rotation.y = -0.4;
+        break;
+      }
+      case 'kiki': {    // 魔女宅急便：海邊小鎮的鐘樓
+        box(0.36, 1.1, 0.36, 0xf1e6d2, 0, 0.55, 0); box(0.4, 0.06, 0.4, 0xb98a55, 0, 1.12, 0);
+        cyl(0.11, 0.11, 0.02, WHITE, 0, 0.88, 0.19, 12).rotation.x = Math.PI / 2; box(0.01, 0.08, 0.01, 0x222222, 0, 0.9, 0.2);
+        cone(0.3, 0.45, 0x3f8a7a, 0, 1.38, 0, 4).rotation.y = Math.PI / 4;
+        const broom = cyl(0.012, 0.012, 0.4, WOOD, 0.35, 1.3, 0.2, 4); broom.rotation.z = 1.3; cone(0.05, 0.12, 0xd9c79a, 0.15, 1.25, 0.2, 6).rotation.z = 1.3;
+        break;
+      }
+      case 'subway': {   // 地下鐵：地鐵站的入口，有亮燈的招牌
+        box(0.7, 0.04, 0.5, 0x8a8a8a, 0, 0.02, 0); box(0.5, 0.04, 0.4, 0x4a4a4a, 0, 0.03, 0.02);
+        [-0.3, 0.3].forEach(x => { box(0.04, 0.6, 0.04, 0x7a7a7a, x, 0.3, -0.2); box(0.03, 0.03, 0.45, 0x9a9a9a, x, 0.25, 0.02); });
+        box(0.68, 0.18, 0.06, std(0x16a085, { emissive: 0x16a085, emissiveIntensity: 0.4 }), 0, 0.68, -0.2); box(0.68, 0.04, 0.3, 0x7a7a7a, 0, 0.6, -0.1);
+        ball(0.06, 0xfff1c2, 0.42, 0.62, -0.2, { emissive: 0xffc46b, emissiveIntensity: 0.6 });
+        break;
+      }
+      // 數學區
+      case 'hakase': {   // 博士熱愛的算式：小小的棒球場
+        const field = add(new THREE.CircleGeometry(0.75, 16, Math.PI * 0.25, Math.PI * 0.5), 0x7fb062, 0, 0.03, 0.35); field.rotation.x = -Math.PI / 2;
+        const inf = box(0.42, 0.02, 0.42, 0xc9935a, 0, 0.04, -0.05); inf.rotation.y = Math.PI / 4;
+        [[0, 0.25], [0.3, -0.05], [0, -0.35], [-0.3, -0.05]].forEach(([x, z]) => box(0.06, 0.03, 0.06, WHITE, x, 0.06, z));
+        box(0.6, 0.35, 0.02, std(0x7a7a7a, { transparent: true, opacity: 0.6 }), 0, 0.18, 0.42);
+        cyl(0.02, 0.02, 0.8, 0x7a7a7a, 0.55, 0.4, -0.45, 4); box(0.25, 0.12, 0.02, 0xf1c40f, 0.55, 0.78, -0.45);   // 阪神虎的黃色旗
+        break;
+      }
+      case 'namiya': {   // 解憂雜貨店：拉下鐵捲門的老雜貨店，門口有收信的牛奶箱
+        box(0.7, 0.5, 0.45, 0xb5a48a, 0, 0.25, 0); box(0.78, 0.06, 0.52, 0x5b4636, 0, 0.53, 0);
+        for (let i = 0; i < 6; i++) box(0.5, 0.035, 0.02, 0x9a9a92, 0, 0.06 + i * 0.05, 0.23);
+        box(0.5, 0.09, 0.02, 0xfff6d6, 0, 0.44, 0.235); box(0.1, 0.12, 0.08, 0xe9dcc4, 0.3, 0.28, 0.27);
+        ball(0.05, 0xfff1c2, -0.36, 0.45, 0.26, { emissive: 0xffc46b, emissiveIntensity: 0.5 });
+        break;
+      }
+      case 'yoru': {    // 夜間遠足：走了一整夜的路，路邊的里程路標和燈籠
+        cyl(0.03, 0.03, 0.9, WOOD, 0, 0.45, 0, 5);
+        [[0.25, 0.75, 0.2], [-0.2, 0.6, -0.3], [0.2, 0.45, 0.5]].forEach(([x, y, r]) => { const s = box(0.5, 0.1, 0.02, 0xe9dcc4, x * 0.6, y, 0); s.rotation.z = r * 0.1; });
+        for (let i = 0; i < 5; i++) box(0.16, 0.03, 0.12, STONE, -0.5 + i * 0.22, 0.02, 0.3 + (i % 2) * 0.08);
+        cyl(0.07, 0.07, 0.14, std(0xfff1d6, { emissive: 0xffa94d, emissiveIntensity: 0.8 }), 0.35, 0.3, 0.2, 8); cyl(0.01, 0.01, 0.25, WOOD, 0.35, 0.12, 0.2, 4);
+        break;
+      }
+      case 'kongming': {  // 孫子兵法：石頭排成的八陣圖，中間插一面令旗
+        for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; cyl(0.06, 0.08, 0.3 + (i % 2) * 0.1, STONE, Math.cos(a) * 0.5, 0.15, Math.sin(a) * 0.5, 6); }
+        cyl(0.18, 0.2, 0.1, STONE, 0, 0.05, 0, 8); cyl(0.015, 0.015, 0.9, WOOD, 0, 0.5, 0, 4); box(0.28, 0.18, 0.01, R, 0.14, 0.85, 0);
+        break;
+      }
+      case 'kinou': {    // 昨日的美食：兩個人的餐桌，今天也好好吃飯
+        box(0.6, 0.04, 0.4, WOOD, 0, 0.3, 0); [[-0.26, -0.16], [0.26, -0.16], [-0.26, 0.16], [0.26, 0.16]].forEach(([x, z]) => box(0.03, 0.28, 0.03, WOOD, x, 0.14, z));
+        [-0.42, 0.42].forEach(x => { box(0.18, 0.03, 0.18, 0xb98a55, x, 0.18, 0); box(0.03, 0.2, 0.18, 0xb98a55, x + (x > 0 ? 0.08 : -0.08), 0.28, 0); });
+        [-0.13, 0.13].forEach(x => { cyl(0.07, 0.07, 0.01, WHITE, x, 0.33, 0, 10); ball(0.04, 0xf3ead2, x, 0.36, 0); });
+        cyl(0.05, 0.04, 0.08, 0x8c2f2b, 0, 0.36, -0.1, 8);
+        break;
+      }
+      // 社會區
+      case 'tetsudo': {   // 11 元的鐵道旅行：鄉間的小車站和月台
+        box(1.1, 0.12, 0.3, 0xc9c2b2, 0, 0.06, 0.15); box(0.45, 0.35, 0.3, 0xf1e6d2, -0.2, 0.3, -0.2); box(0.55, 0.05, 0.4, 0x2f5f8a, -0.2, 0.5, -0.2);
+        box(0.3, 0.08, 0.02, WHITE, -0.2, 0.42, -0.04);
+        [0.4, 0.55].forEach(z => box(1.3, 0.03, 0.03, 0x7a7a7a, 0, 0.02, z)); for (let i = 0; i < 6; i++) box(0.05, 0.02, 0.22, WOOD, -0.55 + i * 0.22, 0.01, 0.475);
+        cyl(0.015, 0.015, 0.5, 0x7a7a7a, 0.4, 0.3, 0.05, 4); box(0.2, 0.12, 0.02, 0x2f7fd1, 0.4, 0.55, 0.05);
+        break;
+      }
+      case 'koto': {    // 古都：朱紅的鳥居和北山杉
+        [-0.25, 0.25].forEach(x => cyl(0.04, 0.045, 0.75, R, x, 0.37, 0.15, 8));
+        box(0.75, 0.06, 0.08, R, 0, 0.76, 0.15); box(0.62, 0.04, 0.06, R, 0, 0.62, 0.15); box(0.8, 0.03, 0.1, 0x2a2a2a, 0, 0.8, 0.15);
+        [-0.35, 0, 0.35].forEach((x, i) => { cyl(0.03, 0.04, 0.9, 0x8a5f42, x, 0.45, -0.3, 5); cone(0.14, 0.7, 0x2f5a3a, x, 1.1 + (i % 2) * 0.1, -0.3, 6); });
+        break;
+      }
+      case 'saigon': {   // 西貢小子：小吃攤推車、紅燈籠和塑膠小板凳
+        box(0.55, 0.3, 0.3, 0xb5c9a8, 0, 0.25, 0); [-0.2, 0.2].forEach(x => cyl(0.07, 0.07, 0.03, 0x333333, x, 0.07, 0.16, 10).rotation.x = Math.PI / 2);
+        [-0.25, 0.25].forEach(x => box(0.02, 0.4, 0.02, 0x7a7a7a, x, 0.6, -0.12));
+        for (let i = 0; i < 5; i++) box(0.12, 0.02, 0.4, i % 2 ? WHITE : 0xd35400, -0.24 + i * 0.12, 0.8, 0.02);
+        [-0.18, 0.18].forEach(x => { ball(0.06, R, x, 0.68, 0.2, { emissive: R, emissiveIntensity: 0.4 }); });
+        [[0.45, 0.25, 0xe74c3c], [0.5, -0.1, 0x2980b9]].forEach(([x, z, c]) => box(0.12, 0.12, 0.12, c, x, 0.06, z));
+        break;
+      }
+      case 'saga': {    // 佐賀的超級阿嬤：河邊會轉的水車（阿嬤在這裡撿漂下來的菜）
+        box(0.3, 0.04, 1.0, 0x6fb4d8, -0.2, 0.03, 0, { emissive: 0x3f84a8, emissiveIntensity: 0.2 });
+        const wheel = new THREE.Group(); wheel.position.set(0.05, 0.38, 0);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.03, 6, 16), std(WOOD)); rim.rotation.y = Math.PI / 2; wheel.add(rim);
+        for (let i = 0; i < 8; i++) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.64, 0.03), std(0x7a5236)); p.rotation.x = i * Math.PI / 8; wheel.add(p); }
+        g.add(wheel); spinners.push({ m: wheel, axis: 'x', v: 0.8 });
+        box(0.3, 0.5, 0.4, 0x8a6a4a, 0.35, 0.25, 0); cone(0.32, 0.22, 0x4a4a3a, 0.35, 0.6, 0, 4).rotation.y = Math.PI / 4;
+        ball(0.05, 0xe74c3c, -0.2, 0.08, 0.3); ball(0.05, 0x6b9a52, -0.22, 0.08, -0.2);
+        break;
+      }
+      case 'seirei': {   // 精靈守護者：山谷上的吊橋
+        [-0.5, 0.5].forEach(x => [-0.12, 0.12].forEach(z => cyl(0.03, 0.03, 0.6, WOOD, x, 0.3, z, 5)));
+        for (let i = 0; i < 9; i++) { const x = -0.4 + i * 0.1, y = 0.42 - 0.12 * Math.sin((i + 0.5) / 9 * Math.PI); box(0.08, 0.02, 0.22, 0xa8804f, x, y, 0); }
+        [-0.12, 0.12].forEach(z => { for (let i = 0; i < 10; i++) { const x = -0.45 + i * 0.1, y = 0.58 - 0.12 * Math.sin(i / 9 * Math.PI); box(0.1, 0.01, 0.01, 0xd9c79a, x, y, z); } });
+        cone(0.3, 0.5, 0x8a8a7a, -0.65, 0.2, 0, 5); cone(0.3, 0.5, 0x8a8a7a, 0.65, 0.2, 0, 5);
+        break;
+      }
+      case 'alu': {    // 巷口小報：街角的報亭
+        box(0.5, 0.45, 0.4, 0x2f5d62, 0, 0.23, 0); box(0.6, 0.05, 0.5, 0xd9b86a, 0, 0.48, 0);
+        box(0.4, 0.2, 0.02, 0xfff6d6, 0, 0.32, 0.21); for (let i = 0; i < 4; i++) box(0.08, 0.1, 0.01, [0xf3ead2, 0xe9dcc4, 0xfdfaf2, 0xe0d2b6][i], -0.15 + i * 0.1, 0.12, 0.215);
+        box(0.18, 0.08, 0.02, R, 0, 0.56, 0);
+        break;
+      }
+      case 'alu2': {    // 下冊：社區的公布欄和長椅
+        [-0.3, 0.3].forEach(x => box(0.04, 0.7, 0.04, WOOD, x, 0.35, 0)); box(0.66, 0.4, 0.04, 0x8a5a2c, 0, 0.5, 0); box(0.72, 0.04, 0.12, 0x5b3a1e, 0, 0.73, 0);
+        [[-0.18, 0.55, 0xfff6d6], [0.05, 0.6, 0xf9d3e0], [0.2, 0.45, 0xd7eaf5], [-0.08, 0.42, 0xfff1c2]].forEach(([x, y, c]) => box(0.14, 0.16, 0.01, c, x, y, 0.025));
+        box(0.5, 0.04, 0.15, WOOD, 0, 0.16, 0.35); [-0.2, 0.2].forEach(x => box(0.03, 0.14, 0.13, 0x4a4a4a, x, 0.07, 0.35));
+        break;
+      }
+      default: { cyl(0.04, 0.05, 0.6, WOOD, 0, 0.3, 0, 5); box(0.4, 0.25, 0.03, 0xe9dcc4, 0, 0.6, 0); }   // 沒有專屬模型的書：小木牌
+    }
+    g.traverse(o => { if (o.isMesh) o.userData.markPart = true; });
+    return g;
+  }
+  function buildMarks() {
+    const end = weekIdx != null && ctx.S.weeks[weekIdx] ? ctx.S.weeks[weekIdx].end : null;
+    const list = (ctx.marks || []).filter(m => !end || !m.at || m.at <= end), sig = JSON.stringify(list);
+    if (sig === markSig) return;
+    const had = markSig === null ? null : new Set(markLayer.children.map(c => c.userData.mark));
+    markSig = sig;
+    while (markLayer.children.length) markLayer.remove(markLayer.children[0]);
+    spinners = [];
+    const used = {};
+    list.forEach(m => {
+      const j = SUBJECTS.indexOf(m.s); if (j < 0) return;
+      const n = used[m.s] = (used[m.s] || 0) + 1; if (n > MARK_SLOTS.length) return;
+      const [r, da] = MARK_SLOTS[n - 1], a = -Math.PI / 2 + j * (Math.PI * 2 / 5) + da;
+      const mk = markMesh(m.id);
+      mk.position.set(Math.cos(a) * r, 0.18, Math.sin(a) * r);
+      mk.lookAt(Math.cos(a) * (r + 5), 0.18, Math.sin(a) * (r + 5));   // 正面朝海
+      mk.scale.setScalar(1.2); mk.userData.mark = m.id;
+      markLayer.add(mk);
+      // 這次打開 App 之後才讀完的：冒出來
+      if (had && !had.has(m.id)) { mk.scale.setScalar(0.01); popping.push({ m: mk, t: 0, to: 1.2 }); }
+    });
+  }
+
   // 她的家：蓋在中央碼頭，跟著島嶼等級擴建
   function buildHome() {
     const h = ctx.home, sig = JSON.stringify(h || null);
@@ -762,6 +1047,8 @@
     if (homeHit && (!hit || homeHit.distance <= hit.distance)) { if (ctx.onHome) ctx.onHome(); return; }
     const lightHit = hits.find(h => { let o = h.object; while (o && !o.userData.light && !o.userData.subject) o = o.parent; return o && o.userData.light; });
     if (lightHit && ctx.onLight && (!hit || lightHit.distance <= hit.distance)) { ctx.onLight(); return; }
+    const mHit = hits.find(h => { let o = h.object; while (o && o.userData.mark == null && !o.userData.subject) o = o.parent; return o && o.userData.mark != null; });
+    if (mHit && ctx.onMark && (!hit || mHit.distance <= hit.distance)) { let o = mHit.object; while (o.userData.mark == null) o = o.parent; ctx.onMark(o.userData.mark); return; }
     const bHit = hits.find(h => { let o = h.object; while (o && !o.userData.book && !o.userData.subject) o = o.parent; return o && o.userData.book; });
     if (bHit && ctx.onBook && (!hit || bHit.distance <= hit.distance)) { ctx.onBook(); return; }
     const gHit = hits.find(h => { let o = h.object; while (o && !o.userData.garden && !o.userData.plant && !o.userData.subject) o = o.parent; return o && (o.userData.garden || o.userData.plant); });
@@ -798,11 +1085,12 @@
     if (!renderer.domElement.isConnected) { running = false; return; }
     const dt = Math.min(clock.getDelta(), 0.1);
     animateSky(dt);
+    spinners.forEach(sp => { sp.m.rotation[sp.axis] += sp.v * dt; });
     popping = popping.filter(p => {
       p.t += dt / 0.45;
       const t = Math.min(p.t, 1);
       if (p.bounce) { p.m.position.y = 0.2 + Math.sin(t * Math.PI) * 0.25; }
-      else { const e = 1 - Math.pow(1 - t, 3); p.m.scale.setScalar(Math.max(0.01, e * (1 + 0.15 * Math.sin(t * Math.PI)))); }
+      else { const e = 1 - Math.pow(1 - t, 3); p.m.scale.setScalar(Math.max(0.01, e * (p.to || 1) * (1 + 0.15 * Math.sin(t * Math.PI)))); }
       return t < 1;
     });
     controls.update();
@@ -834,7 +1122,7 @@
     if (ctx.season && ctx.season !== seasonNow) setSeason(ctx.season);
     el.appendChild(renderer.domElement);
     resize();
-    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden]) + weekIdx;
+    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden, ctx.marks]) + weekIdx;
     if (sig !== signature) { signature = sig; buildDynamic(false); }
     if (selected && ctx.onSelect) ctx.onSelect(selected);
     if (!running) { running = true; clock.getDelta(); loop(); }
