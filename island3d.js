@@ -15,7 +15,9 @@
   let root, buildLayer, linkLayer, plates = {}, anchors = {}, popping = [];
   let running = false, signature = '', weekIdx = null;
   // 天色與天氣
-  let homeLayer, homeSig = '';
+  let homeLayer, homeSig = '', walkLayer, walkSig = '';
+  // 節氣：草地、樹葉的顏色與飄落的花瓣／楓葉／螢火蟲
+  let grassMat, leafMats = [], seasonFx, seasonNow = null;
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
 
   // ---------- 小工具 ----------
@@ -139,7 +141,8 @@
     water = new THREE.Mesh(new THREE.CircleGeometry(80, 48), std(0x6fb4d8, { roughness: 0.4 }));
     water.rotation.x = -Math.PI / 2; water.position.y = -0.6; root.add(water);
     const sand = new THREE.Mesh(new THREE.CylinderGeometry(14.2, 15, 0.8, 40), std(0xe6c98e)); sand.position.y = -0.4; root.add(sand);
-    const grass = new THREE.Mesh(new THREE.CylinderGeometry(13, 13.4, 0.5, 40), std(0x8cc56c)); grass.position.y = -0.05; root.add(grass);
+    grassMat = std(0x8cc56c);
+    const grass = new THREE.Mesh(new THREE.CylinderGeometry(13, 13.4, 0.5, 40), grassMat); grass.position.y = -0.05; root.add(grass);
 
     plates = {}; anchors = {};
     SUBJECTS.forEach((s, i) => {
@@ -160,13 +163,15 @@
 
     // 樹（固定亂數，每次都長在同樣的位置）
     const rand = rng(20270515);
+    leafMats = [std(0x6fb36a), std(0x86c47a), std(0x6fb36a)];
+    let ti = 0;
     for (let i = 0; i < 46; i++) {
       const a = rand() * Math.PI * 2, r = 4 + rand() * 8.6;
       const p = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
       if (SUBJECTS.some((s, j) => p.distanceTo(districtPos(j)) < 4.1)) continue;
       const h = 0.7 + rand() * 0.6;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4, 5), std(0x9a6b4a)); trunk.position.set(p.x, 0.4, p.z);
-      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.42, h, 6), std(rand() < 0.5 ? 0x6fb36a : 0x86c47a)); leaf.position.set(p.x, 0.6 + h / 2, p.z);
+      rand(); const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.42, h, 6), leafMats[ti++ % 3]); leaf.position.set(p.x, 0.6 + h / 2, p.z);
       root.add(trunk, leaf);
     }
     // 中央碼頭廣場
@@ -174,6 +179,7 @@
 
     buildSky();
     homeLayer = new THREE.Group(); root.add(homeLayer);
+    walkLayer = new THREE.Group(); root.add(walkLayer);
     buildLayer = new THREE.Group(); root.add(buildLayer);
     linkLayer = new THREE.Group(); root.add(linkLayer);
   }
@@ -213,6 +219,42 @@
       c.userData.speed = 0.15 + r() * 0.2; clouds.add(c);
     }
     clouds.userData.mat = cm; clouds.visible = false; scene.add(clouds);
+    // 季節飄落物：花瓣、楓葉（白天）或螢火蟲（夏天晚上）
+    const fg = new THREE.BufferGeometry(), fp = [];
+    for (let i = 0; i < 140; i++) fp.push((r() - 0.5) * 26, r() * 9, (r() - 0.5) * 26);
+    fg.setAttribute('position', new THREE.Float32BufferAttribute(fp, 3));
+    seasonFx = new THREE.Points(fg, new THREE.PointsMaterial({ color: 0xf4b6c8, size: 0.22, transparent: true, opacity: 0.9 }));
+    seasonFx.visible = false; scene.add(seasonFx);
+  }
+  // 二十四節氣的景色：grass 草地、leaves 三種樹葉、fx 飄落物（petal 花瓣、maple 楓葉、firefly 螢火蟲）
+  const SEASONS = {
+    立春: { grass: 0x95c873, leaves: [0x6fb36a, 0xf6c4d4, 0x86c47a] }, 雨水: { grass: 0x97cc75, leaves: [0x6fb36a, 0xf4b6c8, 0x86c47a], fx: 'petal' },
+    驚蟄: { grass: 0x9bd27a, leaves: [0xf4b6c8, 0xf9d3df, 0x86c47a], fx: 'petal' }, 春分: { grass: 0x9bd27a, leaves: [0xf4b6c8, 0xf9d3df, 0xf0a9bf], fx: 'petal' },
+    清明: { grass: 0x92cf70, leaves: [0xf4b6c8, 0x86c47a, 0xf9d3df], fx: 'petal' }, 穀雨: { grass: 0x88c866, leaves: [0x7cc070, 0x9ad48a, 0xf4b6c8] },
+    立夏: { grass: 0x7fc35e, leaves: [0x5fae5a, 0x7cc070, 0x5fae5a] }, 小滿: { grass: 0x78c058, leaves: [0x55a650, 0x74bb66, 0x55a650] },
+    芒種: { grass: 0x72bd55, leaves: [0x4fa34a, 0x6fb36a, 0x4fa34a], fx: 'firefly' }, 夏至: { grass: 0x6fbf5a, leaves: [0x4fa34a, 0x6fb36a, 0x4fa34a], fx: 'firefly' },
+    小暑: { grass: 0x6fbf5a, leaves: [0x4a9e46, 0x66b062, 0x4a9e46], fx: 'firefly' }, 大暑: { grass: 0x74bb54, leaves: [0x4a9e46, 0x66b062, 0x4a9e46] },
+    立秋: { grass: 0x80bb5c, leaves: [0x5fa858, 0x7cb866, 0x5fa858] }, 處暑: { grass: 0x88b85e, leaves: [0x6aa85a, 0x8ab866, 0xc9b24a] },
+    白露: { grass: 0x92b862, leaves: [0x6aa85a, 0xd9b24a, 0x8ab866] }, 秋分: { grass: 0x9cb664, leaves: [0xd99a3d, 0x7cb866, 0xe0b54a] },
+    寒露: { grass: 0xa4b468, leaves: [0xd9653b, 0xe8a33d, 0x8aae62], fx: 'maple' }, 霜降: { grass: 0xa9b06a, leaves: [0xd9553b, 0xe8933d, 0xc94a3a], fx: 'maple' },
+    立冬: { grass: 0xa2ac70, leaves: [0xc9653b, 0x8aa070, 0xd98a3d], fx: 'maple' }, 小雪: { grass: 0x9ea878, leaves: [0x5d8f62, 0x7a9e7e, 0xb8653b] },
+    大雪: { grass: 0x99a47c, leaves: [0x5d8f62, 0x7a9e7e, 0x5d8f62] }, 冬至: { grass: 0x97a27e, leaves: [0x5d8f62, 0x7a9e7e, 0xd94a5a] },
+    小寒: { grass: 0x97a27e, leaves: [0x5d8f62, 0x7a9e7e, 0xe85a7a] }, 大寒: { grass: 0x95a37c, leaves: [0x5d8f62, 0x7a9e7e, 0xf4b6c8] }
+  };
+  function setSeason(term) {
+    const t = SEASONS[term]; seasonNow = term;
+    if (!t || !grassMat) return;
+    grassMat.color.setHex(t.grass);
+    leafMats.forEach((m, i) => m.color.setHex(t.leaves[i]));
+    seasonFx.userData.kind = t.fx || null;
+    seasonFx.material.color.setHex(t.fx === 'maple' ? 0xe0603a : t.fx === 'firefly' ? 0xf6f08a : 0xf7bfd0);
+    seasonFx.material.size = t.fx === 'firefly' ? 0.16 : 0.22;
+    showSeasonFx();
+  }
+  function showSeasonFx() {
+    if (!seasonFx) return;
+    const k = seasonFx.userData.kind, night = envNow.phase === 'night', wet = envNow.weather === 'rain' || envNow.weather === 'storm';
+    seasonFx.visible = !!k && !wet && (k === 'firefly' ? night : !night);
   }
   const SKY = { dawn: 0xf6c9a8, day: 0xcfe8f3, dusk: 0xf2a07b, night: 0x1b2440 };
   const GREY = { dawn: 0xb9aaa4, day: 0xaab6c0, dusk: 0x9c8f92, night: 0x151b28 };
@@ -244,8 +286,20 @@
     clouds.visible = w !== 'clear' || ph === 'day';
     clouds.userData.mat.color.setHex(wet ? 0x7d8794 : night ? 0x4a5370 : 0xffffff);
     if (container) container.style.background = '#' + sky.getHexString();
+    showSeasonFx();
   }
   function animateSky(dt) {
+    if (seasonFx && seasonFx.visible) {
+      const p = seasonFx.geometry.attributes.position, fly = seasonFx.userData.kind === 'firefly', t = performance.now() / 1000;
+      for (let i = 0; i < p.count; i++) {
+        if (fly) { p.setY(i, 0.6 + 1.2 * (0.5 + 0.5 * Math.sin(t * 0.8 + i))); p.setX(i, p.getX(i) + Math.sin(t + i * 1.7) * dt * 0.4); continue; }
+        let y = p.getY(i) - dt * 0.7;
+        if (y < 0.2) y += 9;
+        p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(t * 1.3 + i) * dt * 0.5);
+      }
+      p.needsUpdate = true;
+      if (fly) seasonFx.material.opacity = 0.6 + 0.4 * Math.sin(t * 3);
+    }
     if (rain && rain.visible) {
       const p = rain.geometry.attributes.position, speed = (envNow.weather === 'storm' ? 26 : 18) * dt;
       for (let i = 0; i < p.count; i += 2) {
@@ -349,6 +403,7 @@
     buildLayer.children.slice().forEach(m => { if (!keep.has(m.userData.key)) buildLayer.remove(m); });
     buildLinks();
     buildHome();
+    buildWalk();
   }
 
   // 她的家：蓋在中央碼頭，跟著島嶼等級擴建
@@ -391,6 +446,28 @@
     const lb = labelSprite('🏠 ' + (h.name || '我的家'), null, { scale: 1.0, color: '#3a2a33' });
     lb.position.set(0, h.tier === 'tent' ? 2.1 : h.tier === 'cabin' ? 2.6 : 3.4, 0); lb.userData.home = true; homeLayer.add(lb);
     setEnvironment(envNow);
+  }
+
+  // 海邊步道：每蓋一個運動章鋪一段木棧道，每三章多一盞燈籠
+  function buildWalk() {
+    const n = Math.min(ctx.walk || 0, 120), sig = String(n);
+    if (sig === walkSig) return;
+    walkSig = sig;
+    while (walkLayer.children.length) walkLayer.remove(walkLayer.children[0]);
+    if (!n) return;
+    const plank = std(0xb08356), post = std(0x7a5236), paper = std(0xfff1d6, { emissive: 0xffb347, emissiveIntensity: 0.6 });
+    const R = 13.75, step = 0.075, a0 = Math.PI * 0.42;   // 從島的前方海邊開始往右鋪
+    for (let i = 0; i < n; i++) {
+      const a = a0 - i * step;
+      const b = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 0.9), plank);
+      b.position.set(Math.cos(a) * R, 0.05, Math.sin(a) * R); b.rotation.y = -a; walkLayer.add(b);
+      if (i % 3 === 2) {
+        const la = a, lr = R + 0.62;
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.6, 5), post); p.position.set(Math.cos(la) * lr, 0.3, Math.sin(la) * lr);
+        const l = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.2, 8), paper); l.position.set(Math.cos(la) * lr, 0.68, Math.sin(la) * lr);
+        walkLayer.add(p, l);
+      }
+    }
   }
 
   function buildLinks() {
@@ -481,9 +558,10 @@
       buildStatic();
     }
     setEnvironment(envNow);
+    if (ctx.season && ctx.season !== seasonNow) setSeason(ctx.season);
     el.appendChild(renderer.domElement);
     resize();
-    const sig = JSON.stringify([ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home]) + weekIdx;
+    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home]) + weekIdx;
     if (sig !== signature) { signature = sig; buildDynamic(false); }
     if (selected && ctx.onSelect) ctx.onSelect(selected);
     if (!running) { running = true; clock.getDelta(); loop(); }
@@ -496,5 +574,5 @@
     buildDynamic(animate !== false);
   }
 
-  window.Island3D = { mount, setWeek, setEnvironment, pointsUntil: w => pointsUntil(w), select, get selected() { return selected; } };
+  window.Island3D = { mount, setWeek, setEnvironment, setSeason, pointsUntil: w => pointsUntil(w), select, get selected() { return selected; } };
 })();

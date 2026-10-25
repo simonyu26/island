@@ -129,6 +129,11 @@
   .furn { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 8px; }
   .furn button { background: #fff; color: var(--ink); border: 1.5px solid var(--plum-light); padding: 8px 4px; font-size: 13px; }
   .furn button span { display: block; font-size: 26px; } .furn button small { display: block; color: var(--muted); font-size: 11px; }
+  .stamps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
+  .stamp { aspect-ratio: 1; border: 2px dashed var(--plum-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+  .stamp.today { border-color: var(--plum); }
+  .stamp.on { border: 2px solid #c0392b; background: #fff5f3; color: #c0392b; font-weight: 700; font-size: 18px; transform: rotate(-8deg); }
+  .hanko { display: inline-flex; width: 30px; height: 30px; border: 2px solid #c0392b; border-radius: 50%; color: #c0392b; font-weight: 700; align-items: center; justify-content: center; transform: rotate(-8deg); }
   .greet { position: fixed; inset: 0; background: rgba(60, 20, 45, .35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; animation: fadeIn .3s; }
   .greet-card { background: #fff; border-radius: 24px; padding: 22px 18px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.2); animation: popIn .45s cubic-bezier(.2,1.4,.4,1); }
   .greet-pic { font-size: 64px; line-height: 1; } .greet-pic .pic { width: 84px; height: 84px; }
@@ -166,8 +171,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.4';
+const APP_VERSION = '2.5';
 const CHANGELOG = [
+  { v: '2.5', date: '2026-10-25', items: ['🏃 運動集章卡：今天運動了就蓋一章，一週 3 章得 3 枚島幣，連續達標解鎖排球和日本風家具', '海邊步道：每蓋一章鋪一段木棧道，每三章多一盞燈籠', '⛵ 紙船碼頭：檢討完紙本考卷放一艘紙船，和爸爸一起檢討是親子船', '🍁 整座島跟著二十四節氣換季：春天櫻花、夏夜螢火蟲、秋天楓紅'] },
   { v: '2.4', date: '2026-10-24', items: ['💡 讓島順起來：在嚮導卡下面寫你對小島的想法，爸爸會收到，也會在這裡回覆你'] },
   { v: '2.3', date: '2026-10-24', items: ['嚮導每天第一次見面會先跟你打招呼', '加碼任務改成「挑戰任務」：不用花島幣，自己選基礎／中級／進階，答對賺 1～3 枚島幣，每天最多 10 題', '挑戰任務的題目來自會考考古題（106～115 年，心測中心）', '我的家可以用 3D 走進房間看', '可以去島民家作客、送他們家具、幫他們換牆壁顏色'] },
   { v: '2.2', date: '2026-10-24', items: ['🏠 我的家：在島中央蓋你的家，島嶼升級就會擴建', '🛋️ 家具店：用島幣買家具，擺進自己的房間', '📬 信箱：島民每天的信和嚮導的新聞都收在這裡', '🪙 加碼任務降價，1 枚島幣就能換一題'] },
@@ -330,8 +336,28 @@ function derive(S) {
   xp += sumXp(questsDone) + sumXp(xqDone);
   coinXp += sumXp(questsDone) + sumXp(xqDone.filter(q => !q.tier));
 
+  // 運動集章卡：一章 +5 經驗值；一週集滿 3 章 +3 枚島幣；每週 ≥ 3 章算連續達標
+  const exDays = Object.keys(save).filter(k => k.startsWith('ex:') && save[k]).map(k => k.slice(3)).sort();
+  const exWeeks = {}; exDays.forEach(d => { const w = mondayOf(d); exWeeks[w] = (exWeeks[w] || 0) + 1; });
+  xp += exDays.length * 5;
+  const exCoins = Object.values(exWeeks).filter(n => n >= EX_GOAL).length * 3;
+  let exStreak = 0, exBest = 0;
+  if (exDays.length) {
+    for (let w = mondayOf(exDays[0]); w <= curMon; w = addD(w, 7)) {
+      if ((exWeeks[w] || 0) >= EX_GOAL) exStreak++;
+      else if (w !== curMon) exStreak = 0;   // 這週還沒結束，不算斷
+      exBest = Math.max(exBest, exStreak);
+    }
+  }
+  // 紙船（自己檢討）、親子船（爸爸一起）：第一科 2 枚＋20 經驗值，每多一科 +1 枚，一次最多 4 枚；兩種船各自每天算 1 次
+  const papers = Object.keys(save).filter(k => k.startsWith('paper:') && save[k]).sort().map(k => Object.assign({ id: k }, save[k]));
+  const sessions = []; papers.forEach(x => { let ss = sessions.find(y => y.session === x.session); if (!ss) sessions.push(ss = { session: x.session, kind: x.kind, date: x.at, note: x.note, lanes: [], rows: [] }); ss.lanes.push(x.lane); ss.rows.push(x); });
+  const paidDay = {}; let paperCoins = 0;
+  sessions.forEach(ss => { const k = ss.kind + ss.date; ss.paid = !paidDay[k]; paidDay[k] = true;
+    if (ss.paid) { ss.coins = Math.min(PAPER_MAX, 1 + ss.lanes.length); paperCoins += ss.coins; xp += 20; } });
+
   const spent = (save.purchases || []).reduce((a, p) => a + p.price, 0);
-  const coins = 20 + Math.floor(coinXp / 10) + xqCoins - spent;   // 開島禮物 20 枚
+  const coins = 20 + Math.floor(coinXp / 10) + xqCoins + exCoins + paperCoins - spent;   // 開島禮物 20 枚
   const level = Math.floor(Math.sqrt(xp / 60)) + 1;
   const lvBase = 60 * Math.pow(level - 1, 2), lvNext = 60 * Math.pow(level, 2);
 
@@ -362,11 +388,14 @@ function derive(S) {
     { ic: '🎯', name: '任務達人 ×10', ok: questsDone.length >= 10 },
     { ic: '📖', name: '解題高手 ×20', ok: questsRight + xqDone.filter(q => q.correct).length >= 20 },
     { ic: '🪙', name: '加碼挑戰 ×10', ok: xqDone.length >= 10 },
-    { ic: '🏰', name: '島嶼 Lv.10', ok: level >= 10 }
+    { ic: '🏰', name: '島嶼 Lv.10', ok: level >= 10 },
+    { ic: '🏐', name: '運動集章 ×30', ok: exDays.length >= 30 },
+    { ic: '⛵', name: '紙船 ×10', ok: sessions.length >= 10 }
   ];
 
   return { cfg, xp, coins, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
-           links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts };
+           links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
+           exDays, exWeeks, exStreak, exBest, paperSessions: sessions };
 }
 
 /* ===== 共用 ===== */
@@ -442,9 +471,9 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home' }[tab] || tab;
+  const navOn = { pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
-  app.innerHTML = ({ home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = ({ home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home') { ensureDaily(); maybeGreet(); }
   if (tab === 'house') mountRoom();
@@ -501,7 +530,7 @@ function viewHome() {
       <div class="card" style="margin-top:12px" id="i3dTime">${timelineHtml()}</div>
       <div class="card" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>`
     : `<div class="island"><div class="districts">${districts}</div></div>`;
-  return hud() + newsCard + todayCard() + questCard() + xqCard() + guideCard() + `
+  return hud() + newsCard + todayCard() + habitCard() + questCard() + xqCard() + guideCard() + `
     ${toggle}${islandView}
     ${dailyCard()}
     <div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
@@ -529,7 +558,7 @@ function dailyCtx() {
     residents: SUBJECTS.map(s => { const r = resident(s);
       return { key: s, name: r.name, personality: r.personality, relation: r.relation, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null }; }),
     guide: { name: g.name, tone: TONES[g.tone] || g.tone },
-    weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '')
+    weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '') + '；今天的節氣是' + solarTerm(S.today) + '（' + TERM_NOTE[solarTerm(S.today)] + '）'
   };
 }
 async function ensureDaily() {
@@ -682,8 +711,8 @@ function openHouse(who) { houseWho = who || 'me'; go('house'); }
 function houseTier() { let t = HOUSE_TIERS[0]; HOUSE_TIERS.forEach(x => { if (D.level >= x.lv) t = x; }); return t; }
 function homeOf() { return S.save.home || null; }
 function catalogFor(who) { return who === 'me' ? FURNITURE : RES_FURNITURE[who].concat(FURNITURE.filter(f => f.z !== 'out')); }
-function furnOf(id) { return FURNITURE.find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
-function ownedFor(who) { return [...new Set((S.save.purchases || []).filter(p => p.furniture && (p.for || 'me') === who).map(p => p.furniture))]; }
+function furnOf(id) { return FURNITURE.find(f => f.id === id) || EX_REWARDS.find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
+function ownedFor(who) { return [...new Set((S.save.purchases || []).filter(p => p.furniture && (p.for || 'me') === who).map(p => p.furniture).concat(who === 'me' ? exUnlocked() : []))]; }
 function ownedFurniture() { return ownedFor('me'); }
 function roomOf(who) { return who === 'me' ? homeOf() || {} : ((S.save.decor || {})[who] || {}); }
 function slotsFor(who) { return who === 'me' ? houseTier().slots : RES_SLOTS; }
@@ -739,7 +768,11 @@ function furnShop(who) {
     ${who === 'me' ? '' : `<div class="muted" style="margin-top:4px">前三件是${esc(resident(who).name)}最想要的。點已經送的家具可以收起來或擺出來。</div>`}
     <div class="furn">${catalogFor(who).map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" onclick="${has ? `toggleFurniture('${who}','${f.id}')` : `buyFurniture('${who}','${f.id}')`}" ${!has && D.coins < f.price ? 'disabled' : ''}>
-        <span>${f.ic}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '🪙 ' + f.price}</small></button>`; }).join('')}</div></div>`;
+        <span>${f.ic}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '🪙 ' + f.price}</small></button>`; }).join('')}</div>
+    ${who === 'me' ? `<h3 style="margin-top:14px">🏐 運動獎勵</h3><div class="muted">每週運動 3 天、連續達標就會解鎖，不用島幣。</div>
+    <div class="furn">${EX_REWARDS.map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
+      return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
+        <span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '連續 ' + f.weeks + ' 週'}</small></button>`; }).join('')}</div>` : ''}</div>`;
 }
 function visitRow(except) {
   return `<div class="card"><h3>🏘️ 去島民家作客</h3><div class="row" style="justify-content:space-around">${SUBJECTS.filter(s => s !== except).map(s => { const r = resident(s);
@@ -839,6 +872,97 @@ function toggleFurniture(who, id) {
   if (who === 'me') { S.save.home = h; queueSave('home', 'saveHome', h); }
   else { const decor = Object.assign({}, S.save.decor || {}); decor[who] = h; S.save.decor = decor; queueSave('decor', 'saveDecor', decor); }
   render();
+}
+
+/* --- 運動集章卡（ラジオ体操的集章卡）與紙船（紙本錯題檢討） --- */
+const EX_GOAL = 3;   // 一週集滿幾章算達標
+// 連續達標的週數解鎖的家具：排球用品和日本風
+const EX_REWARDS = [
+  { weeks: 2, id: 'ex-ball', ic: '🏐', name: '排球' }, { weeks: 4, id: 'ex-yukata', z: 'wall', ic: '👘', name: '浴衣' },
+  { weeks: 6, id: 'ex-shoes', ic: '👟', name: '排球鞋＋鞋架' }, { weeks: 8, id: 'ex-torii', z: 'out', ic: '⛩️', name: '海邊鳥居燈' },
+  { weeks: 10, id: 'ex-towel', ic: '🧣', name: '護膝＋運動毛巾' }, { weeks: 12, id: 'ex-net', z: 'out', ic: '🥅', name: '沙灘排球網' },
+  { weeks: 16, id: 'ex-onsen', z: 'out', ic: '♨️', name: '小溫泉' }, { weeks: 20, id: 'ex-jersey', z: 'wall', ic: '🎽', name: '專屬排球隊服' },
+  { weeks: 24, id: 'ex-sakura', z: 'out', ic: '🌸', name: '步道旁的櫻花樹' }
+];
+function exUnlocked() { return EX_REWARDS.filter(r => D.exBest >= r.weeks).map(r => r.id); }
+function exToday() { return !!S.save['ex:' + S.today]; }
+function habitCard() {
+  const wk = mondayOf(S.today), n = D.exWeeks[wk] || 0, on = exToday();
+  const next = EX_REWARDS.find(r => D.exBest < r.weeks);
+  const runner = resident(SUBJECTS[daySeed() % 5]);
+  const stamps = DAYS.map((d, i) => { const date = addD(wk, i), got = !!S.save['ex:' + date];
+    return `<div class="stamp ${got ? 'on' : ''} ${date === S.today ? 'today' : ''}"><span>${got ? '済' : d}</span></div>`; }).join('');
+  const paperToday = D.paperSessions.filter(x => x.date === S.today);
+  return `<div class="card" id="habitCard">
+    <div class="row"><h3 class="grow" style="margin:0">🏃 運動集章卡</h3><span class="muted">本週 ${n}／${EX_GOAL} 章${n >= EX_GOAL ? '・🪙 +3 達成！' : ''}</span></div>
+    <div class="stamps">${stamps}</div>
+    <div class="row" style="margin-top:8px;flex-wrap:nowrap">
+      ${on ? `<div class="grow muted">${runner.ipic} ${esc(runner.name)}陪你跑完了！海邊步道又多了一段 🏮</div><button class="ghost" style="padding:6px 10px;font-size:13px" onclick="toggleExercise()">按錯了</button>`
+        : `<button class="grow" onclick="toggleExercise()">🏃 今天運動了！</button>`}</div>
+    <div class="muted" style="margin-top:6px">${D.exStreak ? `已經連續 ${D.exStreak} 週達標 🔥` : '一週運動 3 天就達標'}${next ? `・連續 ${next.weeks} 週可以拿到 ${next.ic} ${next.name}` : '・所有運動家具都拿到了！'}</div>
+    <div class="row" style="margin-top:12px;border-top:1px dashed var(--plum-light);padding-top:10px;flex-wrap:nowrap">
+      <div class="grow"><b>⛵ 紙本檢討</b><div class="muted">${paperToday.length ? '今天放了 ' + paperToday.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、') : '寫完考卷、檢討完錯題，放一艘紙船'}</div></div>
+      <button class="ghost" onclick="go('paper')">去碼頭</button></div></div>`;
+}
+function toggleExercise() {
+  const on = !exToday(), wk = mondayOf(S.today), before = D.exWeeks[wk] || 0;
+  S.save['ex:' + S.today] = on ? { at: S.today, src: 'button' } : null;
+  queueSave('ex:' + S.today, 'saveExercise', S.today, on, 'button');
+  D = derive(S);
+  if (on) toast(before + 1 === EX_GOAL ? '🏃 蓋章！這週集滿 3 章，🪙 +3！' : '🏃 蓋章！+5 經驗值，步道多一盞燈籠');
+  render();
+}
+
+// 紙船碼頭：自己檢討是紙船，爸爸一起檢討是親子船；一科一面大漁旗
+const PAPER_MAX = 4;
+const REASONS = [['careless', '粗心'], ['concept', '觀念不熟'], ['reading', '看不懂題目'], ['guess', '用猜的']];
+function viewPaper() {
+  const f = draft.paper || (draft.paper = { kind: 'self', lanes: [], note: '', details: {}, stamp: false, more: false });
+  const used = k => D.paperSessions.some(x => x.date === S.today && x.kind === k);
+  const gain = f.lanes.length ? Math.min(PAPER_MAX, 1 + f.lanes.length) : 0;
+  const list = D.paperSessions.slice().reverse().slice(0, 20);
+  return `<div class="card"><h2>⛵ 紙船碼頭</h2><div class="muted">寫完紙本考卷或練習、檢討完錯題，就放一艘船。自己檢討是紙船，爸爸陪你檢討是親子船。燈塔蓋好以後，船會停到燈塔的小碼頭。</div></div>
+    <div class="card">
+      <div class="row" style="gap:6px">${[['self', '⛵ 紙船（自己檢討）'], ['parent', '🚢 親子船（和爸爸）']].map(k => `<button class="${f.kind === k[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" onclick="paperKeep();draft.paper.kind='${k[0]}';render()">${k[1]}</button>`).join('')}</div>
+      <label style="margin-top:10px">這次檢討了哪幾科（可以多選）</label>
+      <div class="row" style="gap:6px">${QLANES.map(l => `<button class="${f.lanes.includes(l) ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="paperLane('${l}')">${esc(l)}</button>`).join('')}</div>
+      <label style="margin-top:10px">今天最大的收穫（一句話）</label>
+      <input id="ppNote" value="${esc(f.note)}" maxlength="200" placeholder="例如：浮力要先畫受力圖再列式" oninput="draft.paper.note=this.value">
+      <button class="ghost" style="margin-top:10px;padding:6px 10px;font-size:13px" onclick="paperKeep();draft.paper.more=!draft.paper.more;render()">${f.more ? '▲ 收起' : '▼ 想多記一點（選填，跳過也有島幣）'}</button>
+      ${f.more ? f.lanes.map(l => { const d = f.details[l] || {};
+        return `<div class="item" style="display:block"><b>${esc(l)}</b>
+          <div class="row" style="margin-top:6px">錯了 <input type="number" min="0" max="99" style="width:70px" value="${d.wrong == null ? '' : d.wrong}" onchange="paperDetail('${l}','wrong',this.value)"> 題</div>
+          <div class="row" style="margin-top:6px;gap:6px">${REASONS.map(r => { const c = (d.reasons || {})[r[0]] || 0;
+            return `<button class="${c ? '' : 'ghost'}" style="padding:4px 10px;font-size:13px" onclick="paperReason('${l}','${r[0]}')">${r[1]}${c ? ' ×' + c : ''}</button>`; }).join('')}</div></div>`; }).join('') || '<div class="muted">先選科目。</div>' : ''}
+      ${f.kind === 'parent' ? `<div class="row" style="margin-top:12px;flex-wrap:nowrap"><div class="grow">${f.stamp ? '<span class="hanko">父</span> 爸爸蓋章了！' : '請爸爸在你的手機上蓋章'}</div>
+        ${f.stamp ? '' : `<button class="ghost" onclick="paperStamp()">🔴 爸爸蓋章</button>`}</div>` : ''}
+      <div class="muted" style="margin-top:10px">${used(f.kind) ? '今天已經放過' + (f.kind === 'parent' ? '親子船' : '紙船') + '了，這艘會記下來，但不會再給島幣。' : gain ? `這艘船：🪙 +${gain}、+20 經驗值` : '第一科 2 枚島幣，每多一科 +1 枚，一次最多 4 枚。'}</div>
+      <button style="width:100%;margin-top:10px" id="ppGo" onclick="sendPaper()">放船 ⛵</button></div>
+    <div class="card"><h3>🌊 碼頭上的船</h3>${list.length ? list.map(x => `<div class="item" style="display:block">
+        <div class="row"><b class="grow">${x.kind === 'parent' ? '🚢 親子船' : '⛵ 紙船'}　${x.lanes.map(l => `<span class="pill">🎏 ${esc(l)}</span>`).join('')}</b><span class="muted">${short(x.date)}${x.paid ? '・🪙 +' + x.coins : ''}</span></div>
+        <div style="margin-top:4px">💡 ${esc(x.note)}</div>
+        ${x.rows.some(r => r.wrong != null || r.reasons) ? `<div class="muted" style="font-size:12px;margin-top:2px">${x.rows.filter(r => r.wrong != null || r.reasons).map(r => esc(r.lane) + (r.wrong != null ? ' 錯 ' + r.wrong + ' 題' : '') + (r.reasons ? '（' + REASONS.filter(q => r.reasons[q[0]]).map(q => q[1] + r.reasons[q[0]]).join('、') + '）' : '')).join('；')}</div>` : ''}</div>`).join('')
+      : '<div class="muted">碼頭還空空的，放第一艘船吧！</div>'}</div>
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+function paperKeep() { const n = document.getElementById('ppNote'); if (n) draft.paper.note = n.value; }
+function paperLane(l) { paperKeep(); const f = draft.paper; f.lanes = f.lanes.includes(l) ? f.lanes.filter(x => x !== l) : f.lanes.concat([l]); render(); }
+function paperDetail(l, k, v) { paperKeep(); const d = draft.paper.details[l] || (draft.paper.details[l] = {}); d[k] = v === '' ? null : Number(v); }
+function paperReason(l, r) {
+  paperKeep(); const d = draft.paper.details[l] || (draft.paper.details[l] = {}), rs = d.reasons || (d.reasons = {});
+  rs[r] = ((rs[r] || 0) + 1) % 6; if (!rs[r]) delete rs[r]; render();
+}
+function paperStamp() { paperKeep(); if (confirm('爸爸，這次檢討你陪她做完了嗎？按「確定」蓋章。')) { draft.paper.stamp = true; render(); } }
+async function sendPaper() {
+  paperKeep(); const f = draft.paper;
+  if (!f.lanes.length) return toast('選一下這次檢討了哪幾科');
+  if (!f.note.trim()) return toast('寫一句今天最大的收穫');
+  if (f.kind === 'parent' && !f.stamp) return toast('親子船要請爸爸蓋章');
+  document.getElementById('ppGo').disabled = true;
+  const before = D.coins;
+  try { await flush(); S = await call('addPaper', f.kind, f.lanes, f.note, f.details, f.stamp); D = derive(S); }
+  catch (e) { document.getElementById('ppGo').disabled = false; return toast('放船失敗：' + (e.message || e)); }
+  draft = {}; toast(D.coins > before ? '⛵ 船出發了！🪙 +' + (D.coins - before) : '⛵ 船停進碼頭了'); render(); window.scrollTo(0, 0);
 }
 
 /* --- 挑戰任務（加碼任務）：每天最多 10 題，自己選難度，答對直接賺島幣 --- */
@@ -1170,7 +1294,7 @@ async function mount3D() {
     el.innerHTML = '';
     Island3D.mount(el, {
       S, bond: D.bond, resident, roommate, imgOf, subjectName: SUBJECT_NAME, pointsUntil: pointsUntil,
-      sig: JSON.stringify(D.weekPts),
+      sig: JSON.stringify(D.weekPts), season: solarTerm(S.today), walk: D.exDays.length,
       home: homeOf() && { tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') },
       onHome: () => openHouse('me'),
       grade: s => D.grades[s] && D.grades[s].level,
@@ -1301,7 +1425,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // 只更新需要變的部分，3D 小島不用重新載入
 function softRender() {
   if (tab === 'home') {
-    const parts = { hudCard: hud, todayCard: todayCard, xqCard: xqCard, guideCard: guideCard, dailyCard: dailyCard };
+    const parts = { hudCard: hud, todayCard: todayCard, habitCard: habitCard, xqCard: xqCard, guideCard: guideCard, dailyCard: dailyCard };
     Object.keys(parts).forEach(id => {
       const el = document.getElementById(id); if (!el) return;
       const tmp = document.createElement('div'); tmp.innerHTML = parts[id]();
@@ -1477,7 +1601,7 @@ const DEFAULT_ABBR = {
          'Wei M': '數・wei', 'Wei S': '理化・wei', 'online': '國・online-2單元', '地科': '地科・講義', 'S英': '英・空英',
          '國三': { mode: 'all', names: ['國・online-2單元', '國・閱策', '國・成語'] },
          'Wei H': { mode: 'pick', names: ['數・wei', '理化・wei'] } },
-  ignore: ['violin', '運動']
+  ignore: ['violin']
 };
 // 字典的一筆統一成 { rows, mode }：mode 'all' 是全部都要做，'pick' 是其中一項、之後才知道
 function abbrEntry(v) { return typeof v === 'object' && v ? { rows: (v.rows || []).slice(), mode: v.mode || 'all' } : { rows: [Number(v)], mode: 'all' }; }
@@ -1499,6 +1623,7 @@ function abbrOf() {
 // 第一次用 v2：國文加上「成語」這一項，再存好預設的寫法字典
 let seeding = false;
 async function seedDefaults() {
+  if (S && S.save.abbr) migrateAbbr();
   if (seeding || !S || S.save.abbr || !D.cfg) return;
   seeding = true;
   try {
@@ -1507,6 +1632,10 @@ async function seedDefaults() {
     S = await call('saveAbbr', abbrOf()); D = derive(S);
     if (tab === 'home') softRender(); else if (tab === 'abbr' || tab === 'items' || tab === 'plan') render();
   } catch (e) { /* 下次打開再試 */ } finally { seeding = false; }
+}
+function migrateAbbr() {
+  const a = S.save.abbr;
+  if (a && (a.ignore || []).includes('運動')) setAbbr(Object.assign({}, a, { ignore: a.ignore.filter(x => x !== '運動') }));
 }
 function setAbbr(a) { S.save.abbr = a; queueSave('abbr', 'saveAbbr', a); }
 function itemSelect(id) {
@@ -1552,6 +1681,7 @@ function viewScan() {
     <div class="card">${r.days.map((d, i) => `<div class="item" style="display:block"><b>週${DAYS[i]} ${short(addD(wk, i))}</b><div style="margin-top:4px">${pills(d, i)}</div>
         ${struckOf(i).length ? `<div class="muted" style="margin-top:4px">劃掉（取消）：<s>${struckOf(i).map(it => esc(it.subject + '・' + it.name)).join('、')}</s></div>` : ''}</div>`).join('')}
       ${r.tray.length ? `<div class="item" style="display:block"><b>📦 沒寫哪天</b><div style="margin-top:4px">${pills(r.tray, -1)}</div></div>` : ''}
+      ${(r.exercise || []).some((v, i) => v === 'done' && addD(wk, i) <= S.today) ? `<div style="margin-top:10px">🏃 運動打勾的日子：${(r.exercise || []).map((v, i) => v === 'done' && addD(wk, i) <= S.today ? '週' + DAYS[i] : '').filter(Boolean).join('、')}，套用時會自動蓋運動章。</div>` : ''}
       ${anyDone ? `<label class="row" style="margin-top:10px;color:var(--ink)"><input type="checkbox" class="check" ${draft.markDone ? 'checked' : ''} onchange="draft.markDone=this.checked"> 打勾（✓）的項目，順便記成「完成」</label>` : ''}
 </div>
     ${r.unknown.length ? `<div class="card"><h3>🤔 這些看不懂</h3>
@@ -1599,9 +1729,15 @@ function applyScan(merge) {
     const lg = Object.assign({}, logOf(date)); rows.forEach(x => { lg[x] = 2; logged++; });
     S.save['log:' + date] = { rows: lg }; queueSave('log:' + date, 'logDay', date, lg);
   });
+  // 計畫本上「運動」有打勾的日子，自動蓋運動章
+  let stamped = 0;
+  (r.exercise || []).forEach((v, i) => {
+    const date = addD(wk, i); if (v !== 'done' || date > S.today || S.save['ex:' + date]) return;
+    S.save['ex:' + date] = { at: S.today, src: 'scan' }; queueSave('ex:' + date, 'saveExercise', date, true, 'scan'); stamped++;
+  });
   D = derive(S); flush().catch(() => {});
   planWeek = wk; planDay = null; draft = {}; tab = 'plan';
-  toast(logged ? '計畫排好了，也記下 ' + logged + ' 個打勾的項目！' : '計畫排好了！'); render(); window.scrollTo(0, 0);
+  toast((logged ? '計畫排好了，也記下 ' + logged + ' 個打勾的項目！' : '計畫排好了！') + (stamped ? '運動章蓋了 ' + stamped + ' 個 🏃' : '')); render(); window.scrollTo(0, 0);
 }
 
 /* --- 我的寫法（字典） --- */
@@ -1875,6 +2011,13 @@ function viewGuide() {
     p('房間可以用 <b>3D</b> 看：一根手指拖曳轉動、兩指拉近；手機比較舊的話按「🖼️ 平面」。') +
     p('家具在「家具店」用島幣買，買了就是你的，可以隨時收起來或擺出來。每天會有一位島民來作客，跟你越要好（跨科連結越多）的島民越常來。島民寫給你的信和嚮導的新聞，都收在家裡的 📬 信箱，可以翻舊信。') +
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。'))}
+  ${sec('🏃', '運動集章卡', p('首頁的「運動集章卡」就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
+    p('每蓋一章 +5 經驗值，島的海邊會多鋪一段木棧道，每三章多一盞燈籠。一週（週一到週日）集滿 3 章，🪙 +3。') +
+    `<table><tr><th>連續達標</th><th>解鎖的家具</th></tr>${EX_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` +
+    p('斷掉了也沒關係：拿到的家具都會留著，重新累積就好。解鎖的家具在「我的家」的家具店最下面，可以擺出來。'))}
+  ${sec('⛵', '紙船碼頭（紙本檢討）', p('寫完紙本考卷或練習、檢討完錯題，到首頁按「去碼頭」放一艘船。選這次檢討了哪幾科，寫一句今天最大的收穫就好，大約 30 秒。想多記一點，可以填每科錯幾題、錯的原因，跳過也一樣有島幣。') +
+    p('自己檢討是 ⛵ 紙船；爸爸陪你檢討是 🚢 親子船，要請爸爸在你的手機上蓋章。第一科 🪙 2 枚＋20 經驗值，每多一科再 +1 枚，一次最多 4 枚。紙船和親子船每天各算一次。'))}
+  ${sec('🍁', '二十四節氣', p('整座島會跟著節氣換季：立春到清明櫻花慢慢開、花瓣飄落；芒種到小暑的夜晚有螢火蟲；寒露到立冬楓葉轉紅、紅葉飄下；冬天換上深綠的冬裝。右上角會顯示今天的節氣，嚮導打招呼時也可能聊到。'))}
   ${sec('💡', '讓島順起來', p('這座島你也是設計師！在首頁嚮導卡下面按「💡 讓島順起來」，選一種類型（新玩法、卡卡的、想要的東西、其他），寫下你的想法，也可以附一張截圖。') +
     p('送出後爸爸會收到。他會把狀態改成「討論中」「做好了」或「先不做」，也可能寫一句回覆給你；有新回覆時，嚮導卡上的按鈕會提醒你。做好的點子會出現在之後的小島更新裡。'))}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
@@ -2017,9 +2160,28 @@ function weatherKind(code) {
   if (code >= 2) return 'cloudy';
   return 'clear';
 }
+// 二十四節氣（台灣常用的日期，前後差一天沒關係）：整座島的草地、樹葉和飄落物跟著變
+const TERMS = [['小寒', 1, 6], ['大寒', 1, 20], ['立春', 2, 4], ['雨水', 2, 19], ['驚蟄', 3, 6], ['春分', 3, 21], ['清明', 4, 5], ['穀雨', 4, 20],
+  ['立夏', 5, 6], ['小滿', 5, 21], ['芒種', 6, 6], ['夏至', 6, 21], ['小暑', 7, 7], ['大暑', 7, 23], ['立秋', 8, 8], ['處暑', 8, 23],
+  ['白露', 9, 8], ['秋分', 9, 23], ['寒露', 10, 8], ['霜降', 10, 23], ['立冬', 11, 7], ['小雪', 11, 22], ['大雪', 12, 7], ['冬至', 12, 22]];
+const TERM_NOTE = {
+  立春: '春天開始了，樹梢冒出淡淡的粉紅', 雨水: '春雨來了，第一批櫻花開始飄', 驚蟄: '春雷叫醒了小蟲，櫻花正盛', 春分: '晝夜一樣長，滿島櫻花',
+  清明: '櫻花吹雪的最後幾天', 穀雨: '雨水滋潤新綠，櫻花謝了', 立夏: '夏天開始，島上一片新綠', 小滿: '麥子漸漸飽滿，樹葉更深了',
+  芒種: '梅雨季，晚上有螢火蟲', 夏至: '一年白天最長的一天，晚上螢火蟲最多', 小暑: '熱起來了，夜裡螢火蟲還在', 大暑: '一年最熱的時候，記得多喝水',
+  立秋: '秋天開始，暑氣還沒退', 處暑: '暑氣慢慢退了，有幾片葉子轉黃', 白露: '早晚涼了，葉子開始變色', 秋分: '晝夜又一樣長，島上一半轉黃',
+  寒露: '楓葉轉紅，開始飄落', 霜降: '楓紅最美的時候，滿地紅葉', 立冬: '冬天開始，最後一批楓葉', 小雪: '天氣涼了，樹葉安靜下來',
+  大雪: '台灣不下雪，島上換上深綠的冬裝', 冬至: '一年夜晚最長，吃湯圓的日子', 小寒: '寒流來了，山茶花開', 大寒: '一年最冷的時候，早開的櫻花在等春天'
+};
+function solarTerm(date) {
+  const d = parseD(date), m = d.getMonth() + 1, day = d.getDate();
+  let t = '冬至'; TERMS.forEach(x => { if (m > x[1] || (m === x[1] && day >= x[2])) t = x[0]; });
+  return t;
+}
+function termIcon(t) { const i = TERMS.findIndex(x => x[0] === t); return ['❄️', '❄️', '🌸', '🌸', '🌸', '🌸', '🌸', '🌱', '🌿', '🌿', '🌿', '🌿', '🌿', '🌿', '🌾', '🌾', '🌾', '🌾', '🍁', '🍁', '🍁', '🍂', '❄️', '❄️'][i] || '🌿'; }
 function envText() {
   const ph = env.phase === 'night' && env.weather === 'clear' ? '🌙' : (env.weather ? WEATHER_ICON[env.weather] : PHASE_ICON[env.phase]);
-  return `${ph} 台北 ${env.hhmm}${env.temp != null ? '・' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : ''}`;
+  const t = S && S.today ? solarTerm(S.today) : '';
+  return `${ph} 台北 ${env.hhmm}${env.temp != null ? '・' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : ''}${t ? '・' + termIcon(t) + t : ''}`;
 }
 function updateEnv() {
   const t = taipeiClock();
