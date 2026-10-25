@@ -1,5 +1,5 @@
 // 快取 App 外殼，讓小島打開更快；資料仍以伺服器為準
-const CACHE = 'island-v16';
+const CACHE = 'island-v17';
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png'];
 
 self.addEventListener('install', e => {

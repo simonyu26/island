@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#741b47">
+<meta name="robots" content="noindex">
+<title>登島參觀・會考小島</title>
+<link rel="icon" href="icon-192.png">
+<style>
+  :root {
+    --plum: #741b47; --plum-mid: #c27ba0; --plum-light: #ead1dc;
+    --sea: #cfe8f3; --sand: #fdf6ec; --ink: #3a2a33; --muted: #8a7480; --card: #ffffff; --gold: #e3a21a;
+    --wood: #b98a5e; --indigo: #2f4a7a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+         background: var(--sea); color: var(--ink); -webkit-tap-highlight-color: transparent; }
+  main { max-width: 720px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 40px; }
+  h2 { font-size: 20px; margin: 0 0 8px; } h3 { font-size: 16px; margin: 0 0 8px; }
+  .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 0 rgba(116,27,71,.12); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; }
+  button { font: inherit; border: none; border-radius: 12px; padding: 10px 16px; cursor: pointer; background: var(--plum); color: #fff; }
+  button.ghost { background: var(--plum-light); color: var(--plum); }
+  input { font: inherit; padding: 10px 12px; border: 1.5px solid var(--plum-light); border-radius: 10px; width: 100%; background: #fff; color: var(--ink); }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  .loading { text-align: center; padding: 80px 0; color: var(--muted); }
+  .speech { background: var(--sand); border-radius: 14px; padding: 12px 14px; line-height: 1.7; }
+  .guide { display: flex; gap: 10px; align-items: flex-start; }
+  .guide .who { font-size: 40px; line-height: 1; }
+
+  /* 乘船券：渡船的票根樣式 */
+  .ticket { position: relative; background: #fffaf0; border-radius: 14px; padding: 18px 18px 16px; margin-bottom: 14px;
+            border: 2px solid var(--wood); box-shadow: 0 3px 0 rgba(120,80,40,.18); overflow: hidden; }
+  .ticket::before, .ticket::after { content: ''; position: absolute; top: 50%; width: 22px; height: 22px; margin-top: -11px;
+            background: var(--sea); border: 2px solid var(--wood); border-radius: 50%; }
+  .ticket::before { left: -13px; } .ticket::after { right: -13px; }
+  .ticket .head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px dashed var(--wood); padding-bottom: 8px; margin-bottom: 10px; }
+  .ticket .head b { font-size: 20px; color: var(--indigo); letter-spacing: 2px; }
+  .ticket .head small { color: var(--wood); letter-spacing: 3px; }
+  .ticket dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
+  .ticket dt { color: var(--wood); } .ticket dd { margin: 0; }
+  .boat { font-size: 44px; text-align: center; animation: bob 2.4s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
+
+  /* 3D 小島 */
+  #i3d { height: min(62vh, 520px); border-radius: 24px; overflow: hidden; background: #cfe8f3; position: relative; margin-bottom: 14px; }
+  .chip { position: absolute; left: 10px; top: 10px; background: rgba(255,255,255,.88); border-radius: 999px; padding: 4px 12px; font-size: 13px; z-index: 2; }
+  .resident { display: flex; gap: 10px; align-items: center; }
+  .avatar { font-size: 34px; line-height: 1; }
+  .lane { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .lane-name { flex: 0 0 110px; font-size: 13px; color: var(--plum); }
+  .town { font-size: 17px; letter-spacing: 2px; word-break: break-all; }
+
+  /* 集章護照 */
+  .stamps { display: grid; grid-template-columns: repeat(3, minmax(0, 92px)); justify-content: space-around; gap: 10px; margin-top: 8px; }
+  .stamp { border: 2px dashed var(--plum-light); border-radius: 50%; aspect-ratio: 1; display: flex; flex-direction: column;
+           align-items: center; justify-content: center; font-size: 12px; color: var(--muted); background: #fff; cursor: pointer; padding: 4px; text-align: center; }
+  .stamp span { font-size: 26px; filter: grayscale(1); opacity: .35; }
+  .stamp.on { border: 2px solid #c0392b; color: #c0392b; transform: rotate(-6deg); background: #fff5f3; }
+  .stamp.on span { filter: none; opacity: 1; }
+  .board { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center; }
+  .board b { display: block; font-size: 24px; color: var(--plum); }
+
+  /* 房間 */
+  .sheet { position: fixed; inset: 0; background: rgba(40,20,30,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet .card { width: 100%; max-width: 720px; margin: 0; border-radius: 20px 20px 0 0; max-height: 92vh; overflow: auto; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  #r3d { height: min(56vh, 400px); border-radius: 14px; overflow: hidden; background: #f6efe6; }
+  .room { border-radius: 14px; padding: 12px; min-height: 180px; display: flex; flex-direction: column; gap: 10px; }
+  .zone { display: flex; flex-wrap: wrap; gap: 8px; font-size: 30px; min-height: 40px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px;
+           border-radius: 12px; display: none; z-index: 20; font-size: 14px; max-width: 90vw; }
+</style>
+</head>
+<body>
+<main id="app"><div class="loading">⛴️ 渡船準備中…</div></main>
+<div class="toast" id="toast"></div>
+<script src="config.js"></script>
+<script src="visit.js"></script>
+</body>
+</html>
