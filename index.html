@@ -233,8 +233,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.15';
+const APP_VERSION = '2.15.1';
 const CHANGELOG = [
+  { v: '2.15.1', date: '2026-10-25', items: ['📷 拍照讀計畫變快、也不會再一直轉不停：讀的時候畫面會顯示等了幾秒，讀不出來會清楚說原因', '💬 島民和嚮導說話更自然了'] },
   { v: '2.15', date: '2026-10-25', items: ['📖 故事任務變成連續劇：答對之後，島民會依自己的個性、跟其他島民的關係，接著寫下一章；下次輪到這條街或巷子，就會接著演', '📚 每條故事都可以回看，還有前情提要'] },
   { v: '2.14', date: '2026-10-25', items: ['🏠 我的家變成休息的地方：可以邀一位同住的夥伴（寵物或室友，自己取名、選樣子或上傳圖），你回家時會說「おかえり」', '📆 日めくり：睡前寫今天的一句話或心情，同住夥伴會回你一個表情；只有你看得到，想給家人看的頁再按分享', '🎐 家門口掛上暖簾（六種花色），家的名字寫在木門牌上', '⏰ 會考倒數鐘搬到燈塔，已經買的退還島幣；家裡的信箱拿掉了（信都在首頁的郵便受け）', '📮 首頁每天會直接露出一位島民的信，嚮導的早安也會聊一個脆上的話題'] },
   { v: '2.13', date: '2026-10-25', items: ['🖼️ 海邊步道、燈塔、植木屋的管理員也可以上傳自己畫的圖或照片當樣子，跟島民一樣'] },
@@ -2525,7 +2526,7 @@ function viewPlan() {
 }
 function bindPlan() {
   const f = document.getElementById('scanFile');
-  if (f) f.onchange = e => { const file = e.target.files[0]; if (file) scanPlanPhoto(file); };
+  if (f) f.onchange = e => { const file = e.target.files[0]; e.target.value = ''; if (file) scanPlanPhoto(file); };   // 清掉，同一張照片可以再選一次
 }
 function planRemove(r) {
   const plan = planOf(planWeek);
@@ -2665,18 +2666,27 @@ function itemSelect(id) {
   return html + '</optgroup></select>';
 }
 
+// v2.15.1：等待畫面放在 #app 外面，存檔同步重畫頁面時不會被洗掉；最多等 150 秒，失敗的原因留在畫面上
+function scanOverlay(html) {
+  let o = document.getElementById('scanWait');
+  if (!o) { o = document.createElement('div'); o.id = 'scanWait'; o.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(o); }
+  o.innerHTML = `<div class="card" style="max-width:360px;width:100%">${html}</div>`;
+}
+function scanOverlayClose() { clearInterval(scanOverlay.t); const o = document.getElementById('scanWait'); if (o) o.remove(); }
 async function scanPlanPhoto(file) {
-  const wk = planWeek;
-  document.getElementById('app').insertAdjacentHTML('afterbegin', '<div class="card" id="scanWait"><div class="big">🔍</div><h3 style="text-align:center">島民正在讀你的計畫…</h3><div class="muted" style="text-align:center">大約 10 到 30 秒</div></div>');
-  window.scrollTo(0, 0);
+  const wk = planWeek, t0 = Date.now();
+  const tick = () => scanOverlay(`<div class="big">🔍</div><h3 style="text-align:center">島民正在讀你的計畫…</h3><div class="muted" style="text-align:center">大約 10 到 60 秒・已經 ${Math.round((Date.now() - t0) / 1000)} 秒</div>`);
+  tick(); clearInterval(scanOverlay.t); scanOverlay.t = setInterval(tick, 1000);
   try {
     const photo = await shrinkPhoto(file);
     if (!S.save.abbr) await seedDefaults(); else await flush();
-    const res = await call('scanPlan', wk, photo);
+    const res = await Promise.race([call('scanPlan', wk, photo),
+      new Promise((_, bad) => setTimeout(() => bad(new Error('等了 150 秒還沒讀完，可能是網路或 AI 太忙，過一下再拍一次')), 150000))]);
+    scanOverlayClose();
     draft = { scan: res, week: wk, markDone: true }; tab = 'scan'; render(); window.scrollTo(0, 0);
   } catch (e) {
-    const w = document.getElementById('scanWait'); if (w) w.remove();
-    toast('讀不出來：' + (e.message || e));
+    clearInterval(scanOverlay.t);
+    scanOverlay(`<div class="big">😵</div><h3 style="text-align:center">這次沒讀出來</h3><div class="muted" style="text-align:center">${esc(e.message || String(e))}</div><div class="row" style="margin-top:12px"><button class="grow" onclick="scanOverlayClose()">知道了</button></div>`);
   }
 }
 function viewScan() {
@@ -3221,6 +3231,7 @@ function viewGuide() {
   ${sec('📅', '排計畫', p('到「📅 計畫」頁。最快的方法是按「📷 拍手寫計畫」：拍下這週的計畫書，島民會讀出每天排了什麼，對應到週檢討表的項目，你檢查一下再按「用這份計畫」。') +
     p('也可以點上面的「一、二、三…日」，按「＋ 排項目」自己加。同一項可以排在好幾天，例如英文單字排五天，就算五次。確定這週要做、但還沒想好哪天的，放在「📦 沒排天」。') +
     p('計畫本上打勾（✓）的項目，套用時可以順便記成「完成」；劃掉的當作取消，不會排進計畫。所以只在週末拍一次照片，也能把整週排好、記好。') +
+    p('讀照片通常要 10 到 60 秒，畫面會顯示已經等了幾秒。超過 150 秒還沒讀完，或 AI 太忙、照片看不清楚，畫面會告訴你原因，過一下再拍一次就好。拍的時候只拍這一週的那兩頁、光線亮一點，會讀得比較快。') +
     p('一個寫法可以代表好幾項，例如「國三」＝online、閱策、成語三項一起排。還不知道是哪一科的（例如「Wei H」，要等上課才知道是數學還是理化），會先排成 ❓ 待定，知道了再點一下選科目。') +
     p('看不懂的字，島民會列出來問你：選它是哪一項按「記住」，下次就認得了；不是讀書的行程（才藝課、運動）按「無關」，以後就會略過。這些都存在「⚙️ 更多 → 📖 我的寫法」，可以自己新增或刪除。') +
     p('週檢討表上沒有的項目，到「⚙️ 更多 → 📝 任務清單」新增；名字想改也在那裡改，以前的紀錄都會保留。') +
