@@ -185,31 +185,11 @@
   .tiers button { padding: 10px 4px; font-size: 14px; line-height: 1.4; } .tiers button small { display: block; font-size: 11px; opacity: .85; }
   .furn button.on { border-color: var(--plum); background: var(--plum-light); } .furn button.has { background: var(--sand); }
   /* 獨立書店（v2.17）：台灣巷弄書店的店內插畫，店貓在幾個點之間走動 */
-  .bscene { position: relative; width: 100%; aspect-ratio: 16 / 11; border-radius: 18px; overflow: hidden; background: #f1ead9; margin-top: 10px; user-select: none; -webkit-user-select: none; }
-  .bscene .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 26%; background: repeating-linear-gradient(90deg, #c99a63 0 46px, #bf8f58 46px 48px); }
-  .bscene .wall { position: absolute; left: 0; right: 0; top: 0; height: 74%; background: linear-gradient(#f6f1e4, #ece3cf); }
-  .bscene .lamp { position: absolute; top: 0; width: 9%; height: 15%; }
-  .bscene .lamp::before { content: ''; position: absolute; left: 50%; top: 0; width: 1px; height: 55%; background: #555; }
-  .bscene .lamp::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 45%; border-radius: 50% 50% 8% 8% / 90% 90% 10% 10%; background: radial-gradient(circle at 30% 30%, #fff 0 8%, transparent 9%), #2f7fd1; box-shadow: 0 6px 14px rgba(255, 220, 140, .65); }
-  .bscene.night .lamp::after { box-shadow: 0 10px 26px rgba(255, 210, 120, .95); }
-  .bscene .shelf { position: absolute; display: grid; gap: 3px; padding: 4px; border-radius: 3px; }
-  .bscene .shelf.back { left: 28%; width: 40%; top: 18%; height: 50%; background: #2c2622; grid-template-rows: repeat(5, 1fr); }
-  .bscene .shelf.side { left: 3%; width: 18%; top: 22%; height: 52%; background: #b98a55; grid-template-rows: repeat(5, 1fr); }
-  .bscene .shelf .row-b { display: flex; align-items: flex-end; gap: 1px; overflow: hidden; background: rgba(0,0,0,.18); padding: 0 2px; }
-  .bscene .shelf .row-b i { display: block; flex: 0 0 auto; border-radius: 1px 1px 0 0; }
-  .bscene .window { position: absolute; right: 4%; top: 14%; width: 22%; height: 34%; border: 5px solid #6b4a2b; border-radius: 4px; overflow: hidden; }
-  .bscene .window::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #6b4a2b; }
-  .bscene .window .rain { position: absolute; inset: 0; background: repeating-linear-gradient(105deg, transparent 0 7px, rgba(255,255,255,.55) 7px 8px); background-size: 40px 40px; animation: bsRain .5s linear infinite; }
-  @keyframes bsRain { to { background-position: -8px 40px; } }
-  .bscene .sill { position: absolute; right: 3%; top: 48%; width: 24%; height: 3%; background: #8a6136; border-radius: 2px; }
-  .bscene .table { position: absolute; left: 30%; width: 34%; bottom: 8%; height: 18%; border-radius: 4px 4px 0 0; background: repeating-linear-gradient(90deg, #8d97a4 0 6px, #e9ecef 6px 12px); box-shadow: 0 4px 0 rgba(0,0,0,.12); }
-  .bscene .table .books { position: absolute; left: 4%; right: 4%; top: -16%; height: 22%; display: flex; gap: 2px; }
-  .bscene .table .books i { flex: 1; border-radius: 2px; }
-  .bscene .counter { position: absolute; right: 4%; bottom: 8%; width: 26%; height: 20%; background: linear-gradient(#a8733d, #8a5a2c); border-radius: 4px 4px 0 0; }
-  .bscene .counter .bell { position: absolute; right: 12%; top: -24%; font-size: 14px; }
-  .bscene .keeper { position: absolute; right: 6%; bottom: 25%; font-size: 34px; line-height: 1; cursor: pointer; }
+  .bscene { position: relative; width: 100%; aspect-ratio: 400 / 280; border-radius: 18px; overflow: hidden; background: #f1ead9; box-shadow: inset 0 0 0 1px rgba(90,60,30,.15); margin-top: 10px; user-select: none; -webkit-user-select: none; }
+  .bscene .keeper { position: absolute; left: 86%; top: 63%; transform: translate(-50%, -100%); font-size: 34px; z-index: 2; line-height: 1; cursor: pointer; }
   .bscene .keeper .kpic { width: 40px; height: 40px; }
-  .bscene .sign { position: absolute; left: 50%; transform: translateX(-50%); top: 3%; background: #fffaf0; border: 2px solid #6b4a2b; border-radius: 6px; padding: 2px 10px; font-size: 13px; font-weight: 700; color: #5b4630; white-space: nowrap; }
+  .bscene svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .bscene .keeper .nm, .bscene .cat .nm { display: none; }
   .bscene .cat { position: absolute; font-size: 30px; line-height: 1; transform: translate(-50%, -100%); transition: left 3.2s ease-in-out, top 3.2s ease-in-out; cursor: pointer; z-index: 3; }
   .bscene .cat .kpic { width: 32px; height: 32px; }
   .bscene .cat .body { display: inline-block; }
@@ -273,8 +253,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.17';
+const APP_VERSION = '2.17.1';
 const CHANGELOG = [
+  { v: '2.17.1', date: '2026-10-25', items: ['📚 書店可以自己取名字了：第一次進店先幫它取個店名，之後在店裡按「✏️ 改店名」就能換', '🎨 書店裡面重新畫過：吊燈的暖光、塞滿書的木書架、掛滿明信片的麻繩、窗邊的坐墊和盆栽，晚上和下雨天也不一樣'] },
   { v: '2.17', date: '2026-10-25', items: ['📚 島上的巷口開了一間獨立書店！先請一位店長：名字、樣子、個性都由你決定，第一次進店店長會跟你介紹書店', '🐈 店裡也可以養一隻店貓：取名字、選花色和個性。牠會在書架、平台桌、窗邊、櫃台之間走來走去，晚上比較愛睡，下雨天會坐在窗邊看雨，點牠會有反應', '📮 明信片冊和 🎟️ 邀請朋友從我的家搬到書店了，家人來島上也會到書店看明信片', '📖 書店裡有一座你的書架，之後智慧島上課得到的書會擺在這裡'] },
   { v: '2.16', date: '2026-10-25', items: ['📷 燈塔可以拍錯題了：紙本考卷、講義上答錯的題拍下來（國文、英文最好用），AI 會讀出題目、你的答案和正確答案，確認後收進海灘變成漂流瓶，隔天一樣漂回來出類題', '🧭 燈塔多了「錯題類型」：看看自己最常錯哪一類題（例如英文的時態、國文的修辭），按「練一題」就照這類題出新題練習'] },
   { v: '2.15.1', date: '2026-10-25', items: ['📷 拍照讀計畫變快、也不會再一直轉不停：讀的時候畫面會顯示等了幾秒，讀不出來會清楚說原因', '💬 島民和嚮導說話更自然了'] },
@@ -771,7 +752,7 @@ const BOARD = [
     st() { const n = D.paperSessions.filter(x => x.date === S.today); return n.length ? { t: '今天放了 ' + n.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、'), c: 'done' } : { t: '檢討完放一艘', c: 'info' }; },
     todo() { return false; } },
   { key: 'books', ic: '📚', name: '獨立書店', go: 'bookstore',
-    st() { const n = newCards().length; return !keeperOf('bookstore') ? { t: '巷口開了一間書店', c: 'info' } : n ? { t: '📮 ' + n + ' 張新明信片', c: 'info' } : { t: '去坐坐', c: 'info' }; },
+    st() { const n = newCards().length; return !bookName() ? { t: '巷口開了一間書店', c: 'info' } : !keeperOf('bookstore') ? { t: '還缺一位店長', c: 'info' } : n ? { t: '📮 ' + n + ' 張新明信片', c: 'info' } : { t: '去坐坐', c: 'info' }; },
     todo() { return false; } }
 ];
 function todayPlan() {
@@ -2241,7 +2222,7 @@ async function mount3D() {
       onHome: () => openHouse('me'),
       light: (st => ({ name: lightTitle(), sea: st.sea, due: st.due, lanterns: st.lanterns }))(lightStats()), onLight: () => go('light'),
       garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),
-      book: { name: '獨立書店', sub: newCards().length ? '📮 ' + newCards().length + ' 張新明信片' : null }, onBook: () => go('bookstore'),
+      book: { name: bookTitle(), sub: newCards().length ? '📮 ' + newCards().length + ' 張新明信片' : null }, onBook: () => go('bookstore'),
       grade: s => D.grades[s] && D.grades[s].level,
       onSelect: showInfo3D
     });
@@ -3180,7 +3161,7 @@ function islandSnapshot(withStats) {
     guide: { name: g.name, emoji: g.emoji }, residents, roommates, pts: pointsUntil(null), bond: D.bond,
     mate: keeperOf('home') ? { name: keeperOf('home').name, emoji: keeperOf('home').emoji } : null,
     diary: diaryPages().filter(dt => S.save['diary:' + dt].shared).slice(-14).map(dt => ({ date: dt, text: S.save['diary:' + dt].text, emoji: S.save['diary:' + dt].emoji || '' })),
-    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx(), book: { name: '獨立書店' } };
+    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx(), book: { name: bookTitle() } };
   if (withStats) snap.stats = { streakWeeks: D.streak, weekDone: weekDoneCount() };
   return snap;
 }
@@ -3295,6 +3276,28 @@ const WISDOM_BOOKS = [
   { key: 'xiaomiao2', title: '湯屋的放鬆筆記・下冊', color: '#7FA88A' }, { key: 'alu2', title: '巷口小報・下冊', color: '#3B5B8C' },
   { key: 'einstein2', title: '愛因斯坦的科學筆記・下冊', color: '#2E3A59' }];
 const wisdomJson = {};
+// 店名：她自己取（存在 keeper:bookname 的 name，沿用 saveKeeper，後端不用改）
+const BOOK_NAMES = ['巷口書店', '小島書房', '海風書屋', '午後書店', '月見書房', '晴耕雨讀', '貓與書', '燈下書房'];
+function bookName() { const k = S.save['keeper:bookname']; return (k && k.name) || ''; }
+function bookTitle() { return bookName() || '獨立書店'; }
+async function saveBookName(name) {
+  name = String(name || '').trim();
+  if (!name) return toast('幫書店取個名字吧');
+  if (name.length > 12) return toast('店名最多 12 個字');
+  try { await flush(); S = await call('saveKeeper', 'bookname', { name, emoji: '📚' }); D = derive(S); }
+  catch (e) { return toast('儲存失敗：' + (e.message || e)); }
+  toast('📚 「' + name + '」開張了！');
+  if (!keeperOf('bookstore')) openKeeper('bookstore'); else { draft = {}; render(); }
+}
+function viewBookName() {
+  const v = draft.bookName != null ? draft.bookName : bookName(), first = !bookName();
+  return `<div class="card"><div class="big">📚</div><h2 style="text-align:center">${first ? '巷口開了一間小書店' : '幫書店換個名字'}</h2>
+      <div class="muted" style="text-align:center">${first ? '這間書店是你和家人往來的地方：明信片冊、邀請朋友、你的書架都在這裡。先幫它取個店名吧！' : '店名會寫在店裡的木招牌和島上的書店屋頂。'}</div>
+      <div class="row" style="gap:6px;margin-top:12px;justify-content:center">${BOOK_NAMES.map(n => `<button class="ghost" style="padding:6px 12px" onclick="draft.bookName='${n}';render()">${n}</button>`).join('')}</div>
+      <label>店名（也可以自己取，12 個字以內）</label><input id="bkName" maxlength="12" value="${esc(v)}" placeholder="例如：巷口書店" oninput="draft.bookName=this.value">
+      <button style="width:100%;margin-top:12px" onclick="saveBookName(document.getElementById('bkName').value)">${first ? '就叫這個名字！' : '改好了'}</button></div>
+      <div class="row"><button class="ghost grow" onclick="${first ? "go('home')" : "draft={};render()"}">${first ? '回到小島 🏝️' : '取消'}</button></div>`;
+}
 function newCards() { const seen = Number(S.save.cardsSeen || 0); return cardList().filter(c => c.ts > seen); }
 function myBooks() {
   const ls = (S.save.wisdom && S.save.wisdom.lessons) || {};
@@ -3305,7 +3308,7 @@ function loadWisdomJson(key) {
   wisdomJson[key] = {};
   fetch('wisdom/' + key + '.json').then(r => r.ok ? r.json() : {}).then(j => { const o = {}; ['title', 'color', 'chapters'].forEach(f => { if (j[f]) o[f] = j[f]; }); wisdomJson[key] = o; if (tab === 'bookstore' && Object.keys(o).length) render(); }).catch(() => {});
 }
-function bookNote() { return '這裡是島上的獨立書店，她和家人往來的地方：明信片冊有 ' + cardList().length + ' 張明信片' + (newCards().length ? '（' + newCards().length + ' 張新的）' : '') + '，也可以在這裡發乘船券邀請朋友。店裡有一隻店貓' + (keeperOf('bookcat') ? '叫' + keeperOf('bookcat').name : '') + '。請像巷口書店的店長一樣閒聊，不要提讀書、考試或成績。'; }
+function bookNote() { return '這裡是島上的獨立書店「' + bookTitle() + '」，她和家人往來的地方：明信片冊有 ' + cardList().length + ' 張明信片' + (newCards().length ? '（' + newCards().length + ' 張新的）' : '') + '，也可以在這裡發乘船券邀請朋友。店裡有一隻店貓' + (keeperOf('bookcat') ? '叫' + keeperOf('bookcat').name : '') + '。請像巷口書店的店長一樣閒聊，不要提讀書、考試或成績。'; }
 function bookKeeperLine() {
   const n = newCards().length, cat = keeperOf('bookcat');
   if (n) return '有家人寄了 ' + n + ' 張明信片來，我幫你收在明信片冊裡了。';
@@ -3324,40 +3327,118 @@ function bookShelfHtml() {
         return `<div class="item" style="${d ? 'cursor:pointer' : 'opacity:.45'}" ${d && typeof openWisdomLesson === 'function' ? `onclick="openWisdomLesson('${ob.key}', ${n})"` : ''}><span style="width:26px">${d ? '<span class="hanko" style="font-size:11px">印</span>' : '・'}</span>
           <div class="name grow">第 ${n} 章${ch ? '・' + esc(ch) : ''}</div><span class="muted">${d && d.at ? short(String(d.at).slice(0, 10)) : ''}</span></div>`; }).join('')}</div>` : ''}</div>`;
 }
-// 店內插畫：書架的書背顏色固定（同一天看起來一樣）
-function bookSpines(n, seed, h) {
-  const cs = ['#c0392b', '#e67e22', '#f1c40f', '#27ae60', '#2980b9', '#8e44ad', '#ecf0f1', '#d35400', '#16a085', '#7f8c8d', '#e8c39e', '#34495e'];
-  let x = seed, out = '';
-  for (let i = 0; i < n; i++) { x = (x * 9301 + 49297) % 233280; out += `<i style="width:${3 + x % 4}px;height:${h - x % 5 * 6}%;background:${cs[x % cs.length]}"></i>`; }
+// 店內插畫（v2.17.1 重畫）：台灣巷弄獨立書店。viewBox 400×280；店貓與店長疊在上面（CAT_SPOTS 用同一套百分比）
+const BK_COLORS = ['#8c2f2b', '#c8963e', '#2f5d62', '#2e3a59', '#efe4cf', '#6b7f3a', '#b5653a', '#c98a8a', '#5b6c7d', '#d9c08a', '#7a4b6b', '#3f6e8c'];
+function bkRand(seed) { let x = seed >>> 0; return () => (x = (x * 1664525 + 1013904223) >>> 0) / 4294967296; }
+// 一層書：x0～x1、底線 y、層高 h；偶爾放倒、斜靠、封面朝外，或空出位子擺小盆栽
+function bkRow(x0, x1, y, h, seed) {
+  const r = bkRand(seed); let x = x0 + 1, out = '';
+  while (x < x1 - 3) {
+    const k = r(), c = BK_COLORS[Math.floor(r() * BK_COLORS.length)];
+    if (k < 0.022 && x1 - x > 14) {   // 小盆栽
+      out += `<rect x="${x + 2}" y="${y - 5}" width="7" height="5" fill="#b5653a"/><circle cx="${x + 5.5}" cy="${y - 8}" r="4" fill="#6b9a52"/><circle cx="${x + 3}" cy="${y - 10}" r="2.5" fill="#7fb062"/>`; x += 12; continue;
+    }
+    if (k < 0.12 && x1 - x > 16) {   // 封面朝外
+      const w = 12, hh = h * 0.78;
+      out += `<rect x="${x}" y="${y - hh}" width="${w}" height="${hh}" fill="${c}" rx="0.6"/><rect x="${x + 2}" y="${y - hh + 3}" width="${w - 4}" height="3" fill="rgba(255,255,255,.55)"/><circle cx="${x + w / 2}" cy="${y - hh / 2 + 2}" r="2.6" fill="rgba(255,255,255,.35)"/>`; x += w + 1; continue;
+    }
+    if (k < 0.18 && x1 - x > 20) {   // 放倒的一疊
+      for (let i = 0; i < 3; i++) out += `<rect x="${x + i * 0.6}" y="${y - 3.2 * (i + 1)}" width="${14 - i}" height="3" fill="${BK_COLORS[(i * 5 + Math.floor(r() * 12)) % 12]}"/>`;
+      x += 16; continue;
+    }
+    const w = 3 + Math.floor(r() * 4), hh = h * (0.62 + r() * 0.3);
+    if (k > 0.96 && x1 - x > 10) {   // 斜靠
+      out += `<rect x="${x}" y="${y - hh}" width="${w}" height="${hh}" fill="${c}" transform="rotate(12 ${x} ${y})"/>`; x += w + 4; continue;
+    }
+    out += `<rect x="${x}" y="${y - hh}" width="${w}" height="${hh}" fill="${c}"/>`;
+    if (w > 4 && r() < 0.5) out += `<rect x="${x}" y="${y - hh + 3}" width="${w}" height="1.2" fill="rgba(255,255,255,.45)"/>`;
+    x += w + (r() < 0.15 ? 0.8 : 0.2);
+  }
+  return out;
+}
+function bkShelf(x, y, w, h, n, wood, back, seed) {
+  const rh = (h - 6) / n; let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${wood}" rx="1.5"/><rect x="${x + 3}" y="${y + 3}" width="${w - 6}" height="${h - 6}" fill="${back}"/>`;
+  for (let i = 0; i < n; i++) { const by = y + 3 + rh * (i + 1); out += bkRow(x + 3, x + w - 3, by - 1.5, rh - 3, seed + i * 31) + `<rect x="${x + 2}" y="${by - 1.5}" width="${w - 4}" height="2.5" fill="${wood}"/>`; }
   return out;
 }
 function bookScene() {
-  const kp = keeperOf('bookstore'), cat = keeperOf('bookcat'), night = env.phase === 'night', wet = env.weather === 'rain' || env.weather === 'storm';
-  const sky = night ? '#1b2440' : env.phase === 'dusk' ? '#f0a46b' : env.phase === 'dawn' ? '#f7c9a0' : wet ? '#9aa6b2' : '#a9d8f0';
-  const rows = (n, seed, k) => Array.from({ length: n }, (_, i) => `<div class="row-b">${bookSpines(k, seed + i * 7, 92)}</div>`).join('');
-  return `<div class="bscene${night ? ' night' : ''}" id="bscene">
-    <div class="wall"></div><div class="floor"></div>
-    <div class="sign">📚 巷口書店</div>
-    ${[10, 24, 70].map(x => `<div class="lamp" style="left:${x - 4.5}%"></div>`).join('')}
-    <div class="shelf side">${rows(5, 11, 14)}</div>
-    <div class="shelf back">${rows(5, 3, 34)}</div>
-    <div class="window" style="background:${sky}">${wet ? '<div class="rain"></div>' : ''}</div><div class="sill"></div>
-    <div class="table"><div class="books">${bookSpines(10, 5, 100).replace(/width:\d+px;/g, '')}</div></div>
-    <div class="counter"><span class="bell">🛎️</span></div>
+  const kp = keeperOf('bookstore'), cat = keeperOf('bookcat'), ph = env.phase, night = ph === 'night', wet = env.weather === 'rain' || env.weather === 'storm';
+  const sky = night ? ['#141c36', '#2a3560'] : ph === 'dusk' ? ['#e9875a', '#f5c48f'] : ph === 'dawn' ? ['#f1b48f', '#fbe0c2'] : wet ? ['#8b97a5', '#b9c2cc'] : ['#7fc4ea', '#cdeaf7'];
+  const glow = night ? 0.85 : wet || ph === 'dusk' ? 0.55 : 0.32, name = bookTitle(), fs = name.length > 8 ? 9 : name.length > 5 ? 11 : 13;
+  const cards = ['#e98fb3', '#7fd3c3', '#f1c40f', '#a9d8f0', '#f0a46b', '#c8b6e2', '#9fd18b'];
+  return `<div class="bscene${night ? ' night' : ''}" id="bscene"><svg viewBox="0 0 400 280" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="bkWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${night ? '#e8d9bd' : '#f7efdf'}"/><stop offset="1" stop-color="${night ? '#d9c6a3' : '#ecdfc6'}"/></linearGradient>
+      <linearGradient id="bkSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient>
+      <linearGradient id="bkFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9875a"/><stop offset="1" stop-color="#d0a274"/></linearGradient>
+      <radialGradient id="bkGlow"><stop offset="0" stop-color="#ffd27a" stop-opacity="${glow}"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+      <pattern id="bkCloth" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#eef0f2"/><rect width="4" height="8" fill="#8d97a4"/></pattern>
+      <pattern id="bkTile" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#e9dcc3"/><path d="M0 10H20M10 0V20" stroke="#dccaa9" stroke-width="1"/></pattern>
+    </defs>
+    <rect width="400" height="200" fill="url(#bkWall)"/>
+    <rect y="168" width="400" height="24" fill="url(#bkTile)" opacity=".8"/>
+    <rect y="190" width="400" height="90" fill="url(#bkFloor)"/>
+    ${Array.from({ length: 9 }, (_, i) => `<path d="M${-60 + i * 65} 280 L${120 + i * 20} 190" stroke="#a8784c" stroke-width="1" opacity=".55"/>`).join('')}
+    <path d="M0 214H400M0 244H400" stroke="#a8784c" stroke-width=".8" opacity=".35"/>
+    <ellipse cx="80" cy="258" rx="58" ry="12" fill="#b0503c" opacity=".85"/><ellipse cx="80" cy="258" rx="50" ry="9" fill="none" stroke="#e9c46a" stroke-width="1.5" stroke-dasharray="3 3"/>
+    <rect width="400" height="12" fill="#6b4a2b"/><rect y="12" width="400" height="3" fill="#57391f"/>
+    <!-- 窗：外面是巷子對面的老公寓和鐵窗花 -->
+    <rect x="282" y="34" width="100" height="92" fill="url(#bkSky)"/>
+    <rect x="300" y="${wet ? 60 : 56}" width="70" height="70" fill="${night ? '#2c2f45' : '#d8cdb8'}" opacity=".9"/>
+    ${[0, 1].map(i => `<rect x="${308 + i * 32}" y="70" width="22" height="18" fill="${night ? '#f6d27a' : '#8fa3b5'}" opacity="${night ? 0.9 : 0.7}"/><path d="M${308 + i * 32} 79h22M${319 + i * 32} 70v18" stroke="${night ? '#6b5a3a' : '#5f6b78'}" stroke-width="1"/>`).join('')}
+    ${night ? '<circle cx="296" cy="46" r="5" fill="#fdf3c8"/><circle cx="364" cy="44" r="1" fill="#fff"/><circle cx="350" cy="52" r=".8" fill="#fff"/>' : wet ? '' : '<circle cx="368" cy="46" r="7" fill="#fff6c9" opacity=".9"/>'}
+    ${wet ? Array.from({ length: 16 }, (_, i) => `<line x1="${286 + (i * 23) % 96}" y1="${36 + (i * 37) % 80}" x2="${283 + (i * 23) % 96}" y2="${46 + (i * 37) % 80}" stroke="#eef6ff" stroke-width="1" opacity=".75"><animate attributeName="y1" values="${36 + (i * 37) % 80};${116 + (i * 37) % 80}" dur="${0.6 + (i % 4) * 0.12}s" repeatCount="indefinite"/><animate attributeName="y2" values="${46 + (i * 37) % 80};${126 + (i * 37) % 80}" dur="${0.6 + (i % 4) * 0.12}s" repeatCount="indefinite"/></line>`).join('') : ''}
+    <path d="M282 34h100v92H282z M332 34v92 M282 80h100" fill="none" stroke="#6b4a2b" stroke-width="5"/>
+    <rect x="276" y="124" width="112" height="7" fill="#8a6136" rx="1"/>
+    <rect x="296" y="116" width="58" height="9" rx="4" fill="#d98b6e"/><path d="M300 120.5h50" stroke="#f3d3c4" stroke-width="1" stroke-dasharray="2 2"/>
+    <rect x="360" y="112" width="12" height="12" fill="#b5653a"/><circle cx="366" cy="106" r="7" fill="#6b9a52"/><circle cx="361" cy="101" r="4" fill="#7fb062"/><circle cx="371" cy="100" r="4" fill="#5d8c47"/>
+    <!-- 左邊的木書架 -->
+    ${bkShelf(6, 36, 92, 158, 6, '#a87445', '#5b3d24', daySeed() + 3)}
+    <!-- 中間的深色大書架、木梯 -->
+    ${bkShelf(110, 52, 152, 128, 5, '#2b2420', '#1c1714', daySeed() + 101)}
+    <path d="M244 50 L230 182 M258 52 L246 182" stroke="#c19a6b" stroke-width="2.5"/>${[0, 1, 2, 3, 4].map(i => `<path d="M${243 - i * 2.7} ${68 + i * 26} h${14}" stroke="#c19a6b" stroke-width="2"/>`).join('')}
+    <!-- 店名木招牌 -->
+    <path d="M162 15 L170 26 M210 15 L202 26" stroke="#57391f" stroke-width="1.2"/>
+    <rect x="146" y="25" width="80" height="22" rx="3" fill="#fbf4e4" stroke="#6b4a2b" stroke-width="2"/>
+    <text x="186" y="40" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#5b3a1e" font-family="'Noto Serif TC','Noto Sans TC',serif">${esc(name)}</text>
+    <!-- 麻繩上夾的明信片 -->
+    <path d="M100 22 Q 130 34 146 28 M226 28 Q 248 36 262 26" stroke="#a68a64" stroke-width="1" fill="none"/>
+    ${[[108, 25, -8], [124, 29, 6], [234, 30, -5], [250, 31, 8]].map(([x, y, a], i) => `<g transform="rotate(${a} ${x} ${y})"><rect x="${x - 6}" y="${y}" width="12" height="9" fill="#fffaf0" stroke="#d6c7ad" stroke-width=".5"/><rect x="${x - 4.5}" y="${y + 1.5}" width="9" height="5" fill="${cards[i % cards.length]}"/><rect x="${x - 1}" y="${y - 2}" width="2" height="3.5" fill="#b0855a"/></g>`).join('')}
+    <!-- 吊燈（藍色燈罩，像照片裡那樣） -->
+    ${[[60, 46], [186, 58], [272, 30]].map(([x, l]) => `<line x1="${x}" y1="15" x2="${x}" y2="${l}" stroke="#444" stroke-width="1"/><ellipse cx="${x}" cy="${l + 30}" rx="${night ? 46 : 34}" ry="${night ? 40 : 28}" fill="url(#bkGlow)"/>
+      <path d="M${x - 12} ${l + 10} Q ${x} ${l - 6} ${x + 12} ${l + 10} Z" fill="#2f7fd1"/><ellipse cx="${x}" cy="${l + 10}" rx="12" ry="2.2" fill="#ffe7a8"/><circle cx="${x - 4}" cy="${l + 3}" r="1.6" fill="#fff" opacity=".8"/>`).join('')}
+    <!-- 天花板垂下的黃金葛 -->
+    <path d="M392 15 v8" stroke="#8a6136" stroke-width="1"/><path d="M384 23 h16 l-2 7 h-12 z" fill="#c9a77c"/>
+    ${[[386, 34], [390, 46], [394, 58], [397, 40], [389, 70], [395, 82]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="3.2" ry="2" fill="#6b9a52" transform="rotate(30 ${x} ${y})"/>`).join('')}
+    <path d="M388 30 Q 384 50 392 82 M396 30 Q 400 38 397 46" stroke="#5d8c47" stroke-width=".8" fill="none"/>
+    <!-- 鋪條紋布的平台桌，上面是店長推薦 -->
+    <rect x="128" y="200" width="134" height="7" fill="#8a5a2c"/>
+    <path d="M126 205 h138 l4 46 h-146 z" fill="url(#bkCloth)"/><path d="M122 251 h146" stroke="#6f7884" stroke-width="1.5"/>
+    ${[[136, 6], [170, 4], [204, 5], [236, 3]].map(([x, n], j) => Array.from({ length: n }, (_, i) => `<rect x="${x + (i % 2)}" y="${200 - 3.4 * (i + 1)}" width="22" height="3.2" fill="${BK_COLORS[(j * 3 + i * 5) % 12]}"/>`).join('')).join('')}
+    <rect x="186" y="178" width="14" height="10" fill="#fffaf0" stroke="#c8b08a" stroke-width=".6" transform="rotate(-6 193 183)"/><text x="193" y="185.5" text-anchor="middle" font-size="4" fill="#8c2f2b" transform="rotate(-6 193 183)">店長推薦</text>
+    <!-- 櫃台 -->
+    <rect x="290" y="176" width="104" height="58" fill="#9b6838"/><rect x="286" y="172" width="112" height="6" fill="#7a4f28"/>
+    ${[0, 1, 2, 3].map(i => `<path d="M${298 + i * 26} 182v46" stroke="#8a5a2c" stroke-width="1.5"/>`).join('')}
+    <rect x="364" y="160" width="20" height="12" rx="1.5" fill="#3a3a3a"/><rect x="367" y="156" width="14" height="5" fill="#5a5a5a"/>
+    <path d="M300 172 q4 -9 8 0 z" fill="#d4a017"/><circle cx="304" cy="162" r="1" fill="#d4a017"/>
+    <rect x="312" y="164" width="16" height="8" fill="#efe4cf"/><rect x="313" y="160" width="14" height="4" fill="#8c2f2b"/>
+    <rect x="388" y="150" width="8" height="22" fill="#d6c7ad"/>${[0, 1, 2].map(i => `<rect x="389" y="${152 + i * 6.5}" width="6" height="5" fill="${cards[(i + 2) % cards.length]}"/>`).join('')}
+  </svg>
     ${kp ? `<div class="keeper" onclick="${isFamily() ? '' : "openKeeper('bookstore')"}" title="${esc(kp.name)}">${kpPic(kp)}</div>` : ''}
     ${cat ? `<div class="cat" id="bcat" onclick="catTap()" title="${esc(cat.name)}"><span class="body">${kpPic(cat)}</span></div>` : ''}
   </div>`;
 }
 function viewBookstore() {
   const kp = keeperOf('bookstore'), cat = keeperOf('bookcat'), fam = isFamily(), n = cardList().length, fresh = newCards().length;
-  if (!kp && !fam) return `<div class="card"><h2>📚 巷口開了一間獨立書店</h2>
+  if (!fam && (!bookName() || draft.renameBook)) return viewBookName();
+  if (!kp && !fam) return `<div class="card"><h2>📚 ${esc(bookTitle())}</h2>
       <div class="muted">這間小書店是你和家人往來的地方，可是還缺一位店長。先請一位店長來顧店吧！</div>
       <ul style="margin:8px 0 0 18px;padding:0">${PLACES.bookstore.about.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
       <button style="width:100%;margin-top:12px" onclick="openKeeper('bookstore')">請一位店長 🧑‍🦱</button></div>
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
   const daily = S.save['daily:' + S.today], intro = fam ? '' : placeIntro('bookstore');
   const say = fam ? 'いらっしゃいませ～歡迎來書店坐坐！要不要寄一張明信片給她？' : (daily && daily.messages && daily.messages.bookstore) || bookKeeperLine();
-  return `<div class="card"><h2>📚 巷口的獨立書店</h2>
+  return `<div class="card"><h2>📚 ${esc(bookTitle())}</h2>
       ${bookScene()}
       <div id="bcatSay" class="muted" style="min-height:1.4em;margin-top:6px;font-size:13px">${cat ? '🐾 ' + esc(cat.name) + catMood() : ''}</div>
       ${intro || (kp ? `<div class="row" style="margin-top:6px;flex-wrap:nowrap;cursor:pointer" onclick="${fam ? '' : "openKeeper('bookstore')"}"><span style="font-size:30px">${kpPic(kp)}</span>
@@ -3368,13 +3449,13 @@ function viewBookstore() {
       ${fam ? `<button class="ghost grow" onclick="go('postcard')">✉️ 寄明信片</button>`
         : `<button class="ghost grow" onclick="go('visits')">🎟️ 邀請朋友</button>`}</div>
     ${bookShelfHtml()}
-    <div class="row">${!fam && cat ? `<button class="ghost" onclick="openKeeper('bookcat')">${kpPic(cat)} 店貓設定</button>` : ''}<button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+    <div class="row">${fam ? '' : `<button class="ghost" onclick="draft.renameBook=true;render()">✏️ 改店名</button>`}${!fam && cat ? `<button class="ghost" onclick="openKeeper('bookcat')">${kpPic(cat)} 店貓</button>` : ''}<button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 店貓：在幾個點之間走、坐、洗臉、睡覺；晚上多睡、雨天坐窗邊；點牠有反應
-const CAT_SPOTS = { shelf: [24, 44], table: [47, 74], window: [86, 48], counter: [75, 73], floor: [22, 94], floor2: [66, 95] };
+const CAT_SPOTS = { shelf: [14, 13.5], table: [55, 71.5], window: [81, 42], counter: [77, 61.5], floor: [20, 93], floor2: [62, 96] };
 const CAT_ACTS = { sit: '坐著發呆', wash: '在洗臉', sleep: '睡著了', walk: '在店裡散步' };
 let catSt = { spot: 'table', act: 'sleep', flip: false }, catTimer = null, catSayUntil = 0;
-function catMood() { const sp = { shelf: '書架上', table: '平台桌上', window: '窗邊', counter: '櫃台上', floor: '地板上', floor2: '地板上' }[catSt.spot];
+function catMood() { const sp = { shelf: '書架頂上', table: '平台桌上', window: '窗邊', counter: '櫃台上', floor: '地毯上', floor2: '地板上' }[catSt.spot];
   return catSt.act === 'walk' ? CAT_ACTS.walk : sp + CAT_ACTS[catSt.act]; }
 function catPaint() {
   const el = document.getElementById('bcat'); if (!el) return;
@@ -3624,7 +3705,7 @@ function viewGuide() {
     p('訪客看到的是你發券那一刻的「快照」，而且<b>看不到</b>成績、計畫、錯題、信箱和你上傳的圖片。要不要給他們看「連續週數、這週完成幾項」，由你在發券時勾選，預設不給看。小島長大了，可以按「📸 重拍」更新；不想給看了，按「收回」連結就立刻失效。') +
     p('家人也可以替你邀請別人（例如奶奶），但會先寄到你的 📮 郵便受け，你看過、按同意之後連結才會生效。'))}
   ${sec('📮', '明信片冊', p('家人有自己的「家人碼」，可以進來看看你的小島，但只能看、不會改到任何東西。家人來逛過的那天，可能會挑一張世界各地的風景或文化照片寄給你，附上一句話和一段小知識。收到時右上角的 📮 郵便受け會亮紅點，所有明信片都收在「📚 獨立書店 → 📮 明信片冊」。'))}
-  ${sec('📚', '獨立書店', p('島上的巷口有一間獨立書店，是你和家人往來的地方。第一次去要先請一位店長：名字、樣子、個性都由你決定（也可以上傳自己的圖），店長會跟你介紹書店。之後點店長可以改設定。') +
+  ${sec('📚', '獨立書店', p('島上的巷口有一間獨立書店，是你和家人往來的地方。第一次去先幫它取個店名（之後按「✏️ 改店名」可以換），再請一位店長：名字、樣子、個性都由你決定（也可以上傳自己的圖），店長會跟你介紹書店。之後點店長可以改設定。') +
     p('店裡可以養一隻店貓，取名字、選花色和個性。牠會在書架、平台桌、窗邊和櫃台之間走走、坐坐、洗臉、睡覺；晚上比較愛睡，下雨天會坐在窗邊看雨，點牠一下會有反應。') +
     p('📮 明信片冊、🎟️ 邀請朋友都在書店裡。店裡還有一座你的書架，之後智慧島上課得到的書會擺在這裡，點書可以看蓋過章的章節。家人用家人碼來島上，也會到書店看明信片、寄明信片給你。'))}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
