@@ -171,8 +171,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.6';
+const APP_VERSION = '2.6.1';
 const CHANGELOG = [
+  { v: '2.6.1', date: '2026-10-25', items: ['👋 第一次來到一個地方時，那裡的管理員會先跟你打招呼，說明這裡可以做什麼（海邊步道先開始）'] },
   { v: '2.6', date: '2026-10-25', items: ['🎟️ 邀請朋友來島上：發一張乘船券（連結或 QR code），朋友就能來逛你的 3D 小島和房間，你決定給他們看什麼、什麼時候收回', '✍️ 先寫一句歡迎詞，嚮導會在碼頭唸給訪客聽', '📮 明信片冊：家人來島上逛過，可以寄一張世界各地的風景明信片給你', '👀 家人可以用自己的家人碼看你的小島，但不會改到任何東西；家人想邀請別人，要你同意才算數'] },
   { v: '2.5', date: '2026-10-25', items: ['🏃 運動集章卡：今天運動了就蓋一章，一週 3 章得 3 枚島幣，連續達標解鎖排球和日本風家具', '海邊步道：每蓋一章鋪一段木棧道，每三章多一盞燈籠', '⛵ 紙船碼頭：檢討完紙本考卷放一艘紙船，和爸爸一起檢討是親子船', '🍁 整座島跟著二十四節氣換季：春天櫻花、夏夜螢火蟲、秋天楓紅', '🧢 海邊步道可以請一位你自己設定的管理員'] },
   { v: '2.4', date: '2026-10-24', items: ['💡 讓島順起來：在嚮導卡下面寫你對小島的想法，爸爸會收到，也會在這裡回覆你'] },
@@ -927,17 +928,26 @@ function habitCard() {
     <div class="row" style="margin-top:8px;flex-wrap:nowrap">
       ${on ? `<div class="grow muted">${kp ? esc(kp.emoji) + ' ' + esc(kp.name) + '陪你跑完了！' : '🏮 '}海邊步道又多了一段</div><button class="ghost" style="padding:6px 10px;font-size:13px" onclick="toggleExercise()">按錯了</button>`
         : `<button class="grow" onclick="toggleExercise()">🏃 今天運動了！</button>`}</div>
-    ${kp ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('walk')"><span style="font-size:28px">${esc(kp.emoji)}</span>
+    ${placeIntro('walk') || (kp ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('walk')"><span style="font-size:28px">${esc(kp.emoji)}</span>
         <div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.walk) || keeperLine('walk', on, n))}</div></div>`
-      : `<button class="ghost" style="width:100%;margin-top:8px;font-size:14px" onclick="openKeeper('walk')">🧢 海邊步道還沒有管理員，幫步道找一位陪跑夥伴</button>`}
+      : `<button class="ghost" style="width:100%;margin-top:8px;font-size:14px" onclick="openKeeper('walk')">🧢 海邊步道還沒有管理員，幫步道找一位陪跑夥伴</button>`)}
     <div class="muted" style="margin-top:6px">${D.exStreak ? `已經連續 ${D.exStreak} 週達標 🔥` : '一週運動 3 天就達標'}${next ? `・連續 ${next.weeks} 週可以拿到 ${next.ic} ${next.name}` : '・所有運動家具都拿到了！'}</div>
     <div class="row" style="margin-top:12px;border-top:1px dashed var(--plum-light);padding-top:10px;flex-wrap:nowrap">
       <div class="grow"><b>⛵ 紙本檢討</b><div class="muted">${paperToday.length ? '今天放了 ' + paperToday.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、') : '寫完考卷、檢討完錯題，放一艘紙船'}</div></div>
       <button class="ghost" onclick="go('paper')">去碼頭</button></div></div>`;
 }
 // 地方的管理角色：她自己取名、選樣子、寫個性；每天的訊息由 AI 依個性寫（getDaily 的 keepers）
-const PLACES = { walk: { name: '海邊步道', ic: '🏃', roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️'] } };
+const PLACES = { walk: { name: '海邊步道', ic: '🏃', about: ['今天有運動就按「今天運動了」蓋一章，一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️'] } };
 function keeperOf(place) { return S.save['keeper:' + place] || null; }
+// 第一次來到這個地方：管理員先打招呼、說明這裡的玩法（每個地方只出現一次）
+function placeIntro(place) {
+  const k = keeperOf(place), pl = PLACES[place];
+  if (!k || local.get('islandMet:' + place)) return '';
+  return `<div class="row" style="margin-top:8px;flex-wrap:nowrap;align-items:flex-start"><span style="font-size:28px">${esc(k.emoji)}</span>
+    <div class="speech grow" style="font-size:14px"><b>${esc(k.name)}</b>：嗨！我是${esc(k.name)}${k.role ? '，' + esc(k.role) : ''}，以後${pl.name}就由我來顧囉！這裡可以這樣玩：
+      <ul style="margin:6px 0 6px 18px;padding:0">${pl.about.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+      <button style="padding:6px 12px;font-size:13px" onclick="local.set('islandMet:${place}', S.today);render()">知道了！</button></div></div>`;
+}
 function keeperLine(place, on, n) {
   const k = keeperOf(place), lines = on ? ['今天跑得很棒！海風好舒服對吧？', '蓋章完成～明天也一起來吧！', '流了汗的感覺很好吧？記得喝水喔。']
     : n >= EX_GOAL ? ['這週已經達標了，今天想散散步也很好。', '達標啦！今天就輕鬆動一動吧～'] : ['今天要不要一起去步道走走？', '我在步道等你喔，動一動腦袋也會更清楚！', '天氣不錯，出來跑一圈吧？'];
@@ -949,6 +959,7 @@ function viewKeeper() {
   const k = draft.keeper || (draft.keeper = Object.assign({ name: '', emoji: pl.emojis[0], personality: '', role: pl.roles[0] }, cur || {}));
   return `<div class="card"><h2>${pl.ic} ${pl.name}的管理員</h2>
       <div class="muted">這個地方由你挑一位管理員：取名字、選樣子、寫個性。他每天會用自己的個性跟你說話。</div>
+      <div class="muted" style="margin-top:6px">${pl.name}是做什麼的：<ul style="margin:4px 0 0 18px;padding:0">${pl.about.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>
       <label>名字</label><input id="kpName" value="${esc(k.name)}" maxlength="12" placeholder="例如：小夏學姊" oninput="draft.keeper.name=this.value">
       <label>樣子</label><div class="row" style="gap:6px">${pl.emojis.map(e => `<button type="button" class="${k.emoji === e ? '' : 'ghost'}" style="padding:4px 8px;font-size:24px" onclick="keeperKeep();draft.keeper.emoji='${e}';render()">${e}</button>`).join('')}</div>
       <label>身分</label><div class="row" style="gap:6px">${pl.roles.map(r => `<button type="button" class="${k.role === r ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="keeperKeep();draft.keeper.role='${r}';render()">${r}</button>`).join('')}</div>
@@ -2291,7 +2302,7 @@ function viewGuide() {
   ${sec('🏃', '運動集章卡', p('首頁的「運動集章卡」就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
     p('每蓋一章 +5 經驗值，島的海邊會多鋪一段木棧道，每三章多一盞燈籠。一週（週一到週日）集滿 3 章，🪙 +3。') +
     `<table><tr><th>連續達標</th><th>解鎖的家具</th></tr>${EX_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` +
-    p('海邊步道可以有自己的管理員：在集章卡下面按「幫步道找一位陪跑夥伴」，取名字、選樣子、寫個性，他每天會用自己的口吻跟你聊運動。') +
+    p('海邊步道可以有自己的管理員：在集章卡下面按「幫步道找一位陪跑夥伴」，取名字、選樣子、寫個性，他每天會用自己的口吻跟你聊運動。第一次見面時，他會先跟你打招呼，說明步道怎麼玩。') +
     p('斷掉了也沒關係：拿到的家具都會留著，重新累積就好。解鎖的家具在「我的家」的家具店最下面，可以擺出來。'))}
   ${sec('⛵', '紙船碼頭（紙本檢討）', p('寫完紙本考卷或練習、檢討完錯題，到首頁按「去碼頭」放一艘船。選這次檢討了哪幾科，寫一句今天最大的收穫就好，大約 30 秒。想多記一點，可以填每科錯幾題、錯的原因，跳過也一樣有島幣。') +
     p('自己檢討是 ⛵ 紙船；爸爸陪你檢討是 🚢 親子船，要請爸爸在你的手機上蓋章。第一科 🪙 2 枚＋20 經驗值，每多一科再 +1 枚，一次最多 4 枚。紙船和親子船每天各算一次。'))}
