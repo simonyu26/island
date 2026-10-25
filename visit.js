@@ -192,6 +192,12 @@
   }
 
   // ---------- 房間（唯讀） ----------
+  // 島主的家：同住夥伴招呼訪客（不談她的事）、她分享的日めくり
+  function homeExtras() {
+    const m = snap.mate, pages = snap.diary || [];
+    return (m ? `<div class="row" style="margin-top:10px;flex-wrap:nowrap"><span style="font-size:28px">${esc(m.emoji || '🐱')}</span><div class="speech grow"><b>${esc(m.name)}</b>：いらっしゃい～歡迎來我們家坐坐！</div></div>` : '')
+      + (pages.length ? `<div style="margin-top:10px"><b>📆 日めくり</b>${pages.slice().reverse().map(p => `<div class="muted" style="margin-top:4px">${esc(p.date.slice(5).replace('-', '/'))}・${esc(p.text)} ${esc(p.emoji || '')}</div>`).join('')}</div>` : '');
+  }
   async function openRoom(who) {
     const room = (snap.rooms || {})[who] || { wall: '#f6efe6', items: [] };
     if (who === 'me') stamp('home');
@@ -199,7 +205,8 @@
     const sheet = document.createElement('div'); sheet.className = 'sheet';
     sheet.innerHTML = `<div class="card"><div class="row"><h3 class="grow" style="margin:0">🏠 ${esc(title)}</h3><button class="ghost" id="closeRoom">關上門</button></div>
       <div id="r3d" style="margin-top:10px"><div class="loading" style="padding-top:120px">🛋️ 開門中…</div></div>
-      <div class="muted" style="margin-top:6px">👆 拖曳可以轉動房間，兩指可以拉近。</div></div>`;
+      <div class="muted" style="margin-top:6px">👆 拖曳可以轉動房間，兩指可以拉近。</div>
+      ${who === 'me' ? homeExtras() : ''}</div>`;
     document.body.appendChild(sheet);
     const close = () => sheet.remove();
     sheet.querySelector('#closeRoom').onclick = close;

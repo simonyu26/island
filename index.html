@@ -104,6 +104,14 @@
   nav button.on { color: var(--plum); font-weight: 700; }
 
   .kpic { width: 1.25em; height: 1.25em; border-radius: 50%; object-fit: cover; vertical-align: middle; background: #fff; }
+  .noren { display: flex; gap: 0; justify-content: center; align-items: flex-start; height: 46px; border-radius: 16px 16px 0 0; position: relative; overflow: hidden; margin-bottom: -2px; }
+  .noren span { font-weight: 700; letter-spacing: 6px; padding-top: 10px; font-size: 18px; text-shadow: 0 1px 2px #0003; }
+  .noren i { position: absolute; top: 14px; bottom: 0; width: 2px; background: #0002; }
+  .noren i:nth-of-type(1) { left: 25%; } .noren i:nth-of-type(2) { left: 50%; } .noren i:nth-of-type(3) { left: 75%; }
+  .namePlate { display: inline-block; background: linear-gradient(#c89a63, #a87a45); color: #3b2512; padding: 2px 12px; border-radius: 4px; box-shadow: inset 0 0 0 2px #7a532a55, 0 2px 3px #0002; font-size: 0.9em; }
+  .diary .dpage { background: #fffdf7; border: 1px solid #e8dcc6; border-top: 8px solid #c0504d; border-radius: 6px; padding: 10px 14px; margin-top: 10px; text-align: center; }
+  .diary .dmon { color: #c0504d; font-weight: 700; } .diary .dday { font-size: 44px; font-weight: 700; line-height: 1; } .diary .dwk { color: #8a6a7a; font-size: 13px; }
+  .diary .diaryText { margin-top: 10px; font-size: 17px; text-align: left; white-space: pre-wrap; min-height: 1.4em; }
   .pic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; vertical-align: middle; background: #fff; }
   .avatar .pic { width: 52px; height: 52px; }
   .ipic { width: 1.4em; height: 1.4em; border-radius: 50%; object-fit: cover; vertical-align: -0.35em; background: #fff; }
@@ -225,8 +233,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.13';
+const APP_VERSION = '2.14';
 const CHANGELOG = [
+  { v: '2.14', date: '2026-10-25', items: ['🏠 我的家變成休息的地方：可以邀一位同住的夥伴（寵物或室友，自己取名、選樣子或上傳圖），你回家時會說「おかえり」', '📆 日めくり：睡前寫今天的一句話或心情，同住夥伴會回你一個表情；只有你看得到，想給家人看的頁再按分享', '🎐 家門口掛上暖簾（六種花色），家的名字寫在木門牌上', '⏰ 會考倒數鐘搬到燈塔，已經買的退還島幣；家裡的信箱拿掉了（信都在首頁的郵便受け）', '📮 首頁每天會直接露出一位島民的信，嚮導的早安也會聊一個脆上的話題'] },
   { v: '2.13', date: '2026-10-25', items: ['🖼️ 海邊步道、燈塔、植木屋的管理員也可以上傳自己畫的圖或照片當樣子，跟島民一樣'] },
   { v: '2.12', date: '2026-10-25', items: ['⏱️ 運動計時：在海邊步道按「出發」，回來按「回來了」。每運動 25 分鐘留下一個足あと 👣 +10 綠點，一天最多 2 個', '一次運動滿 20 分鐘自動蓋今天的章；沒帶手機還是可以手動蓋章（沒有綠點）', '讀書和運動一次只能計一個'] },
   { v: '2.11', date: '2026-10-25', items: ['🥇 完走メダル：會考那一週（2027/5/10～5/16）也集滿 3 章、連續沒斷，就能拿到金牌，掛在我的家'] },
@@ -455,7 +464,7 @@ function derive(S) {
   sessions.forEach(ss => { const k = ss.kind + ss.date; ss.paid = !paidDay[k]; paidDay[k] = true;
     if (ss.paid) { ss.coins = Math.min(PAPER_MAX, 1 + ss.lanes.length); paperCoins += ss.coins; xp += 20; } });
 
-  const spent = (save.purchases || []).reduce((a, p) => a + p.price, 0);
+  const spent = (save.purchases || []).filter(p => !RETIRED_FURN.includes(p.furniture)).reduce((a, p) => a + p.price, 0);   // 退役的家具（會考倒數鐘）退還島幣
   // 經驗值換島幣要她自己按「兌換」（Simon，2026-10-25）；經驗值本身不扣，所以島嶼等級和房子不會因為兌換而降級
   const exXp = save.xpEx ? Math.min(save.xpEx.xp, coinXp) : coinXp;   // 已經換過的經驗值；還沒有紀錄時當作全部換過（舊版是自動換）
   const coins = 20 + Math.floor(exXp / 10) + xqCoins + exCoins + paperCoins - spent;   // 開島禮物 20 枚
@@ -795,7 +804,7 @@ function dailyCtx() {
     residents: SUBJECTS.map(s => { const r = resident(s);
       return { key: s, name: r.name, personality: r.personality, relation: r.relation, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null }; }),
     guide: { name: g.name, tone: TONES[g.tone] || g.tone },
-    keepers: Object.keys(PLACES).filter(k => keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : {})),
+    keepers: Object.keys(PLACES).filter(k => k !== 'home' && keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : {})),
     weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '') + '；今天的節氣是' + solarTerm(S.today) + '（' + TERM_NOTE[solarTerm(S.today)] + '）'
   };
 }
@@ -853,7 +862,11 @@ let kairanOpen = false;
 function kairanCard() {
   const d = S.save['daily:' + S.today], letters = d ? SUBJECTS.filter(s => d.messages && d.messages[s]).length : 0;
   const what = [letters ? '島民的信 ' + letters + ' 封' : '島上消息', d && d.news ? '昨天的新聞' : ''].filter(Boolean).join('・');
-  return `<div class="card" id="kairanCard">${guideCard()}
+  // 今天輪到的島民的信直接露出來（其他的在回覧板裡），免得她沒打開就錯過島民聊的話題
+  const has = d ? SUBJECTS.filter(s => d.messages && d.messages[s]) : [], pick = has.length ? has[daySeed() % has.length] : null;
+  const featured = pick ? `<div class="row" style="align-items:flex-start;margin-top:10px;flex-wrap:nowrap"><span class="avatar" style="font-size:28px">${resident(pick).pic}</span>
+      <div class="speech grow"><b>📮 ${esc(resident(pick).name)}</b>：${esc(d.messages[pick])}${has.length > 1 ? `<div class="muted" style="margin-top:4px">還有 ${has.length - 1} 位島民也寫了信，在下面的回覧板</div>` : ''}</div></div>` : '';
+  return `<div class="card" id="kairanCard">${guideCard()}${featured}
     <details style="margin-top:10px" ${kairanOpen ? 'open' : ''} ontoggle="kairanOpen=this.open"><summary><b>📰 回覧板</b><span class="muted">・${what}${dailyState === 'loading' ? '（寫信中…）' : ''}</span></summary>
       ${guideNews()}${dailyCard()}</details>
     <button class="ghost" style="width:100%;margin-top:10px" onclick="go('wish')">💡 讓島順起來${wishNews() ? `<span class="pill" style="margin-left:6px">爸爸回覆了 ${wishNews()} 則</span>` : ''}</button></div>`;
@@ -960,9 +973,11 @@ let houseWho = 'me';   // 'me' 是自己的家，或島民的科目（國、英�
 function openHouse(who) { houseWho = who || 'me'; go('house'); }
 function houseTier() { let t = HOUSE_TIERS[0]; HOUSE_TIERS.forEach(x => { if (D.level >= x.lv) t = x; }); return t; }
 function homeOf() { return S.save.home || null; }
-function catalogFor(who) { return who === 'me' ? FURNITURE : RES_FURNITURE[who].concat(FURNITURE.filter(f => f.z !== 'out')); }
+// 家是休息的地方（Simon，2026-10-25）：會考倒數鐘不再當家具，搬到燈塔；已經買的退還島幣
+const RETIRED_FURN = ['clock'];
+function catalogFor(who) { const live = FURNITURE.filter(f => !RETIRED_FURN.includes(f.id)); return who === 'me' ? live : RES_FURNITURE[who].concat(live.filter(f => f.z !== 'out')); }
 function furnOf(id) { return FURNITURE.find(f => f.id === id) || EX_REWARDS.concat([EX_MEDAL]).find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
-function ownedFor(who) { return [...new Set((S.save.purchases || []).filter(p => p.furniture && (p.for || 'me') === who).map(p => p.furniture).concat(who === 'me' ? exUnlocked() : []))]; }
+function ownedFor(who) { return [...new Set((S.save.purchases || []).filter(p => p.furniture && !RETIRED_FURN.includes(p.furniture) && (p.for || 'me') === who).map(p => p.furniture).concat(who === 'me' ? exUnlocked() : []))]; }
 function ownedFurniture() { return ownedFor('me'); }
 function roomOf(who) { return who === 'me' ? homeOf() || {} : ((S.save.decor || {})[who] || {}); }
 function slotsFor(who) { return who === 'me' ? houseTier().slots : RES_SLOTS; }
@@ -1036,11 +1051,12 @@ function viewHouse() {
   const next = HOUSE_TIERS.find(x => x.lv > D.level);
   const vs = visitor(), vr = resident(vs), daily = S.save['daily:' + S.today];
   const vline = daily && daily.messages && daily.messages[vs] ? daily.messages[vs] : '我來找你玩了，順便看看你的新家具。';
-  const letters = Object.keys(S.save).filter(k => k.startsWith('daily:') && S.save[k]).sort().reverse().slice(0, 14);
-  return `<div class="card" style="background:${esc(h.wall)};border:3px solid ${esc(h.roof)}">
-      <div class="row"><span style="font-size:44px">${tier.ic}</span><div class="grow"><h2 style="margin:0">${esc(h.name || '我的家')}</h2>
+  return `${norenBar(h)}<div class="card" style="background:${esc(h.wall)};border:3px solid ${esc(h.roof)};border-top-left-radius:0;border-top-right-radius:0">
+      <div class="row"><span style="font-size:44px">${tier.ic}</span><div class="grow"><h2 style="margin:0"><span class="namePlate">${esc(h.name || '我的家')}</span></h2>
         <div class="muted">${tier.name}・島嶼 Lv.${D.level}${next ? `・Lv.${next.lv} 會擴建成${next.name}` : '・已經是最大的房子了'}</div></div>
-        <button class="ghost" style="padding:6px 10px" onclick="draft.editHome=true;render()">🎨 改外觀</button></div></div>
+        ${isFamily() ? '' : '<button class="ghost" style="padding:6px 10px" onclick="draft.editHome=true;render()">🎨 改外觀</button>'}</div></div>
+    ${homeMateCard()}
+    ${diaryCard()}
     <div class="row" style="margin-bottom:14px"><button class="ghost grow" onclick="go('visits')">🎟️ 邀請朋友來島上</button>
       <button class="ghost grow" onclick="go('cards')">📮 明信片冊${cardList().length ? '（' + cardList().length + '）' : ''}</button></div>
     <div class="card"><h3>🛋️ 房間</h3>${roomHtml('me', vs)}
@@ -1048,11 +1064,6 @@ function viewHouse() {
       <div class="muted" style="margin-top:6px">房間可以擺 ${tier.slots} 件家具，房子越大擺越多。點下面的家具可以收起來或擺出來。</div></div>
     ${furnShop('me')}
     ${visitRow('me')}
-    <div class="card"><h3>📬 信箱</h3>${letters.length ? letters.map(k => { const d = S.save[k], date = k.slice(6);
-        return `<details style="margin-top:8px"${k === 'daily:' + S.today ? ' open' : ''}><summary><b>${short(date)}</b> 的信${d.news ? '・📰 ' + esc(d.news.title) : ''}</summary>
-          ${d.greeting ? `<div style="margin-top:6px">${guide().pic} <b>${esc(guide().name)}</b>：${esc(d.greeting)}</div>` : ''}
-          ${SUBJECTS.filter(s => d.messages && d.messages[s]).map(s => `<div style="margin-top:6px">${resident(s).ipic} <b>${esc(resident(s).name)}</b>：${esc(d.messages[s])}</div>`).join('')}
-          ${d.news ? `<div class="muted" style="margin-top:6px">📰 ${esc(d.news.summary)}</div>` : ''}</details>`; }).join('') : '<div class="muted">還沒有信。每天島民寫給你的訊息都會收在這裡。</div>'}</div>
     <div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
       `<div class="badge ${b.ok ? '' : 'locked'}"><span class="ic">${b.ic}</span>${esc(b.name)}</div>`).join('')}</div></div>
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
@@ -1085,14 +1096,85 @@ function setResWall(s, c) {
   decor[s] = Object.assign({}, decor[s] || {}, { wall: c });
   S.save.decor = decor; queueSave('decor', 'saveDecor', decor); render();
 }
+// 暖簾：門口的布簾，幾種日式花色；門牌就是家的名字
+const NOREN = [
+  { id: 'ai', name: '藍染', bg: 'repeating-linear-gradient(90deg,#1f3b6e 0 18px,#24467f 18px 36px)', fg: '#fff' },
+  { id: 'sakura', name: '櫻', bg: 'radial-gradient(circle at 10px 10px,#fff 0 3px,transparent 4px) 0 0/22px 22px,#f2a7bd', fg: '#7a2944' },
+  { id: 'asanoha', name: '麻の葉', bg: 'repeating-linear-gradient(60deg,#fff3 0 2px,transparent 2px 14px),repeating-linear-gradient(-60deg,#fff3 0 2px,transparent 2px 14px),#3f8a6a', fg: '#fff' },
+  { id: 'seigaiha', name: '青海波', bg: 'radial-gradient(circle at 50% 100%,transparent 9px,#fff6 10px 11px,transparent 12px) 0 0/24px 12px,#2d7fb0', fg: '#fff' },
+  { id: 'murasaki', name: '紫', bg: 'repeating-linear-gradient(90deg,#741b47 0 18px,#83255a 18px 36px)', fg: '#fff' },
+  { id: 'kinari', name: '生成り', bg: 'repeating-linear-gradient(90deg,#efe4cf 0 18px,#e6d8bd 18px 36px)', fg: '#5b4630' }
+];
+function norenOf(h) { return NOREN.find(n => n.id === (h && h.noren)) || NOREN[0]; }
+function norenBar(h) { const n = norenOf(h);
+  return `<div class="noren" style="background:${n.bg};color:${n.fg}"><span>${esc((h && h.name) || '我的家')}</span><i></i><i></i><i></i></div>`; }
+// 同住角色（keeper:home）：只做三件事——第一次進門打招呼說明、日めくり回表情、回家說おかえり；不提讀書
+function homeMateCard() {
+  if (isFamily()) { const k = keeperOf('home'); return k ? `<div class="row" style="margin-bottom:10px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(k)}</span><div class="speech grow"><b>${esc(k.name)}</b>：いらっしゃい～歡迎來我們家坐坐！</div></div>` : ''; }
+  const k = keeperOf('home');
+  if (!k) return `<button class="ghost" style="width:100%;margin-bottom:12px" onclick="openKeeper('home')">🐾 家裡還沒有同住的夥伴，邀一位一起住</button>`;
+  const intro = placeIntro('home');
+  if (intro) return `<div class="card">${intro}</div>`;
+  const lines = ['おかえり～今天辛苦了！', 'おかえり！我剛剛在窗邊曬太陽，等你好久了～', 'おかえり～要不要先喝杯茶休息一下？', 'おかえり！今天外面的風好舒服喔。', 'おかえり～我幫你把燈打開了。'];
+  return `<div class="row" style="margin-bottom:12px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('home')"><span style="font-size:30px">${kpPic(k)}</span>
+      <div class="speech grow"><b>${esc(k.name)}</b>${k.role ? '（' + esc(k.role) + '）' : ''}：${lines[daySeed() % lines.length]}</div></div>`;
+}
+// 日めくり：一天一頁，約 30 字；預設只有她看，可逐頁分享給家人；同住角色只回一個表情
+const DIARY_MAX = 40;
+function diaryPages() { return Object.keys(S.save).filter(k => k.startsWith('diary:') && S.save[k] && S.save[k].text).map(k => k.slice(6)).sort(); }
+function diaryEmoji(text) {
+  const t = String(text);
+  if (/累|難過|哭|煩|不開心|討厭|生氣|壓力|好難|崩潰/.test(t)) return '🤗';
+  if (/開心|好棒|讚|耶|成功|快樂|爽|贏|好玩/.test(t)) return '🥳';
+  if (/睏|想睡|晚安|睡/.test(t)) return '🌙';
+  const list = ['😊', '✨', '🍵', '🌸', '👍', '💕', '☺️'];
+  return list[[...t].reduce((a, c) => a + c.codePointAt(0), 0) % list.length];
+}
+function diaryCard() {
+  const fam = isFamily(), pages = diaryPages();
+  const dates = fam ? pages : [...new Set(pages.concat([S.today]))].sort();
+  if (!dates.length) return '';
+  let i = draft.dIdx != null ? Math.max(0, Math.min(draft.dIdx, dates.length - 1)) : dates.length - 1;
+  const date = dates[i], d = S.save['diary:' + date] || {}, k = keeperOf('home'), dd = parseD(date);
+  const editing = !fam && date === S.today && (!d.text || draft.dEdit);
+  const body = editing
+    ? `<textarea id="dText" maxlength="${DIARY_MAX}" rows="2" placeholder="今天的一句話或心情（不寫也沒關係）" style="margin-top:8px">${esc(draft.dText != null ? draft.dText : d.text || '')}</textarea>
+       <div class="row" style="margin-top:6px"><span class="muted grow">約 30 字・只有你自己看得到</span><button onclick="saveDiaryPage()">寫好了</button></div>`
+    : `<div class="diaryText">${esc(d.text || '')}</div>
+       ${d.emoji ? `<div class="row" style="justify-content:flex-end;gap:6px;align-items:center"><span class="muted">${k ? esc(k.name) : '家裡'}回你</span><span style="font-size:26px">${esc(d.emoji)}</span></div>` : ''}
+       ${fam ? '' : `<div class="row" style="margin-top:6px">${date === S.today ? '<button class="ghost" onclick="draft.dEdit=true;render()">改一下</button>' : ''}
+         <span class="grow"></span><button class="ghost" onclick="shareDiaryPage('${date}')">${d.shared ? '👀 已分享給家人（按一下收回）' : '分享給家人'}</button></div>`}`;
+  return `<div class="card diary"><div class="row"><h3 class="grow" style="margin:0">📆 日めくり</h3>
+      <button class="ghost" style="padding:4px 10px" ${i ? '' : 'disabled'} onclick="draft.dIdx=${i - 1};draft.dEdit=false;render()">◀</button>
+      <button class="ghost" style="padding:4px 10px" ${i < dates.length - 1 ? '' : 'disabled'} onclick="draft.dIdx=${i + 1};draft.dEdit=false;render()">▶</button></div>
+    <div class="dpage"><div class="dmon">${dd.getMonth() + 1}月</div><div class="dday">${dd.getDate()}</div><div class="dwk">${'日月火水木金土'[dd.getDay()]}曜日${date === S.today ? '・今日' : ''}</div>${body}</div>
+    ${fam ? '<div class="muted" style="margin-top:6px">這裡只看得到她分享的頁。</div>' : ''}</div>`;
+}
+async function saveDiaryPage() {
+  const el = document.getElementById('dText'), text = el ? el.value.trim().slice(0, DIARY_MAX) : '';
+  const old = S.save['diary:' + S.today] || {};
+  const page = text ? { text, shared: !!old.shared, emoji: diaryEmoji(text), at: S.today } : null;
+  S.save['diary:' + S.today] = page; draft.dEdit = false; draft.dText = null; draft.dIdx = null;
+  queueSave('diary:' + S.today, 'saveDiary', S.today, page ? page.text : '', page ? page.shared : false, page ? page.emoji : '');
+  render();
+  if (page) { const k = keeperOf('home'); toast((k ? k.name : '日めくり') + ' 回你 ' + page.emoji); }
+}
+function shareDiaryPage(date) {
+  const d = Object.assign({}, S.save['diary:' + date]); if (!d.text) return;
+  d.shared = !d.shared; S.save['diary:' + date] = d;
+  queueSave('diary:' + date, 'saveDiary', date, d.text, d.shared, d.emoji || '');
+  toast(d.shared ? '這一頁分享給家人了' : '收回了，只有你看得到'); render();
+}
 function viewHouseSetup() {
-  const h = draft.home || (draft.home = Object.assign({ name: '', roof: ROOF_COLORS[0], wall: WALL_COLORS[0] }, homeOf() || {}));
+  const h = draft.home || (draft.home = Object.assign({ name: '', roof: ROOF_COLORS[0], wall: WALL_COLORS[0], noren: NOREN[0].id }, homeOf() || {}));
   const sw = (list, key) => `<div class="emojis">${list.map(c => `<button type="button" class="${h[key] === c ? 'on' : ''}" style="width:40px;height:40px;background:${c}" onclick="draft.home.${key}='${c}';render()" aria-label="${c}"></button>`).join('')}</div>`;
   return `<div class="card"><div class="big">${houseTier().ic}</div><h2 style="text-align:center">${homeOf() ? '改造我的家' : '在島上蓋你的家'}</h2>
       <div class="muted" style="text-align:center">家蓋在島中央的碼頭。島嶼升級時房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓（Lv.7）→ 海邊洋館（Lv.10）。</div>
       <label>家的名字</label><input id="hmName" value="${esc(h.name)}" placeholder="例如：呱呱小屋" oninput="draft.home.name=this.value">
       <label>屋頂顏色</label>${sw(ROOF_COLORS, 'roof')}
       <label>牆壁顏色</label>${sw(WALL_COLORS, 'wall')}
+      <label>暖簾</label><div class="row" style="gap:6px">${NOREN.map(n => `<button type="button" class="${(h.noren || NOREN[0].id) === n.id ? 'on' : ''}" style="background:${n.bg};color:${n.fg};padding:8px 10px;border:${(h.noren || NOREN[0].id) === n.id ? '3px solid var(--plum)' : '1px solid #ccc'}" onclick="draft.home.name=document.getElementById('hmName').value;draft.home.noren='${n.id}';render()">${n.name}</button>`).join('')}</div>
+      <div class="muted" style="margin-top:4px">家的名字會寫在門口的木門牌上。</div>
       <div class="row" style="margin-top:14px"><button class="grow" onclick="saveHouse()">${homeOf() ? '儲存' : '蓋好了！'}</button>
         ${homeOf() ? '<button class="ghost" onclick="draft={};render()">取消</button>' : ''}</div></div>`;
 }
@@ -1168,7 +1250,9 @@ function viewWalk() {
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 地方的管理角色：她自己取名、選樣子、寫個性；每天的訊息由 AI 依個性寫（getDaily 的 keepers）
-const PLACES = { walk: { name: '海邊步道', ic: '🏃', tab: 'walk', about: ['出門運動前按「出發」、回來按「回來了」，每運動 25 分鐘留下一個足あと 👣 +10 綠點（一天最多 2 個）', '一次滿 20 分鐘自動蓋今天的章；沒帶手機就按「今天運動了」手動蓋章', '一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️', '🐢'] },
+const PLACES = { home: { name: '我的家', ic: '🏠', tab: 'house', about: ['我住在這裡陪你，你回家的時候我會說「おかえり」', '牆上有一本日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，寫完我會回你一個表情，也可以翻回去看', '日めくり只有你自己看得到；想給家人看的那一頁，按「分享給家人」就好', '房間的家具、暖簾和門牌都可以自己布置'],
+    roles: ['貓咪室友', '狗狗室友', '兔子室友', '人類室友'], emojis: ['🐱', '🐈‍⬛', '🐶', '🐕', '🐰', '🐹', '🦊', '🐧', '🦉', '🐢', '👧', '🧑'] },
+  walk: { name: '海邊步道', ic: '🏃', tab: 'walk', about: ['出門運動前按「出發」、回來按「回來了」，每運動 25 分鐘留下一個足あと 👣 +10 綠點（一天最多 2 個）', '一次滿 20 分鐘自動蓋今天的章；沒帶手機就按「今天運動了」手動蓋章', '一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️', '🐢'] },
   lighthouse: { name: '燈塔', ic: '🗼', tab: 'light', about: ['挑戰任務和故事任務答錯的題，會變成漂流瓶漂到燈塔海灘', '瓶子隔天漂回來，撿起來會出一題 AI 類題：同一個觀念，換了數字和情境，也會寫是改編自哪一題', '類題連續兩次答對，瓶子就變成紙燈籠放到海上，還有島幣', '在瓶子上記下為什麼錯；想問爸爸的題按「給爸爸看」', '紙本考卷檢討完，可以在燈塔的小碼頭放紙船'], roles: ['守燈的老爺爺', '燈塔的貓', '退休的船長', '海鷗郵差'], emojis: ['👴', '👵', '🧓', '👩‍✈️', '🧑‍🎨', '🐈', '🐈‍⬛', '🦉', '🐢', '🦭', '🐙', '🦀'] },
   garden: { name: '植木屋', ic: '🌱', tab: 'garden', about: ['讀書計時每專心 25 分鐘集一顆砂時計，一顆 +10 綠點，綠點可以在這裡換樹苗和花', '第一次見面送你 100 綠點當開張禮', '選一種植物，再點地圖上的空地格就能種下去，可以寫一塊小木牌', '植物會跟著節氣開花、變色，種下 7 天變小樹、14 天長大，不會枯掉', '島嶼升到 Lv.5、Lv.8 會開放更多空地'], roles: ['植木屋的老闆娘', '戴草帽的園丁', '愛花的狸貓', '苗圃的小學徒'], emojis: ['👩‍🌾', '🧑‍🌾', '👨‍🌾', '👵', '🧒', '🦝', '🐿️', '🐻', '🐸', '🐝', '🦔', '🐢'] } };
 function keeperOf(place) { const k = S.save['keeper:' + place]; return k ? Object.assign({}, k, { img: imgOf('keeper:' + place) || '' }) : null; }
@@ -1368,7 +1452,8 @@ async function saveKeeperForm(place) {
   if (!k.name.trim()) return toast('幫他取個名字吧');
   try { await flush(); S = await call('saveKeeper', place, k); D = derive(S); }
   catch (e) { return toast('儲存失敗：' + (e.message || e)); }
-  toast(k.emoji + ' ' + k.name + ' 來' + PLACES[place].name + '上班了！'); go(PLACES[place].tab || 'home');
+  if (place === 'home') houseWho = 'me';
+  toast(k.emoji + ' ' + k.name + (place === 'home' ? ' 搬進來一起住了！' : ' 來' + PLACES[place].name + '上班了！')); go(PLACES[place].tab || 'home');
 }
 function toggleExercise() {
   const on = !exToday(), wk = mondayOf(S.today), before = D.exWeeks[wk] || 0;
@@ -1501,7 +1586,9 @@ function viewLight() {
   const row = (b, btn) => `<div class="item" style="cursor:pointer" onclick="openBottle('${b.id}')"><span style="font-size:22px">${b.lantern ? '🏮' : '🍶'}</span>
       <div class="name grow"><b>${tagOf(b)}</b><div class="muted">${esc(b.label)}・${short(b.wrongAt)} 答錯${fam && !b.rv.share ? '' : why(b)}${b.rv.share ? '・👀 給爸爸看' : ''}</div></div>${btn || ''}</div>`;
   const say = (daily && daily.messages && daily.messages.lighthouse) || lightKeeperLine(st), intro = fam ? '' : placeIntro('lighthouse');
+  const examLeft = Math.round((parseD(EXAM_DATES[0]) - parseD(S.today)) / 86400000);
   return `<div class="card"><h2>🗼 ${esc(lightTitle())}</h2>
+      ${examLeft >= 0 ? `<div class="muted">⏰ 會考倒數 <b>${examLeft}</b> 天（${EXAM_DATES.map(short).join('、')}）</div>` : ''}
       ${intro || (kp ? `<div class="row" style="flex-wrap:nowrap;cursor:pointer" onclick="${fam ? '' : "openKeeper('lighthouse')"}"><span style="font-size:32px">${kpPic(kp)}</span>
         <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(say)}</div></div>`
         : fam ? '' : `<button class="ghost" style="width:100%" onclick="openKeeper('lighthouse')">🧓 燈塔還沒有守燈人，請一位來守燈吧</button>`)}
@@ -2871,12 +2958,14 @@ function islandSnapshot(withStats) {
   const g = guide(), h = homeOf();
   const snap = { v: 1, at: S.today, title: D.cfg.islandName || '我的島', level: D.level, season: solarTerm(S.today), walk: D.exDays.length,
     guide: { name: g.name, emoji: g.emoji }, residents, roommates, pts: pointsUntil(null), bond: D.bond,
-    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx() };
+    mate: keeperOf('home') ? { name: keeperOf('home').name, emoji: keeperOf('home').emoji } : null,
+    diary: diaryPages().filter(dt => S.save['diary:' + dt].shared).slice(-14).map(dt => ({ date: dt, text: S.save['diary:' + dt].text, emoji: S.save['diary:' + dt].emoji || '' })),
+    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx() };
   if (withStats) snap.stats = { streakWeeks: D.streak, weekDone: weekDoneCount() };
   return snap;
 }
 function shareList(withStats) {
-  const yes = ['小島的樣子、島名和等級', '五位島民的名字和個性', '你的家和島民家的擺設'].concat(withStats ? ['連續週數（' + D.streak + ' 週）、這週完成 ' + weekDoneCount() + ' 項'] : []);
+  const yes = ['小島的樣子、島名和等級', '五位島民的名字和個性', '你的家和島民家的擺設', '你按了分享的日めくり'].concat(withStats ? ['連續週數（' + D.streak + ' 週）、這週完成 ' + weekDoneCount() + ' 項'] : []);
   const no = ['大考成績和等級', '計畫、每日紀錄、錯題', '信箱、島民的信、你上傳的圖片'].concat(withStats ? [] : ['連續週數、這週完成幾項']);
   return `<div class="row" style="align-items:flex-start;margin-top:8px"><div class="grow" style="min-width:150px"><b style="color:#2e7d32">✅ 訪客看得到</b>
       <ul style="margin:4px 0;padding-left:18px">${yes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
@@ -3147,9 +3236,12 @@ function viewGuide() {
   ${sec('🏠', '我的家', p('島中央的碼頭是你的家。按右上角的房子圖示（或在 3D 小島點中間的房子）就能回家。第一次回家先幫它取名字、選屋頂和牆壁的顏色，之後隨時可以改。') +
     p('島嶼升級時，房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓小屋（Lv.7）→ 海邊洋館（Lv.10）。房子越大，房間能擺的家具越多。') +
     p('房間可以用 <b>3D</b> 看：一根手指拖曳轉動、兩指拉近；手機比較舊的話按「🖼️ 平面」。') +
-    p('家具在「家具店」用島幣買，買了就是你的，可以隨時收起來或擺出來。每天會有一位島民來作客，跟你越要好（跨科連結越多）的島民越常來。島民寫給你的信和嚮導的新聞，都收在家裡的 📬 信箱，可以翻舊信。') +
+    p('家具在「家具店」用島幣買，買了就是你的，可以隨時收起來或擺出來。每天會有一位島民來作客，跟你越要好（跨科連結越多）的島民越常來。島民寫給你的信和嚮導的新聞，都在首頁的 📮 郵便受け。') +
+    p('家是休息的地方，不放讀書的東西（會考倒數鐘搬到燈塔了，買過的已經退還島幣）。家門口的暖簾可以在「🎨 改外觀」換花色，家的名字會寫在木門牌上。') +
+    p('可以邀一位同住的夥伴（寵物或室友都可以，自己取名、選樣子或上傳圖、寫個性）。第一次進門他會跟你說明家裡有什麼，之後你回家他會說「おかえり」。') +
+    p('牆上的 📆 日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，大約 30 字，寫完同住夥伴會回你一個表情；按 ◀ ▶ 可以翻回去看。不寫也沒關係，不會提醒、也沒有獎勵。每一頁預設只有你自己看得到，想給家人看的那頁按「分享給家人」，隨時可以收回。') +
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
-    p('拿到的 🏅 徽章也掛在家裡，在信箱下面。'))}
+    p('拿到的 🏅 徽章也掛在家裡，在最下面。'))}
   ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，一天最多 ' + MOVE_CAP + ' 個；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。'))}
   ${sec('🏃', '運動集章卡', p('首頁「今日のおつとめ」的「🏃 運動」那一行，或海邊步道頁的集章卡，就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
     p('每蓋一章 +5 經驗值，島的海邊會多鋪一段木棧道，每三章多一盞燈籠。一週（週一到週日）集滿 3 章，🪙 +3。') +
