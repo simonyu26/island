@@ -233,8 +233,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.14';
+const APP_VERSION = '2.15';
 const CHANGELOG = [
+  { v: '2.15', date: '2026-10-25', items: ['📖 故事任務變成連續劇：答對之後，島民會依自己的個性、跟其他島民的關係，接著寫下一章；下次輪到這條街或巷子，就會接著演', '📚 每條故事都可以回看，還有前情提要'] },
   { v: '2.14', date: '2026-10-25', items: ['🏠 我的家變成休息的地方：可以邀一位同住的夥伴（寵物或室友，自己取名、選樣子或上傳圖），你回家時會說「おかえり」', '📆 日めくり：睡前寫今天的一句話或心情，同住夥伴會回你一個表情；只有你看得到，想給家人看的頁再按分享', '🎐 家門口掛上暖簾（六種花色），家的名字寫在木門牌上', '⏰ 會考倒數鐘搬到燈塔，已經買的退還島幣；家裡的信箱拿掉了（信都在首頁的郵便受け）', '📮 首頁每天會直接露出一位島民的信，嚮導的早安也會聊一個脆上的話題'] },
   { v: '2.13', date: '2026-10-25', items: ['🖼️ 海邊步道、燈塔、植木屋的管理員也可以上傳自己畫的圖或照片當樣子，跟島民一樣'] },
   { v: '2.12', date: '2026-10-25', items: ['⏱️ 運動計時：在海邊步道按「出發」，回來按「回來了」。每運動 25 分鐘留下一個足あと 👣 +10 綠點，一天最多 2 個', '一次運動滿 20 分鐘自動蓋今天的章；沒帶手機還是可以手動蓋章（沒有綠點）', '讀書和運動一次只能計一個'] },
@@ -592,10 +593,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -1948,9 +1949,14 @@ function todayQuest() {
 }
 function questCard() {
   const q = todayQuest(), who = laneWho(q.lane), it = q.item;
-  const story = esc(q.story).replace('{who}', `<b>${esc(who.name)}</b>`);
+  // 連續劇（v2.15）：答對後 AI 依上一章、島民個性與關係接著寫下一章，存在 story:<巷子>；還沒寫好就用題庫的開場
+  const arc = storyOf(q.lane), ch = arc.ch.find(c => c.n === q.chapter);
+  const ask = esc(q.story).replace('{who}', `<b>${esc(who.name)}</b>`);
+  const story = ch ? esc(ch.text) + `<div style="margin-top:8px">${ask}</div>` : ask;   // 連續劇接著演，再帶出今天這題的難題
+  const recap = ch && q.chapter > 1 && arc.sum ? `<div class="muted" style="margin-top:6px">前情提要：${esc(arc.sum)}</div>` : '';
   const head = `<div class="row"><span class="avatar">${who.pic}</span><div class="grow"><b>📖 ${esc(SUBS[GROUP[q.lane]] ? q.lane + '巷' : SUBJECT_NAME[q.lane] + '街')}的故事・第 ${q.chapter} 章</b>
-      <div class="speech" style="margin-top:6px">${story}</div></div></div>
+      ${recap}<div class="speech" style="margin-top:6px">${story}</div>
+      ${arc.ch.length ? `<button class="ghost" style="padding:4px 10px;margin-top:6px;font-size:13px" onclick="openStory('${q.lane}')">📚 回看這條故事（${arc.ch.length} 章）</button>` : ''}</div></div>
     <div style="margin:12px 0 8px;font-weight:700">${esc(it.q)}</div>`;
   if (q.saved && q.saved.done) {
     const ok = q.saved.correct, pick = q.saved.choice;
@@ -1958,7 +1964,7 @@ function questCard() {
     return `<div class="card" id="questCard">${head}
       <div class="opts">${it.o.map((o, i) => `<button class="opt ${i === it.a ? 'right' : i === pick ? 'wrong' : ''}" disabled>${esc(o)}</button>`).join('')}</div>
       <div class="speech" style="margin-top:10px">${ok ? '⭕ 答對了！' : '❌ 這次沒答對。'}${esc(it.ex)}<br><b>${esc(who.name)}</b>：${esc(outro)}</div>
-      <div class="muted" style="margin-top:6px">+${ok ? QUEST_XP.right : QUEST_XP.wrong} 經驗值。明天島上會有新的故事。</div></div>`;
+      <div class="muted" style="margin-top:6px">+${ok ? QUEST_XP.right : QUEST_XP.wrong} 經驗值。${ok ? (storyOf(q.lane).ch.some(c => c.n === q.chapter + 1) ? '下一章已經寫好了，下次輪到這條巷子就會接著演 ✨' : '島民正在想下一章的故事…') : '下次答對，故事就會往下走。'}</div></div>`;
   }
   return `<div class="card" id="questCard" style="border:2px dashed var(--gold)">${head}
     <div class="opts">${it.o.map((o, i) => `<button class="opt" onclick="questAnswer(${i})">${esc(o)}</button>`).join('')}</div>
@@ -1973,7 +1979,26 @@ async function questAnswer(i) {
     S = await call('saveQuest', S.today, { qid: q.qid, lane: q.lane, choice: i, correct, rerolls: q.rerolls, done: true });
     D = derive(S); toast(correct ? '答對了！+' + QUEST_XP.right + ' 經驗值 🎉' : '+' + QUEST_XP.wrong + ' 經驗值，這題漂到燈塔海灘了'); render();
     crossCheckLater('quest:' + S.today, { q: q.item.q, o: q.item.o });
+    if (correct) storyNextLater(q);
   } catch (e) { toast('送出失敗：' + (e.message || e)); document.querySelectorAll('#questCard .opt').forEach(b => b.disabled = false); }
+}
+function storyOf(lane) { const a = S.save['story:' + lane] || {}; return { ch: Array.isArray(a.ch) ? a.ch : [], sum: a.sum || '' }; }
+// 答對後在背景請 AI 寫下一章，寫好就存起來；失敗沒關係，下次還是用題庫的開場
+async function storyNextLater(q) {
+  const n = q.chapter + 1; if (storyOf(q.lane).ch.some(c => c.n === n)) return;
+  const who = laneWho(q.lane), s = GROUP[q.lane] || q.lane, r = resident(s), arc = storyOf(q.lane), cur = arc.ch.find(c => c.n === q.chapter);
+  const others = SUBJECTS.filter(x => x !== s).map(x => { const o = resident(x); return { name: o.name, subject: SUBJECT_NAME[x], relation: o.relation }; });
+  const ctx = { place: SUBS[s] ? q.lane + '巷' : SUBJECT_NAME[s] + '街', who: { name: who.name, personality: r.personality, relation: r.relation }, others,
+    chapter: n, last: cur ? cur.text : String(q.story).replace('{who}', who.name), sum: arc.sum, season: solarTerm(S.today), guide: guide().name };
+  try { S = await call('storyNext', q.lane, ctx); D = derive(S); if (tab === 'home') softRender(); } catch (e) { /* 下次再寫 */ }
+}
+function openStory(lane) { draft = { storyLane: lane }; tab = 'story'; render(); window.scrollTo(0, 0); }
+function viewStory() {
+  const lane = draft.storyLane, arc = storyOf(lane), who = laneWho(lane), s = GROUP[lane] || lane;
+  return `<div class="card"><div class="row"><span class="avatar">${who.pic}</span><h2 class="grow" style="margin:0">📚 ${esc(SUBS[s] ? lane + '巷' : SUBJECT_NAME[s] + '街')}的故事</h2></div>
+      ${arc.sum ? `<div class="muted" style="margin-top:6px">到目前為止：${esc(arc.sum)}</div>` : ''}</div>
+    ${arc.ch.slice().sort((a, b) => a.n - b.n).map(c => `<div class="card"><b>第 ${c.n} 章</b><span class="muted">・${short(c.at)}</span><div style="margin-top:6px;white-space:pre-wrap">${esc(c.text)}</div></div>`).join('') || '<div class="card muted">故事還沒開始。答對這條巷子的故事任務，就會寫出下一章。</div>'}
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 async function questReroll() {
   const q = todayQuest(); if (q.rerolls >= 1) return;
@@ -3271,6 +3296,7 @@ function viewGuide() {
   ${sec('📖', '故事任務', p('每天打開小島，會有一位島民（或室友）遇到難題來找你幫忙：可能是石碑上的詩句、燈塔的電路、或是颱風的風向。幫他解一題會考範圍的選擇題，就是今天的任務。') +
     p(`答對 +${QUEST_XP.right} 經驗值；答錯也有 +${QUEST_XP.wrong}，而且會看到解說。每天可以按「🎲 換一個」一次，換成別條巷子的故事。`) +
     p('比較少讀的巷子比較常來求救。每條巷子的故事有好幾章，答對一章，下次就會遇到下一章。任務是額外加分，不會動到你的計畫，也不會寫進試算表。') +
+    p('故事是<b>連續劇</b>：答對之後，島民會照自己的個性、跟其他島民的關係，還有之前發生過的事，接著寫下一章，常常會留一個小懸念。下次輪到這條巷子，任務卡上會先有「前情提要」，再接著演。按「📚 回看這條故事」可以從第一章重看。') +
     p('如果覺得題目或答案怪怪的，跟爸爸說。'))}
   ${sec('⚔️', '挑戰任務（賺島幣）', p(`故事任務下面是「挑戰任務」：先選科目（或讓島民隨便挑），再選難度，島民就會拿一題<b>會考考古題</b>（106～115 年）來問你，題目和通過率來自心測中心。每天最多 ${XQ_DAILY} 題，三種難度可以自由搭配；上一題答完才能再挑下一題。`) +
     `<table><tr><th>難度</th><th>大概多少人答得對</th><th>答對</th></tr>${Object.keys(XQ_TIERS).map(k => { const t = XQ_TIERS[k];
