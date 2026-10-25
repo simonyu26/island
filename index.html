@@ -69,6 +69,12 @@
   .seg button[data-s="2"].on { background: var(--plum); color: #fff; }
   .seg button[data-s="1"].on { background: var(--plum-mid); color: #fff; }
   .seg button[data-s="0"].on { background: var(--plum-light); color: var(--plum); }
+  .tbtn { padding: 6px 9px; background: var(--sand); color: var(--plum); }
+  .focus { background: var(--sand); border-radius: 14px; padding: 12px 14px; margin: 8px 0; }
+  .focus .clock { font-size: 34px; font-weight: 700; color: var(--plum); font-variant-numeric: tabular-nums; }
+  .focus select { width: auto; flex: 1; min-width: 0; }
+  .focusPill { position: sticky; top: 6px; z-index: 5; display: flex; gap: 8px; align-items: center; background: var(--sand); color: var(--plum);
+               border: 1.5px solid var(--plum-light); border-radius: 999px; padding: 6px 14px; margin-bottom: 10px; cursor: pointer; }
   .check { width: 22px; height: 22px; accent-color: var(--plum); }
 
   .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
@@ -208,8 +214,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.8.2';
+const APP_VERSION = '2.9';
 const CHANGELOG = [
+  { v: '2.9', date: '2026-10-25', items: ['⏳ 讀書計時：開始讀書時按 ⏳，讀完按停止。每專心 25 分鐘集一顆砂時計 +10 綠點，一天最多 4 顆（綠點之後可以拿來種樹）', '📝 讀完了再勾「讀完了」，經驗值照舊從完成的項目來；一項分好幾次讀、或一次讀好幾項都可以'] },
   { v: '2.8.2', date: '2026-10-25', items: ['🐢 島民、管理員的樣子可以選紫色的烏龜，在 3D 小島和房間裡也是紫色的'] },
   { v: '2.8.1', date: '2026-10-25', items: ['🐢 讓島順起來「卡卡的」換成紫色的烏龜'] },
   { v: '2.8', date: '2026-10-25', items: ['📋 首頁變清爽了：最上面是「今日のおつとめ」，今天要做的事一行一件，右邊標好做了沒，點一下就展開', '📮 右上角多了郵便受け：小島更新、家人寄的明信片、邀請、爸爸的回覆都收在這裡，有新東西會亮紅點', '🏃 運動集章卡搬到海邊步道自己的頁面，管理員在那裡等你；首頁那一行也能直接蓋章', '🏝️ 3D 小島往上移，打開就看得到；島民的信和新聞收進嚮導的回覧板', '🏅 徽章搬到我的家'] },
@@ -399,6 +406,16 @@ function derive(S) {
   const exDays = Object.keys(save).filter(k => k.startsWith('ex:') && save[k]).map(k => k.slice(3)).sort();
   const exWeeks = {}; exDays.forEach(d => { const w = mondayOf(d); exWeeks[w] = (exWeeks[w] || 0) + 1; });
   xp += exDays.length * 5;
+  // 讀書計時（focus:日期）：同一次計時（s）每整整 25 分鐘一顆砂時計 +10 綠點，一天最多 4 顆；只看時間，跟打勾無關。
+  // 砂時計不給經驗值和島幣（Simon，2026-10-25），綠點只從這裡來，種樹那邊用 D.focusGreen 算（開張禮＋focusGreen－種樹花掉的）
+  const focusDays = {}; let focusGlass = 0;
+  Object.keys(save).filter(k => k.startsWith('focus:') && save[k]).forEach(k => {
+    const per = {}, d = { min: 0, glass: 0 };
+    (save[k].list || []).forEach(x => { per[x.s] = (per[x.s] || 0) + (x.min || 0); d.min += x.min || 0; });
+    d.glass = Math.min(FOCUS_CAP, Object.values(per).reduce((a, m) => a + Math.floor(m / FOCUS_GLASS), 0));
+    focusDays[k.slice(6)] = d;
+    focusGlass += d.glass;
+  });
   const exCoins = Object.values(exWeeks).filter(n => n >= EX_GOAL).length * 3;
   let exStreak = 0, exBest = 0;
   if (exDays.length) {
@@ -458,7 +475,7 @@ function derive(S) {
 
   return { cfg, xp, coins, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
-           exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks };
+           exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN };
 }
 
 /* ===== 共用 ===== */
@@ -539,10 +556,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + ({ walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -551,6 +568,8 @@ function render() {
   if (tab === 'plan') bindPlan();
   if (tab === 'pick') bindPicker();
   if (tab === 'confirm') bindConfirm();
+  if (tab === 'focus') bindFocusStop();
+  focusTick();
 }
 function go(t) { if (t === 'plan') { planWeek = null; planDay = null; } tab = t; draft = {}; render(); window.scrollTo(0, 0); }
 
@@ -603,7 +622,8 @@ function viewHome() {
 let boardOpen = '';   // 展開的那一行；'' 是全部收起來（打開 App 時先收起來，3D 小島才看得到）
 const BOARD = [
   { key: 'plan', ic: '📝', name: '讀書計畫',
-    st() { const p = todayPlan(); return !p.rows.length ? { t: p.extra ? '計畫外 ' + p.extra + ' 項' : '今天沒排', c: 'info' } : { t: (p.done >= p.rows.length ? '✓ ' : '') + p.done + '／' + p.rows.length, c: p.done >= p.rows.length ? 'done' : 'todo' }; },
+    st() { const f = focusActive(); if (f) return { t: (f.pausedAt ? '☕ ' : '⏳ ') + clockText(focusMs(f)), c: 'todo', clock: 1 };
+      const p = todayPlan(); return !p.rows.length ? { t: p.extra ? '計畫外 ' + p.extra + ' 項' : '今天沒排', c: 'info' } : { t: (p.done >= p.rows.length ? '✓ ' : '') + p.done + '／' + p.rows.length, c: p.done >= p.rows.length ? 'done' : 'todo' }; },
     todo() { const p = todayPlan(); return p.rows.length > 0 && p.done < p.rows.length; },
     body() { return todayCard(true); } },
   { key: 'walk', ic: '🏃', name: '運動',
@@ -636,7 +656,7 @@ function boardCard() {
   return `<div class="card board" id="boardCard"><div class="row"><h3 class="grow" style="margin:0">📋 今日のおつとめ</h3><span class="muted">週${DAYS[di]} ${short(S.today)}</span></div>
     ${todo.length ? '' : '<div class="speech" style="margin-top:8px">🎉 今天的おつとめ都完成了！去島上逛逛吧～</div>'}
     <div style="margin-top:4px">${BOARD.map(b => { const st = b.st(), on = !b.go && open === b.key;
-      return `<button class="brow" onclick="boardTap('${b.key}')" aria-expanded="${on}"><span class="ic">${b.ic}</span><span class="nm">${b.name}</span><span class="st ${st.c}">${esc(st.t)}</span><span class="chev">${b.go ? '›' : on ? '▴' : '▾'}</span></button>`
+      return `<button class="brow" onclick="boardTap('${b.key}')" aria-expanded="${on}"><span class="ic">${b.ic}</span><span class="nm">${b.name}</span><span class="st ${st.c}${st.clock ? ' focusClock' : ''}">${esc(st.t)}</span><span class="chev">${b.go ? '›' : on ? '▴' : '▾'}</span></button>`
         + (on ? `<div class="bbody">${b.body()}</div>` : ''); }).join('')}</div></div>`;
 }
 function boardTap(key) {
@@ -1847,13 +1867,177 @@ document.addEventListener('click', e => {
   setLog(g.dataset.date, Number(g.dataset.row), Number(b.dataset.s));
 });
 
+/* ===== 讀書計時（集中の砂時計，v2.9） =====
+   計時只給「時間」的綠點（砂時計）；經驗值還是從勾「讀完了」來，寫進同一格 log:日期，所以不會和自己打的勾重複算。
+   計時中的狀態存在這支手機的 localStorage（focusActive），按停止、存好之後才寫回 focus:日期。 */
+const FOCUS_GLASS = 25, FOCUS_GREEN = 10, FOCUS_CAP = 4, FOCUS_MAX = 90;   // 一顆幾分鐘、一顆幾綠點、一天最多幾顆、一次最多算幾分鐘
+function focusActive() { if (isFamily()) return null; try { return JSON.parse(local.get('focusActive') || 'null'); } catch (e) { return null; } }
+function focusPut(f) { if (f) local.set('focusActive', JSON.stringify(f)); else local.del('focusActive'); }
+// 一段的專心時間（毫秒）：結束（或現在）減開始，再扣掉休息
+function segMs(g, f, now) { return Math.max(0, (g.end || now) - g.start - (g.pause || 0) - (!g.end && f.pausedAt ? now - f.pausedAt : 0)); }
+function focusMs(f, now) { now = now || Date.now(); return f.segs.reduce((a, g) => a + segMs(g, f, now), 0); }
+function clockText(ms) { if (ms >= FOCUS_MAX * 60000) return FOCUS_MAX + ':00+';   // 超過一次的上限就不再往上跳
+  const m = Math.floor(ms / 60000), sec = Math.floor(ms / 1000) % 60; return m + ':' + String(sec).padStart(2, '0'); }
+function itemLabel(r) { const it = D.itemsByRow[r]; return it ? it.subject + '・' + it.name : '不指定項目'; }
+function focusWho(r) { const it = D.itemsByRow[r], g = it && (GROUP[it.subject] || it.subject); return SUBJECT_NAME[g] ? resident(g) : guide(); }
+function focusBtn(r) { return isFamily() || focusActive() ? '' : `<button class="tbtn" onclick="focusStart(${r})" aria-label="開始計時">⏳</button>`; }
+function focusOptions(sel) {
+  const today = planOf(mondayOf(S.today)).days[dayIdx(S.today)].filter(r => D.itemsByRow[r]);
+  const opt = r => `<option value="${r}" ${r === sel ? 'selected' : ''}>${esc(itemLabel(r))}</option>`;
+  const bySub = {}; S.items.forEach(it => { if (!today.includes(it.row)) (bySub[it.subject] = bySub[it.subject] || []).push(it.row); });
+  return (today.length ? `<optgroup label="今天的計畫">${today.map(opt).join('')}</optgroup>` : '') + opt(0)
+    + Object.keys(bySub).map(k => `<optgroup label="${esc(k)}">${bySub[k].map(opt).join('')}</optgroup>`).join('');
+}
+function glassText(min, date) {
+  const before = Math.min(FOCUS_CAP, (D.focusDays[date] || {}).glass || 0), n = Math.floor(min / FOCUS_GLASS);
+  const left = FOCUS_CAP - before;
+  if (left <= 0) return '今天的砂時計集滿 ' + FOCUS_CAP + ' 顆了，再讀也很棒，只是不再加綠點。';
+  return (n ? '已集 ' + '⏳'.repeat(Math.min(n, left)) + '・' : '') + (n >= left ? '今天的砂時計集滿了！' : '下一顆還差 ' + (FOCUS_GLASS - min % FOCUS_GLASS) + ' 分鐘');
+}
+function focusBlock() {
+  if (isFamily()) return '';
+  const f = focusActive();
+  if (!f) return `<div class="focus"><div class="muted">要開始讀了嗎？按項目旁的 ⏳，或在這裡選一項開始計時。每專心 ${FOCUS_GLASS} 分鐘集一顆砂時計，🌱 +${FOCUS_GREEN} 綠點。</div>
+      <div class="row" style="margin-top:6px"><select id="fStart">${focusOptions(-1)}</select><button class="tbtn" onclick="focusStart(Number(document.getElementById('fStart').value))">⏳ 開始</button></div></div>`;
+  const cur = f.segs[f.segs.length - 1], w = focusWho(cur.row), min = Math.floor(focusMs(f) / 60000);
+  const lines = ['我陪你一起讀，加油！', '專心一下下，等等再休息。', '你已經開始了，最難的一步做完了。'];   // 用開始時間挑一句，同一次計時不會一直換
+  return `<div class="focus" id="focusBox"><div class="row"><span class="grow"><b>${esc(itemLabel(cur.row))}</b>${f.date !== S.today ? '（' + short(f.date) + ' 開始的）' : ''}</span><span class="muted">${f.pausedAt ? '☕ 休息中' : '⏳ 計時中'}</span></div>
+    <div class="row"><span class="clock grow focusClock">${clockText(focusMs(f))}</span><span class="muted focusGlass">${glassText(min, f.date)}</span></div>
+    ${min >= FOCUS_MAX ? `<div class="speech" style="margin:6px 0">已經 ${FOCUS_MAX} 分鐘了，還在讀嗎？先停下來休息一下吧。如果早就讀完了，按停止時可以把結束時間改早一點。</div>` : `<div class="muted" style="margin:4px 0">${w.emoji} ${esc(w.name)}：「${lines[f.sid % lines.length]}」</div>`}
+    <div class="row" style="margin-top:6px"><button class="ghost" onclick="focusPause()">${f.pausedAt ? '▶ 繼續' : '☕ 休息一下'}</button>
+      <button class="grow" onclick="focusStopOpen()">⏹ 停止</button></div>
+    <div class="row" style="margin-top:8px"><span class="muted">換下一項</span><select id="fNext" onchange="focusSwitch(Number(this.value))">${focusOptions(cur.row)}</select></div>
+    <div class="muted" style="margin-top:4px">休息的時間不算。關掉 App 也會繼續計時，回來再按停止就好。🌱 已存 ${D.focusGreen} 綠點，植木屋開張後可以種樹。</div></div>`;
+}
+function focusPill() {
+  const f = focusActive(); if (!f) return '';
+  return `<div class="focusPill" onclick="focusOpen()"><span>${f.pausedAt ? '☕' : '⏳'}</span><span class="grow">${esc(itemLabel(f.segs[f.segs.length - 1].row))}</span><b class="focusClock">${clockText(focusMs(f))}</b></div>`;
+}
+function focusOpen() { tab = 'home'; draft = {}; boardOpen = 'plan'; render(); }
+function focusRefresh() { D = derive(S); if (tab === 'home') softRender(); else render(); focusTick(); }
+function focusStart(r) {
+  if (focusActive()) return toast('已經有一個在計時了');
+  const now = Date.now();
+  focusPut({ date: S.today, sid: now, segs: [{ row: r, start: now, pause: 0 }], pausedAt: null });
+  boardOpen = 'plan'; focusRefresh(); toast('⏳ 開始計時，加油！');
+}
+function focusPause() {
+  const f = focusActive(); if (!f) return;
+  const now = Date.now(), cur = f.segs[f.segs.length - 1];
+  if (f.pausedAt) { cur.pause = (cur.pause || 0) + now - f.pausedAt; f.pausedAt = null; } else f.pausedAt = now;
+  focusPut(f); focusRefresh();
+}
+function focusSwitch(r) {
+  const f = focusActive(); if (!f) return;
+  const now = Date.now(), cur = f.segs[f.segs.length - 1];
+  if (cur.row === r) return;
+  if (f.pausedAt) { cur.pause = (cur.pause || 0) + now - f.pausedAt; f.pausedAt = null; }
+  cur.end = now;
+  f.segs.push({ row: r, start: now, pause: 0 });
+  focusPut(f); focusRefresh(); toast('換成「' + itemLabel(r) + '」，時間接著算');
+}
+// 每秒更新畫面上的時鐘（只改文字，不重畫）
+function focusTick() {
+  clearTimeout(focusTick.h);
+  const f = focusActive(); if (!f) return;
+  const ms = focusMs(f), t = clockText(ms);
+  document.querySelectorAll('.focusClock').forEach(el => el.textContent = el.classList.contains('st') ? (f.pausedAt ? '☕ ' : '⏳ ') + t : t);
+  document.querySelectorAll('.focusGlass').forEach(el => el.textContent = glassText(Math.floor(ms / 60000), f.date));
+  focusTick.h = setTimeout(focusTick, 1000);
+}
+
+/* --- 按停止：確認結束時間、勾哪幾項讀完了 --- */
+function hhmm(ms) { const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+// 照結束時間把每一段切好，最多算 FOCUS_MAX 分鐘；回傳 [{ row, start, end, min }]
+function focusCut(f, endAt) {
+  let left = FOCUS_MAX * 60000;
+  return f.segs.map(g => {
+    if (g.start >= endAt || left <= 0) return null;
+    const end = Math.min(g.end || endAt, endAt);
+    let ms = Math.max(0, Math.min(end - g.start - (g.pause || 0), left));
+    left -= ms;
+    return { row: g.row, start: g.start, end: g.start + (g.pause || 0) + ms, ms };
+  }).filter(Boolean);
+}
+function focusStopOpen() {
+  const f = focusActive(); if (!f) return;
+  const now = Date.now(), cur = f.segs[f.segs.length - 1];
+  const ff = JSON.parse(JSON.stringify(f));   // 停止畫面用副本；按「回去繼續讀」時原本的計時不變
+  if (ff.pausedAt) { ff.segs[ff.segs.length - 1].pause = (cur.pause || 0) + now - ff.pausedAt; ff.pausedAt = null; }
+  // 最晚算到：現在、開始那天的 23:59、或剛好讀滿 90 分鐘的時候
+  const dayEnd = parseD(ff.date).getTime() + 86400000 - 60000;
+  const cut = focusCut(ff, Math.min(now, dayEnd)), last = cut[cut.length - 1];
+  const maxEnd = last ? last.end : Math.min(now, dayEnd);
+  const lg = logOf(ff.date), choice = {}; [...new Set(ff.segs.map(g => g.row))].filter(r => r).forEach(r => choice[r] = lg[r] || 0);
+  tab = 'focus'; draft = { focus: { f: ff, maxEnd, endAt: maxEnd, choice, more: false } }; render(); window.scrollTo(0, 0);
+}
+function viewFocusStop() {
+  const st = draft.focus; if (!st) { tab = 'home'; return viewHome(); }
+  const f = st.f, cut = focusCut(f, st.endAt), min = Math.floor(cut.reduce((a, g) => a + g.ms, 0) / 60000);
+  const byRow = {}; cut.forEach(g => byRow[g.row] = (byRow[g.row] || 0) + g.ms);
+  const lg = logOf(f.date), w = focusWho(f.segs[0].row);
+  const capped = st.maxEnd < Date.now() - 60000;
+  const before = Math.min(FOCUS_CAP, (D.focusDays[f.date] || {}).glass || 0), gain = Math.max(0, Math.min(Math.floor(min / FOCUS_GLASS), FOCUS_CAP - before));
+  const rowsHere = Object.keys(st.choice).map(Number);
+  const planRows = planOf(mondayOf(f.date)).days[dayIdx(f.date)].filter(r => D.itemsByRow[r] && !rowsHere.includes(r));
+  const line = r => `<div class="item"><div class="name">${esc(itemLabel(r))}${byRow[r] ? `<div class="muted">這次讀了 ${Math.round(byRow[r] / 60000)} 分鐘</div>` : ''}</div>${lg[r] === 2 ? '<span class="muted">✓ 今天已經記過完成了</span>'
+    : `<div class="seg fseg" data-row="${r}">${[[0, '還沒完'], [1, '部分'], [2, '讀完了']].map(([v, t]) => `<button data-s="${v}" class="${(st.choice[r] || 0) === v ? 'on' : ''}">${t}</button>`).join('')}</div>`}</div>`;
+  return `<div class="card"><h2>⏹ 這次讀了 ${min} 分鐘</h2>
+      <div class="speech">${w.emoji} ${esc(w.name)}：「辛苦了！${gain ? '這次集到 ' + '⏳'.repeat(gain) + '，+' + gain * FOCUS_GREEN + ' 綠點。' : min < FOCUS_GLASS ? '再多讀一點，滿 ' + FOCUS_GLASS + ' 分鐘就有一顆砂時計喔。' : '今天的砂時計已經集滿了，還是很棒！'}」</div>
+      <div class="muted" style="margin-top:6px">🌱 已存 ${D.focusGreen + gain * FOCUS_GREEN} 綠點，植木屋開張後可以種樹。</div>
+      ${capped ? `<div class="muted" style="margin-top:8px">計時開了很久，一次最多算 ${FOCUS_MAX} 分鐘${f.date !== S.today ? '（算在 ' + short(f.date) + '）' : ''}。</div>` : ''}
+      <div class="row" style="margin-top:10px"><label class="grow" style="margin:0">什麼時候停下來的？忘了按停止可以改早一點</label><input type="time" id="fEnd" value="${hhmm(st.endAt)}" style="width:auto"></div></div>
+    <div class="card"><h3>這次讀的項目，讀完了嗎？</h3>
+      <div class="muted">沒讀完也沒關係，時間已經算進砂時計了。下次接著讀完再勾「讀完了」，就會拿到這一項的經驗值（每一項每天算一次）。</div>
+      ${rowsHere.length ? rowsHere.map(line).join('') : '<div class="muted" style="margin-top:6px">這次沒有指定項目。如果有讀完今天的計畫，可以在下面勾。</div>'}
+      ${planRows.length ? (st.more ? `<div class="subj">今天計畫裡的其他項目</div>` + planRows.map(line).join('') : `<button class="ghost" style="margin-top:8px" onclick="draft.focus.more=true;render()">＋ 這次還讀完了別的</button>`) : ''}
+      <div class="row" style="margin-top:12px"><button id="fSave" class="grow">存好 ✨</button><button class="ghost" onclick="draft={};focusOpen()">回去繼續讀</button></div>
+      <div style="margin-top:8px"><button class="ghost" onclick="focusDiscard()">這次不算，丟掉</button></div></div>`;
+}
+function bindFocusStop() {
+  const st = draft.focus; if (!st) return;
+  document.querySelectorAll('.fseg').forEach(g => g.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    st.choice[Number(g.dataset.row)] = Number(b.dataset.s); render();
+  });
+  const end = document.getElementById('fEnd');
+  end.onchange = () => {
+    const m = end.value.match(/^(\d{2}):(\d{2})$/); if (!m) return;
+    const t = parseD(st.f.date).getTime() + (Number(m[1]) * 60 + Number(m[2])) * 60000;
+    st.endAt = Math.max(st.f.sid, Math.min(t, st.maxEnd)); render();
+  };
+  document.getElementById('fSave').onclick = () => {
+    const f = st.f, date = f.date, cut = focusCut(f, st.endAt);
+    const list = cut.map(g => ({ row: g.row, s: f.sid, start: g.start, end: g.end, min: Math.floor(g.ms / 60000) })).filter(g => g.min >= 1);
+    if (list.length) {
+      const all = ((S.save['focus:' + date] || {}).list || []).concat(list);
+      S.save['focus:' + date] = { list: all };
+      queueSave('focus:' + date, 'saveFocus', date, all);
+    }
+    // 只往上記（還沒完 → 部分 → 讀完了），不會把已經記好的取消
+    const rows = Object.assign({}, logOf(date)); let changed = false;
+    Object.keys(st.choice).forEach(r => { const v = st.choice[r]; if (v > (rows[r] || 0)) { rows[r] = v; changed = true; } });
+    if (changed) { S.save['log:' + date] = { rows }; queueSave('log:' + date, 'logDay', date, rows); }
+    const before = D.xp, gBefore = D.focusGlass;
+    focusPut(null); D = derive(S);
+    const gain = D.xp - before, green = (D.focusGlass - gBefore) * FOCUS_GREEN;
+    toast('存好了！' + (green ? '+' + green + ' 綠點 ⏳' : '') + (gain ? ' +' + gain + ' 經驗值' : ''));
+    draft = {}; tab = 'home'; boardOpen = 'plan'; render(); window.scrollTo(0, 0);
+  };
+}
+function focusDiscard() {
+  if (!confirm('這次的計時不記下來，確定嗎？')) return;
+  focusPut(null); draft = {}; focusOpen();
+}
+
 function todayCard(inBoard) {
   const di = dayIdx(S.today), rows = planOf(mondayOf(S.today)).days[di], lg = logOf(S.today);
   const extra = Object.keys(lg).map(Number).filter(r => !rows.includes(r));
   const doneN = rows.filter(r => lg[r]).length;
   return `<div class="card" id="todayCard">${inBoard ? '' : `<div class="row"><h3 class="grow">📝 今天・週${DAYS[di]} ${short(S.today)}</h3><span class="muted syncState">${syncState}</span></div>`}
-    ${rows.length ? `<div class="row"><span class="muted grow">計畫 ${rows.length} 項，已記錄 ${doneN} 項</span>${inBoard ? `<span class="muted syncState">${syncState}</span>` : ''}</div>` + itemList(rows, r => seg(S.today, r)) + pendingList(rows, mondayOf(S.today), di, false) : '<div class="muted">今天沒有排計畫。可以到「📅 計畫」排這週，或直接記下今天做了什麼。</div>'}
-    ${extra.length ? `<div class="subj">計畫外</div>` + itemList(extra, r => seg(S.today, r)) : ''}
+    ${focusBlock()}
+    ${rows.length ? `<div class="row"><span class="muted grow">計畫 ${rows.length} 項，已記錄 ${doneN} 項</span>${inBoard ? `<span class="muted syncState">${syncState}</span>` : ''}</div>` + itemList(rows, r => focusBtn(r) + seg(S.today, r)) + pendingList(rows, mondayOf(S.today), di, false) : '<div class="muted">今天沒有排計畫。可以到「📅 計畫」排這週，或直接記下今天做了什麼。</div>'}
+    ${extra.length ? `<div class="subj">計畫外</div>` + itemList(extra, r => focusBtn(r) + seg(S.today, r)) : ''}
     <div class="row" style="margin-top:10px"><button class="ghost" onclick="openPicker('log', S.today)">＋ 記錄計畫外的項目</button></div>
     <div class="muted" style="margin-top:6px">點「完成」或「部分」就會自動存好。不一定要每天記，週日一次補也可以。</div></div>`;
 }
@@ -2213,13 +2397,14 @@ function viewConfirm() {
   const fmt = v => String(v).replace('.5', '½').replace(/^0½$/, '½');
   let total = 0, got = 0; Object.keys(wd.planned).forEach(r => { total += wd.planned[r]; got += Math.min(c[r] || 0, wd.planned[r]); });
   const pct = total ? Math.round(got / total * 100) : 0;
+  const fmin = {}; for (let i = 0; i < 7; i++) ((S.save['focus:' + addD(wk, i)] || {}).list || []).forEach(x => fmin[x.row] = (fmin[x.row] || 0) + (x.min || 0));
   return `<div class="card"><h2>✅ 確認 ${short(wk)}–${short(addD(wk, 6))}</h2>
       <div class="muted">每一項做了幾次，已經從每天的紀錄帶進來了。漏記的用 ＋／－ 補上，做了一半就按「½」。${wd.settled ? '<br>這週確認過了，再送出會覆蓋。' : ''}</div>
       ${total ? `<div class="row" style="margin-top:10px"><div class="bar grow" style="margin-top:0"><i id="cfBar" style="width:${pct}%"></i></div><b id="cfPct">${pct}%</b></div>` : ''}
       <div style="margin-top:8px"><button class="ghost" onclick="draft.showAll=!draft.showAll;draft.note=document.getElementById('note').value;render()">${draft.showAll ? '只看這週的計畫和紀錄' : '顯示全部項目'}</button></div></div>
     ${(() => { const p = wd.plan, blocks = p.days.map((d, i) => [i, d]).concat([[7, p.tray]]).filter(([, d]) => d.some(isPending));
       return blocks.length ? `<div class="card"><h3>❓ 還沒決定是哪一項</h3>${blocks.map(([i, d]) => `<div class="subj">${i === 7 ? '沒排天' : '週' + DAYS[i]}</div>` + pendingList(d, wk, i, false)).join('')}</div>` : ''; })()}
-    <div class="card">${rows.length ? itemList(rows, r => `<div class="step" data-row="${r}"><button data-d="-1">－</button><b>${fmt(c[r] || 0)}</b><span class="muted">/${wd.planned[r] || '－'}</span><button data-d="1">＋</button><button data-d="half" class="ghost">½</button></div>`) : '<div class="muted">這週沒有計畫也沒有紀錄。按「顯示全部項目」補記，或直接確認，當作休息週。</div>'}
+    <div class="card">${rows.length ? itemList(rows, r => (fmin[r] ? `<span class="muted">⏳ ${fmin[r]} 分</span>` : '') + `<div class="step" data-row="${r}"><button data-d="-1">－</button><b>${fmt(c[r] || 0)}</b><span class="muted">/${wd.planned[r] || '－'}</span><button data-d="1">＋</button><button data-d="half" class="ghost">½</button></div>`) : '<div class="muted">這週沒有計畫也沒有紀錄。按「顯示全部項目」補記，或直接確認，當作休息週。</div>'}
       <label>這週一句話（只會存在島上）</label><textarea id="note" placeholder="例如：數學卡在二次函數，但歷史影片看完了">${esc(draft.note != null ? draft.note : (wd.settled && wd.settled.note) || '')}</textarea>
       <div class="row" style="margin-top:12px"><button id="doConfirm" class="grow">確認這週 ✨</button><button class="ghost" onclick="draft={};tab='plan';render()">返回</button></div></div>
     ${viewLinkForm()}`;
@@ -2596,6 +2781,10 @@ function viewGuide() {
     p('上週排過的項目會出現在「最近常排的」，自己加的時候找起來比較快。'))}
   ${sec('📝', '記錄你做了什麼', p('首頁「今日のおつとめ」的「📝 讀書計畫」會列出今天排的項目，做完就點「完成」，做了一半就點「部分」，再點一次可以取消。按了就會自動存好，右上角會顯示「✓ 已存到試算表」。') +
     p('做了計畫外的項目？按「＋ 記錄計畫外的項目」。忘了記也沒關係，到計畫頁點那一天就能補，或週末確認時一次補。<b>想每天記、或只在週日記都可以</b>，小島兩種都接受。'))}
+  ${sec('⏳', '讀書計時（集中の砂時計）', p('開始讀書時，在「📝 讀書計畫」裡按項目旁邊的 ⏳，讀完按「⏹ 停止」。每專心 ' + FOCUS_GLASS + ' 分鐘集一顆砂時計，一顆 +' + FOCUS_GREEN + ' 🌱 綠點，一天最多 ' + FOCUS_CAP + ' 顆。中間想喝水就按「☕ 休息一下」，休息的時間不算。') +
+    p('綠點之後可以在島上種樹，植木屋開張以前會先幫你存著。') +
+    p('砂時計只看<b>讀了多久</b>，給的是綠點；經驗值還是從完成的項目來，讀完一項要勾「讀完了」才算完成。一項分好幾次讀完，每次的時間都會算進砂時計，最後一次再勾讀完了；一次讀好幾項，就按「換下一項」，或停止時一起勾。完成的經驗值每一項每天只算一次，所以自己按「完成」或停止時勾「讀完了」，都是同一份，不會重複算。') +
+    p('關掉 App 也會繼續計時。一次最多算 ' + FOCUS_MAX + ' 分鐘；忘了按停止的話，停止時可以把結束時間改早一點。週末確認這週時，每一項旁邊會寫這週計時了幾分鐘，給你參考。'))}
   ${sec('✅', '週末確認這週', `<ol style="padding-left:20px;line-height:1.8;margin:6px 0">
       <li>到「📅 計畫」頁，按「✅ 確認這週」。</li>
       <li>每一項做了幾次，已經從每天的紀錄帶進來了。漏記的用 ＋／－ 補，做一半就按「½」。</li>
