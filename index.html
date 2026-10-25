@@ -224,8 +224,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.10.1';
+const APP_VERSION = '2.11';
 const CHANGELOG = [
+  { v: '2.11', date: '2026-10-25', items: ['🥇 完走メダル：會考那一週（2027/5/10～5/16）也集滿 3 章、連續沒斷，就能拿到金牌，掛在我的家'] },
   { v: '2.10.1', date: '2026-10-25', items: ['🪙 經驗值換島幣改成自己按：到商店最上面按「兌換」，每 10 點換 1 枚（點首頁的島幣也會到商店）', '換了之後經驗值不會減少，島嶼等級和房子都不會變小', '島幣明細一次看清楚：開島禮物、經驗值、挑戰任務、運動、紙船、商店花掉的'] },
   { v: '2.10', date: '2026-10-25', items: ['🌱 植木屋開張了！碼頭旁多了一間小小的植木屋，先幫它請一位管理員，第一次見面送你 100 綠點', '🌸 用綠點在島上的空地種樹和花：櫻花、楓樹、繡球花、油桐花、鳳凰木…一共 12 種，會跟著節氣開花、變色', '🪵 種的時候可以寫一塊小木牌，在 3D 小島點那棵樹就看得到；樹會慢慢長大，不會枯掉', '⏳ 綠點從讀書計時來：每專心 25 分鐘一顆砂時計 +10 綠點'] },
   { v: '2.9', date: '2026-10-25', items: ['⏳ 讀書計時：開始讀書時按 ⏳，讀完按停止。每專心 25 分鐘集一顆砂時計 +10 綠點，一天最多 4 顆（綠點之後可以拿來種樹）', '📝 讀完了再勾「讀完了」，經驗值照舊從完成的項目來；一項分好幾次讀、或一次讀好幾項都可以'] },
@@ -948,7 +949,7 @@ function openHouse(who) { houseWho = who || 'me'; go('house'); }
 function houseTier() { let t = HOUSE_TIERS[0]; HOUSE_TIERS.forEach(x => { if (D.level >= x.lv) t = x; }); return t; }
 function homeOf() { return S.save.home || null; }
 function catalogFor(who) { return who === 'me' ? FURNITURE : RES_FURNITURE[who].concat(FURNITURE.filter(f => f.z !== 'out')); }
-function furnOf(id) { return FURNITURE.find(f => f.id === id) || EX_REWARDS.find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
+function furnOf(id) { return FURNITURE.find(f => f.id === id) || EX_REWARDS.concat([EX_MEDAL]).find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
 function ownedFor(who) { return [...new Set((S.save.purchases || []).filter(p => p.furniture && (p.for || 'me') === who).map(p => p.furniture).concat(who === 'me' ? exUnlocked() : []))]; }
 function ownedFurniture() { return ownedFor('me'); }
 function roomOf(who) { return who === 'me' ? homeOf() || {} : ((S.save.decor || {})[who] || {}); }
@@ -1007,9 +1008,9 @@ function furnShop(who) {
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" onclick="${has ? `toggleFurniture('${who}','${f.id}')` : `buyFurniture('${who}','${f.id}')`}" ${!has && D.coins < f.price ? 'disabled' : ''}>
         <span>${f.ic}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '🪙 ' + f.price}</small></button>`; }).join('')}</div>
     ${who === 'me' ? `<h3 style="margin-top:14px">🏐 運動獎勵</h3><div class="muted">每週運動 3 天、連續達標就會解鎖，不用島幣。</div>
-    <div class="furn">${EX_REWARDS.map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
+    <div class="furn">${EX_REWARDS.concat([EX_MEDAL]).map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
-        <span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '連續 ' + f.weeks + ' 週'}</small></button>`; }).join('')}</div>` : ''}</div>`;
+        <span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : (f.lock || '連續 ' + f.weeks + ' 週')}</small></button>`; }).join('')}</div>` : ''}</div>`;
 }
 function visitRow(except) {
   return `<div class="card"><h3>🏘️ 去島民家作客</h3><div class="row" style="justify-content:space-around">${SUBJECTS.filter(s => s !== except).map(s => { const r = resident(s);
@@ -1118,6 +1119,10 @@ function toggleFurniture(who, id) {
 /* --- 運動集章卡（ラジオ体操的集章卡）與紙船（紙本錯題檢討） --- */
 const EX_GOAL = 3;   // 一週集滿幾章算達標
 // 連續達標的週數解鎖的家具：排球用品和日本風
+const EXAM_DATES = ['2027-05-15', '2027-05-16'];   // 會考日期（Simon 提供，2026-10-25）；倒數鐘等之後的功能也用這個
+// 完走メダル：會考那一週也集滿 3 章、而且前一週也達標（連續沒斷），金牌掛在我的家
+const EX_MEDAL = { id: 'ex-medal', z: 'wall', ic: '🥇', name: '完走メダル', lock: '會考週也沒斷' };
+function exMedal() { const wk = mondayOf(EXAM_DATES[0]); return (D.exWeeks[wk] || 0) >= EX_GOAL && (D.exWeeks[addD(wk, -7)] || 0) >= EX_GOAL; }
 const EX_REWARDS = [
   { weeks: 2, id: 'ex-ball', ic: '🏐', name: '排球' }, { weeks: 4, id: 'ex-yukata', z: 'wall', ic: '👘', name: '浴衣' },
   { weeks: 6, id: 'ex-shoes', ic: '👟', name: '排球鞋＋鞋架' }, { weeks: 8, id: 'ex-torii', z: 'out', ic: '⛩️', name: '海邊鳥居燈' },
@@ -1125,7 +1130,7 @@ const EX_REWARDS = [
   { weeks: 16, id: 'ex-onsen', z: 'out', ic: '♨️', name: '小溫泉' }, { weeks: 20, id: 'ex-jersey', z: 'wall', ic: '🎽', name: '專屬排球隊服' },
   { weeks: 24, id: 'ex-sakura', z: 'out', ic: '🌸', name: '步道旁的櫻花樹' }
 ];
-function exUnlocked() { return EX_REWARDS.filter(r => D.exBest >= r.weeks).map(r => r.id); }
+function exUnlocked() { return EX_REWARDS.filter(r => D.exBest >= r.weeks).map(r => r.id).concat(exMedal() ? [EX_MEDAL.id] : []); }
 function exToday() { return !!S.save['ex:' + S.today]; }
 function habitCard() {
   const wk = mondayOf(S.today), n = D.exWeeks[wk] || 0, on = exToday();
@@ -3030,7 +3035,7 @@ function viewGuide() {
     p('拿到的 🏅 徽章也掛在家裡，在信箱下面。'))}
   ${sec('🏃', '運動集章卡', p('首頁「今日のおつとめ」的「🏃 運動」那一行，或海邊步道頁的集章卡，就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
     p('每蓋一章 +5 經驗值，島的海邊會多鋪一段木棧道，每三章多一盞燈籠。一週（週一到週日）集滿 3 章，🪙 +3。') +
-    `<table><tr><th>連續達標</th><th>解鎖的家具</th></tr>${EX_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` +
+    `<table><tr><th>連續達標</th><th>解鎖的家具</th></tr>${EX_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}<tr><td>會考那週（5/10～5/16）也達標、連續沒斷</td><td>${EX_MEDAL.ic} ${EX_MEDAL.name}（金牌，掛在我的家）</td></tr></table>` +
     p('點運動那一行的「去海邊步道」，就是步道自己的頁面。步道可以有自己的管理員：在集章卡下面按「幫步道找一位陪跑夥伴」，取名字、選樣子、寫個性，他每天會用自己的口吻跟你聊運動。第一次見面時，他會先跟你打招呼，說明步道怎麼玩。') +
     p('斷掉了也沒關係：拿到的家具都會留著，重新累積就好。解鎖的家具在「我的家」的家具店最下面，可以擺出來。'))}
   ${sec('⛵', '紙船碼頭（紙本檢討）', p('寫完紙本考卷或練習、檢討完錯題，點首頁「今日のおつとめ」的「⛵ 紙本檢討」（或燈塔的小碼頭）放一艘船。選這次檢討了哪幾科，寫一句今天最大的收穫就好，大約 30 秒。想多記一點，可以填每科錯幾題、錯的原因，跳過也一樣有島幣。') +
