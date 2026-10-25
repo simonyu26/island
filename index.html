@@ -224,8 +224,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.10';
+const APP_VERSION = '2.10.1';
 const CHANGELOG = [
+  { v: '2.10.1', date: '2026-10-25', items: ['🪙 經驗值換島幣改成自己按：點首頁的「島幣」，按「兌換」，每 10 點換 1 枚', '換了之後經驗值不會減少，島嶼等級和房子都不會變小', '島幣明細一次看清楚：開島禮物、經驗值、挑戰任務、運動、紙船、商店花掉的'] },
   { v: '2.10', date: '2026-10-25', items: ['🌱 植木屋開張了！碼頭旁多了一間小小的植木屋，先幫它請一位管理員，第一次見面送你 100 綠點', '🌸 用綠點在島上的空地種樹和花：櫻花、楓樹、繡球花、油桐花、鳳凰木…一共 12 種，會跟著節氣開花、變色', '🪵 種的時候可以寫一塊小木牌，在 3D 小島點那棵樹就看得到；樹會慢慢長大，不會枯掉', '⏳ 綠點從讀書計時來：每專心 25 分鐘一顆砂時計 +10 綠點'] },
   { v: '2.9', date: '2026-10-25', items: ['⏳ 讀書計時：開始讀書時按 ⏳，讀完按停止。每專心 25 分鐘集一顆砂時計 +10 綠點，一天最多 4 顆（綠點之後可以拿來種樹）', '📝 讀完了再勾「讀完了」，經驗值照舊從完成的項目來；一項分好幾次讀、或一次讀好幾項都可以'] },
   { v: '2.8.2', date: '2026-10-25', items: ['🐢 島民、管理員的樣子可以選紫色的烏龜，在 3D 小島和房間裡也是紫色的'] },
@@ -444,7 +445,9 @@ function derive(S) {
     if (ss.paid) { ss.coins = Math.min(PAPER_MAX, 1 + ss.lanes.length); paperCoins += ss.coins; xp += 20; } });
 
   const spent = (save.purchases || []).reduce((a, p) => a + p.price, 0);
-  const coins = 20 + Math.floor(coinXp / 10) + xqCoins + exCoins + paperCoins - spent;   // 開島禮物 20 枚
+  // 經驗值換島幣要她自己按「兌換」（Simon，2026-10-25）；經驗值本身不扣，所以島嶼等級和房子不會因為兌換而降級
+  const exXp = save.xpEx ? Math.min(save.xpEx.xp, coinXp) : coinXp;   // 已經換過的經驗值；還沒有紀錄時當作全部換過（舊版是自動換）
+  const coins = 20 + Math.floor(exXp / 10) + xqCoins + exCoins + paperCoins - spent;   // 開島禮物 20 枚
   const level = Math.floor(Math.sqrt(xp / 60)) + 1;
   const lvBase = 60 * Math.pow(level - 1, 2), lvNext = 60 * Math.pow(level, 2);
 
@@ -484,7 +487,7 @@ function derive(S) {
     { ic: '⛵', name: '紙船 ×10', ok: sessions.length >= 10 }
   ];
 
-  return { cfg, xp, coins, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
+  return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor((coinXp - exXp) / 10), xqCoins, exCoins, paperCoins, spent }, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
            exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN,
            // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計－種樹花掉的；只從計時來，不扣經驗值、不影響等級
@@ -569,10 +572,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -586,6 +589,38 @@ function render() {
 }
 function go(t) { if (t === 'plan') { planWeek = null; planDay = null; } tab = t; draft = {}; render(); window.scrollTo(0, 0); }
 
+// 兌換：只記「換過多少經驗值」，經驗值總數不變
+async function exchangeXpNow() {
+  const c = D.coinParts; if (!c.canEx) return;
+  const xp = c.exXp + c.canEx * 10;
+  try { await flush(); S = await call('exchangeXp', xp); D = derive(S); }
+  catch (e) { return toast('兌換失敗：' + (e.message || e)); }
+  toast('🪙 +' + c.canEx + ' 枚島幣！經驗值和等級都沒有變'); render();
+}
+function migrateXpEx() {   // 舊版是自動換：第一次打開新版時，把目前的經驗值記成「已經換過」，島幣數字不變
+  if (S.save.xpEx || !D.coinParts) return;
+  S.save.xpEx = { xp: D.coinParts.coinXp, at: S.today };
+  queueSave('xpEx', 'exchangeXp', D.coinParts.coinXp); D = derive(S);
+}
+// 島幣明細：每一筆來源，以及經驗值換島幣的按鈕
+function viewCoins() {
+  const c = D.coinParts, left = 10 - ((c.coinXp - c.exXp) % 10);
+  const row = (ic, name, n, note) => `<div class="row" style="flex-wrap:nowrap;padding:8px 0;border-bottom:1px dashed var(--plum-light)"><span style="font-size:22px">${ic}</span>
+    <div class="grow"><b>${name}</b>${note ? `<div class="muted">${note}</div>` : ''}</div><b>${n >= 0 ? '+' : '−'}${Math.abs(n)}</b></div>`;
+  return `<div class="card"><h2>🪙 島幣明細</h2>
+      <div class="muted">每 10 點經驗值可以換 1 枚島幣。換了之後經驗值<b>不會減少</b>，島嶼等級和房子都不會變小。</div>
+      <div class="row" style="margin:10px 0;flex-wrap:nowrap;background:var(--plum-light);border-radius:12px;padding:10px">
+        <div class="grow">${c.canEx ? `現在可以換 <b>🪙 ${c.canEx}</b> 枚` : `還沒有可以換的，再 <b>${left}</b> 點經驗值就能換 1 枚`}</div>
+        ${isFamily() ? '' : `<button ${c.canEx ? '' : 'disabled'} onclick="exchangeXpNow()">兌換</button>`}</div>
+      ${row('🎁', '開島禮物', c.gift)}
+      ${row('⭐', '經驗值換來的', c.fromXp, `已經換了 ${c.exXp} 點（開島後的計畫、故事任務、試煉才能換；開島前補記的舊紀錄只算經驗值）`)}
+      ${row('⚔️', '挑戰任務答對', c.xqCoins, '直接給的，不再從經驗值換')}
+      ${row('🏃', '運動達標', c.exCoins, '一週集滿 3 章 +3')}
+      ${row('⛵', '紙本檢討', c.paperCoins)}
+      ${row('🛍️', '在商店花掉', -c.spent)}
+      <div class="row" style="margin-top:10px"><b class="grow">現在有</b><b style="font-size:20px">🪙 ${D.coins}</b></div>
+      <div class="row" style="margin-top:12px"><button class="grow" onclick="go('shop')">去商店逛逛</button><button class="ghost" onclick="go('home')">回到小島</button></div></div>`;
+}
 function hud() {
   const pct = Math.round((D.xp - D.lvBase) / (D.lvNext - D.lvBase) * 100);
   return `<div class="card" id="hudCard">
@@ -595,7 +630,7 @@ function hud() {
       <button class="ghost" style="padding:4px 10px" onclick="go('guide')" aria-label="玩法說明">❓</button></div>
     <div class="hud">
       <div><b>${D.xp}</b><span class="muted">經驗值</span></div>
-      <div><b>${D.coins}</b><span class="muted">🪙 島幣</span></div>
+      <div class="tap" onclick="go('coins')" role="button" aria-label="島幣明細"><b>${D.coins}</b><span class="muted">🪙 島幣${D.coinParts.canEx && !isFamily() ? `<span class="pill" style="margin-left:4px">可換 ${D.coinParts.canEx}</span>` : ''}</span></div>
       <div><b>${D.streak}</b><span class="muted">🔥 連續週</span></div>
       <div><b>${D.cards}</b><span class="muted">🛌 休息卡</span></div>
       <div class="tap" onclick="openGarden()" role="button" aria-label="植木屋"><b>${D.green}</b><span class="muted">🌱 綠點</span></div>
@@ -2364,6 +2399,7 @@ let seeding = false;
 async function seedDefaults() {
   if (isFamily()) return;
   if (S && S.save.abbr) migrateAbbr();
+  if (S && D && D.cfg) migrateXpEx();
   if (seeding || !S || S.save.abbr || !D.cfg) return;
   seeding = true;
   try {
@@ -2970,7 +3006,7 @@ function viewGuide() {
     p('經驗值會讓島嶼升級。全部達成就是 <b>FULL COMBO</b>！'))}
   ${sec('⚔️', 'Boss 戰', p('寫完模擬考或一整份考古題後，到「⚔️ 大考」記錄各科等級。島民頭上的等級，只看最近一次 Boss 戰的結果。') +
     p('就像音遊重打同一首歌，你只跟上一次的自己比。'))}
-  ${sec('🪙', '島幣和商店', p('每 10 點經驗值換 1 枚島幣，開島送 20 枚，一般一週大約賺 10 到 15 枚。挑戰任務答對另外直接給 1～3 枚。') +
+  ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：點首頁的「🪙 島幣」，按「兌換」就好。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚，一般一週大約賺 10 到 15 枚。挑戰任務答對另外直接給 1～3 枚。') +
     p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。'))}
   ${sec('🔥', '連續週數和休息卡', p('每週有確認或有紀錄，連續週數就 +1。每累積 6 週紀錄會得到 1 張 🛌 休息卡。') +
     p('哪一週真的沒空，休息卡會自動幫你守住連續週數，不用擔心一斷就歸零。'))}
