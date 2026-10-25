@@ -290,8 +290,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.21';
+const APP_VERSION = '2.22';
 const CHANGELOG = [
+  { v: '2.22', date: '2026-10-26', items: ['🙋 考古題可以請島民講解了：答錯的考古題（挑戰任務或漂流瓶）按「請島民講解」，島民會看題目，一步一步說明怎麼想', '🌊 小島周圍有海浪了，岸邊有一圈浪花湧上沙灘；海面一天漲退兩次潮', '🌞 3D 小島有影子了，顏色更有層次，房子變成圓角，像模型玩具。手機變慢的話，可以在「更多」關掉高畫質'] },
   { v: '2.21', date: '2026-10-26', items: ['🗼 燈塔的話：每週按「確認這週」之後，守燈人會寫三句話給你：這週做得好的、值得照亮的、下週一件小事，還會回應你寫的「這週一句話」。上週已經確認過的，按「🔁 重新確認這週」就能補寫', '🏮 放走的紙燈籠累積到 30、100、300 盞，會解鎖燈塔風格的家具：紙燈籠吊燈、燈塔模型、岬角的航海燈'] },
   { v: '2.20', date: '2026-10-25', items: ['📚 書店的書單會自己補書了：每次只剩十本還沒讀，就會再上架三十本，都從國高中推薦閱讀清單挑', '🆕 這次先上架的第二批有《安妮日記》《老人與海》《魯冰花》《數學女孩》《昆蟲記》等三十本，每本讀完也會在島上長出地標'] },
   { v: '2.19', date: '2026-10-25', items: ['🏞️ 讀完一本書，島上就會長出一個地標！每本書依內容對應國、英、數、自、社其中一條街，例如《銀河鐵道之夜》讀完，自然街靠海的草地會長出觀星丘', '📖 家人送的書按「讀過了」、智慧島的書 13 章都蓋完章就會長出來；點地標可以打開那本書', '🗺️ 打開書可以看到讀完後會長出什麼；點一條街，也看得到這條街長了哪些地標'] },
@@ -1766,6 +1767,25 @@ async function renameLighthouse() {
   if (!name || name === lighthouseName()) return;
   try { S = await call('saveLighthouse', name); D = derive(S); render(); } catch (e) { toast('儲存失敗：' + (e.message || e)); }
 }
+// 請島民講解（v2.22）：考古題沒有文字解說，按了才請 AI 看題目圖寫，存在 bx:<題號>，同一題之後直接用
+const bxBusy = {};
+function bankExplain(q) {
+  const x = S.save['bx:' + q.bank], who = laneWho(q.lane);
+  if (x) return `<div class="row" style="flex-wrap:nowrap;margin-top:8px;align-items:flex-start"><span class="avatar">${who.pic}</span><div class="speech grow" style="white-space:pre-wrap"><b>${esc(x.who || who.name)}</b>：${esc(x.text)}<div class="muted" style="font-size:12px;margin-top:4px">🤖 AI 看題目寫的解說，如果覺得怪怪的，跟爸爸說。</div></div></div>`;
+  if (isFamily() || !BETA3D) return '';
+  return bxBusy[q.bank] ? `<div class="muted" style="margin-top:8px">✍️ ${esc(who.name)}正在看題目、寫解說…（大約 10～30 秒）</div>`
+    : `<button class="ghost" style="width:100%;margin-top:8px" onclick="askExplain('${q.bank}')">🙋 請${esc(who.name)}講解這一題</button>`;
+}
+async function askExplain(bank) {
+  const q = Object.keys(S.save).map(k => S.save[k]).find(v => v && v.bank === bank && v.img); if (!q || bxBusy[bank]) return;
+  bxBusy[bank] = true; render();
+  try {
+    const p = { img: await examImage(q.img), ctx: await examImage(q.ctx), a: q.a, lane: q.lane, year: q.year, who: laneWho(q.lane).name };
+    if (!p.img) throw new Error('讀不到題目圖');
+    S = await call('explainBank', bank, p); D = derive(S);
+  } catch (e) { toast('講解失敗：' + (e.message || e)); }
+  bxBusy[bank] = false; render();
+}
 // 考古題的圖片轉成 dataURL，給 AI 看（只有網頁 App 版有題目圖）
 async function examImage(file) {
   if (!file || !BETA3D) return null;
@@ -1799,7 +1819,7 @@ function viewBottle() {
   if (q.src === 'photo') body = photoBody(q, fam);
   else if (q.bank) body = `<div class="exq">${q.ctx ? `<img src="exam/${esc(q.ctx)}" alt="題組文章">` : ''}<img src="exam/${esc(q.img)}" alt="題目"></div>
       <div class="muted" style="font-size:12px">📜 ${q.year} 年會考第 ${q.qn} 題・試題來源：心測中心 國中教育會考歷屆試題</div>
-      <div style="margin-top:8px">你選了 (${ABCD.charAt(q.choice)})，正確答案是 <b>(${ABCD.charAt(q.a)})</b>。全國有 ${q.pass}% 的考生答對這題。</div>`;
+      <div style="margin-top:8px">你選了 (${ABCD.charAt(q.choice)})，正確答案是 <b>(${ABCD.charAt(q.a)})</b>。全國有 ${q.pass}% 的考生答對這題。</div>${bankExplain(q)}`;
   else {
     const it = b.item || q, ans = b.item ? b.item.a : q.a;
     body = `<div style="margin:8px 0;font-weight:700;white-space:pre-wrap">${esc(it.q)}</div>
@@ -2007,6 +2027,7 @@ function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題�
   } else {
     if (last && last.done && last.at === S.today) html = show(last) + `<div class="opts${last.img ? ' abcd' : ''}">${last.o.map((o, i) => `<button class="opt ${i === last.a ? 'right' : i === last.choice ? 'wrong' : ''}" disabled>${esc(o)}</button>`).join('')}</div>
       <div class="speech" style="margin-top:10px">${last.correct ? '⭕ 答對了！' : '❌ 這次沒答對。'}${esc(last.ex)}</div>
+      ${last.bank ? bankExplain(last) : ''}
       <div class="muted" style="margin:6px 0 12px">${last.coins ? '🪙 +' + last.coins + '、' : ''}+${last.xp} 經驗值${last.lantern ? '・🏮 瓶子變成紙燈籠，漂到海上了！' : last.review ? (last.correct ? '・🍶 再答對一次就變成燈籠' : '・🍶 瓶子明天會再漂回來') : last.correct ? '' : '・🍶 這題漂到燈塔海灘了，明天會漂回來'}
         ${last.review ? ` <a href="#" onclick="openBottle('${last.review}');return false">看原題</a>` : ''}</div>`;
     if (inLight) return `<div class="card" id="xqCard">${html}</div>`;
@@ -4009,8 +4030,12 @@ function viewMore() {
     <button class="ghost" onclick="go('wish')">💡 讓島順起來</button>
     <button class="ghost" onclick="go('visits')">🎟️ 邀請朋友</button>
     <button class="ghost" onclick="tab='setup'; draft={}; render()">修改島嶼設定（島民、嚮導、商店）</button></div>
-    <div class="muted" style="margin-top:8px">版本 v${APP_VERSION}</div></div>`;
+    <div class="muted" style="margin-top:8px">版本 v${APP_VERSION}</div></div>
+  ${BETA3D ? `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🖥️ 3D 高畫質</b><div class="muted">開著會有影子、比較細的海浪；手機變慢或發燙就關掉。</div></div>
+    <button class="ghost" onclick="toggleHQ()">${hqOn() ? '✅ 開著' : '⬜ 關著'}</button></div></div>` : ''}`;
 }
+function hqOn() { const v = local.get('island3dHQ'); return v ? v === '1' : !(navigator.deviceMemory && navigator.deviceMemory < 4); }
+function toggleHQ() { local.set('island3dHQ', hqOn() ? '0' : '1'); toast('換好了，重新打開小島'); setTimeout(() => location.reload(), 600); }
 
 /* --- 玩法說明（改版時一起更新） --- */
 function viewGuide() {
@@ -4095,6 +4120,7 @@ function viewGuide() {
   ${sec('🗼', '燈塔（錯題的漂流瓶）', p('島的岬角上有一座燈塔。第一次去的時候先幫它取名字，再請一位守燈人：取名字、選樣子、寫個性，他每天會用自己的口吻跟你說話。首頁「今日のおつとめ」的「🍶 漂流瓶」或 3D 小島上的燈塔都能進去。') +
     p('每週按「✅ 確認這週」之後，守燈人會寫下「<b>燈塔的話</b>」三句：這週做得好的一件事、一件值得照亮的事、下週一件很小的事。第三句會回應你在確認時寫的「這週一句話」。在燈塔頁或確認完成的畫面都看得到；重新確認這週，守燈人會重寫一次。燈塔的話只有你看得到。') +
     p('放走的紙燈籠會累積起來：<b>30 盞</b>解鎖 🏮 紙燈籠吊燈、<b>100 盞</b>解鎖 🗼 燈塔模型、<b>300 盞</b>解鎖 🪔 岬角的航海燈，都擺在我的家，不用島幣，解鎖了就不會收回。在我的家下面的家具店看得到進度。') +
+    p('考古題原本只有正確答案和全國答對率。答錯時（挑戰任務的結果，或漂流瓶裡），按「🙋 請島民講解」，島民會看題目圖，說明這題在考什麼、怎麼一步一步得到答案、其他選項錯在哪裡。同一題講過一次就會記住，之後再看不用等。解說是 AI 寫的，覺得怪怪的就跟爸爸說。') +
     p('挑戰任務或故事任務答錯的題，會變成 🍶 漂流瓶漂到燈塔海灘。<b>隔天</b>它會漂回來，按「撿起來」，守燈人會請 AI 出一題<b>類題</b>：考同一個觀念，但數字、情境或說法都換過，不會是一模一樣的題目。題目下面會寫「AI 類題・改編自 113 年會考自然第 10 題」這樣的來源。原題太依賴圖表、AI 改寫不了時，會改出一題同科同難度的考古題，也會標明。') +
     `<table>${row('類題答錯', '+3 經驗值，隔 1 天再漂回來')}${row('類題答對', '+10／+15／+20 經驗值（看難度），隔 2 天再漂回來')}${row('連續兩次答對', '🏮 變成紙燈籠放到海上，🪙 +1／+2／+3')}</table>` +
     p(`撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個；全國答對率高、你卻答錯的題會先漂回來，因為這種題最值得追回來。`) +
@@ -4134,6 +4160,7 @@ function viewGuide() {
   ${BETA3D ? sec('🗺️', '3D 小島和成長回放', p('首頁預設是 3D 小島：一根手指拖曳可以轉動，兩根手指可以縮放。點一塊街區，下面會出現島民、每條小巷的房子和最近四週的成績。') +
     p('按「▶️ 從第一週播放」，可以看到島從 5 月開始一週一週長出來；也可以拖動進度條跳到任何一週。跨科連結會變成島民之間的粉紅色拱橋，好感度越高橋越粗。') +
     p('小島會跟著<b>台北現在的時間和天氣</b>變化：清晨和傍晚天空是橘色的，晚上會有星星、房子會亮燈；台北下雨，島上也會下雨，打雷時還會閃電。右上角的小字會顯示台北現在的時間和氣溫。') +
+    p('小島周圍有海浪，岸邊有一圈浪花一波一波湧上沙灘；下雨和打雷時浪會變大。海面一天漲退兩次潮（照月亮的位置推算，大約 12 小時 25 分一輪，不是精確的潮汐表），退潮時沙灘會露出比較寬。白天太陽會投下影子。手機變慢或發燙的話，到「更多」把「3D 高畫質」關掉，就不會有影子、海浪也會簡單一點。') +
     p('手機比較舊、覺得卡的話，按「📋 清單」就會回到原本的畫面。')) : ''}
   ${sec('🏘️', '房子怎麼長大', p('每 2 個達成點蓋一棟 🏠，5 棟變成 🏘️，4 個 🏘️ 變成 🏢，4 棟 🏢 變成 🏰。自然街和社會街還分成小巷，哪條巷子比較空，一眼就看得到。'))}
   <div class="card"><h3>📜 更新紀錄</h3>${CHANGELOG.map(c => `<div style="margin-top:8px"><b>v${c.v}</b> <span class="muted">${c.date}</span>
