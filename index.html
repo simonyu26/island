@@ -202,6 +202,41 @@
   @keyframes bsWalk { from { transform: translateY(0); } to { transform: translateY(-3px); } }
   @keyframes bsWash { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-12deg); } }
   @keyframes bsZz { 0% { opacity: 0; transform: translateY(4px); } 50% { opacity: 1; } 100% { opacity: 0; transform: translateY(-8px); } }
+  .bkdesk { background: radial-gradient(ellipse at 50% 0, #ffe2ae 0, transparent 60%), #8a5a2c; border-radius: 18px; padding: 16px 10px 20px; box-shadow: inset 0 0 0 3px #6b4a2b; margin-bottom: 14px; }
+  .bkbook { position: relative; background: #fbf6ea; border-radius: 6px 6px 8px 8px; box-shadow: 0 6px 14px rgba(0,0,0,.35), 0 0 0 1px #d9c7a8; overflow: hidden; color: #3a2a33; }
+  .bkpage { padding: 18px 20px; position: relative; }
+  .bkpage + .bkpage { border-top: 1px dashed #e0d2b6; }
+  .bkrib { position: absolute; right: 22px; top: -6px; width: 12px; height: 46px; background: #c0392b; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%); }
+  .bkcv { flex: 0 0 92px; width: 92px; height: 128px; border-radius: 3px; position: relative; box-shadow: 2px 3px 6px rgba(0,0,0,.3); overflow: hidden; color: #fff; }
+  .bkcv::before { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(255,255,255,.35); border-radius: 1px; }
+  .bkcv span { position: absolute; left: 0; right: 0; top: 22px; text-align: center; font-size: 30px; }
+  .bkcv .t { position: absolute; left: 4px; right: 4px; bottom: 12px; text-align: center; font: 700 12px 'Noto Serif TC', serif; line-height: 1.3; }
+  .bkcv .a { position: absolute; left: 0; right: 0; bottom: 42px; text-align: center; font-size: 9px; opacity: .85; }
+  .bkh { font: 700 21px 'Noto Serif TC', serif; margin: 0; }
+  .bktag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #efe4cf; color: #6b4a2b; margin: 6px 4px 0 0; }
+  .bksec { font: 700 13px 'Noto Serif TC', serif; color: #8c2f2b; letter-spacing: 2px; margin: 0 0 6px; display: flex; align-items: center; gap: 6px; }
+  .bksec::after { content: ''; flex: 1; border-top: 1px solid #e0d2b6; }
+  .bkp { margin: 0; line-height: 1.85; font-size: 14.5px; }
+  .bkvalue { background: #fff4d6; border-left: 4px solid #d9b86a; border-radius: 4px; padding: 10px 12px; }
+  .bknote { background: #fffdf7; border: 1px solid #e3d3b2; border-radius: 4px; padding: 14px 16px 10px; transform: rotate(-1.2deg); box-shadow: 0 2px 6px rgba(0,0,0,.12); background-image: repeating-linear-gradient(transparent 0 27px, #ecdcc0 27px 28px); background-position: 0 10px; line-height: 28px; font-size: 15px; position: relative; color: #3a2a33; }
+  .bknote .tape { position: absolute; top: -9px; left: 40%; width: 56px; height: 16px; background: rgba(233,196,106,.7); transform: rotate(3deg); }
+  .bknote .who { text-align: right; color: #8c2f2b; font-size: 13px; }
+  .bkemo { font-size: 22px; background: #fff; border: 1px solid #e3d3b2; border-radius: 50%; width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: inherit; }
+  .bkemo.sm { font-size: 17px; width: 32px; height: 32px; }
+  .bkemo.on { border: 2px solid var(--plum); background: #fbeef4; }
+  .bkch { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dotted #e0d2b6; font-size: 14px; cursor: pointer; }
+  .bkch .hanko { width: 26px; height: 26px; font-size: 11px; flex: 0 0 26px; background: rgba(255,255,255,.6); }
+  .bkch .bkdot { width: 26px; text-align: center; color: #b9a07a; }
+  .bkch .n { width: 50px; color: #8a7a6a; font-family: 'Noto Serif TC', serif; flex: 0 0 50px; }
+  .bkch .d { color: #8a7a6a; font-size: 12px; }
+  .bkch.off { opacity: .4; cursor: default; }
+  .bkch.on { background: #fff4d6; margin: 0 -8px; padding: 9px 8px; border-radius: 6px; }
+  .bkwcover { height: 120px; border-radius: 4px; position: relative; color: #e8cf8e; text-align: center; }
+  .bkwcover b { font: 700 24px 'Noto Serif TC', serif; letter-spacing: 6px; position: absolute; top: 28px; left: 0; right: 0; }
+  .bkwcover i { font-style: normal; font-size: 12px; position: absolute; bottom: 18px; left: 0; right: 0; }
+  .bkwcover::before, .bkwcover::after { content: ''; position: absolute; left: 12px; right: 12px; height: 2px; border-top: 1px solid #e8cf8e; border-bottom: 1px solid #e8cf8e; }
+  .bkwcover::before { top: 10px; } .bkwcover::after { bottom: 8px; }
+  .bkmini { flex: 0 0 30px; width: 30px; height: 40px; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 1px 2px 3px rgba(0,0,0,.25); }
   .bookrow { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; padding: 8px 8px 0; background: linear-gradient(transparent calc(100% - 8px), #8a5a2c calc(100% - 8px)); border-radius: 6px; }
   .bookrow .spine { width: 34px; min-height: 120px; line-height: 1.15; border-radius: 3px 3px 0 0; color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 1px; display: flex; justify-content: center; padding: 6px 0; text-align: center; cursor: pointer; border: none; box-shadow: inset -3px 0 0 rgba(0,0,0,.18); margin-bottom: 8px; }
 </style>
@@ -253,8 +288,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.17.1';
+const APP_VERSION = '2.18';
 const CHANGELOG = [
+  { v: '2.18', date: '2026-10-25', items: ['📚 書店的書架重新做過：上層擺智慧島的書（書背燙金、蓋章進度，讀完掛紅絲帶），下層擺家人送的書，點一本就能打開', '🎁 家人可以送你書了：每位家人每週挑一本，寫一句為什麼想送你，店長會包上書衣放到你的書架；打開可以看在講什麼、為什麼值得讀，讀完按「📖 讀過了」', '💌 家人也可以寫鼓勵卡，店長會在你進書店時交給你，收在明信片冊的「鼓勵卡」那一頁', '😊 收到書和鼓勵卡都可以回一個表情，家人下次來就看得到'] },
   { v: '2.17.1', date: '2026-10-25', items: ['📚 書店可以自己取名字了：第一次進店先幫它取個店名，之後在店裡按「✏️ 改店名」就能換', '🎨 書店裡面重新畫過：吊燈的暖光、塞滿書的木書架、掛滿明信片的麻繩、窗邊的坐墊和盆栽，晚上和下雨天也不一樣'] },
   { v: '2.17', date: '2026-10-25', items: ['📚 島上的巷口開了一間獨立書店！先請一位店長：名字、樣子、個性都由你決定，第一次進店店長會跟你介紹書店', '🐈 店裡也可以養一隻店貓：取名字、選花色和個性。牠會在書架、平台桌、窗邊、櫃台之間走來走去，晚上比較愛睡，下雨天會坐在窗邊看雨，點牠會有反應', '📮 明信片冊和 🎟️ 邀請朋友從我的家搬到書店了，家人來島上也會到書店看明信片', '📖 書店裡有一座你的書架，之後智慧島上課得到的書會擺在這裡'] },
   { v: '2.16', date: '2026-10-25', items: ['📷 燈塔可以拍錯題了：紙本考卷、講義上答錯的題拍下來（國文、英文最好用），AI 會讀出題目、你的答案和正確答案，確認後收進海灘變成漂流瓶，隔天一樣漂回來出類題', '🧭 燈塔多了「錯題類型」：看看自己最常錯哪一類題（例如英文的時態、國文的修辭），按「練一題」就照這類題出新題練習'] },
@@ -340,7 +376,7 @@ function boot() {
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 /* ===== 家人碼（v2.6）：家人看到的畫面和她一樣，但只能做這幾件事；後端也會再擋一次 ===== */
-const FAMILY_FNS = ['getState', 'familyInvite', 'postcardCandidates', 'sendPostcard'];
+const FAMILY_FNS = ['getState', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer'];
 function isFamily() { return !!(S && S.who && S.who.role === 'family'); }
 let familyBase = null;   // 家人模式下最後一次從伺服器拿到的狀態，誤按時用來還原畫面
 const callAsOwner = call;
@@ -619,15 +655,15 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
   if (tab === 'cards') seeAllCards();
-  if (tab === 'bookstore') catStart(); else catStop();
+  if (tab === 'bookstore') { catStart(); seeBooksNow(); } else { catStop(); if (tab !== 'book' && tab !== 'cards') bookFreshKeys = []; }
   if (tab === 'house') mountRoom();
   if (tab === 'plan') bindPlan();
   if (tab === 'pick') bindPicker();
@@ -752,7 +788,7 @@ const BOARD = [
     st() { const n = D.paperSessions.filter(x => x.date === S.today); return n.length ? { t: '今天放了 ' + n.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、'), c: 'done' } : { t: '檢討完放一艘', c: 'info' }; },
     todo() { return false; } },
   { key: 'books', ic: '📚', name: '獨立書店', go: 'bookstore',
-    st() { const n = newCards().length; return !bookName() ? { t: '巷口開了一間書店', c: 'info' } : !keeperOf('bookstore') ? { t: '還缺一位店長', c: 'info' } : n ? { t: '📮 ' + n + ' 張新明信片', c: 'info' } : { t: '去坐坐', c: 'info' }; },
+    st() { const n = newCards().length, fb = freshBooks().length; return fb && bookName() && keeperOf('bookstore') ? { t: '🎁 家人送東西來了', c: 'info' } : !bookName() ? { t: '巷口開了一間書店', c: 'info' } : !keeperOf('bookstore') ? { t: '還缺一位店長', c: 'info' } : n ? { t: '📮 ' + n + ' 張新明信片', c: 'info' } : { t: '去坐坐', c: 'info' }; },
     todo() { return false; } }
 ];
 function todayPlan() {
@@ -797,7 +833,7 @@ function newsItems() {
 function freshCards() { const seen = Number(S.save.cardsSeen || 0); return cardList().filter(c => c.ts > seen); }
 function mailCount() {
   if (isFamily()) return 0;
-  return (newsItems().length ? 1 : 0) + (freshCards().length ? 1 : 0) + visitList().filter(v => v.status === 'pending').length + (wishNews() ? 1 : 0);
+  return (newsItems().length ? 1 : 0) + (freshCards().length ? 1 : 0) + (freshBooks().length ? 1 : 0) + visitList().filter(v => v.status === 'pending').length + (wishNews() ? 1 : 0);
 }
 function viewMail() {
   const g = guide(), news = newsItems(), n = mailCount();
@@ -806,9 +842,11 @@ function viewMail() {
     <div class="row"><button onclick="local.set('islandSeenVersion', APP_VERSION); go('guide')">看玩法說明</button>
     <button class="ghost" onclick="local.set('islandSeenVersion', APP_VERSION); render()">知道了</button></div></div>` : '';
   const wish = wishNews() ? `<div class="card" style="border:2px solid var(--gold);cursor:pointer" onclick="go('wish')"><b>💡 爸爸回覆了你的 ${wishNews()} 則想法</b><div class="muted">點開「讓島順起來」看看</div></div>` : '';
+  const fb = freshBooks(), fg = fb.filter(x => x.key.startsWith('gift:')).length, fc = fb.length - fg;
+  const books = fb.length ? `<div class="card" style="border:2px solid var(--gold);cursor:pointer" onclick="go('bookstore')"><b>📚 ${[...new Set(fb.map(x => x.from))].map(esc).join('、')}送來了${bookGotText(fg, fc)}</b><div class="muted">書店店長幫你收著，去書店拿吧</div></div>` : '';
   return `<div class="card"><div class="row" style="flex-wrap:nowrap"><span class="avatar">${g.pic}</span>
       <div class="speech grow"><b>${esc(g.name)}</b>：${n ? '有新的東西寄來了！我都幫你收好了，一封一封看吧 ✉️' : '郵便受け現在空空的。有人寄東西來，右上角的 📮 會亮紅點喔。'}</div></div></div>
-    ${newsCard}${visitCards()}${wish}
+    ${newsCard}${books}${visitCards()}${wish}
     <div class="row" style="margin-bottom:14px"><button class="ghost grow" onclick="go('cards')">📮 明信片冊${cardList().length ? '（' + cardList().length + '）' : ''}</button>
       <button class="ghost grow" onclick="openHouse('me')">📬 以前的信</button></div>
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
@@ -3308,24 +3346,240 @@ function loadWisdomJson(key) {
   wisdomJson[key] = {};
   fetch('wisdom/' + key + '.json').then(r => r.ok ? r.json() : {}).then(j => { const o = {}; ['title', 'color', 'chapters'].forEach(f => { if (j[f]) o[f] = j[f]; }); wisdomJson[key] = o; if (tab === 'bookstore' && Object.keys(o).length) render(); }).catch(() => {});
 }
-function bookNote() { return '這裡是島上的獨立書店「' + bookTitle() + '」，她和家人往來的地方：明信片冊有 ' + cardList().length + ' 張明信片' + (newCards().length ? '（' + newCards().length + ' 張新的）' : '') + '，也可以在這裡發乘船券邀請朋友。店裡有一隻店貓' + (keeperOf('bookcat') ? '叫' + keeperOf('bookcat').name : '') + '。請像巷口書店的店長一樣閒聊，不要提讀書、考試或成績。'; }
+function bookNote() { return '這裡是島上的獨立書店「' + bookTitle() + '」，她和家人往來的地方：明信片冊有 ' + cardList().length + ' 張明信片' + (newCards().length ? '（' + newCards().length + ' 張新的）' : '') + '，也可以在這裡發乘船券邀請朋友；她的書架上有 ' + giftList().length + ' 本家人送的書（讀完 ' + giftList().filter(g => g.readAt).length + ' 本）、收過 ' + cheerList().length + ' 張家人的鼓勵卡。店裡有一隻店貓' + (keeperOf('bookcat') ? '叫' + keeperOf('bookcat').name : '') + '。請像巷口書店的店長一樣閒聊，不要提讀書、考試或成績。'; }
 function bookKeeperLine() {
   const n = newCards().length, cat = keeperOf('bookcat');
   if (n) return '有家人寄了 ' + n + ' 張明信片來，我幫你收在明信片冊裡了。';
   const lines = ['歡迎光臨～今天店裡很安靜，慢慢逛。', '我剛泡了一壺茶，坐一下再走吧。', '窗邊那個位子今天光線很好喔。', cat ? cat.name + '今天又霸佔了平台桌，書都被牠壓住了。' : '下雨天的時候，店裡的人特別多。', '今天有人來問有沒有新的旅行書，我說還在路上。'];
   return lines[daySeed() % lines.length];
 }
+const BOOK_CATALOG = [{"id": "ginga","title": "銀河鐵道之夜","author": "宮澤賢治","cat": "日本","about": "孤單的喬凡尼在祭典夜晚坐上銀河列車，和好友康帕內拉一起穿越星空。","value": "用一趟星空旅行，溫柔地談「失去」和「真正的幸福是什麼」。許多日本動畫和小說都受它影響，讀過之後會在很多作品裡認出它。","warn": "","tags": ["奇幻","友情"],"hours": 3,"color": "#1f2a4d","ic": "🌌"},{"id": "chumon","title": "要求很多的餐廳","author": "宮澤賢治","cat": "日本","about": "兩個紳士獵人在山裡走進一間餐廳，門上一道一道的「要求」越來越怪。","value": "十分鐘就能讀完，結局卻會讓人倒抽一口氣。用童話的方式嘲諷人的傲慢，示範短篇怎麼靠「反轉」說道理。","warn": "","tags": ["童話","短篇"],"hours": 0.5,"color": "#5b3a1e","ic": "🍽️"},{"id": "kaze","title": "風又三郎","author": "宮澤賢治","cat": "日本","about": "山村小學來了一個紅頭髮的轉學生，孩子們懷疑他是風的精靈。","value": "把東北山村的風、雨、河寫得像會呼吸一樣，是體會宮澤賢治「人和自然是一體」的入門作。","warn": "","tags": ["童話","自然"],"hours": 2,"color": "#3f6e8c","ic": "🍃"},{"id": "izu","title": "伊豆的舞孃","author": "川端康成","cat": "日本","about": "高中生獨自旅行伊豆，和巡迴藝人一家同行幾天。","value": "諾貝爾文學獎作家最好入口的短篇。示範日本文學「什麼都沒說破」的含蓄美：一段沒有開始的心動，卻讓人記很久。","warn": "","tags": ["青春","短篇"],"hours": 1.5,"color": "#b5653a","ic": "🪭"},{"id": "koto","title": "古都","author": "川端康成","cat": "日本","about": "京都布莊的養女千重子，在祇園祭遇見長得一模一樣的姊妹。","value": "一整年的京都祭典、和服、北山杉都寫進故事裡，像一本用小說寫的京都歲時記，也談「身世」與「選擇」","warn": "","tags": ["京都","家人"],"hours": 5,"color": "#7a4b6b","ic": "⛩️"},{"id": "botchan","title": "少爺","author": "夏目漱石","cat": "日本","about": "直腸子的東京青年到四國鄉下中學當老師，和同事、學生鬥智。","value": "一百多年前的日本國民小說，到現在讀還是很好笑。主角的「正直到笨拙」讓人重新想：圓滑和正直哪個重要。","warn": "","tags": ["幽默","校園"],"hours": 4,"color": "#2f5d62","ic": "🍡"},{"id": "rashomon","title": "羅生門・蜘蛛之絲","author": "芥川龍之介","cat": "日本","about": "短篇集：亂世中的僕人、地獄裡抓住一根蜘蛛絲的強盜。","value": "每篇幾頁就把人性的兩難寫透。「羅生門」這個詞後來變成「各說各話」的代名詞，讀了才知道出處。","warn": "","tags": ["短篇","人性"],"hours": 3,"color": "#3a3a3a","ic": "🕸️"},{"id": "totto","title": "窗邊的小荳荳","author": "黑柳徹子","cat": "日本","about": "被退學的小荳荳轉進用電車當教室的巴氏學園。","value": "真人真事。校長一句「你真是個好孩子」改變了她一生，讓人看見被理解、被接納對一個人有多重要。","warn": "","tags": ["真人真事","校園"],"hours": 4,"color": "#e98fb3","ic": "🚃"},{"id": "saga","title": "佐賀的超級阿嬤","author": "島田洋七","cat": "日本","about": "戰後被寄養在佐賀的男孩，和窮得很樂觀的阿嬤一起生活。","value": "真人真事改編，邊讀邊笑。阿嬤的「窮有兩種：消極的窮和開朗的窮」是很實用的人生觀。","warn": "","tags": ["真人真事","家人"],"hours": 3,"color": "#c8963e","ic": "🍅"},{"id": "hakase","title": "博士熱愛的算式","author": "小川洋子","cat": "日本","about": "記憶只有 80 分鐘的數學博士、新來的管家和她十歲的兒子。","value": "少見把數學寫得這麼溫暖的小說：友愛數、完全數變成人和人之間的語言。讀完會覺得數學不只是考試。","warn": "","tags": ["數學","溫暖"],"hours": 5,"color": "#3b5b8c","ic": "🔢"},{"id": "namiya","title": "解憂雜貨店","author": "東野圭吾","cat": "日本","about": "三個逃亡的年輕人躲進廢棄雜貨店，收到來自過去的煩惱信。","value": "推理作家寫的溫情小說，幾條故事最後全部扣在一起，很好看。也讓人想：給別人建議，和自己做決定，有什麼不同。","warn": "","tags": ["溫暖","懸疑"],"hours": 7,"color": "#8c6a3e","ic": "✉️"},{"id": "kiki","title": "魔女宅急便","author": "角野榮子","cat": "日本","about": "13 歲的見習魔女琪琪離家一年，在海邊小鎮開送貨店。","value": "宮崎駿動畫的原著，比電影多很多章。講第一次離家、靠自己的本事被需要，和「沒自信的時候怎麼辦」","warn": "","tags": ["奇幻","成長"],"hours": 4,"color": "#2e3a59","ic": "🧹"},{"id": "natsu","title": "夏之庭","author": "湯本香樹實","cat": "日本","about": "三個小學男生想知道死亡是什麼，開始「監視」一位獨居老人。","value": "從孩子的好奇出發，談死亡卻一點也不沉重。一個夏天的忘年之交，讓人想珍惜身邊的長輩。","warn": "","tags": ["成長","夏天"],"hours": 3,"color": "#6b9a52","ic": "🌻"},{"id": "colorful","title": "多彩的黑","author": "森繪都","cat": "日本","about": "一個做錯事的靈魂得到重來的機會，住進一位想不開的國三生身體裡。","value": "主角就是國三生。用局外人的眼光重新看家人、同學和自己，發現每個人都不只一種顏色，對正在升學壓力中的人很有力量。","warn": "","tags": ["成長","國三"],"hours": 5,"color": "#5b6c7d","ic": "🎨"},{"id": "yoru","title": "夜間遠足","author": "恩田陸","cat": "日本","about": "高中一年一度、全校走一整夜八十公里的「步行祭」","value": "幾乎沒有大事件，卻把青春最後一次集體活動寫得讓人想一直走下去。日本書店大賞第一名。","warn": "","tags": ["青春","友情"],"hours": 7,"color": "#2a3560","ic": "🌙"},{"id": "seirei","title": "精靈守護者","author": "上橋菜穗子","cat": "日本","about": "女保鏢巴爾莎保護被精靈寄宿、被親生父親追殺的皇子。","value": "作者是文化人類學家，整個世界的民俗、神話都有根據。主角是三十歲、靠本事活著的女戰士，很不一樣的奇幻英雄。","warn": "","tags": ["奇幻","冒險"],"hours": 7,"color": "#6b7f3a","ic": "🗡️"},{"id": "taiyo","title": "小太陽","author": "林良","cat": "台灣","about": "一個台北家庭和三個女兒長大的日常散文。","value": "兒童文學大師林良的代表作。示範怎麼把平凡的家常寫得有溫度，很適合當寫作文的範本。","warn": "","tags": ["散文","家人"],"hours": 4,"color": "#e8b84a","ic": "☀️"},{"id": "tetsudo","title": "11 元的鐵道旅行","author": "劉克襄","cat": "台灣","about": "自然作家只搭區間車，在台灣的小車站下車散步。","value": "讓人發現家門口就有旅行。每一站的老街、小吃、植物都寫得很細，看完會想自己去搭一次。","warn": "","tags": ["旅行","台灣"],"hours": 4,"color": "#2f7fd1","ic": "🚉"},{"id": "magician","title": "天橋上的魔術師","author": "吳明益","cat": "台灣","about": "中華商場長大的孩子們，和天橋上變魔術的人。","value": "用孩子的眼睛記下已經拆掉的台北中華商場。魔幻和寫實混在一起，也有改編影集。","warn": "","tags": ["台北","短篇"],"hours": 5,"color": "#8c2f2b","ic": "🎩"},{"id": "saigon","title": "西貢小子","author": "張友漁","cat": "台灣","about": "台灣爸爸、越南媽媽的男孩，暑假回到越南外婆家。","value": "從新住民孩子的角度看兩個家鄉。讓人理解班上可能有的同學心裡在想什麼。","warn": "","tags": ["新住民","成長"],"hours": 4,"color": "#d35400","ic": "🛵"},{"id": "subway","title": "地下鐵","author": "幾米","cat": "台灣","about": "失明的女孩在地下鐵裡想像一站一站的風景。","value": "繪本，十分鐘看完卻能看很多次。圖畫裡藏著很多細節，適合累的時候翻。","warn": "","tags": ["繪本","想像"],"hours": 0.5,"color": "#16a085","ic": "🚇"},{"id": "prince","title": "小王子","author": "聖修伯里","cat": "世界","about": "飛行員在沙漠遇見從小行星來的小王子。","value": "小時候讀和長大讀，是兩本不一樣的書。「真正重要的東西，眼睛是看不見的」","warn": "","tags": ["經典","寓言"],"hours": 2,"color": "#2f6fae","ic": "🌹"},{"id": "wonder","title": "奇蹟男孩","author": "R. J. Palacio","cat": "世界","about": "臉部先天缺陷的奧吉第一次上學。","value": "每一章換一個角色說話，讓人練習站在別人的位置想事情。「在對與善良之間，選擇善良」","warn": "","tags": ["校園","善良"],"hours": 6,"color": "#3f6e8c","ic": "🚀"},{"id": "henshaw","title": "親愛的漢修先生","author": "Beverly Cleary","cat": "世界","about": "男孩寫信給喜歡的作家，後來開始寫日記。","value": "全書都是信和日記，看一個孩子怎麼透過寫字整理難過的事，順便學會寫作。","warn": "","tags": ["書信","寫作"],"hours": 3,"color": "#8a5a2c","ic": "✏️"},{"id": "doukyusei","title": "同級生（第一集）","author": "中村明日美子","cat": "BL","about": "合唱祭前，愛玩樂團的草壁和優等生佐條慢慢靠近。","value": "畫風乾淨、節奏細膩，把「喜歡上一個人」最笨拙的樣子畫得很真。被很多讀者當作 BL 入門。","warn": "只放第一集，續集《卒業生》之後尺度較大。動畫電影分級 PG12","tags": ["漫畫","戀愛"],"hours": 1,"color": "#e9e3d6","ic": "🎵"},{"id": "kinou","title": "昨日的美食","author": "吉永史","cat": "BL","about": "律師史朗和美髮師賢二的同居日常，每話一道家常菜。","value": "用每天的晚餐，寫兩個人怎麼在現實裡一起生活，也談出櫃、家人、變老。菜都能照著做。","warn": "青年漫畫，集數多，可以先送第一集","tags": ["漫畫","料理"],"hours": 1,"color": "#c0392b","ic": "🍳"}];
+/* --- 書店第二版（v2.18）：精緻書架、打開書的頁面、家人送書、鼓勵卡 ---
+   存檔（後端 Bookstore.gs）：gift:時間戳 = { from, at, book, note, emoji, readAt }、cheer:時間戳 = { from, at, text, emoji }、booksSeen
+   書單 BOOK_CATALOG 由 make_catalog.py 從 bookstore/家人送書書單.md 產生；每位家人每週送一本、每天一張鼓勵卡；不給經驗值或島幣 */
+const BOOK_EMOJIS = ['😊', '🥹', '📖', '🙏', '⭐', '🐈'];
+const WISDOM_ICONS = { kongming: '🪶', xiaomiao: '♨️', alu: '📰', einstein: '🔭' };
+const GIFT_WRAPS = ['kraft', '#e9d6c1', '#cfd9c7', 'kraft', '#d7cfe3', '#f0d9c4'];
+const BOOK_CATS = [['日本', '🗾 日本文學'], ['台灣', '🏝️ 台灣'], ['世界', '🌍 世界經典'], ['BL', '🌸 漫畫（請先自己看過）']];
+let bookKey = '', bookFreshKeys = [];
+function catalogOf(id) { return BOOK_CATALOG.find(b => b.id === id) || null; }
+function giftList() { return Object.keys(S.save).filter(k => k.startsWith('gift:') && S.save[k] && catalogOf(S.save[k].book)).map(k => Object.assign({ key: k, ts: Number(k.slice(5)) }, S.save[k])).sort((a, b) => a.ts - b.ts); }
+function cheerList() { return Object.keys(S.save).filter(k => k.startsWith('cheer:') && S.save[k]).map(k => Object.assign({ key: k, ts: Number(k.slice(6)) }, S.save[k])).sort((a, b) => b.ts - a.ts); }
+function freshBooks() { const seen = Number(S.save.booksSeen || 0); return giftList().concat(cheerList()).filter(x => x.ts > seen); }
+function bookFresh() { const keys = new Set(freshBooks().map(x => x.key).concat(bookFreshKeys)); return giftList().concat(cheerList()).filter(x => keys.has(x.key)); }
+// 進書店時把新到的書和鼓勵卡標成看過（這次進店期間仍標「新到的」）
+function seeBooksNow() {
+  if (isFamily()) return;
+  const f = freshBooks(); if (!f.length) return;
+  bookFreshKeys = bookFreshKeys.concat(f.map(x => x.key));
+  const top = Math.max.apply(null, f.map(x => x.ts));
+  S.save.booksSeen = top; call('seeBooks', top).catch(() => {});
+}
+function wisdomShelfBooks() { return myBooks().map(b => ({ key: b.key, title: b.title, color: b.color, icon: WISDOM_ICONS[b.key.replace(/2$/, '')] || '📘', vol: /2$/.test(b.key), done: Object.keys(b.done).length, total: 13 })); }
+
+// 「我的書架」：上層智慧島的書、下層家人送的書（最新一本封面朝外）。點書打開
+function shelfSvg() {
+  const W = 400, books = wisdomShelfBooks(), gifts = giftList();
+  const shade = (hex, k) => { const n = parseInt(String(hex).slice(1), 16) || 0, f = v => Math.max(0, Math.min(255, Math.round(v * k)));
+    return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(v => f(v).toString(16).padStart(2, '0')).join(''); };
+  const gold = '#e8cf8e', serif = "'Noto Serif TC','Noto Serif CJK TC',serif";
+  let defs = `<linearGradient id="shWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b98654"/><stop offset=".5" stop-color="#a87445"/><stop offset="1" stop-color="#8f5f35"/></linearGradient>
+    <linearGradient id="shBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a3322"/><stop offset="1" stop-color="#5e4129"/></linearGradient>
+    <linearGradient id="shEdge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9955f"/><stop offset="1" stop-color="#946236"/></linearGradient>
+    <linearGradient id="shPages" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#efe4cf"/><stop offset=".5" stop-color="#fbf6ea"/><stop offset="1" stop-color="#e2d4b8"/></linearGradient>
+    <radialGradient id="shLamp" cx=".5" cy="0" r=".9"><stop offset="0" stop-color="#ffd9a0" stop-opacity=".55"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/></radialGradient>
+    <pattern id="shGrain" width="60" height="8" patternUnits="userSpaceOnUse"><path d="M0 3 Q15 1 30 3 T60 3" stroke="#7a4f2a" stroke-width=".5" fill="none" opacity=".35"/></pattern>
+    <pattern id="shKraft" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#d9c3a0"/><path d="M0 6L6 0" stroke="#c9ae86" stroke-width=".6"/></pattern>`;
+  const plank = y => `<rect x="10" y="${y}" width="${W - 20}" height="9" fill="url(#shEdge)"/><rect x="10" y="${y}" width="${W - 20}" height="9" fill="url(#shGrain)"/><rect x="10" y="${y + 9}" width="${W - 20}" height="5" fill="#000" opacity=".18"/>`;
+  const label = (y, t) => `<rect x="${W / 2 - 34}" y="${y + 1}" width="68" height="7.5" rx="1" fill="#d9b86a" stroke="#a8843e" stroke-width=".5"/><text x="${W / 2}" y="${y + 6.8}" text-anchor="middle" font-size="5.6" fill="#4a3322" font-family="${serif}" letter-spacing="1">${t}</text>`;
+  const hint = (y, t) => `<text x="${W / 2}" y="${y - 70}" text-anchor="middle" font-size="9" fill="#e9d9b8" opacity=".75" font-family="sans-serif">${esc(t)}</text>`;
+  const ribbon = (x, base) => `<path d="M${x} ${base - 1} v18 l-3.5 -4 l-3.5 4 v-18 z" fill="#c0392b"/>`;
+  // 智慧島的書：圓背光影、上下金線、燙金直書書名、導師徽章、蓋章進度；13 章讀完掛紅絲帶
+  const spine = (b, x, base) => {
+    const w = b.vol ? 36 : 40, h = 168 + (b.title.length % 3) * 6, y = base - h, id = 'sp' + b.key;
+    defs += `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${shade(b.color, 0.72)}"/><stop offset=".18" stop-color="${shade(b.color, 1.18)}"/><stop offset=".45" stop-color="${b.color}"/><stop offset="1" stop-color="${shade(b.color, 0.62)}"/></linearGradient>`;
+    const chars = [...b.title.replace('・下冊', '')].slice(0, 9), fs = Math.min(13, (h - 72) / chars.length / 1.12), ty = y + 18 + fs, full = b.done >= b.total;
+    return `<g style="cursor:pointer" onclick="openBook('w:${b.key}')"><rect x="${x + 2}" y="${y + 3}" width="${w}" height="${h}" fill="#000" opacity=".25" rx="2"/>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5" fill="url(#${id})"/><rect x="${x + 1}" y="${y - 2.5}" width="${w - 2}" height="3" rx="1" fill="url(#shPages)"/>
+      <path d="M${x + 3} ${y + 10}h${w - 6}M${x + 3} ${y + 13}h${w - 6}M${x + 3} ${y + h - 13}h${w - 6}M${x + 3} ${y + h - 10}h${w - 6}" stroke="${gold}" stroke-width=".9"/>
+      ${chars.map((c, i) => `<text x="${x + w / 2}" y="${ty + i * fs * 1.12}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="${gold}" font-family="${serif}">${esc(c)}</text>`).join('')}
+      <circle cx="${x + w / 2}" cy="${y + h - 38}" r="10" fill="${shade(b.color, 0.55)}" stroke="${gold}" stroke-width="1"/>
+      <text x="${x + w / 2}" y="${y + h - 34}" text-anchor="middle" font-size="11">${b.icon}</text>
+      <text x="${x + w / 2}" y="${y + h - 18}" text-anchor="middle" font-size="${b.vol ? 6.2 : 7.5}" fill="${gold}" font-family="sans-serif">${b.vol ? '下・' : ''}${b.done}／${b.total}</text>
+      ${full ? ribbon(x + w - 3, base) + `<circle cx="${x + w / 2}" cy="${y + h - 38}" r="12.5" fill="none" stroke="#ffe08a" stroke-width="1.2" opacity=".9"/>` : ''}</g>`;
+  };
+  // 家人送的書：書店的書衣、手寫書名籤、底下「誰送的」；讀過了掛紅絲帶
+  const gspine = (g, x, base, i) => {
+    const bk = catalogOf(g.book), w = 34, h = 150 + (i % 2) * 10, y = base - h, t = [...bk.title.replace(/（.*）/, '')].slice(0, 10), n = t.length, fs = Math.min(10, (h - 58) / n / 1.15);
+    const wrap = GIFT_WRAPS[i % GIFT_WRAPS.length], fill = wrap === 'kraft' ? 'url(#shKraft)' : wrap;
+    return `<g style="cursor:pointer" onclick="openBook('${g.key}')"><rect x="${x + 2}" y="${y + 3}" width="${w}" height="${h}" fill="#000" opacity=".22" rx="2"/>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${fill}"/><rect x="${x}" y="${y}" width="5" height="${h}" fill="#000" opacity=".08"/><rect x="${x + w - 4}" y="${y}" width="4" height="${h}" fill="#000" opacity=".12"/>
+      <rect x="${x + 1}" y="${y - 2.5}" width="${w - 2}" height="3" rx="1" fill="url(#shPages)"/>
+      <rect x="${x + 6}" y="${y + 14}" width="${w - 12}" height="${n * fs * 1.15 + 9}" fill="#fffaf0" stroke="#b9a07a" stroke-width=".6"/>
+      ${t.map((c, k) => `<text x="${x + w / 2}" y="${y + 18 + fs + k * fs * 1.15}" text-anchor="middle" font-size="${fs}" fill="#4a3322" font-family="${serif}">${esc(c)}</text>`).join('')}
+      <path d="M${x + 5} ${y + h - 30}h${w - 10}" stroke="#a68a64" stroke-width=".6" stroke-dasharray="2 1.5"/>
+      <rect x="${x + 4}" y="${y + h - 24}" width="${w - 8}" height="13" rx="6.5" fill="#fff6d6" stroke="#c9ae86" stroke-width=".6"/>
+      <text x="${x + w / 2}" y="${y + h - 15}" text-anchor="middle" font-size="6.5" fill="#8c2f2b" font-family="sans-serif">${esc(g.from)}送</text>
+      ${g.readAt ? ribbon(x + w - 4, base) : ''}</g>`;
+  };
+  // 封面朝外：最新收到的那一本
+  const cover = (g, fx, base) => {
+    const bk = catalogOf(g.book), fy = base - 128, fresh = !g.readAt && (parseD(S.today) - parseD(g.at)) / 86400000 <= 7;
+    const tt = bk.title.replace(/（.*）/, ''), tfs = tt.length > 6 ? 9 : 11;
+    return `<g style="cursor:pointer" onclick="openBook('${g.key}')"><path d="M${fx - 4} ${base} l14 -20 h70 l14 20 z" fill="#8a5a2c"/>
+      <rect x="${fx + 2}" y="${fy + 3}" width="88" height="112" fill="#000" opacity=".25" rx="2"/><rect x="${fx}" y="${fy}" width="88" height="112" rx="2" fill="${bk.color}"/>
+      <rect x="${fx + 5}" y="${fy + 5}" width="78" height="102" rx="1" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".8"/>
+      <circle cx="${fx + 44}" cy="${fy + 44}" r="22" fill="rgba(255,255,255,.14)"/><text x="${fx + 44}" y="${fy + 54}" text-anchor="middle" font-size="26">${bk.ic}</text>
+      <text x="${fx + 44}" y="${fy + 84}" text-anchor="middle" font-size="6" fill="rgba(255,255,255,.85)" font-family="sans-serif">${esc(bk.author)}</text>
+      <text x="${fx + 44}" y="${fy + 100}" text-anchor="middle" font-size="${tfs}" font-weight="700" fill="#fff" font-family="${serif}">${esc(tt)}</text>
+      <g transform="rotate(-6 ${fx + 70} ${fy - 4})"><rect x="${fx + 48}" y="${fy - 12}" width="46" height="16" rx="2" fill="#fff6d6" stroke="#c9ae86" stroke-width=".7"/>
+        <text x="${fx + 71}" y="${fy - 1}" text-anchor="middle" font-size="7" fill="#8c2f2b" font-family="sans-serif">${fresh ? 'NEW・' : ''}${esc(g.from)}${fresh ? '' : '送'}</text></g></g>`;
+  };
+  let body = '';
+  const b1 = 228, older = gifts.slice(0, -1).reverse(), newest = gifts[gifts.length - 1];
+  const rows = [older.slice(0, 6)]; for (let i = 6; i < older.length; i += 9) rows.push(older.slice(i, i + 9));
+  const H = b1 + rows.length * 190 + 52;
+  body += `<rect width="${W}" height="${H}" fill="#f4ecdc"/><ellipse cx="200" cy="0" rx="260" ry="160" fill="url(#shLamp)"/>
+    <rect x="6" y="20" width="${W - 12}" height="${H - 34}" rx="4" fill="url(#shWood)"/><rect x="6" y="20" width="${W - 12}" height="${H - 34}" fill="url(#shGrain)" opacity=".7"/>
+    <rect x="16" y="30" width="${W - 32}" height="${H - 54}" fill="url(#shBack)"/><rect x="16" y="30" width="${W - 32}" height="14" fill="#000" opacity=".2"/>
+    <rect x="${W / 2 - 52}" y="8" width="104" height="22" rx="3" fill="#fbf4e4" stroke="#6b4a2b" stroke-width="1.5"/>
+    <text x="${W / 2}" y="23.5" text-anchor="middle" font-size="12" font-weight="700" fill="#5b3a1e" font-family="${serif}">${isFamily() ? '她的書架' : '我的書架'}</text>`;
+  let x = 30;
+  books.forEach(b => { body += spine(b, x, b1); x += (b.vol ? 36 : 40) + 3; });
+  if (!books.length) body += hint(b1, '智慧島開航後，上完的課會變成書擺在這裡');
+  // 招き猫書擋、小盆栽
+  body += `<g transform="translate(${Math.min(x + 8, W - 96)} ${b1})"><path d="M0 0 v-34 q0 -6 6 -6 h14 q6 0 6 6 v34 z" fill="#fdfaf2" stroke="#d9c7a8"/><path d="M4 -40 l3 -7 l3 7 M16 -40 l3 -7 l3 7" fill="#fdfaf2" stroke="#d9c7a8"/>
+    <circle cx="9" cy="-30" r="1.3" fill="#3a2a33"/><circle cx="17" cy="-30" r="1.3" fill="#3a2a33"/><path d="M11 -26 q2 2 4 0" stroke="#3a2a33" fill="none" stroke-width=".8"/><circle cx="13" cy="-16" r="5" fill="#e8b84a"/><path d="M24 -26 q6 -8 2 -14" stroke="#d9c7a8" stroke-width="3" fill="none"/></g>
+    <g transform="translate(${W - 58} ${b1})"><path d="M0 0 l3 -18 h20 l3 18 z" fill="#b5653a"/><rect x="1" y="-20" width="24" height="4" fill="#9b5530"/>
+    ${[[13, -32, 9], [6, -27, 6], [20, -27, 6], [9, -38, 5], [17, -37, 5]].map(([cx, cy, r]) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${r > 7 ? '#6b9a52' : '#7fb062'}"/>`).join('')}</g>`;
+  body += plank(b1) + label(b1, '智慧島的書');
+  rows.forEach((row, ri) => {
+    const base = b1 + 190 * (ri + 1);
+    x = 30; row.forEach((g, i) => { body += gspine(g, x, base, gifts.indexOf(g)); x += 37; });
+    if (ri === 0 && newest) body += cover(newest, W - 128, base);
+    if (ri === 0 && !newest) body += hint(base, '家人送的書會擺在這一層');
+    body += plank(base) + (ri === 0 ? label(base, '家人送的書') : '');
+  });
+  body += `<rect x="6" y="${H - 14}" width="${W - 12}" height="8" fill="#7a4f28"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;border-radius:12px" xmlns="http://www.w3.org/2000/svg"><defs>${defs}</defs>${body}</svg>`;
+}
 function bookShelfHtml() {
-  const books = myBooks(), open = draft.bookOpen;
-  books.forEach(b => loadWisdomJson(b.key));
-  const ob = open && books.find(b => b.key === open);
-  return `<div class="card"><h3>📖 ${isFamily() ? '她的書架' : '我的書架'}</h3>
-    ${books.length ? `<div class="bookrow">${books.map(b => `<button class="spine" style="background:${esc(b.color)}" onclick="draft.bookOpen=draft.bookOpen==='${b.key}'?'':'${b.key}';render()"><span>${[...b.title].map(esc).join('<br>')}</span></button>`).join('')}</div>`
-      : '<div class="muted">書架還空著。之後智慧島開航，上完一講課就會在這裡蓋章，一本一本擺上來。</div>'}
-    ${ob ? `<div style="margin-top:10px"><b>${esc(ob.title)}</b>・蓋了 ${Object.keys(ob.done).length}／13 章
-      ${Array.from({ length: 13 }, (_, i) => i + 1).map(n => { const d = ob.done[n], ch = ob.chapters && ob.chapters[n - 1];
-        return `<div class="item" style="${d ? 'cursor:pointer' : 'opacity:.45'}" ${d && typeof openWisdomLesson === 'function' ? `onclick="openWisdomLesson('${ob.key}', ${n})"` : ''}><span style="width:26px">${d ? '<span class="hanko" style="font-size:11px">印</span>' : '・'}</span>
-          <div class="name grow">第 ${n} 章${ch ? '・' + esc(ch) : ''}</div><span class="muted">${d && d.at ? short(String(d.at).slice(0, 10)) : ''}</span></div>`; }).join('')}</div>` : ''}</div>`;
+  return `<div class="card">${shelfSvg()}<div class="muted" style="font-size:12px;margin-top:6px">點書背打開書・${isFamily() ? '讀完的書會掛上紅絲帶' : '讀完的書會掛上紅絲帶'}</div></div>`;
+}
+
+// 打開一本書
+function openBook(key) { bookKey = key; draft = {}; tab = 'book'; render(); window.scrollTo(0, 0); }
+function viewBook() {
+  const back = `<button class="ghost" onclick="go('bookstore')">放回書架</button>`;
+  if (bookKey.startsWith('w:')) {
+    const b = myBooks().find(x => x.key === bookKey.slice(2));
+    if (!b) return `<div class="card">找不到這本書。</div><div class="row">${back}</div>`;
+    const icon = WISDOM_ICONS[b.key.replace(/2$/, '')] || '📘', ns = Object.keys(b.done).map(Number).sort((p, q) => p - q);
+    const dates = ns.map(n => String(b.done[n].at || '').slice(0, 10)).filter(Boolean).sort(), sel = draft.ch || ns[ns.length - 1];
+    const cur = b.done[sel], full = ns.length >= 13;
+    return `<div class="bkdesk"><div class="bkbook">
+      <div class="bkpage"><div class="bkwcover" style="background:linear-gradient(90deg,${b.color}cc,${b.color} 20%,${b.color} 80%,${b.color}cc)"><b>${esc(b.title)}</b><i>${icon} 智慧島</i></div>
+        <div class="row" style="margin-top:12px;justify-content:space-between"><span><b>蓋了 ${ns.length}／13 章</b>${dates.length ? ` <span class="muted">・${esc(dates[0].replace(/-/g, '/'))}～${esc(dates[dates.length - 1].slice(5).replace('-', '/'))}</span>` : ''}</span>${full ? '<span style="color:#c0392b">🎀 讀完了</span>' : ''}</div></div>
+      <div class="bkpage"><div class="bksec">目錄</div>
+        ${Array.from({ length: 13 }, (_, i) => i + 1).map(n => { const d = b.done[n], ch = b.chapters && b.chapters[n - 1];
+          return `<div class="bkch${d ? '' : ' off'}${d && n === sel ? ' on' : ''}" ${d ? `onclick="draft.ch=${n};render()"` : ''}>${d ? '<span class="hanko">印</span>' : '<span class="bkdot">・</span>'}<span class="n">第 ${n} 章</span><span class="grow">${ch ? esc(ch) : ''}</span><span class="d">${d && d.at ? short(String(d.at).slice(0, 10)) : ''}${d && n === sel ? ' ›' : ''}</span></div>`; }).join('')}</div>
+      ${cur ? `<div class="bkpage"><div class="bksec">第 ${sel} 章的心得</div>
+        <div class="bknote"><div class="tape"></div>${cur.note ? esc(cur.note) : '<span class="muted">這一章沒有寫心得。</span>'}<div class="who">—— ${esc(short(String(cur.at || '').slice(0, 10)))} 的${isFamily() ? '她' : '我'}</div></div>
+        <div class="row" style="margin-top:14px">${typeof openWisdomLesson === 'function' ? `<button class="grow" onclick="openWisdomLesson('${b.key}', ${sel})">回看第 ${sel} 章全文</button>` : ''}${back}</div></div>` : `<div class="bkpage"><div class="row">${back}</div></div>`}
+    </div></div>`;
+  }
+  const g = S.save[bookKey], bk = g && catalogOf(g.book), fam = isFamily(), kp = keeperOf('bookstore');
+  if (!bk) return `<div class="card">找不到這本書。</div><div class="row">${back}</div>`;
+  const hrs = bk.hours < 1 ? '十幾分鐘就能讀完' : '約 ' + bk.hours + ' 小時讀完';
+  return `<div class="bkdesk"><div class="bkbook">
+    <div class="bkpage">${g.readAt ? '<div class="bkrib"></div>' : ''}<div class="row" style="align-items:flex-start;flex-wrap:nowrap;gap:14px">
+      <div class="bkcv" style="background:${bk.color}"><span>${bk.ic}</span><div class="a">${esc(bk.author)}</div><div class="t">${esc(bk.title.replace(/（.*）/, ''))}</div></div>
+      <div><h2 class="bkh">${esc(bk.title)}</h2><div class="muted" style="margin-top:4px">${esc(bk.author)}・${esc((BOOK_CATS.find(c => c[0] === bk.cat) || [, ''])[1].replace(/^\S+ /, ''))}</div>
+        <div>${bk.tags.map(t => `<span class="bktag">${esc(t)}</span>`).join('')}<span class="bktag">${hrs}</span></div>
+        <div class="muted" style="margin-top:8px">${esc(g.at.replace(/-/g, '/'))} 收到${g.readAt ? '・' + esc(short(g.readAt)) + ' 讀完' : ''}</div></div></div></div>
+    <div class="bkpage"><div class="bksec">在講什麼</div><p class="bkp">${esc(bk.about)}</p>
+      <div class="bksec" style="margin-top:16px">為什麼值得讀</div><div class="bkvalue"><p class="bkp">${esc(bk.value)}</p></div></div>
+    <div class="bkpage" style="padding-top:22px"><div class="bknote"><div class="tape"></div>${esc(g.note)}<div class="who">—— ${esc(g.from)}</div></div>
+      ${kp ? `<div class="row" style="margin-top:12px;flex-wrap:nowrap;align-items:flex-start"><span style="font-size:26px">${kpPic(kp)}</span><div class="speech grow" style="font-size:13.5px"><b>${esc(kp.name)}</b>：${fam ? '這本我已經包好，放在她的書架上了。' : '這本是' + esc(g.from) + '親自挑的喔，我幫你包好書衣了。'}</div></div>` : ''}</div>
+    <div class="bkpage">${fam ? `<div class="muted">${g.emoji ? '她回了 <span style="font-size:22px">' + esc(g.emoji) + '</span>' : '她還沒回表情'}${g.readAt ? '・已經讀完了 🎀' : ''}</div><div class="row" style="margin-top:12px">${back}</div>`
+      : `<div class="muted">回${esc(g.from)}一個表情（${esc(g.from)}下次來看得到）</div>
+      <div class="row" style="margin-top:8px;gap:6px">${BOOK_EMOJIS.map(e => `<button class="bkemo${g.emoji === e ? ' on' : ''}" onclick="answerBook('${bookKey}', '${g.emoji === e ? '' : e}')">${e}</button>`).join('')}</div>
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="answerBook('${bookKey}', null, ${g.readAt ? 'false' : 'true'})">${g.readAt ? '↩️ 還沒讀完' : '📖 讀過了'}</button>${back}</div>`}</div>
+  </div></div>`;
+}
+async function answerBook(key, emoji, read) {
+  try { await flush(); S = await call('answerBook', key, emoji, read == null ? null : read); D = derive(S); }
+  catch (e) { return toast('儲存失敗：' + (e.message || e)); }
+  if (read === true) toast('🎀 讀完了！掛上紅絲帶');
+  render();
+}
+
+// 家人：送她一本書（每週一本）
+function giftedThisWeek() { const mon = mondayOf(S.today); return giftList().some(g => g.from === S.who.name && g.at >= mon); }
+function viewGiftPick() {
+  if (!isFamily()) return viewBookstore();
+  if (giftedThisWeek()) return `<div class="card"><h2>📚 這週已經送過一本了</h2><div class="muted">每位家人每週可以送一本，下週一再來挑吧。</div></div><div class="row"><button class="ghost grow" onclick="go('bookstore')">回到書店 📚</button></div>`;
+  const have = new Set(giftList().map(g => g.book)), pick = draft.pick && catalogOf(draft.pick);
+  if (pick) return `<div class="card"><div class="row" style="flex-wrap:nowrap;gap:12px;align-items:flex-start"><div class="bkcv" style="background:${pick.color}"><span>${pick.ic}</span><div class="a">${esc(pick.author)}</div><div class="t">${esc(pick.title.replace(/（.*）/, ''))}</div></div>
+      <div><h2 class="bkh">${esc(pick.title)}</h2><div class="muted">${esc(pick.author)}</div><div>${pick.tags.map(t => `<span class="bktag">${esc(t)}</span>`).join('')}</div></div></div>
+      <div class="bksec" style="margin-top:14px">在講什麼</div><p class="bkp">${esc(pick.about)}</p>
+      <div class="bksec" style="margin-top:12px">為什麼值得讀</div><div class="bkvalue"><p class="bkp">${esc(pick.value)}</p></div>
+      ${pick.warn ? `<div class="muted" style="margin-top:8px">⚠️ ${esc(pick.warn)}</div>` : ''}
+      <label style="margin-top:14px">寫一句為什麼想送她這本（60 字內）</label>
+      <textarea id="gfNote" maxlength="60" rows="3" placeholder="例如：這本是我國中時最喜歡的書，考試累的時候讀一點點就好。" oninput="draft.gnote=this.value">${esc(draft.gnote || '')}</textarea>
+      <div class="muted" style="font-size:12px;margin-top:4px">只稱讚她的努力和想法就好，不用提外表。</div>
+      <div class="row" style="margin-top:12px"><button class="grow" id="gfGo" onclick="sendGift()">📚 請店長包好送給她</button><button class="ghost" onclick="draft.pick='';render()">換一本</button></div></div>`;
+  return `<div class="card"><h2>📚 送她一本書</h2><div class="muted">挑一本，寫一句為什麼想送她。店長會包上書衣，放在她的書架上，她打開小島時會收到。每位家人每週可以送一本。</div></div>
+    ${BOOK_CATS.map(([c, name]) => { const list = BOOK_CATALOG.filter(b => b.cat === c); return list.length ? `<div class="card"><h3>${name}</h3>${list.map(b => `<div class="item" style="cursor:${have.has(b.id) ? 'default' : 'pointer'};${have.has(b.id) ? 'opacity:.45' : ''}" ${have.has(b.id) ? '' : `onclick="draft.pick='${b.id}';render();window.scrollTo(0,0)"`}>
+        <span class="bkmini" style="background:${b.color}">${b.ic}</span><div class="name grow"><b>${esc(b.title)}</b> <span class="muted">${esc(b.author)}</span><div class="muted" style="font-size:12px">${have.has(b.id) ? '已經在她的書架上' : esc(b.value.length > 40 ? b.value.slice(0, 38) + '…' : b.value)}</div></div></div>`).join('')}</div>` : ''; }).join('')}
+    <div class="row"><button class="ghost grow" onclick="go('bookstore')">回到書店 📚</button></div>`;
+}
+async function sendGift() {
+  const el = document.getElementById('gfNote'), note = (el ? el.value : draft.gnote || '').trim();
+  if (!note) return toast('寫一句為什麼想送她這本吧');
+  const btn = document.getElementById('gfGo'); if (btn) btn.disabled = true;
+  try { S = await call('giftBook', draft.pick, note); D = derive(S); }
+  catch (e) { if (btn) btn.disabled = false; return toast(e.message || String(e)); }
+  draft = {}; toast('📚 送出了！店長會轉交給她'); go('bookstore');
+}
+// 家人：寫鼓勵卡（每天一張，40 字）
+function cheeredToday() { return cheerList().some(c => c.from === S.who.name && c.at === S.today); }
+function viewCheerWrite() {
+  if (!isFamily()) return viewBookstore();
+  if (cheeredToday()) return `<div class="card"><h2>💌 今天已經寫過了</h2><div class="muted">每天可以寫一張，明天再來吧。</div></div><div class="row"><button class="ghost grow" onclick="go('bookstore')">回到書店 📚</button></div>`;
+  const eg = ['今天也辛苦了，記得早點睡。', '看到你每天都在讀書，很佩服你的堅持。', '累了就休息一下，我們都在。'];
+  return `<div class="card"><h2>💌 寫一張鼓勵卡</h2><div class="muted">寫幾句話給她（40 字內），店長會在她下次進書店時交給她，也會收進明信片冊的「鼓勵卡」那一頁。她可以回你一個表情。</div>
+      <div class="row" style="gap:6px;margin-top:10px">${eg.map(t => `<button class="ghost" style="padding:6px 10px;font-size:13px" onclick="draft.cheer='${t}';render()">${t}</button>`).join('')}</div>
+      <textarea id="chText" maxlength="40" rows="3" style="margin-top:10px" placeholder="寫給她的話" oninput="draft.cheer=this.value">${esc(draft.cheer || '')}</textarea>
+      <div class="muted" style="font-size:12px;margin-top:4px">稱讚她的努力、想法和做到的事就好，不用提外表。</div>
+      <div class="row" style="margin-top:12px"><button class="grow" id="chGo" onclick="sendCheer()">💌 交給店長</button><button class="ghost" onclick="go('bookstore')">取消</button></div></div>`;
+}
+async function sendCheer() {
+  const el = document.getElementById('chText'), text = (el ? el.value : draft.cheer || '').trim();
+  if (!text) return toast('寫幾句話給她吧');
+  const btn = document.getElementById('chGo'); if (btn) btn.disabled = true;
+  try { S = await call('sendCheer', text); D = derive(S); }
+  catch (e) { if (btn) btn.disabled = false; return toast(e.message || String(e)); }
+  draft = {}; toast('💌 交給店長了！'); go('bookstore');
+}
+// 一張鼓勵卡（書店的新到區、明信片冊的鼓勵卡頁共用）
+function cheerCard(c) {
+  const fam = isFamily();
+  return `<div class="bknote" style="margin:14px 4px 8px;transform:rotate(${(c.ts % 3) - 1}deg)"><div class="tape"></div>${esc(c.text)}<div class="who">—— ${esc(c.from)}・${esc(short(c.at))}</div></div>
+    <div class="row" style="gap:6px;margin:0 4px 6px">${fam ? `<span class="muted" style="font-size:13px">${c.emoji ? '她回了 <span style="font-size:20px">' + esc(c.emoji) + '</span>' : '她還沒回表情'}</span>`
+      : BOOK_EMOJIS.map(e => `<button class="bkemo sm${c.emoji === e ? ' on' : ''}" onclick="answerBook('${c.key}', '${c.emoji === e ? '' : e}')">${e}</button>`).join('')}</div>`;
+}
+function bookGotText(g, c) { return [g ? (g > 1 ? ' ' + g + ' 本書' : '一本書') : '', c ? (c > 1 ? ' ' + c + ' 張鼓勵卡' : '一張鼓勵卡') : ''].filter(Boolean).join('和'); }
+// 書店裡的「新到的」：店長轉交家人送的書、鼓勵卡
+function bookFreshHtml() {
+  if (isFamily()) return '';
+  const f = bookFresh(); if (!f.length) return '';
+  const kp = keeperOf('bookstore'), gifts = f.filter(x => x.key.startsWith('gift:')), cheers = f.filter(x => x.key.startsWith('cheer:'));
+  const who = [...new Set(f.map(x => x.from))].join('、');
+  return `<div class="card" style="border:2px solid var(--gold)">
+      ${kp ? `<div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow"><b>${esc(kp.name)}</b>：${esc(who)}送來了${bookGotText(gifts.length, cheers.length)}，我幫你收好了。</div></div>` : ''}
+      ${gifts.map(g => { const bk = catalogOf(g.book); return `<div class="item" style="cursor:pointer" onclick="openBook('${g.key}')"><span class="bkmini" style="background:${bk.color}">${bk.ic}</span><div class="name grow"><b>${esc(bk.title)}</b><div class="muted">${esc(g.from)}送的・點開看看</div></div><span>›</span></div>`; }).join('')}
+      ${cheers.map(cheerCard).join('')}</div>`;
 }
 // 店內插畫（v2.17.1 重畫）：台灣巷弄獨立書店。viewBox 400×280；店貓與店長疊在上面（CAT_SPOTS 用同一套百分比）
 const BK_COLORS = ['#8c2f2b', '#c8963e', '#2f5d62', '#2e3a59', '#efe4cf', '#6b7f3a', '#b5653a', '#c98a8a', '#5b6c7d', '#d9c08a', '#7a4b6b', '#3f6e8c'];
@@ -3437,13 +3691,16 @@ function viewBookstore() {
       <button style="width:100%;margin-top:12px" onclick="openKeeper('bookstore')">請一位店長 🧑‍🦱</button></div>
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
   const daily = S.save['daily:' + S.today], intro = fam ? '' : placeIntro('bookstore');
-  const say = fam ? 'いらっしゃいませ～歡迎來書店坐坐！要不要寄一張明信片給她？' : (daily && daily.messages && daily.messages.bookstore) || bookKeeperLine();
+  const say = fam ? 'いらっしゃいませ～歡迎來書店坐坐！要不要送她一本書，或寫一張鼓勵卡給她？' : (daily && daily.messages && daily.messages.bookstore) || bookKeeperLine();
   return `<div class="card"><h2>📚 ${esc(bookTitle())}</h2>
       ${bookScene()}
       <div id="bcatSay" class="muted" style="min-height:1.4em;margin-top:6px;font-size:13px">${cat ? '🐾 ' + esc(cat.name) + catMood() : ''}</div>
       ${intro || (kp ? `<div class="row" style="margin-top:6px;flex-wrap:nowrap;cursor:pointer" onclick="${fam ? '' : "openKeeper('bookstore')"}"><span style="font-size:30px">${kpPic(kp)}</span>
         <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(say)}</div></div>` : '')}
       ${!fam && kp && !cat && !intro ? `<button class="ghost" style="width:100%;margin-top:10px" onclick="openKeeper('bookcat')">🐾 ${esc(kp.name)}：「店裡好像少了一隻貓……要不要幫我們養一隻？」</button>` : ''}</div>
+    ${bookFreshHtml()}
+    ${fam ? `<div class="row" style="margin-bottom:10px"><button class="grow" onclick="go('giftPick')">📚 送她一本書${giftedThisWeek() ? '（這週送過了）' : ''}</button>
+      <button class="grow" onclick="go('cheerWrite')">💌 寫鼓勵卡${cheeredToday() ? '（今天寫過了）' : ''}</button></div>` : ''}
     <div class="row" style="margin-bottom:14px">
       <button class="ghost grow" onclick="go('cards')">📮 明信片冊${n ? '（' + n + '）' : ''}${fresh && !fam ? ' 🔴' : ''}</button>
       ${fam ? `<button class="ghost grow" onclick="go('postcard')">✉️ 寄明信片</button>`
@@ -3507,8 +3764,13 @@ function catTap() {
 
 // 明信片冊（她和家人都能看）
 function viewCards() {
-  const list = cardList();
-  return `<div class="card"><h2>📮 明信片冊</h2><div class="muted">家人來島上逛過，寄給你的世界各地明信片。</div></div>
+  const list = cardList(), cheers = cheerList(), onCheer = draft.cardTab === 'cheer';
+  const tabs = `<div class="row" style="margin-bottom:14px"><button class="${onCheer ? 'ghost ' : ''}grow" onclick="draft.cardTab='';render()">📮 明信片（${list.length}）</button>
+    <button class="${onCheer ? '' : 'ghost '}grow" onclick="draft.cardTab='cheer';render()">💌 鼓勵卡（${cheers.length}）</button></div>`;
+  if (onCheer) return `<div class="card"><h2>💌 鼓勵卡</h2><div class="muted">${isFamily() ? '家人寫給她的鼓勵卡，她回的表情也會在這裡。' : '家人寫給你的鼓勵卡。點一個表情回給他們，他們下次來就看得到。'}</div></div>${tabs}
+    ${cheers.length ? `<div class="card" style="background:#f6efe2">${cheers.map(cheerCard).join('')}</div>` : `<div class="card"><div class="muted">還沒有鼓勵卡。家人用家人碼進書店，可以寫一張給${isFamily() ? '她' : '你'}。</div></div>`}
+    <div class="row"><button class="ghost grow" onclick="go('bookstore')">回到書店 📚</button></div>`;
+  return `<div class="card"><h2>📮 明信片冊</h2><div class="muted">家人來島上逛過，寄給你的世界各地明信片。</div></div>${tabs}
     ${list.length ? list.map(c => `<div class="card" style="background:#fffaf0;border:2px solid #e7d3b8">
       <img src="${esc(c.img)}" alt="${esc(c.title)}" loading="lazy" style="width:100%;max-height:340px;object-fit:cover;border-radius:8px;border:6px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.15)">
       <div class="row" style="margin-top:8px"><b class="grow">${esc(c.title)}</b><span class="muted">${short(c.at)}</span></div>
@@ -3707,7 +3969,8 @@ function viewGuide() {
   ${sec('📮', '明信片冊', p('家人有自己的「家人碼」，可以進來看看你的小島，但只能看、不會改到任何東西。家人來逛過的那天，可能會挑一張世界各地的風景或文化照片寄給你，附上一句話和一段小知識。收到時右上角的 📮 郵便受け會亮紅點，所有明信片都收在「📚 獨立書店 → 📮 明信片冊」。'))}
   ${sec('📚', '獨立書店', p('島上的巷口有一間獨立書店，是你和家人往來的地方。第一次去先幫它取個店名（之後按「✏️ 改店名」可以換），再請一位店長：名字、樣子、個性都由你決定（也可以上傳自己的圖），店長會跟你介紹書店。之後點店長可以改設定。') +
     p('店裡可以養一隻店貓，取名字、選花色和個性。牠會在書架、平台桌、窗邊和櫃台之間走走、坐坐、洗臉、睡覺；晚上比較愛睡，下雨天會坐在窗邊看雨，點牠一下會有反應。') +
-    p('📮 明信片冊、🎟️ 邀請朋友都在書店裡。店裡還有一座你的書架，之後智慧島上課得到的書會擺在這裡，點書可以看蓋過章的章節。家人用家人碼來島上，也會到書店看明信片、寄明信片給你。'))}
+    p('📮 明信片冊、🎟️ 邀請朋友都在書店裡。店裡還有一座你的書架：上層擺智慧島的書，點開看目錄和蓋過章的章節，點一章看那天寫的心得；下層擺家人送的書。') +
+    p('家人用家人碼進書店，每人每週可以挑一本書送你，寫一句為什麼想送你；也可以每天寫一張鼓勵卡（40 字內）。店長會在你進書店時交給你，右上角的 📮 也會亮紅點。打開書可以看「在講什麼」和「為什麼值得讀」，讀完按「📖 讀過了」會掛上紅絲帶。書和鼓勵卡都可以回一個表情，家人下次來就看得到。鼓勵卡收在明信片冊的「💌 鼓勵卡」那一頁。'))}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
   ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊 Threads 上最近的熱門話題，有的會關心你；很久沒去找他，他可能會抱怨或想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性。') +
     p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
