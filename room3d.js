@@ -5,6 +5,26 @@
  *   opts = { wall: '#rrggbb', accent: '#rrggbb', items: [{ ic, z: 'wall'|'floor'|'out' }], visitor: { emoji, img }, night }
  */
 (function () {
+  // 紫色的烏龜：🐢 先畫在另一張畫布，把綠色轉成紫色再貼上（和 CSS 的 hue-rotate(185deg) saturate(1.4) 一樣）
+  function drawEmoji(g, e, x, y) {
+    if (!e || e.indexOf('🐢') < 0) return g.fillText(e, x, y);
+    const c = document.createElement('canvas'); c.width = g.canvas.width; c.height = g.canvas.height;
+    const t = c.getContext('2d'); t.font = g.font; t.textAlign = g.textAlign; t.textBaseline = g.textBaseline; t.fillText(e, x, y);
+    const d = t.getImageData(0, 0, c.width, c.height), p = d.data, a = 185 * Math.PI / 180, co = Math.cos(a), si = Math.sin(a), s = 1.4;
+    const H = [0.213 + co * 0.787 - si * 0.213, 0.715 - co * 0.715 - si * 0.715, 0.072 - co * 0.072 + si * 0.928,
+      0.213 - co * 0.213 + si * 0.143, 0.715 + co * 0.285 + si * 0.140, 0.072 - co * 0.072 - si * 0.283,
+      0.213 - co * 0.213 - si * 0.787, 0.715 - co * 0.715 + si * 0.715, 0.072 + co * 0.928 + si * 0.072];
+    const S = [0.213 + 0.787 * s, 0.715 - 0.715 * s, 0.072 - 0.072 * s, 0.213 - 0.213 * s, 0.715 + 0.285 * s, 0.072 - 0.072 * s,
+      0.213 - 0.213 * s, 0.715 - 0.715 * s, 0.072 + 0.928 * s];
+    const M = [0, 1, 2].map(i => [0, 1, 2].map(j => S[i * 3] * H[j] + S[i * 3 + 1] * H[3 + j] + S[i * 3 + 2] * H[6 + j]));
+    for (let i = 0; i < p.length; i += 4) {
+      if (!p[i + 3]) continue;
+      const r = p[i], gg = p[i + 1], b = p[i + 2];
+      p[i] = M[0][0] * r + M[0][1] * gg + M[0][2] * b; p[i + 1] = M[1][0] * r + M[1][1] * gg + M[1][2] * b; p[i + 2] = M[2][0] * r + M[2][1] * gg + M[2][2] * b;
+    }
+    t.putImageData(d, 0, 0); g.drawImage(c, 0, 0);
+  }
+
   let renderer, scene, camera, controls, clock, container, content, visitorSp;
   let running = false, signature = '', t = 0;
   const std = (color, extra) => new THREE.MeshStandardMaterial(Object.assign({ color, flatShading: true, roughness: 0.9, metalness: 0 }, extra));
@@ -14,7 +34,7 @@
     const N = 256, cv = document.createElement('canvas'); cv.width = cv.height = N;
     const g = cv.getContext('2d');
     g.font = `${N * 0.78}px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(emoji, N / 2, N / 2 + 12);
+    drawEmoji(g, emoji, N / 2, N / 2 + 12);
     const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
     return tex;
   }
@@ -40,7 +60,7 @@
     const base = () => { g.clearRect(0, 0, N, N); g.fillStyle = '#fff'; g.beginPath(); g.arc(N / 2, N / 2, N / 2 - 6, 0, Math.PI * 2); g.fill();
       g.lineWidth = 10; g.strokeStyle = '#741b47'; g.stroke(); };
     base();
-    g.font = `${N * 0.6}px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(emoji || '🙂', N / 2, N / 2 + 10);
+    g.font = `${N * 0.6}px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; drawEmoji(g, emoji || '🙂', N / 2, N / 2 + 10);
     if (imgSrc) {
       const im = new Image();
       im.onload = () => { base(); g.save(); g.beginPath(); g.arc(N / 2, N / 2, N / 2 - 12, 0, Math.PI * 2); g.clip();

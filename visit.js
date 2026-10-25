@@ -4,6 +4,25 @@
  * 參觀進度（暱稱、集到的章）只存在訪客自己的瀏覽器。
  */
 (function () {
+  // 紫色的烏龜：🐢 先畫在另一張畫布，把綠色轉成紫色再貼上（和 CSS 的 hue-rotate(185deg) saturate(1.4) 一樣）
+  function drawEmoji(g, e, x, y) {
+    if (!e || e.indexOf('🐢') < 0) return g.fillText(e, x, y);
+    const c = document.createElement('canvas'); c.width = g.canvas.width; c.height = g.canvas.height;
+    const t = c.getContext('2d'); t.font = g.font; t.textAlign = g.textAlign; t.textBaseline = g.textBaseline; t.fillText(e, x, y);
+    const d = t.getImageData(0, 0, c.width, c.height), p = d.data, a = 185 * Math.PI / 180, co = Math.cos(a), si = Math.sin(a), s = 1.4;
+    const H = [0.213 + co * 0.787 - si * 0.213, 0.715 - co * 0.715 - si * 0.715, 0.072 - co * 0.072 + si * 0.928,
+      0.213 - co * 0.213 + si * 0.143, 0.715 + co * 0.285 + si * 0.140, 0.072 - co * 0.072 - si * 0.283,
+      0.213 - co * 0.213 - si * 0.787, 0.715 - co * 0.715 + si * 0.715, 0.072 + co * 0.928 + si * 0.072];
+    const S = [0.213 + 0.787 * s, 0.715 - 0.715 * s, 0.072 - 0.072 * s, 0.213 - 0.213 * s, 0.715 + 0.285 * s, 0.072 - 0.072 * s,
+      0.213 - 0.213 * s, 0.715 - 0.715 * s, 0.072 + 0.928 * s];
+    const M = [0, 1, 2].map(i => [0, 1, 2].map(j => S[i * 3] * H[j] + S[i * 3 + 1] * H[3 + j] + S[i * 3 + 2] * H[6 + j]));
+    for (let i = 0; i < p.length; i += 4) {
+      if (!p[i + 3]) continue;
+      const r = p[i], gg = p[i + 1], b = p[i + 2];
+      p[i] = M[0][0] * r + M[0][1] * gg + M[0][2] * b; p[i + 1] = M[1][0] * r + M[1][1] * gg + M[1][2] * b; p[i + 2] = M[2][0] * r + M[2][1] * gg + M[2][2] * b;
+    }
+    t.putImageData(d, 0, 0); g.drawImage(c, 0, 0);
+  }
   const SUBJECTS = ['國', '英', '數', '自', '社'];
   const SUBJECT_NAME = { 國: '國文', 英: '英文', 數: '數學', 自: '自然', 社: '社會' };
   const SUBS = { 自: ['理化', '生物', '地科'], 社: ['歷史', '地理', '公民'] };
@@ -210,7 +229,7 @@
     g.fillStyle = '#cfe8f3'; g.fillRect(60, 60, 560, H - 120);
     g.fillStyle = '#dff0d8'; g.beginPath(); g.ellipse(340, 470, 230, 120, 0, 0, Math.PI * 2); g.fill();
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = emoji(64); SUBJECTS.forEach((s, i) => g.fillText(resident(s).emoji, 180 + i * 80, 450 + (i % 2) * 40));
+    g.font = emoji(64); SUBJECTS.forEach((s, i) => drawEmoji(g, resident(s).emoji, 180 + i * 80, 450 + (i % 2) * 40));
     g.font = emoji(90); g.fillText('🏡', 340, 330);
     g.font = emoji(70); g.fillText('⛴️', 520, 640);
     // 右半：文字
@@ -246,4 +265,26 @@
     } catch (e) { fail(e.message || String(e)); }
   }
   boot();
+})();
+
+// 紫色的烏龜：畫面上出現的 🐢 一律包成 .purple-ic（CSS 轉成紫色）
+(function () {
+  const SKIP = { OPTION: 1, TEXTAREA: 1, SCRIPT: 1, STYLE: 1, TITLE: 1 };
+  function wrap(root) {
+    if (!root) return;
+    if (root.nodeType === 3) { if (root.data.indexOf('🐢') >= 0) one(root); return; }
+    if (root.nodeType !== 1 || SKIP[root.tagName]) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
+    while (w.nextNode()) if (w.currentNode.data.indexOf('🐢') >= 0) list.push(w.currentNode);
+    list.forEach(one);
+  }
+  function one(t) {
+    const par = t.parentNode;
+    if (!par || SKIP[par.nodeName] || (par.closest && par.closest('.purple-ic'))) return;
+    const f = document.createDocumentFragment();
+    t.data.split('🐢').forEach((x, i) => { if (i) { const s = document.createElement('span'); s.className = 'purple-ic'; s.textContent = '🐢'; f.appendChild(s); } if (x) f.appendChild(document.createTextNode(x)); });
+    par.replaceChild(f, t);
+  }
+  function start() { wrap(document.body); new MutationObserver(ms => ms.forEach(m => m.type === 'characterData' ? wrap(m.target) : m.addedNodes.forEach(wrap))).observe(document.body, { childList: true, subtree: true, characterData: true }); }
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
