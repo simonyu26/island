@@ -42,6 +42,8 @@
   let grassMat, leafMats = [], seasonFx, seasonNow = null;
   // 植樹（v2.10）：她用綠點種在街道之間空地格上的植物，和碼頭旁的植木屋
   let gardenLayer, gardenSig = null;
+  // 獨立書店（v2.17）：碼頭左前方的巷口小書店
+  let bookLayer, bookSig = null;
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
 
   // ---------- 小工具 ----------
@@ -193,7 +195,7 @@
       const a = rand() * Math.PI * 2, r = 4 + rand() * 8.6;
       const p = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
       if (SUBJECTS.some((s, j) => p.distanceTo(districtPos(j)) < 4.1)) continue;
-      if (GARDEN_SLOTS.some(q => Math.hypot(q.x - p.x, q.z - p.z) < 0.9) || Math.hypot(HUT.x - p.x, HUT.z - p.z) < 1.2) continue;
+      if (GARDEN_SLOTS.some(q => Math.hypot(q.x - p.x, q.z - p.z) < 0.9) || Math.hypot(HUT.x - p.x, HUT.z - p.z) < 1.2 || Math.hypot(BOOK.x - p.x, BOOK.z - p.z) < 1.3) continue;
       const h = 0.7 + rand() * 0.6;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4, 5), std(0x9a6b4a)); trunk.position.set(p.x, 0.4, p.z);
       rand(); const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.42, h, 6), leafMats[ti++ % 3]); leaf.position.set(p.x, 0.6 + h / 2, p.z);
@@ -209,6 +211,7 @@
     buildLayer = new THREE.Group(); root.add(buildLayer);
     linkLayer = new THREE.Group(); root.add(linkLayer);
     gardenLayer = new THREE.Group(); root.add(gardenLayer);
+    bookLayer = new THREE.Group(); root.add(bookLayer);
   }
 
   // ---------- 天色與天氣：跟著台北的時間和天氣 ----------
@@ -308,6 +311,7 @@
     wallMat.emissive.setHex(night ? 0xffb347 : wet && ph !== 'day' ? 0xffb347 : 0x000000);
     wallMat.emissiveIntensity = night ? 0.8 : 0.35;
     homeLayer && homeLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0; });
+    bookLayer && bookLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0.15; });
     if (lamp) lamp.emissiveIntensity = night ? 1.4 : ph === 'dusk' || wet ? 0.9 : 0.4;
     if (beam) beam.visible = night || ph === 'dusk' || w === 'fog';
     stars.visible = night && !wet && w !== 'fog';
@@ -438,6 +442,7 @@
     buildWalk();
     buildLight();
     buildGarden();
+    buildBook();
   }
 
   // ---------- 植樹 ----------
@@ -453,6 +458,7 @@
   }
   const GARDEN_SLOTS = Array.from({ length: 40 }, (_, i) => gardenSlot(i));
   const HUT = { x: Math.cos(Math.PI / 10) * 3.2, z: Math.sin(Math.PI / 10) * 3.2 };   // 植木屋：碼頭右前方
+  const BOOK = { x: Math.cos(Math.PI * 9 / 10) * 3.2, z: Math.sin(Math.PI * 9 / 10) * 3.2 };   // 獨立書店：碼頭左前方（和植木屋對稱）
   const TERM_ORDER = ['立春', '雨水', '驚蟄', '春分', '清明', '穀雨', '立夏', '小滿', '芒種', '夏至', '小暑', '大暑',
     '立秋', '處暑', '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'];
 
@@ -569,6 +575,37 @@
       m.userData.plant = p.id || String(p.slot);
       gardenLayer.add(m);
     });
+  }
+
+  // 獨立書店：台灣巷弄的兩層小街屋，藍白條紋遮雨棚、落地玻璃窗（晚上亮燈）、門口的書箱和招牌
+  function buildBook() {
+    const B = ctx.book || null, sig = JSON.stringify(B);
+    if (sig === bookSig) return;
+    bookSig = sig;
+    while (bookLayer.children.length) bookLayer.remove(bookLayer.children[0]);
+    if (!B) return;
+    const shop = new THREE.Group(); shop.userData.book = true;
+    const box = (w, h, d, x, y, z, m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m.isMaterial ? m : std(m)); b.position.set(x, y, z); shop.add(b); return b; };
+    box(1.0, 1.1, 0.7, 0, 0.6, 0, 0xf1e6d2);                    // 洗石子色的牆
+    box(1.06, 0.06, 0.76, 0, 1.18, 0, 0x7a5a48);                // 二樓的簷
+    box(0.3, 0.22, 0.02, -0.22, 0.92, 0.36, 0x6b7f8f);          // 二樓小窗
+    box(0.3, 0.22, 0.02, 0.22, 0.92, 0.36, 0x6b7f8f);
+    const glass = std(0xfff1c2, { emissive: 0xffc46b, emissiveIntensity: 0.15 });
+    box(0.56, 0.4, 0.02, -0.14, 0.37, 0.36, glass);             // 落地玻璃窗（晚上亮）
+    box(0.56, 0.06, 0.06, -0.14, 0.15, 0.37, 0x6b4a2b);
+    box(0.2, 0.42, 0.03, 0.33, 0.36, 0.36, 0x6b4a2b);           // 木門
+    const awn = new THREE.Group();                              // 藍白條紋遮雨棚
+    for (let i = 0; i < 6; i++) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.03, 0.34), std(i % 2 ? 0xfdfaf2 : 0x2f6fae)); st.position.set(-0.45 + i * 0.18, 0, 0); awn.add(st); }
+    awn.position.set(0, 0.68, 0.5); awn.rotation.x = 0.35; shop.add(awn);
+    box(0.36, 0.14, 0.03, 0, 1.38, 0.2, 0xfffaf0);              // 屋頂招牌
+    box(0.3, 0.12, 0.22, -0.2, 0.12, 0.56, 0xb98a55);           // 門口的書箱
+    [0xc0392b, 0xf1c40f, 0x27ae60, 0x2980b9].forEach((c, i) => box(0.05, 0.1, 0.16, -0.31 + i * 0.07, 0.22, 0.56, c));
+    shop.position.set(BOOK.x, 0.05, BOOK.z);
+    shop.lookAt(new THREE.Vector3(BOOK.x * 2, 0.05, BOOK.z * 2 + 2));
+    shop.scale.setScalar(1.25); shop.userData.glass = glass;
+    bookLayer.add(shop);
+    const lb = labelSprite('📚 ' + (B.name || '獨立書店'), B.sub || null, { scale: 0.75, color: '#3a2a33' });
+    lb.position.set(BOOK.x, 1.95, BOOK.z); lb.userData.book = true; bookLayer.add(lb);
   }
 
   // 她的家：蓋在中央碼頭，跟著島嶼等級擴建
@@ -725,6 +762,8 @@
     if (homeHit && (!hit || homeHit.distance <= hit.distance)) { if (ctx.onHome) ctx.onHome(); return; }
     const lightHit = hits.find(h => { let o = h.object; while (o && !o.userData.light && !o.userData.subject) o = o.parent; return o && o.userData.light; });
     if (lightHit && ctx.onLight && (!hit || lightHit.distance <= hit.distance)) { ctx.onLight(); return; }
+    const bHit = hits.find(h => { let o = h.object; while (o && !o.userData.book && !o.userData.subject) o = o.parent; return o && o.userData.book; });
+    if (bHit && ctx.onBook && (!hit || bHit.distance <= hit.distance)) { ctx.onBook(); return; }
     const gHit = hits.find(h => { let o = h.object; while (o && !o.userData.garden && !o.userData.plant && !o.userData.subject) o = o.parent; return o && (o.userData.garden || o.userData.plant); });
     if (gHit && (!hit || gHit.distance <= hit.distance)) {
       let o = gHit.object; while (!o.userData.garden && !o.userData.plant) o = o.parent;
