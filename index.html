@@ -301,8 +301,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.27';
+const APP_VERSION = '2.28';
 const CHANGELOG = [
+  { v: '2.28', date: '2026-10-26', items: ['📔 我的家多了一本「絆の手帖」：翻開有三頁，島民、智慧島的老師與各地方的管理員、島民之間的關係圖', '🪶 和智慧島老師也有交情了：每上一講、寫一句心得就會變深，7 天沒去才會慢慢變淡', '💞 關係圖上點一條線，就能看看兩位島民有多熟'] },
   { v: '2.27', date: '2026-10-26', items: ['🤝 你和每位島民之間有了「絆」：讀他那一科、做他的故事任務、請他講解、送家具、去他家作客、回他的信，交情都會慢慢變深', '💌 島民的信下面可以回一個表情', '🏷️ 島民的家和街區卡上會寫你們現在的交情（はじめまして → 一生的朋友），交情越深，信和故事的語氣越親近', '💞 島民之間也有交情：同一天讀兩科、寫跨科連結，他們就會越來越熟'] },
   { v: '2.26', date: '2026-10-26', items: ['🏝️ 可以用經驗值換衛星小島了：在商店的兌換卡下面，自己挑樣子（沙洲、松樹岩島、漁港、茶園）、方向和名字', '🌉 每座小島都用紅色太鼓橋接回本島，在 3D 小島上點小島就能過去', '🧑‍🌾 每座小島可以請一位你自己設定的管理員，第一次去他會先打招呼', '⭐ 換小島和換島幣用同一包可換的經驗值；經驗值總數和等級都不會變'] },
   { v: '2.25', date: '2026-10-26', items: ['🗣️ 島民設定多了「說話方式／口頭禪」：寫信、故事、挑戰任務、講解都會照著說', '🏘️ 理化、生物、地科、歷史、地理、公民巷的室友，也可以設定自己的個性和說話方式', '📝 每位島民可以寫一段介紹，會出現在島民的家和「更多」頁；智慧島四位老師也有介紹了', '💬 島民家裡的道謝和島上消息，改成島民每天照自己的口吻寫'] },
@@ -473,25 +474,71 @@ function kizunaOf(save, itemsByRow, today) {
       (v.ch || []).forEach(c => SUBJECTS.forEach(o => { if (o !== s && names[o] && String(c.text || '').includes(names[o])) add(pk(s, o), c.at, 'story', 1, 1); })); }
   });
   (save.links || []).forEach(l => add(pk(l.a, l.b), l.date, 'link', 2));
+  // 導師（v2.28）：上一講 +2、寫心得 +0.5；第二本書（kongming2）算同一位老師
+  const ls = (save.wisdom && save.wisdom.lessons) || {};
+  Object.keys(ls).forEach(b => Object.keys(ls[b] || {}).forEach(n => { const L = ls[b][n]; if (!L || !L.at) return; const d = String(L.at).slice(0, 10), t = 't:' + b.replace(/2$/, ''); add(t, d, 'lesson', 2); if (L.note) add(t, d, 'note', 0.5); }));
   const seen = {}; (save.purchases || []).forEach(p => { if (!p.furniture || !SUBJECTS.includes(p.for) || seen[p.for + p.furniture]) return; seen[p.for + p.furniture] = 1; add(p.for, p.date, 'gift', 2); });
   const ex0 = mondayOf(EXAM_DATES[0]), ex1 = addD(ex0, 6);
-  const run = who => {
+  const run = (who, wait) => {
     const days = ev[who] || {}, ds = Object.keys(days).sort();
     let score = 0, idle = 0, before = 0, d = ds[0];
     while (d && d <= today) {
       const e = days[d];
       if (e) { before = idle; idle = 0; score += Math.min(4, Object.keys(e).reduce((a, c) => a + e[c], 0)); }
-      else { idle++; if (idle > 3 && !(d >= ex0 && d <= ex1)) score -= 1; }
+      else { idle++; if (idle > (wait || 3) && !(d >= ex0 && d <= ex1)) score -= 1; }
       score = Math.max(0, Math.min(100, score)); d = addD(d, 1);
     }
     score = Math.round(score * 10) / 10;
     const lv = kzLevel(score);
-    return { score, lv, name: KZ_NAME[lv], idle, missing: idle >= 3, back: !!days[today] && before >= 3, near: lv < 5 && KZ_LV[lv + 1] - score <= 3 };
+    return { score, lv, name: KZ_NAME[lv], idle, first: ds[0] || null, missing: idle >= (wait || 3), back: !!days[today] && before >= 3, near: lv < 5 && KZ_LV[lv + 1] - score <= 3 };
   };
-  const her = {}, pair = {};
+  const her = {}, pair = {}, tutor = {};
   SUBJECTS.forEach(s => her[s] = run(s));
+  ['kongming', 'einstein', 'xiaomiao', 'alu'].forEach(t => tutor[t] = run('t:' + t, 7));
   for (let i = 0; i < SUBJECTS.length; i++) for (let j = i + 1; j < SUBJECTS.length; j++) { const k = pk(SUBJECTS[i], SUBJECTS[j]); pair[k] = run(k); }
-  return { her, pair };
+  return { her, pair, tutor };
+}
+// 絆の手帖（v2.28）：我的家牆邊的一本手帖，只寫關係與回憶，不寫分數、讀了幾格。家人碼只看島民那一頁的等級名稱
+const KZ_TUTORS = ['kongming', 'einstein', 'xiaomiao', 'alu'];
+function viewKizuna() {
+  const fam = isFamily(), pg = fam ? 0 : draft.kzPage || 0;
+  const tabs = fam ? '' : `<div class="row" style="gap:6px;margin-top:8px">${['島民', '導師與管理員', '島民之間'].map((t, i) => `<button class="${pg === i ? '' : 'ghost'}" style="padding:6px 12px" onclick="draft.kzPage=${i};render()">${t}</button>`).join('')}</div>`;
+  let body = '';
+  if (pg === 0) body = SUBJECTS.map(s => {
+    const r = resident(s), k = D.kizuna.her[s];
+    const gifts = [...new Set((S.save.purchases || []).filter(p => p.furniture && p.for === s).map(p => p.furniture))].map(furnOf).filter(Boolean);
+    return `<div class="card"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="avatar">${r.pic}</span><div class="grow">
+        <b>${esc(r.name)}</b><span class="muted">・${SUBJECT_NAME[s]}街</span>
+        <div style="margin-top:2px">絆・<b>${k.name}</b>${k.missing && !fam ? '<span class="pill" style="margin-left:6px;font-size:12px">有點想你</span>' : ''}</div>
+        ${fam ? '' : `<div class="muted" style="font-size:13px;margin-top:4px">${k.first ? '第一次見面：' + short(k.first) : '還沒有一起做過什麼，去他家坐坐吧'}</div>
+          ${r.intro ? `<div style="font-size:13px;margin-top:4px">${esc(r.intro)}</div>` : ''}
+          ${gifts.length ? `<div class="muted" style="font-size:13px;margin-top:4px">你送的：${gifts.map(f => f.ic + esc(f.name)).join('、')}</div>` : ''}`}</div></div></div>`; }).join('');
+  else if (pg === 1) {
+    const tutors = KZ_TUTORS.map(t => { const T = WISDOM_T[t], k = D.kizuna.tutor[t], met = wisdomOn() && !wisdomClosed(t) || k.score > 0;
+      return met ? `<div class="card"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span style="font-size:32px">${T.ic}</span><div class="grow"><b>${esc(T.name)}</b><span class="muted">・${esc(T.place)}</span>
+          <div style="margin-top:2px">絆・<b>${k.name}</b></div><div class="muted" style="font-size:13px;margin-top:4px">${k.first ? '第一次上課：' + short(k.first) : '還沒上過課'}</div>
+          <div style="font-size:13px;margin-top:4px">${esc(T.intro || '')}</div></div></div></div>`
+        : `<div class="card" style="opacity:.6"><div class="row"><span style="font-size:32px;filter:grayscale(1) brightness(.3)">${T.ic}</span><div class="grow"><b>？？？</b><div class="muted">還沒遇見</div></div></div></div>`; }).join('');
+    const keepers = Object.keys(PLACES).filter(p => keeperOf(p)).map(p => { const k = keeperOf(p);
+      return `<div class="item"><span class="avatar">${kpPic(k)}</span><div class="name"><b>${esc(k.name)}</b>・${esc(PLACES[p].name)}<div class="muted">${esc(k.role || '')}${k.personality ? '・' + esc(k.personality) : ''}</div></div></div>`; }).join('');
+    body = `<h3>🪶 智慧島的老師</h3>${tutors}<div class="muted" style="margin:-4px 0 10px">每上一講、寫一句心得，和老師的交情就會變深；一週一講，所以 7 天沒去才會慢慢變淡。</div>
+      <div class="card"><h3 style="margin-top:0">🧑‍🌾 各地方的管理員</h3>${keepers || '<div class="muted">還沒有請管理員。</div>'}<div class="muted" style="margin-top:6px">管理員只放介紹，沒有交情等級。</div></div>`;
+  } else {
+    const W = 300, C = 150, R = 105, pos = {}; SUBJECTS.forEach((s, i) => { const a = -Math.PI / 2 + i * Math.PI * 2 / 5; pos[s] = [C + Math.cos(a) * R, C + Math.sin(a) * R]; });
+    const col = ['#d9c9d3', '#e8a9c4', '#e07aa8', '#cf4f8c', '#a8326e', '#741b47'], sel = draft.kzPair;
+    const lines = Object.keys(D.kizuna.pair).map(k => { const v = D.kizuna.pair[k], a = pos[k[0]], b = pos[k[1]];
+      return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col[v.lv]}" stroke-width="${v.score > 0 ? 2 + v.lv * 2 : 1.5}" ${v.score > 0 ? '' : 'stroke-dasharray="4 4"'} stroke-linecap="round" style="cursor:pointer" onclick="draft.kzPair='${k}';render()"/>
+        <line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="transparent" stroke-width="18" style="cursor:pointer" onclick="draft.kzPair='${k}';render()"/>`; }).join('');
+    const dots = SUBJECTS.map(s => { const r = resident(s), p = pos[s];
+      return `<circle cx="${p[0]}" cy="${p[1]}" r="24" fill="#fdf6ec" stroke="#741b47" stroke-width="2"/><text x="${p[0]}" y="${p[1] + 8}" text-anchor="middle" font-size="22">${esc(r.emoji)}</text>
+        <text x="${p[0]}" y="${p[1] + (p[1] > C ? 42 : -30)}" text-anchor="middle" font-size="12" fill="#3a2a33">${esc(r.name)}</text>`; }).join('');
+    const pv = sel && D.kizuna.pair[sel];
+    body = `<div class="card"><svg viewBox="0 0 ${W} ${W}" style="width:100%;max-width:360px;display:block;margin:0 auto">${lines}${dots}</svg>
+        <div class="speech" style="margin-top:8px">${pv ? `${esc(resident(sel[0]).name)} × ${esc(resident(sel[1]).name)}：<b>${pv.name}</b>${pv.score > 0 ? '' : '（還沒什麼交集）'}` : '點一條線，看看這兩位的交情。線越粗、顏色越深，就越熟。'}</div>
+        <div class="muted" style="margin-top:6px;font-size:13px">你同一天讀了兩科、寫了跨科連結、AI 發現跨科題，或故事裡兩位一起出場，他們就會越來越熟。</div></div>`;
+  }
+  return `<div class="card"><h2 style="margin:0">📔 絆の手帖</h2><div class="muted">這本手帖只記你和大家的關係與回憶。</div>${tabs}</div>${body}
+    <div class="row"><button class="ghost grow" onclick="openHouse('me')">回我的家 🏠</button></div>`;
 }
 function kzBadge(s) { const k = D.kizuna && D.kizuna.her[s]; return k ? `<span class="pill" style="margin-left:6px;font-size:12px" title="和你的交情">絆・${k.name}</span>` : ''; }
 // 回島民的信：一個表情（每位每天一次，+交情）
@@ -743,10 +790,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', isleNew: 'shop', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, isleNew: viewIsleNew, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -1525,6 +1572,7 @@ function viewHouse() {
         <div class="muted">${tier.name}・島嶼 Lv.${D.level}${next ? `・Lv.${next.lv} 會擴建成${next.name}` : '・已經是最大的房子了'}</div></div>
         ${isFamily() ? '' : '<button class="ghost" style="padding:6px 10px" onclick="draft.editHome=true;render()">🎨 改外觀</button>'}</div></div>
     ${homeMateCard()}
+    <button class="ghost" style="width:100%;margin-bottom:12px" onclick="draft={};tab='kizuna';render();window.scrollTo(0,0)">📔 絆の手帖：你和島民、老師的交情</button>
     ${diaryCard()}
     <div class="card"><h3>🛋️ 房間</h3>${roomHtml('me', vs)}
       <div class="speech" style="margin-top:10px"><b>${esc(vr.name)}</b>來作客：${esc(vline)}</div>
@@ -4602,6 +4650,7 @@ function viewMore() {
   const pairs = Object.keys(D.kizuna.pair).filter(k => D.kizuna.pair[k].score > 0).map(k => [k, D.kizuna.pair[k]]);
   return `<div class="card"><h2>👥 島民關係</h2>${SUBJECTS.map(s => { const r = resident(s);
       return `<div class="item"><span class="avatar">${r.pic}</span><div class="name"><b>${esc(r.name)}</b>（${SUBJECT_NAME[s]}）${kzBadge(s)}<div class="muted">${esc(r.personality)}${r.relation ? '・' + esc(r.relation) : ''}</div>${r.intro ? `<div style="font-size:13px;margin-top:2px">${esc(r.intro)}</div>` : ''}</div></div>`; }).join('')}
+    <button class="ghost" style="width:100%;margin-top:10px" onclick="draft={};tab='kizuna';render();window.scrollTo(0,0)">📔 翻開絆の手帖</button>
     <h3 style="margin-top:12px">💞 島民之間的交情</h3>${pairs.length ? pairs.map(([k, v]) =>
       `<div>${resident(k[0]).ipic} ${esc(resident(k[0]).name)} × ${resident(k[1]).ipic} ${esc(resident(k[1]).name)}：${v.name}</div>`).join('') : '<div class="muted">同一天讀兩科、寫跨科連結，島民之間就會越來越熟。</div>'}
     ${D.links.length ? `<h3 style="margin-top:12px">🔗 連結筆記</h3>` + D.links.slice().reverse().map(l => `<div class="muted">${esc(l.date)}・${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}：${esc(l.note)}</div>`).join('') : ''}
@@ -4692,7 +4741,8 @@ function viewGuide() {
     p('你做過的挑戰任務和故事任務，島也會請 AI 看看是不是跨科題（例如理化題要列方程式，就是理化 × 數學）。是的話會跳出提示，兩條街的島民好感度也會上升，在「更多」的「任務裡發現的跨科題」看得到。自動發現的不加經驗值和島幣，自己寫下的連結才有。'))}
   ${sec('🤝', '和島民的絆', p('你和每位島民之間都有一段交情，從「はじめまして」開始，慢慢變成「顔見知り」「聊得來」「好朋友」「好夥伴」，最後是「一生的朋友」。讀他那一科的計畫、做他那條街的故事任務、挑戰任務答對、請他講解、把他那一科的瓶子變成燈籠、送他家具、去他家作客、回他的信（每天一個表情），交情都會慢慢變深，每位一天最多前進一點點。') +
     p('好幾天沒去找他，交情會慢慢變淡，他會說有點想你；回來找他就補得回來。會考那週不會變淡。交情只寫等級，不算分數、也不排名次。交情越深，島民寫信和故事的語氣就越親近。') +
-    p('島民之間也有交情：你同一天讀了兩科、寫了跨科連結、AI 發現跨科題，或故事裡兩位一起出場，他們就會越來越熟，3D 小島上的連線也會變粗。'))}
+    p('島民之間也有交情：你同一天讀了兩科、寫了跨科連結、AI 發現跨科題，或故事裡兩位一起出場，他們就會越來越熟，3D 小島上的連線也會變粗。') +
+    p('想看大家的交情，到「我的家」翻開📔 絆の手帖：第一頁是五位島民，第二頁是智慧島的老師（上一講、寫心得會變熟，7 天沒去才變淡）和各地方的管理員，第三頁是島民之間的關係圖。手帖只寫關係和回憶，不寫分數。'))}
   ${sec('🏝️', '衛星小島', p('在商店的兌換卡下面，可以用經驗值換一座衛星小島：挑一種樣子（沙洲小島、松樹岩島、漁港小島、茶園小島）、一個方向，也可以幫它取名字。小島會出現在本島旁邊的海上，用紅色太鼓橋接回來，在 3D 小島上點小島或橋就能過去。') +
     p('第一座 300 點，之後 500、800、1200、1600、2000 點，最多六座。換小島和換島幣用的是同一包「可換的經驗值」：換了之後經驗值總數和島嶼等級都不會變，房子也不會變小，只是用掉的那些點數不能再換島幣。') +
     p('每座小島可以請一位你自己設定的管理員（名字、樣子、個性），第一次去他會先打招呼，之後每天寫一句話給你。'))}
