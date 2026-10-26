@@ -2661,8 +2661,8 @@ function viewLamp() {
   const unitCard = `<div class="card"><h3>🧭 正在補強</h3>
     <div class="muted" style="font-size:12px;margin-bottom:6px">${fam ? '她' : '你'}做過的題裡，答對比較少的單元，最多列 3 個。一個單元做滿 ${UNIT_MIN} 題才會列進來。</div>
     ${!um ? `<div class="muted">${unitsData === false ? '單元資料要在網頁 App 版才看得到。' : '單元資料載入中…'}</div>`
-      : um.weak.length ? um.weak.map(t => `<div class="item"><div class="name grow"><b>${uName(t)}</b><div class="muted">做過 ${t.n} 題・🍶 ${t.sea} 個瓶子還在海灘${t.lanterns ? '・🏮 已經放走 ' + t.lanterns + ' 盞' : ''}</div></div>${fam ? '' : `<button class="ghost" style="padding:6px 12px" ${xqBusy || todayChallenges().length >= XQ_DAILY ? 'disabled' : ''} onclick='practiceUnit(${JSON.stringify(t.lane)},${JSON.stringify(t.unit)})'>練一題</button>`}</div>`).join('')
-        + (fam ? '' : `<div class="muted" style="font-size:12px;margin-top:6px">按「練一題」，會從這個單元你還沒做過的考古題抽一題，算在每天 ${XQ_DAILY} 題挑戰裡。</div>`)
+      : um.weak.length ? um.weak.map(t => `<div class="item"><div class="name grow"><b>${uName(t)}</b><div class="muted">做過 ${t.n} 題・🍶 ${t.sea} 個瓶子還在海灘${t.lanterns ? '・🏮 已經放走 ' + t.lanterns + ' 盞' : ''}</div></div>${fam || !UNIT_TOOLS ? '' : `<button class="ghost" style="padding:6px 12px" ${xqBusy || todayChallenges().length >= XQ_DAILY ? 'disabled' : ''} onclick='practiceUnit(${JSON.stringify(t.lane)},${JSON.stringify(t.unit)})'>練一題</button>`}</div>`).join('')
+        + (fam || !UNIT_TOOLS ? '' : `<div class="muted" style="font-size:12px;margin-top:6px">按「練一題」，會從這個單元你還沒做過的考古題抽一題，算在每天 ${XQ_DAILY} 題挑戰裡。</div>`)
       : `<div class="muted">還沒有要補強的單元。每個單元做滿 ${UNIT_MIN} 題，這裡才會出現。</div>`}
     ${sea >= GUESS_CAP ? `<div class="muted" style="font-size:13px;margin-top:6px">海灘上的瓶子有點多了（${sea} 個）。有點猜的題這陣子先不收進來，一次撿幾個就好。</div>` : ''}</div>
     <div class="card"><h3>🏮 已補強</h3>
@@ -3025,6 +3025,8 @@ async function pickBank(tier, lane) {
 // v2.36 錯題循環②：撿瓶子時照錯因換練法。觀念不熟、用猜的→先看觀念小卡；看不懂題目→先選「這題在問什麼」；一時看錯→同單元的題先提醒
 const xqSeen = {};   // 這次打開 App 已經看過（或跳過）小卡、選過「這題在問什麼」的題；c<id>、a<id>
 const LANE_FULL = { 國: '國文', 英: '英文', 數: '數學' };
+// 錯題循環②裡依賴單元標籤的三項：觀念小卡、「正在補強」的練一題、挑戰前幾題從補強單元出。考古題要先重新清理、標籤（另一個專案），標好之前先關著（Simon 2026-10-26）
+const UNIT_TOOLS = false;
 // 觀念小卡（Simon 2026-10-26）：全部先寫好、人工審過才上。exam/cards.json 只收審過的卡；這個單元還沒有審過的卡，就跳過小卡直接答題
 let cardsData = null, cardsLoad = null;
 function loadCards() {
@@ -3033,7 +3035,7 @@ function loadCards() {
   return cardsLoad;
 }
 function cardOf(q) {
-  if (!q.card) return null;
+  if (!UNIT_TOOLS || !q.card) return null;
   if (cardsData === null) { loadCards(); return null; }
   const c = cardsData && cardsData[q.card];
   return c && c.reviewed === true && c.points && c.points.length ? Object.assign({ lane: q.card.split('|')[0], unit: q.card.split('|').slice(1).join('|') }, c) : null;
@@ -3092,7 +3094,7 @@ function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題�
     const opts = `<option value="">🎲 隨便一條</option>` + QLANES.map(l => `<option value="${l}"${l === xqLanePick ? ' selected' : ''}>${esc(laneLabel(l))}</option>`).join('');
     html += `<div class="row"><b class="grow">⚔️ 挑戰任務</b><span class="muted">今天還有 ${left}／${XQ_DAILY} 題${earned ? '・已賺 🪙 ' + earned : ''}</span></div>
       ${left ? `<select id="xqLane" style="width:100%;margin-top:8px" onchange="xqLanePick=this.value">${opts}</select>
-      ${isFamily() ? '' : `<label style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:14px"><input type="checkbox" style="width:auto" ${xqWeakOn() ? 'checked' : ''} onchange="setXqWeak(this.checked)"> 🧭 前 ${XQ_WEAK} 題從正在補強的單元出</label>
+      ${isFamily() || !UNIT_TOOLS ? '' : `<label style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:14px"><input type="checkbox" style="width:auto" ${xqWeakOn() ? 'checked' : ''} onchange="setXqWeak(this.checked)"> 🧭 前 ${XQ_WEAK} 題從正在補強的單元出</label>
       <div class="muted" style="font-size:12px">選「隨便一條」時，每天前 ${XQ_WEAK} 題會從你正在補強的單元抽考古題；不想要可以關掉。題數和島幣都不變。</div>`}
       <div class="tiers">${Object.keys(XQ_TIERS).map(k => { const t = XQ_TIERS[k];
         return `<button onclick="challengeXq('${k}')" ${xqBusy ? 'disabled' : ''}>${t.ic} ${t.name}<small>答對 🪙 +${t.coins}</small></button>`; }).join('')}</div>
@@ -3110,7 +3112,7 @@ async function pickUnitBank(lane, unit, tier) {
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
 async function practiceUnit(lane, unit) {
-  if (xqBusy || todayChallenges().length >= XQ_DAILY) return;
+  if (!UNIT_TOOLS || xqBusy || todayChallenges().length >= XQ_DAILY) return;
   if (todayChallenges().some(q => !q.done)) return toast('還有一題沒回答，先把它答完');
   xqBusy = true; render();
   try {
@@ -3127,7 +3129,7 @@ const XQ_WEAK = 3;
 function xqWeakOn() { try { return localStorage.getItem('islandXqWeak') !== 'off'; } catch (e) { return true; } }
 function setXqWeak(on) { try { localStorage.setItem('islandXqWeak', on ? 'on' : 'off'); } catch (e) {} }
 async function pickWeakBank(tier) {
-  if (!xqWeakOn()) return null;
+  if (!UNIT_TOOLS || !xqWeakOn()) return null;
   await loadUnits(); if (!unitsData) return null;
   const um = unitMap(); if (!um.weak.length) return null;
   const weak = new Set(um.weak.map(t => t.lane + '|' + t.unit));
@@ -5502,8 +5504,8 @@ function viewGuide() {
     p(`撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個；全國答對率高、你卻答錯的題會先漂回來，因為這種題最值得追回來。`) +
     p('<b>答完當下就能記</b>：答錯時，結果下面點一下為什麼會錯，就記到瓶子上（可以跳過）；答對時會問「這題你有把握嗎？」，選「有點猜」，這題會變成一個 🫧 輕輕的瓶子漂回來，下次有把握答對就直接變燈籠（這種燈籠不另給島幣）。海灘上的瓶子超過 ' + GUESS_CAP + ' 個時，有點猜的題先不收，一次撿幾個就好。') +
     p('🧭 <b>正在補強／已補強</b>：燈塔頂樓的燈室會把做過的題照單元整理（國文、英文照題型）。一個單元做滿 ' + UNIT_MIN + ' 題、海灘上還有瓶子，就可能列進「正在補強」，最多 3 個；一個單元的瓶子都變成燈籠，就會搬到「已補強」。這裡不加分也不扣分，家人碼也看得到這兩張卡。') +
-    p('🩹 <b>照原因換練法</b>：撿瓶子的時候，會照你記的原因換一種練法：觀念不熟或用猜的，先看一張這個單元的觀念小卡；一時看錯／算錯，在瓶子上寫一句下次要檢查的事，之後同一個單元的題會先提醒你；看不懂題目，先選這題在問什麼，再答題。小卡可以跳過，跳過也不影響經驗值和島幣。') +
-    p('🧭 <b>練一題、從補強單元出題</b>：燈室的「正在補強」可以按「練一題」，從那個單元你還沒做過的考古題抽一題。挑戰任務選「隨便一條」時，每天前 ' + XQ_WEAK + ' 題會從正在補強的單元抽，不想要可以在挑戰卡上關掉。題數和島幣都不變。') +
+    p('🩹 <b>照原因換練法</b>：撿瓶子的時候，會照你記的原因換一種練法：' + (UNIT_TOOLS ? '觀念不熟或用猜的，先看一張這個單元的觀念小卡；' : '') + '一時看錯／算錯，在瓶子上寫一句下次要檢查的事，之後同一個單元的題會先提醒你；看不懂題目，先選這題在問什麼，再答題。' + (UNIT_TOOLS ? '小卡可以跳過，跳過也不影響經驗值和島幣。' : '')) +
+    (UNIT_TOOLS ? p('🧭 <b>練一題、從補強單元出題</b>：燈室的「正在補強」可以按「練一題」，從那個單元你還沒做過的考古題抽一題。挑戰任務選「隨便一條」時，每天前 ' + XQ_WEAK + ' 題會從正在補強的單元抽，不想要可以在挑戰卡上關掉。題數和島幣都不變。') : '') +
     p('點一個瓶子可以看原題、記下為什麼會錯（一時看錯／算錯、觀念不熟、看不懂題目、用猜的），也可以寫一句想對自己說的話。這些只有你看得到；想問爸爸的題，勾「👀 給爸爸看」，家人才看得到你寫的原因和那句話。') +
     p('📷 <b>拍錯題</b>：紙本考卷、講義上答錯的題，在燈塔按「拍照」，先選科目再拍。AI 會讀出題目、你寫的答案和正確答案，分好題型（國文像字音字形、修辭、文意理解；英文像時態、片語、閱讀），你確認、勾好要收的題，它們就變成漂流瓶，明天開始漂回來出類題。讀錯的字可以直接改；照片上看不到答案時，AI 會自己解，請你對一下。收進一題 +5 經驗值，一天最多算 5 題，一天最多拍 10 張。') +
     p('🧭 <b>錯題類型</b>：燈塔會整理你最常錯哪一類題。按「練一題」，會照你收集的這一類錯題出一題新題，算在每天 ' + XQ_DAILY + ' 題挑戰裡，答對一樣有經驗值和島幣，答錯也會變成漂流瓶。') +
