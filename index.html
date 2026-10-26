@@ -2606,7 +2606,7 @@ const OLD_TYPES = { 時態: '文法・時態', 片語: '片語・慣用語', 克
 let unitsData = null, unitsLoad = null;
 function loadUnits() {
   if (!unitsLoad) unitsLoad = (BETA3D ? fetch('exam/units.json').then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null))
-    .then(u => { unitsData = u && u.tags ? u : false; if (unitsData && tab === 'lamp') render(); return unitsData; });
+    .then(u => { unitsData = u && u.tags ? u : false; if (unitsData) { if (tab === 'lamp') render(); else softRender(); } return unitsData; });
   return unitsLoad;
 }
 function unitOf(rec, id) {
@@ -2652,7 +2652,8 @@ function viewLamp() {
   const unitCard = `<div class="card"><h3>🧭 正在補強</h3>
     <div class="muted" style="font-size:12px;margin-bottom:6px">${fam ? '她' : '你'}做過的題裡，答對比較少的單元，最多列 3 個。一個單元做滿 ${UNIT_MIN} 題才會列進來。</div>
     ${!um ? `<div class="muted">${unitsData === false ? '單元資料要在網頁 App 版才看得到。' : '單元資料載入中…'}</div>`
-      : um.weak.length ? um.weak.map(t => `<div class="item"><div class="name grow"><b>${uName(t)}</b><div class="muted">做過 ${t.n} 題・🍶 ${t.sea} 個瓶子還在海灘${t.lanterns ? '・🏮 已經放走 ' + t.lanterns + ' 盞' : ''}</div></div></div>`).join('')
+      : um.weak.length ? um.weak.map(t => `<div class="item"><div class="name grow"><b>${uName(t)}</b><div class="muted">做過 ${t.n} 題・🍶 ${t.sea} 個瓶子還在海灘${t.lanterns ? '・🏮 已經放走 ' + t.lanterns + ' 盞' : ''}</div></div>${fam ? '' : `<button class="ghost" style="padding:6px 12px" ${xqBusy || todayChallenges().length >= XQ_DAILY ? 'disabled' : ''} onclick='practiceUnit(${JSON.stringify(t.lane)},${JSON.stringify(t.unit)})'>練一題</button>`}</div>`).join('')
+        + (fam ? '' : `<div class="muted" style="font-size:12px;margin-top:6px">按「練一題」，會從這個單元你還沒做過的考古題抽一題，算在每天 ${XQ_DAILY} 題挑戰裡。</div>`)
       : `<div class="muted">還沒有要補強的單元。每個單元做滿 ${UNIT_MIN} 題，這裡才會出現。</div>`}
     ${sea >= GUESS_CAP ? `<div class="muted" style="font-size:13px;margin-top:6px">海灘上的瓶子有點多了（${sea} 個）。有點猜的題這陣子先不收進來，一次撿幾個就好。</div>` : ''}</div>
     <div class="card"><h3>🏮 已補強</h3>
@@ -2736,6 +2737,7 @@ async function reviewBottle(id) {
       : b.rec.src === 'photo' ? {}
       : b.rec.bank ? { img: await examImage(b.rec.img), ctx: await examImage(b.rec.ctx) } : {};
     const fallback = await pickBank(b.tier, b.lane);
+    await loadUnits(); src.unit = unitOf(b.rec, b.id) || '';   // v2.36：後端照單元找觀念小卡
     S = await call('reviewQuest', id, src, fallback); D = derive(S);
   } catch (e) { toast('撿瓶子失敗：' + (e.message || e)); }
   lightBusy = false; tab = 'light'; render();
@@ -2746,7 +2748,7 @@ function viewBottle() {
   const b = bottles().find(x => x.id === draft.bottle);
   if (!b) return `<div class="card">找不到這個瓶子。</div><div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button></div>`;
   const q = b.rec, fam = isFamily(), hide = fam && !b.rv.share;
-  const f = draft.rv || (draft.rv = { why: b.rv.why || null, note: b.rv.note || '', share: !!b.rv.share });
+  const f = draft.rv || (draft.rv = { why: b.rv.why || null, note: b.rv.note || '', share: !!b.rv.share, check: b.rv.check || '' });
   const ABCD = 'ABCD';
   let body;
   if (q.src === 'photo') body = photoBody(q, fam);
@@ -2766,17 +2768,19 @@ function viewBottle() {
       <div class="muted" style="margin-top:8px">${b.lantern ? (b.guess ? '有把握答對了類題，' : '連續三次答對類題，') + short(b.lantern) + ' 變成燈籠漂走了。' + (b.due <= S.today ? '今天當老朋友漂回來了，可以到燈塔海灘撿起來。' : short(b.due) + ' 會當老朋友漂回來看看你。') : b.due <= S.today ? '🌊 今天漂回來了，可以到燈塔海灘撿起來。' : '🌫️ ' + short(b.due) + ' 會再漂回來。'}${tries ? '　類題紀錄：' + tries : ''}</div></div>
     ${hide ? '<div class="card"><div class="muted">她還沒把這個瓶子分享給家人，所以看不到她寫的原因和那一句話。</div></div>' : `<div class="card"><h3>📝 ${b.guess ? '想對自己說的話' : '為什麼會錯？'}</h3>
       <div class="row" style="gap:6px${b.guess ? ';display:none' : ''}">${REASONS.map(r => `<button class="${f.why === r[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" ${fam ? 'disabled' : ''} onclick="bottleKeep();draft.rv.why=draft.rv.why==='${r[0]}'?null:'${r[0]}';render()">${r[1]}</button>`).join('')}</div>
+      ${f.why === 'careless' && !b.guess ? `<label>下次要檢查什麼？</label><input id="rvCheck" maxlength="60" value="${esc(f.check)}" ${fam ? 'disabled' : ''} placeholder="例如：單位有沒有換算、正負號、題目問的是『不正確』的、英文的單複數" oninput="draft.rv.check=this.value">
+      <div class="muted" style="font-size:12px;margin-top:2px">下次遇到同一個單元的題目，會先提醒你。</div>` : ''}
       <label>想對自己說的一句話（選填）</label><input id="rvNote" maxlength="120" value="${esc(f.note)}" ${fam ? 'disabled' : ''} placeholder="例如：單位要先換成公尺" oninput="draft.rv.note=this.value">
       ${fam ? '' : `<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" style="width:auto" ${f.share ? 'checked' : ''} onchange="bottleKeep();draft.rv.share=this.checked"> 👀 給爸爸看（想問這題的時候打勾，家人才看得到你寫的原因和這句話）</label>
       <button style="width:100%;margin-top:10px" onclick="saveBottle('${b.id}')">記下來</button>`}</div>`}
     <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button></div>`;
 }
-function bottleKeep() { const n = document.getElementById('rvNote'); if (n) draft.rv.note = n.value; }
+function bottleKeep() { const n = document.getElementById('rvNote'), c = document.getElementById('rvCheck'); if (n) draft.rv.note = n.value; if (c) draft.rv.check = c.value; }
 async function saveBottle(id) {
   bottleKeep();
   try { await flush(); S = await call('saveReview', id, draft.rv); D = derive(S); }
   catch (e) { return toast('儲存失敗：' + (e.message || e)); }
-  toast('📝 記在瓶子上了'); go('light');
+  toast(draft.rv.why === 'careless' && draft.rv.check ? '📝 寫好了。下次遇到同一個單元的題目，會先提醒你。' : '📝 記在瓶子上了'); go('light');
 }
 // 跨科連結自動判斷：答完題後在背景請 AI 判斷，結果存在 xc:<題目 key>，會變成島民之間的好感度
 async function crossCheckLater(id, payload) {
@@ -2942,6 +2946,31 @@ async function pickBank(tier, lane) {
   const list = b.items.filter(x => TIER_KEY[x.tier] === tier && (!lane || x.lane === lane) && !used.has(x.id) && noGroup(x));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
+// v2.36 錯題循環②：撿瓶子時照錯因換練法。觀念不熟、用猜的→先看觀念小卡；看不懂題目→先選「這題在問什麼」；一時看錯→同單元的題先提醒
+const xqSeen = {};   // 這次打開 App 已經看過（或跳過）小卡、選過「這題在問什麼」的題；c<id>、a<id>
+const LANE_FULL = { 國: '國文', 英: '英文', 數: '數學' };
+function cardOf(q) { const c = q.card && S.save['cc:' + q.card]; return c && c.points && c.points.length ? c : null; }
+function conceptCardHtml(q, c) {
+  const src = (LANE_FULL[c.lane] || c.lane) + '『' + c.unit + '』';
+  return `<div class="speech" style="margin:8px 0"><b>📘 觀念小卡・${esc(laneLabel(c.lane))}・${esc(c.unit)}</b>
+      <div class="muted" style="font-size:13px">答題前，先花一分鐘看看這個單元的重點。</div>
+      <ul style="margin:6px 0 4px 18px;padding:0">${c.points.map(x => `<li style="margin:2px 0">${esc(x)}</li>`).join('')}</ul>
+      ${c.trap ? `<div style="margin-top:4px">⚠️ 常見的陷阱：${esc(c.trap)}</div>` : ''}
+      <div class="muted" style="font-size:12px;margin-top:6px">${c.reviewed ? '📘 依 108 課綱國中' + esc(src) + '整理，已經人工核對過。' : '🤖 AI 依 108 課綱國中' + esc(src) + '整理，可能有不夠精確的地方，有疑問就問老師或翻課本。'}</div>
+      <div class="row" style="gap:6px;margin-top:8px"><button onclick="xqSeen['c${q.id}']=1;softRender()">看完了，開始答題</button><button class="ghost" onclick="xqSeen['c${q.id}']=1;softRender()">先不看，直接答</button></div></div>`;
+}
+function askHtml(q) {
+  const k = q.ask, pick = xqSeen['a' + q.id];
+  if (pick == null) return `<div class="speech" style="margin:8px 0"><b>先想一想：這題在問什麼？</b>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${k.o.map((o, i) => `<button class="opt" onclick="xqSeen['a${q.id}']=${i};softRender()">${esc(o)}</button>`).join('')}</div></div>`;
+  return `<div class="muted" style="font-size:13px;margin:6px 0">${pick === k.a ? '對，這題就是在問這個。接著選答案吧。' : '這題其實是在問：' + esc(k.o[k.a]) + '。再讀一次題目，接著選答案。'}</div>`;
+}
+function checkNote(q) {   // 同一科、同一個單元的瓶子上寫過「下次要檢查」，題目上方先提醒
+  const fam = isFamily(), u = q.unit || (q.bank && unitsData ? (unitsData.tags || {})[q.bank] : '') || q.practice || q.type; if (!u) return '';
+  const b = bottles().filter(x => x.rv.check && x.lane === q.lane && (!fam || x.rv.share) && unitOf(x.rec, x.id) === u)
+    .sort((x, y) => (y.wrongAt || '').localeCompare(x.wrongAt || ''))[0];
+  return b ? `<div class="muted" style="font-size:13px;margin:6px 0">📝 ${fam ? '她' : '你'}上次提醒自己：${esc(b.rv.check)}</div>` : '';
+}
 function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題目和結果，不顯示出新題的按鈕
   const all = extraQuests(), open = all.find(q => !q.done), last = all[all.length - 1];
   const today = todayChallenges(), left = Math.max(0, XQ_DAILY - today.length);
@@ -2960,8 +2989,10 @@ function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題�
   let html = '';
   if (open) {
     const t = XQ_TIERS[open.tier];
-    const gq = guessReview(open);
-    html = show(open) + (gq ? `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" style="width:auto" ${xqGuess ? 'checked' : ''} onchange="xqGuess=this.checked"> 🤔 這題我還是有點猜（有把握答對，瓶子就直接變成燈籠）</label>` : '') + `<div class="opts${open.img ? ' abcd' : ''}">${open.o.map((o, i) => `<button class="opt" onclick="answerXq('${open.id}',${i})">${esc(o)}</button>`).join('')}</div>
+    const gq = guessReview(open), card = cardOf(open), cardOn = card && !xqSeen['c' + open.id], askOn = open.ask && xqSeen['a' + open.id] == null;
+    if (unitsData === null) loadUnits();
+    if (cardOn || askOn) html = show(open) + checkNote(open) + (cardOn ? conceptCardHtml(open, card) : askHtml(open));
+    else html = show(open) + checkNote(open) + (open.ask ? askHtml(open) : '') + (gq ? `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" style="width:auto" ${xqGuess ? 'checked' : ''} onchange="xqGuess=this.checked"> 🤔 這題我還是有點猜（有把握答對，瓶子就直接變成燈籠）</label>` : '') + `<div class="opts${open.img ? ' abcd' : ''}">${open.o.map((o, i) => `<button class="opt" onclick="answerXq('${open.id}',${i})">${esc(o)}</button>`).join('')}</div>
       <div class="muted" style="margin-top:6px">${open.review ? (open.friend ? `老朋友來看你了：答對 +${t.xp} 經驗值，一個月後再來；答錯 +${XQ_WRONG} 經驗值，一週後再來。燈籠不會變回瓶子。` : gq ? `答對 +${t.xp} 經驗值；有把握答對就變成紙燈籠（這種瓶子不另給島幣）。答錯 +${XQ_WRONG} 經驗值，瓶子明天再漂回來。` : `答對 +${t.xp} 經驗值；連續三次答對變成紙燈籠，那一次再給 🪙 +${t.coins}。答錯 +${XQ_WRONG} 經驗值，瓶子明天再漂回來。`) : t ? `答對 🪙 +${t.coins}、+${t.xp} 經驗值` : '答對 +10 經驗值'}${open.review ? '' : `；答錯 +${XQ_WRONG} 經驗值，會看到正確答案。`}</div>`;
   } else {
     if (last && last.done && last.at === S.today) html = show(last) + `<div class="opts${last.img ? ' abcd' : ''}">${last.o.map((o, i) => `<button class="opt ${i === last.a ? 'right' : i === last.choice ? 'wrong' : ''}" disabled>${esc(o)}</button>`).join('')}</div>
@@ -2973,6 +3004,8 @@ function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題�
     const opts = `<option value="">🎲 隨便一條</option>` + QLANES.map(l => `<option value="${l}"${l === xqLanePick ? ' selected' : ''}>${esc(laneLabel(l))}</option>`).join('');
     html += `<div class="row"><b class="grow">⚔️ 挑戰任務</b><span class="muted">今天還有 ${left}／${XQ_DAILY} 題${earned ? '・已賺 🪙 ' + earned : ''}</span></div>
       ${left ? `<select id="xqLane" style="width:100%;margin-top:8px" onchange="xqLanePick=this.value">${opts}</select>
+      ${isFamily() ? '' : `<label style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:14px"><input type="checkbox" style="width:auto" ${xqWeakOn() ? 'checked' : ''} onchange="setXqWeak(this.checked)"> 🧭 前 ${XQ_WEAK} 題從正在補強的單元出</label>
+      <div class="muted" style="font-size:12px">選「隨便一條」時，每天前 ${XQ_WEAK} 題會從你正在補強的單元抽考古題；不想要可以關掉。題數和島幣都不變。</div>`}
       <div class="tiers">${Object.keys(XQ_TIERS).map(k => { const t = XQ_TIERS[k];
         return `<button onclick="challengeXq('${k}')" ${xqBusy ? 'disabled' : ''}>${t.ic} ${t.name}<small>答對 🪙 +${t.coins}</small></button>`; }).join('')}</div>
       <div class="muted" style="margin-top:6px">${xqBusy ? '✍️ 島民出題中…' : '題目來自會考考古題。基礎：七成以上的考生答對；中級：四到七成；進階：不到四成。難度越高，島幣越多。'}</div>`
@@ -2980,13 +3013,48 @@ function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題�
   }
   return `<div class="card" id="xqCard">${html}</div>`;
 }
+// v2.36：從某個單元還沒做過的考古題挑一題（tier 空白就不限難度）
+async function pickUnitBank(lane, unit, tier) {
+  const b = await loadBank(); await loadUnits(); if (!b || !b.items || !unitsData) return null;
+  const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
+  const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);
+  const list = b.items.filter(x => x.lane === lane && unitsData.tags[x.id] === unit && (!tier || TIER_KEY[x.tier] === tier) && !used.has(x.id) && noGroup(x));
+  return list.length ? list[Math.floor(Math.random() * list.length)] : null;
+}
+async function practiceUnit(lane, unit) {
+  if (xqBusy || todayChallenges().length >= XQ_DAILY) return;
+  if (todayChallenges().some(q => !q.done)) return toast('還有一題沒回答，先把它答完');
+  xqBusy = true; render();
+  try {
+    await flush();
+    const item = await pickUnitBank(lane, unit);
+    if (!item) toast('這個單元的考古題你都做過了，可以改撿瓶子或拍紙本錯題。');
+    else { S = await call('challengeBank', item); D = derive(S); tab = 'home'; boardOpen = 'xq'; }
+  } catch (e) { toast('出題失敗：' + (e.message || e)); }
+  xqBusy = false; render();
+  const el = document.getElementById('xqCard'); if (el) el.scrollIntoView({ block: 'start' });
+}
+// v2.36：「隨便一條」的時候，每天前 3 題優先從「正在補強」的單元抽（她可以關；題數、島幣不變）
+const XQ_WEAK = 3;
+function xqWeakOn() { try { return localStorage.getItem('islandXqWeak') !== 'off'; } catch (e) { return true; } }
+function setXqWeak(on) { try { localStorage.setItem('islandXqWeak', on ? 'on' : 'off'); } catch (e) {} }
+async function pickWeakBank(tier) {
+  if (!xqWeakOn()) return null;
+  await loadUnits(); if (!unitsData) return null;
+  const um = unitMap(); if (!um.weak.length) return null;
+  const weak = new Set(um.weak.map(t => t.lane + '|' + t.unit));
+  const done = todayChallenges().filter(q => q.bank && !q.review && weak.has(q.lane + '|' + unitsData.tags[q.bank])).length;
+  if (done >= XQ_WEAK) return null;
+  const t = um.weak[done % um.weak.length];
+  return await pickUnitBank(t.lane, t.unit, tier) || (await Promise.all(um.weak.map(w => pickUnitBank(w.lane, w.unit, tier)))).find(Boolean) || null;
+}
 async function challengeXq(tier) {
   if (xqBusy || todayChallenges().length >= XQ_DAILY) return;
   const sel = document.getElementById('xqLane'), chosen = sel && sel.value;
   xqBusy = true; softRender();
   try {
     await flush();
-    const item = await pickBank(tier, chosen);   // 先從考古題挑，挑不到（題庫用完或沒有題庫）才請 AI 出
+    const item = (!chosen && await pickWeakBank(tier)) || await pickBank(tier, chosen);   // v2.36 先從正在補強的單元挑；再從考古題挑，挑不到（題庫用完或沒有題庫）才請 AI 出
     if (item) S = await call('challengeBank', item);
     else {
       const lane = chosen || pickQuest(S.today, 50 + extraQuests().length).lane;
@@ -3015,7 +3083,7 @@ function guessReview(q) { const src = q && q.review && S.save[q.review], rv = q 
 function afterAnswer(id, q) {
   if (isFamily() || !q || !q.done || q.review) return '';
   const rv = S.save['rv:' + id] || {}, btn = (d, t) => `<button class="ghost" style="padding:6px 12px;font-size:14px" onclick='quickMark("${id}",${JSON.stringify(d)})'>${t}</button>`;
-  if (!q.correct) return rv.why ? `<div class="muted" style="font-size:13px;margin:-6px 0 10px">📝 記在瓶子上了：${(REASONS.find(r => r[0] === rv.why) || [, ''])[1]}</div>`
+  if (!q.correct) return rv.why ? `<div class="muted" style="font-size:13px;margin:-6px 0 10px">📝 記在瓶子上了：${(REASONS.find(r => r[0] === rv.why) || [, ''])[1]}${rv.why === 'careless' && !rv.check ? `・<a href="#" onclick="openBottle('${id}');return false">寫一句下次要檢查的事 ›</a>` : ''}</div>`
     : `<div style="margin:-6px 0 12px"><div class="muted" style="font-size:13px">為什麼會錯？點一下就記到瓶子上（可以跳過）</div><div class="row" style="gap:6px;margin-top:4px">${REASONS.map(r => btn({ why: r[0] }, r[1])).join('')}</div></div>`;
   if (rv.sure) return rv.sure === 'guess' ? `<div class="muted" style="font-size:13px;margin:-6px 0 10px">${rv.gb ? '🫧 好，這題會變成一個輕輕的瓶子漂回來。下次有把握答對，就直接變燈籠。' : '🫧 記下來了。海灘上的瓶子有點多了，這題這陣子先不收進來，一次撿幾個就好。'}</div>` : '';
   return `<div style="margin:-6px 0 12px"><div class="muted" style="font-size:13px">這題你有把握嗎？</div><div class="row" style="gap:6px;margin-top:4px">${btn({ sure: 'sure' }, '有把握')}${btn({ sure: 'guess' }, '有點猜')}</div></div>`;
@@ -5304,6 +5372,8 @@ function viewGuide() {
     p(`撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個；全國答對率高、你卻答錯的題會先漂回來，因為這種題最值得追回來。`) +
     p('<b>答完當下就能記</b>：答錯時，結果下面點一下為什麼會錯，就記到瓶子上（可以跳過）；答對時會問「這題你有把握嗎？」，選「有點猜」，這題會變成一個 🫧 輕輕的瓶子漂回來，下次有把握答對就直接變燈籠（這種燈籠不另給島幣）。海灘上的瓶子超過 ' + GUESS_CAP + ' 個時，有點猜的題先不收，一次撿幾個就好。') +
     p('🧭 <b>正在補強／已補強</b>：燈塔頂樓的燈室會把做過的題照單元整理（國文、英文照題型）。一個單元做滿 ' + UNIT_MIN + ' 題、海灘上還有瓶子，就可能列進「正在補強」，最多 3 個；一個單元的瓶子都變成燈籠，就會搬到「已補強」。這裡不加分也不扣分，家人碼也看得到這兩張卡。') +
+    p('🩹 <b>照原因換練法</b>：撿瓶子的時候，會照你記的原因換一種練法：觀念不熟或用猜的，先看一張這個單元的觀念小卡；一時看錯／算錯，在瓶子上寫一句下次要檢查的事，之後同一個單元的題會先提醒你；看不懂題目，先選這題在問什麼，再答題。小卡可以跳過，跳過也不影響經驗值和島幣。') +
+    p('🧭 <b>練一題、從補強單元出題</b>：燈室的「正在補強」可以按「練一題」，從那個單元你還沒做過的考古題抽一題。挑戰任務選「隨便一條」時，每天前 ' + XQ_WEAK + ' 題會從正在補強的單元抽，不想要可以在挑戰卡上關掉。題數和島幣都不變。') +
     p('點一個瓶子可以看原題、記下為什麼會錯（一時看錯／算錯、觀念不熟、看不懂題目、用猜的），也可以寫一句想對自己說的話。這些只有你看得到；想問爸爸的題，勾「👀 給爸爸看」，家人才看得到你寫的原因和那句話。') +
     p('📷 <b>拍錯題</b>：紙本考卷、講義上答錯的題，在燈塔按「拍照」，先選科目再拍。AI 會讀出題目、你寫的答案和正確答案，分好題型（國文像字音字形、修辭、文意理解；英文像時態、片語、閱讀），你確認、勾好要收的題，它們就變成漂流瓶，明天開始漂回來出類題。讀錯的字可以直接改；照片上看不到答案時，AI 會自己解，請你對一下。收進一題 +5 經驗值，一天最多算 5 題，一天最多拍 10 張。') +
     p('🧭 <b>錯題類型</b>：燈塔會整理你最常錯哪一類題。按「練一題」，會照你收集的這一類錯題出一題新題，算在每天 ' + XQ_DAILY + ' 題挑戰裡，答對一樣有經驗值和島幣，答錯也會變成漂流瓶。') +
