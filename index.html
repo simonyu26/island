@@ -307,11 +307,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.37';
+const APP_VERSION = '2.37.1';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
-// 只寫會影響操作的項目；小修加 minor: true，只留紀錄不公告（Simon，2026-10-26）
+// 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.37.1', date: '2026-10-26', minor: true, items: ['郵便受け和更新紀錄裡，小修改成摺起來，點開才看得到'] },
   { v: '2.37', date: '2026-10-26', items: ['🧭 看不懂題目而錯的瓶子，撿起來會先問「這題在問什麼」，選完再答，不影響經驗值和島幣', '📝 一時看錯／算錯的瓶子，可以寫一句「下次要檢查什麼」，之後同一個單元的題目會先提醒你'] },
   { v: '2.36.1', date: '2026-10-26', minor: true, items: ['🌱 智慧島小苗第 2 講的呼吸練習改成跟著小船 ⛵ 做'] },
   { v: '2.36', date: '2026-10-26', items: ['🧭 燈室可以請一位學習顧問（AI）了：學習顧問看得到你交出去的計畫，還有爸爸給的每週檢討和大考成績。爸爸會把下週的航線建議貼在燈室，只是參考，由你決定', '📤 計畫頁可以把這週的計畫整理好給學習顧問看：你按「複製」才會拿到文字，不會自動送出'] },
@@ -1342,20 +1343,28 @@ function exerciseMini() {
 /* --- 郵便受け：小島更新、家人的明信片、邀請、爸爸的回覆都寄到這裡，首頁右上角亮紅點 --- */
 function newsItems() {
   const seen = local.get('islandSeenVersion');
-  // 沒看過的版本都列出來；舊玩家第一次遇到更新提示時，只列最新一版。minor 的小修只留紀錄，不公告（Simon，2026-10-26）
+  // 沒看過的版本都列出來；舊玩家第一次遇到更新提示時，只列最新一版。minor 的小修摺起來，只有小修時不亮紅點（Simon，2026-10-26）
   if (seen === APP_VERSION) return [];
-  const seenAt = CHANGELOG.findIndex(c => c.v === seen), big = CHANGELOG.filter(c => !c.minor);
-  return seenAt >= 0 ? CHANGELOG.slice(0, seenAt).filter(c => !c.minor) : big.slice(0, 1);
+  const seenAt = CHANGELOG.findIndex(c => c.v === seen);
+  const list = seenAt >= 0 ? CHANGELOG.slice(0, seenAt) : CHANGELOG.slice(0, CHANGELOG.findIndex(c => !c.minor) + 1);
+  return list.some(c => !c.minor) ? list : [];
 }
 function freshCards() { const seen = Number(S.save.cardsSeen || 0); return cardList().filter(c => c.ts > seen); }
 function mailCount() {
   if (isFamily()) return 0;
   return (newsItems().length ? 1 : 0) + (freshCards().length ? 1 : 0) + (freshBooks().length ? 1 : 0) + visitList().filter(v => v.status === 'pending').length + (wishNews() ? 1 : 0);
 }
+// 小修摺起來：點開才看得到
+function minorFold(list) {
+  if (!list.length) return '';
+  return `<details class="muted" style="margin:6px 0 10px;font-size:13px"><summary>🔧 小修 ${list.map(c => 'v' + c.v).join('、')}</summary>
+    <ul style="margin:4px 0 0;padding-left:20px">${list.flatMap(c => c.items).map(i => `<li>${esc(i)}</li>`).join('')}</ul></details>`;
+}
 function viewMail() {
   const g = guide(), news = newsItems(), n = mailCount();
   const newsCard = news.length ? `<div class="card" style="border:2px solid var(--plum)"><h3>✨ 小島更新了（v${APP_VERSION}）</h3>
-    <ul style="margin:6px 0 10px;padding-left:20px">${news.flatMap(c => c.items).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+    <ul style="margin:6px 0 10px;padding-left:20px">${news.filter(c => !c.minor).flatMap(c => c.items).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+    ${minorFold(news.filter(c => c.minor))}
     ${NEXT_UP && NEXT_UP.items.length ? `<div class="muted" style="margin:-4px 0 10px"><b>下次更新（${esc(NEXT_UP.when)}）預計會有：</b><ul style="margin:4px 0 0;padding-left:20px">${NEXT_UP.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : ''}
     <div class="row"><button onclick="local.set('islandSeenVersion', APP_VERSION); go('guide')">看玩法說明</button>
     <button class="ghost" onclick="local.set('islandSeenVersion', APP_VERSION); render()">知道了</button></div></div>` : '';
@@ -5558,7 +5567,7 @@ function viewGuide() {
     p('小島周圍有海浪，岸邊有一圈浪花一波一波湧上沙灘；下雨和打雷時浪會變大。海面一天漲退兩次潮（照月亮的位置推算，大約 12 小時 25 分一輪，不是精確的潮汐表），退潮時沙灘會露出比較寬。白天太陽會投下影子。手機變慢或發燙的話，到「更多」把「3D 高畫質」關掉，就不會有影子、海浪也會簡單一點。') +
     p('手機比較舊、覺得卡的話，按「📋 清單」就會回到原本的畫面。')) : ''}
   ${sec('🏘️', '房子怎麼長大', p('每 2 個達成點蓋一棟 🏠，5 棟變成 🏘️，4 個 🏘️ 變成 🏢，4 棟 🏢 變成 🏰。自然街和社會街還分成小巷，哪條巷子比較空，一眼就看得到。'))}
-  <div class="card"><h3>📜 更新紀錄</h3>${CHANGELOG.filter(c => !c.minor).map(c => `<div style="margin-top:8px"><b>v${c.v}</b> <span class="muted">${c.date}</span>
+  <div class="card"><h3>📜 更新紀錄</h3>${CHANGELOG.map(c => c.minor ? minorFold([c]) : `<div style="margin-top:8px"><b>v${c.v}</b> <span class="muted">${c.date}</span>
     <ul style="margin:4px 0;padding-left:20px">${c.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}</div>
   <div class="row"><button class="grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
