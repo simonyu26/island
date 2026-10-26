@@ -37,7 +37,7 @@
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const esc = s => String(s == null ? '' : s).replace(/妳/g, '你').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function toast(msg) {
     const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block';
     clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 2600);
