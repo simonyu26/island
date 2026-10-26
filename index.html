@@ -685,6 +685,7 @@ function render() {
   if (tab === 'bookstore' || tab === 'giftPick') maybeMoreBooks();
   if (tab === 'bookstore') { catStart(); seeBooksNow(); } else { catStop(); if (tab !== 'book' && tab !== 'cards') bookFreshKeys = []; }
   if (tab === 'house') mountRoom();
+  if (tab === 'wisdom') mountWisdom3D();
   if (tab === 'plan') bindPlan();
   if (tab === 'pick') bindPicker();
   if (tab === 'confirm') bindConfirm();
@@ -941,12 +942,36 @@ function wisdomScene() {
     <ellipse cx="200" cy="120" rx="220" ry="26" fill="url(#wMist)"/>
   </svg></div>`;
 }
+// 智慧島 3D（v2.25）：和「我的家」一樣，3D 開不了就換回插畫；也可以自己切換
+function use3DWisdom() { return BETA3D && local.get('wisdomView') !== '2d'; }
+function wisdomView3D() {
+  const toggle = BETA3D ? `<div class="row" style="justify-content:flex-end;gap:6px;margin:-4px 0 8px">
+      <button class="${use3DWisdom() ? '' : 'ghost'}" style="padding:6px 12px" onclick="local.set('wisdomView','3d');render()">🧊 3D 小島</button>
+      <button class="${use3DWisdom() ? 'ghost' : ''}" style="padding:6px 12px" onclick="local.set('wisdomView','2d');render()">🖼️ 插畫</button></div>` : '';
+  if (!use3DWisdom()) return toggle + wisdomScene();
+  return toggle + `<div id="w3d" style="height:min(58vh,440px);border-radius:16px;overflow:hidden;background:${env.phase === 'night' ? '#141c36' : '#cfe8f3'}">
+      <div class="loading" style="padding-top:150px">⛴️ 靠岸中…</div></div>
+    <div class="muted" style="margin-top:6px;font-size:13px">👆 拖曳可以轉動小島，兩指可以拉近；點小屋或老師就能進去。</div>`;
+}
+async function mountWisdom3D() {
+  const el = document.getElementById('w3d'); if (!el) return;
+  try {
+    if (!window.THREE) await loadScript('three.min.js');
+    if (!THREE.OrbitControls) await loadScript('OrbitControls.js');
+    if (!window.Wisdom3D) await loadScript('wisdom3d.js');
+    if (!document.getElementById('w3d')) return;
+    el.innerHTML = '';
+    Wisdom3D.mount(el, { phase: env.phase, weather: env.weather,
+      huts: WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k); return { key: k, name: t.name, place: t.place, ic: t.ic, color: t.color, st: wisdomStatus(k), can: !x.why }; }),
+      onHut: k => openWisdomHut(k) });
+  } catch (e) { local.set('wisdomView', '2d'); toast('這支手機開不了 3D，先用插畫'); render(); }
+}
 function viewWisdom() {
   if (!wisdomOn()) return `<div class="card">智慧島還在霧裡，等開島那天再來吧。</div><div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
   WISDOM_ORDER.forEach(k => [...new Set([k, wisdomNext(k).book])].forEach(b => {   // 第二本書等第一本上完才載入
     if (!wisdomFull[b]) wisdomLoad(b).then(() => { if (tab === 'wisdom' || tab === 'whut') render(); }); }));
   const today = wisdomTodayDone();
-  return `<div class="card"><h2>⛴️ 智慧島</h2>${wisdomScene()}
+  return `<div class="card"><h2>⛴️ 智慧島</h2>${wisdomView3D()}
       <div class="speech" style="margin-top:8px">${today ? '🌙 今天的課上完了。渡船照樣開，想回看筆記可以進小屋坐坐，明天再來上下一講。' : '⛴️ 小船靠岸了。霧散開，四間小屋的燈都亮著。今天想去哪一間上課？'}</div>
       <div class="muted" style="margin-top:6px;font-size:13px">點小屋就能進去。每天可以上一講，同一位老師每週一講。</div></div>
     ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k);
