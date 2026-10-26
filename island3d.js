@@ -300,7 +300,7 @@
     clouds.userData.mat = cm; clouds.visible = false; scene.add(clouds);
     // 季節飄落物：花瓣、楓葉（白天）或螢火蟲（夏天晚上）；v2.30 從 140 片減到 60 片，停住的時候不顯示（散在草地上看起來很亂）
     const fg = new THREE.BufferGeometry(), fp = [];
-    for (let i = 0; i < 60; i++) fp.push((r() - 0.5) * 26, r() * 9, (r() - 0.5) * 26);
+    for (let i = 0; i < 60; i++) fp.push((r() - 0.5) * 26, 2 + r() * 8, (r() - 0.5) * 26);
     fg.setAttribute('position', new THREE.Float32BufferAttribute(fp, 3));
     seasonFx = new THREE.Points(fg, new THREE.PointsMaterial({ color: 0xf4b6c8, size: 0.22, transparent: true, opacity: 0.9 })); lin(seasonFx.material.color);
     seasonFx.visible = false; scene.add(seasonFx);
@@ -334,7 +334,7 @@
   function showSeasonFx() {
     if (!seasonFx) return;
     const k = seasonFx.userData.kind, night = envNow.phase === 'night', wet = envNow.weather === 'rain' || envNow.weather === 'storm';
-    seasonFx.visible = false;   // v2.30.1：飄落的花瓣、楓葉散在島上像小紅點垃圾，先不顯示（節氣的草地和樹葉顏色照舊）
+    seasonFx.visible = !!k && !wet && !CALM && (k === 'firefly' ? night : !night);   // v2.30.2：她想保留楓葉，但葉子不落地（見 animateSky）
   }
   const SKY = { dawn: 0xf6c9a8, day: 0xcfe8f3, dusk: 0xf2a07b, night: 0x1b2440 };
   const GREY = { dawn: 0xb9aaa4, day: 0xaab6c0, dusk: 0x9c8f92, night: 0x151b28 };
@@ -402,7 +402,7 @@
       for (let i = 0; i < p.count; i++) {
         if (fly) { p.setY(i, 0.6 + 1.2 * (0.5 + 0.5 * Math.sin(t * 0.8 + i))); p.setX(i, p.getX(i) + Math.sin(t + i * 1.7) * dt * 0.4); continue; }
         let y = p.getY(i) - dt * 0.7;
-        if (y < 0.2) y += 9;
+        if (y < 2) y += 8;   // v2.30.2：飄到半空就回到上面，不會落在草地上看起來像垃圾
         p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(t * 1.3 + i) * dt * 0.5);
       }
       p.needsUpdate = true;
