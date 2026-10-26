@@ -52,7 +52,7 @@
   function phaseOf(h) { return h >= 19 || h < 5 ? 'night' : h < 7 ? 'dawn' : h < 17 ? 'day' : 'dusk'; }
   function resident(s) {
     const r = (snap.residents && snap.residents[s]) || {};
-    return { name: r.name || SUBJECT_NAME[s] + '島民', emoji: r.emoji || '🙂', personality: r.personality || '' };
+    return { name: r.name || SUBJECT_NAME[s] + '島民', emoji: r.emoji || '🙂', personality: r.personality || '', intro: r.intro || '' };
   }
   function roommate(sub) { const r = (snap.roommates && snap.roommates[sub]) || {}; return { name: r.name || '', emoji: r.emoji || '' }; }
   function guide() { const g = snap.guide || {}; return { name: g.name || '嚮導', emoji: g.emoji || '🦉' }; }
@@ -155,7 +155,7 @@
     const r = resident(s), pts = snap.pts || {};
     const lanes = SUBS[s] ? SUBS[s].concat(s === '自' ? ['自然'] : ['社會']) : [s];
     box.innerHTML = `<div class="resident"><span class="avatar">${esc(r.emoji)}</span>
-        <div><b>${esc(r.name)}</b><div class="muted">${SUBJECT_NAME[s]}街${r.personality ? '・' + esc(r.personality) : ''}</div></div></div>
+        <div><b>${esc(r.name)}</b><div class="muted">${SUBJECT_NAME[s]}街${r.personality ? '・' + esc(r.personality) : ''}</div>${r.intro ? `<div style="font-size:13px;margin-top:4px">${esc(r.intro)}</div>` : ''}</div></div>
       <div style="margin-top:10px">${lanes.map(l => {
         const m = SUBS[s] ? roommate(l) : null;
         const name = l === '自然' || l === '社會' ? '綜合廣場' : (m && m.name ? m.name + '（' + l + '）' : (SUBS[s] ? l : SUBJECT_NAME[s] + '街'));
