@@ -182,6 +182,7 @@
         home: snap.home || null, onHome: () => openRoom('me'), grade: () => null, onSelect: showInfo,
         garden: snap.garden || null,  // v2.10：她種的植物（不含小木牌）
         book: snap.book || null,      // v2.17：獨立書店（訪客只看外觀）
+        yatai: snap.yatai || null,    // v2.30.3：島の屋台（訪客只看外觀）
         marks: snap.marks || null     // v2.19：讀完書長出的地標（只有樣子，不給點）
       });
       Island3D.setEnvironment({ phase: phaseOf(taipeiHour()), weather: 'clear' });
