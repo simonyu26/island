@@ -301,8 +301,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.26';
+const APP_VERSION = '2.27';
 const CHANGELOG = [
+  { v: '2.27', date: '2026-10-26', items: ['🤝 你和每位島民之間有了「絆」：讀他那一科、做他的故事任務、請他講解、送家具、去他家作客、回他的信，交情都會慢慢變深', '💌 島民的信下面可以回一個表情', '🏷️ 島民的家和街區卡上會寫你們現在的交情（はじめまして → 一生的朋友），交情越深，信和故事的語氣越親近', '💞 島民之間也有交情：同一天讀兩科、寫跨科連結，他們就會越來越熟'] },
   { v: '2.26', date: '2026-10-26', items: ['🏝️ 可以用經驗值換衛星小島了：在商店的兌換卡下面，自己挑樣子（沙洲、松樹岩島、漁港、茶園）、方向和名字', '🌉 每座小島都用紅色太鼓橋接回本島，在 3D 小島上點小島就能過去', '🧑‍🌾 每座小島可以請一位你自己設定的管理員，第一次去他會先打招呼', '⭐ 換小島和換島幣用同一包可換的經驗值；經驗值總數和等級都不會變'] },
   { v: '2.25', date: '2026-10-26', items: ['🗣️ 島民設定多了「說話方式／口頭禪」：寫信、故事、挑戰任務、講解都會照著說', '🏘️ 理化、生物、地科、歷史、地理、公民巷的室友，也可以設定自己的個性和說話方式', '📝 每位島民可以寫一段介紹，會出現在島民的家和「更多」頁；智慧島四位老師也有介紹了', '💬 島民家裡的道謝和島上消息，改成島民每天照自己的口吻寫'] },
   { v: '2.24', date: '2026-10-26', items: ['⛴️ 智慧島開航了！島左前方的海邊多了一座渡船碼頭，坐船就能到智慧島上課。', '🏯 智慧島是一座 3D 小島，可以轉來轉去，點小屋或老師就能進去。', '🪶 老師一天搬來一位：今天隆中草廬的孔明先開門教《孫子兵法》，明天 NASA 分站的愛因斯坦，後天湯屋的小苗，大後天巷口柑仔店的阿律。', '📖 每一講四步：聽故事、你來選、搬到你的生活、寫一句。寫的那一句交給老師，老師會回你一句話，集章冊蓋一個章。', '🗓️ 每天可以上一講，同一位老師每週一講，上過的課可以回看，也會擺到書店的書架上。'] },
@@ -445,6 +446,68 @@ function assessDate(s) {
 /* ===== 遊戲數值 ===== */
 function isBoss(name) { return /歷屆|模卷|會考|學測/.test(name); }
 
+// 交情（v2.27）：她和每位島民、島民兩兩之間各記 0～100 分，前台只看六個等級（不顯示分數、不排行）。
+// 全部照日期從存檔重算：每天每位最多 +4，3 天沒互動起（第 4 天）每天 −1，會考那週暫停降低。作客、回信存 like:<科>:<日期>
+const KZ_LV = [0, 10, 25, 45, 65, 85], KZ_NAME = ['はじめまして', '顔見知り', '聊得來', '好朋友', '好夥伴', '一生的朋友'];
+function kzLevel(score) { let i = 0; while (i < 5 && score >= KZ_LV[i + 1]) i++; return i; }
+function kizunaOf(save, itemsByRow, today) {
+  const ev = {}, sub = l => GROUP[l] || l, pk = (a, b) => [a, b].sort().join('');
+  const add = (who, date, cat, p, cap) => { if (!who || !date || date > today) return; const d = (ev[who] = ev[who] || {})[date] = ev[who][date] || {}; d[cat] = Math.min(cap || 99, (d[cat] || 0) + p); };
+  const bankLane = {}; Object.keys(save).forEach(k => { const v = save[k]; if (v && v.bank && v.lane && /^(xq|quest):/.test(k)) bankLane[v.bank] = v.lane; });
+  const names = {}; SUBJECTS.forEach(s => { const n = save.config && save.config.residents && save.config.residents[s] && save.config.residents[s].name; if (n) names[s] = n; });
+  Object.keys(save).forEach(k => {
+    const v = save[k]; if (!v) return;
+    if (k.startsWith('log:')) {   // 完成這一科的計畫格 +0.5／格（一天最多 +1.5）；同一天讀了兩科，這一對 +0.5
+      const d = k.slice(4), per = {};
+      Object.keys(v.rows || {}).forEach(r => { const it = itemsByRow[r], s = it && sub(it.subject); if (SUBJECTS.includes(s)) per[s] = (per[s] || 0) + (Number(v.rows[r]) || 1); });
+      const ss = Object.keys(per); ss.forEach(s => add(s, d, 'plan', 0.5 * per[s], 1.5));
+      for (let i = 0; i < ss.length; i++) for (let j = i + 1; j < ss.length; j++) add(pk(ss[i], ss[j]), d, 'same', 0.5, 0.5);
+    } else if (k.startsWith('quest:') && v.done && v.lane) add(sub(v.lane), v.at || k.slice(6), 'quest', 1, 1);
+    else if (k.startsWith('xq:') && v.done && v.correct && v.lane) add(sub(v.lane), v.at || v.date, 'xq', 0.5, 1);
+    else if (k.startsWith('bx:') && bankLane[k.slice(3)]) add(sub(bankLane[k.slice(3)]), v.at, 'explain', 0.5, 0.5);
+    else if (k.startsWith('rv:') && v.lantern) { const src = save[k.slice(3)]; if (src && src.lane) add(sub(src.lane), v.lantern, 'lantern', 1); }
+    else if (k.startsWith('like:')) { const p = k.split(':'); if (v.visit) add(p[1], p[2], 'visit', 0.5, 0.5); if (v.reply) add(p[1], p[2], 'reply', 0.5, 0.5); }
+    else if (k.startsWith('xc:') && (v.lanes || []).length >= 2) { const gs = [...new Set(v.lanes.map(sub))].filter(g => SUBJECTS.includes(g));
+      for (let i = 0; i < gs.length; i++) for (let j = i + 1; j < gs.length; j++) add(pk(gs[i], gs[j]), v.at, 'xc', 1); }
+    else if (k.startsWith('story:')) { const s = sub(k.slice(6));   // 故事的一章同時寫到另一位島民
+      (v.ch || []).forEach(c => SUBJECTS.forEach(o => { if (o !== s && names[o] && String(c.text || '').includes(names[o])) add(pk(s, o), c.at, 'story', 1, 1); })); }
+  });
+  (save.links || []).forEach(l => add(pk(l.a, l.b), l.date, 'link', 2));
+  const seen = {}; (save.purchases || []).forEach(p => { if (!p.furniture || !SUBJECTS.includes(p.for) || seen[p.for + p.furniture]) return; seen[p.for + p.furniture] = 1; add(p.for, p.date, 'gift', 2); });
+  const ex0 = mondayOf(EXAM_DATES[0]), ex1 = addD(ex0, 6);
+  const run = who => {
+    const days = ev[who] || {}, ds = Object.keys(days).sort();
+    let score = 0, idle = 0, before = 0, d = ds[0];
+    while (d && d <= today) {
+      const e = days[d];
+      if (e) { before = idle; idle = 0; score += Math.min(4, Object.keys(e).reduce((a, c) => a + e[c], 0)); }
+      else { idle++; if (idle > 3 && !(d >= ex0 && d <= ex1)) score -= 1; }
+      score = Math.max(0, Math.min(100, score)); d = addD(d, 1);
+    }
+    score = Math.round(score * 10) / 10;
+    const lv = kzLevel(score);
+    return { score, lv, name: KZ_NAME[lv], idle, missing: idle >= 3, back: !!days[today] && before >= 3, near: lv < 5 && KZ_LV[lv + 1] - score <= 3 };
+  };
+  const her = {}, pair = {};
+  SUBJECTS.forEach(s => her[s] = run(s));
+  for (let i = 0; i < SUBJECTS.length; i++) for (let j = i + 1; j < SUBJECTS.length; j++) { const k = pk(SUBJECTS[i], SUBJECTS[j]); pair[k] = run(k); }
+  return { her, pair };
+}
+function kzBadge(s) { const k = D.kizuna && D.kizuna.her[s]; return k ? `<span class="pill" style="margin-left:6px;font-size:12px" title="和你的交情">絆・${k.name}</span>` : ''; }
+// 回島民的信：一個表情（每位每天一次，+交情）
+const KZ_REPLY = ['😊', '👍', '💪', '🥹', '😆'];
+function kzLike(s) { return S.save['like:' + s + ':' + S.today] || {}; }
+function kzSave(s, part) {
+  if (isFamily()) return;
+  const k = 'like:' + s + ':' + S.today, rec = Object.assign({}, S.save[k] || {}, part, { at: S.today });
+  S.save[k] = rec; queueSave(k, 'saveLike', s, S.today, rec); D = derive(S);
+}
+function replyRow(s) {
+  if (isFamily()) return '';
+  const r = kzLike(s).reply;
+  if (r) return `<div class="muted" style="font-size:12px;margin-top:4px">你回了 ${esc(r)}</div>`;
+  return `<div class="row" style="gap:4px;margin-top:4px">${KZ_REPLY.map(e => `<button class="ghost" style="padding:2px 8px;font-size:16px" aria-label="回 ${e}" onclick="kzSave('${s}',{reply:'${e}'});softRender()">${e}</button>`).join('')}</div>`;
+}
 function derive(S) {
   const save = S.save || {};
   const cfg = save.config || null;
@@ -563,13 +626,11 @@ function derive(S) {
     grades[s] = rows[0] ? { level: rows[0][s], date: rows[0].date, source: rows[0].source } : null;
   });
 
-  // 島民之間的好感度（跨科連結）
-  const bond = {};
-  links.forEach(l => { const k = [l.a, l.b].sort().join(''); bond[k] = (bond[k] || 0) + 1; });
+  // 島民之間的交情（v2.27 改用同一套 0～100 分、六級的算法，見 kizunaOf）；bond 給 3D 連線和訪客快照用：有分數的對 → 等級 1～6
+  const kizuna = kizunaOf(save, itemsByRow, S.today), bond = {};
+  Object.keys(kizuna.pair).forEach(k => { if (kizuna.pair[k].score > 0) bond[k] = kizuna.pair[k].lv + 1; });
   // 跨科連結自動判斷（燈塔，xc:<題目 key>）：AI 判斷做過的任務題用到哪幾科，跨街的才算好感度；不給經驗值和島幣
   const autoLinks = Object.keys(save).filter(k => k.startsWith('xc:') && save[k] && (save[k].lanes || []).length >= 2).sort().map(k => Object.assign({ id: k.slice(3) }, save[k]));
-  autoLinks.forEach(x => { const gs = [...new Set(x.lanes.map(l => GROUP[l] || l))].filter(g => SUBJECTS.includes(g)).sort();
-    for (let i = 0; i < gs.length; i++) for (let j = i + 1; j < gs.length; j++) { const k = gs[i] + gs[j]; bond[k] = (bond[k] || 0) + 1; } });
 
   const settledCount = Object.keys(save).filter(k => k.startsWith('settled:')).length;
   const badges = [
@@ -592,7 +653,7 @@ function derive(S) {
     { ic: '⛵', name: '紙船 ×10', ok: sessions.length >= 10 }
   ];
 
-  return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent }, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
+  return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent }, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna,
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
            exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps,
            // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計－種樹花掉的；只從計時來，不扣經驗值、不影響等級
@@ -767,7 +828,7 @@ function viewHome() {
     const r = resident(s), gr = D.grades[s];
     return `<div class="district">
       <div class="resident"><span class="avatar">${r.pic}</span>
-        <div><b>${esc(r.name)}</b><div class="muted">${SUBJECT_NAME[s]}街</div></div>
+        <div><b>${esc(r.name)}</b><div class="muted">${SUBJECT_NAME[s]}街${kzBadge(s)}</div></div>
         <span class="grade ${gr ? '' : 'none'}" title="${gr ? esc(gr.source + ' ' + gr.date) : '還沒有試煉紀錄'}">${gr ? esc(gr.level) : '?'}</span></div>
       ${streets(s)}
       <div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div>
@@ -1204,7 +1265,8 @@ function dailyCtx() {
   return {
     residents: SUBJECTS.map(s => { const r = resident(s);
       const gifts = (S.save.purchases || []).filter(p => p.furniture && p.for === s), f = gifts.length && furnOf(gifts[gifts.length - 1].furniture);
-      return { key: s, name: r.name, personality: r.personality, speech: r.speech, relation: r.relation, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null,
+      const kz = D.kizuna.her[s];
+      return { key: s, name: r.name, personality: r.personality, speech: r.speech, relation: r.relation, kizuna: { level: kz.name, missing: kz.missing, back: kz.back }, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null,
         gifts: gifts.length, lastGift: f ? f.name : null }; }),
     guide: { name: g.name, tone: TONES[g.tone] || g.tone },
     keepers: Object.keys(PLACES).filter(k => k !== 'home' && k !== 'bookcat' && keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : k === 'bookstore' ? { note: bookNote() } : {})),
@@ -1252,7 +1314,7 @@ function dailyCard() {
   if (d && Object.keys(d.messages || {}).length) {
     body = SUBJECTS.filter(s => d.messages[s]).map(s => { const r = resident(s);
       return `<div class="row" style="align-items:flex-start;margin-top:10px;flex-wrap:nowrap"><span class="avatar" style="font-size:28px">${r.pic}</span>
-        <div class="speech grow"><b>${esc(r.name)}</b>：${esc(d.messages[s])}</div></div>`; }).join('');
+        <div class="grow"><div class="speech"><b>${esc(r.name)}</b>：${esc(d.messages[s])}</div>${replyRow(s)}</div></div>`; }).join('');
   } else {
     const ev = residentEvent();
     body = `<div>${ev.r.ipic} ${esc(ev.text)}</div>${dailyState === 'loading' ? '<div class="muted" style="margin-top:6px">✉️ 島民們正在寫信給你…</div>' : ''}`;
@@ -1373,7 +1435,7 @@ const RES_FURNITURE = {
 const RES_WALL = { 國: '#fbe3ee', 英: '#e3f0fb', 數: '#fdf1d6', 自: '#e3f5e5', 社: '#eee6fb' };
 const RES_SLOTS = 8;
 let houseWho = 'me';   // 'me' 是自己的家，或島民的科目（國、英…）
-function openHouse(who) { houseWho = who || 'me'; go('house'); }
+function openHouse(who) { houseWho = who || 'me'; if (SUBJECTS.includes(houseWho) && !kzLike(houseWho).visit) kzSave(houseWho, { visit: true }); go('house'); }
 function houseTier() { let t = HOUSE_TIERS[0]; HOUSE_TIERS.forEach(x => { if (D.level >= x.lv) t = x; }); return t; }
 function homeOf() { return S.save.home || null; }
 // 家是休息的地方（Simon，2026-10-25）：會考倒數鐘不再當家具，搬到燈塔；已經買的退還島幣
@@ -1392,7 +1454,7 @@ function shownFurniture() { return shownFor('me'); }
 function wallFor(who) { return who === 'me' ? (homeOf() || {}).wall || WALL_COLORS[0] : roomOf(who).wall || RES_WALL[who]; }
 // 今天來作客的島民：好感度（跨科連結）越高越常來
 function visitor() {
-  const w = SUBJECTS.map(s => 1 + Object.keys(D.bond).filter(k => k.includes(s)).reduce((a, k) => a + D.bond[k], 0));
+  const w = SUBJECTS.map(s => 1 + D.kizuna.her[s].score / 20 + Object.keys(D.kizuna.pair).filter(k => k.includes(s)).reduce((a, k) => a + D.kizuna.pair[k].score / 40, 0));
   const r = seeded(daySeed() * 13 + 5); r(); let t = r() * w.reduce((a, b) => a + b, 0);
   for (let i = 0; i < 5; i++) { t -= w[i]; if (t <= 0) return SUBJECTS[i]; }
   return SUBJECTS[4];
@@ -1474,6 +1536,9 @@ function viewHouse() {
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 島民的家：她送的家具越多，島民越開心
+// 交情的小暗示：回來那天說おかえり、好幾天沒來說有點想你、快升級時說越來越熟了（不顯示分數）
+function kzLead(s) { const k = !isFamily() && D.kizuna.her[s]; return !k ? '' : k.back ? 'おかえり！' : k.missing ? '最近沒看到你，有點想你。' : ''; }
+function kzTail(s) { const k = !isFamily() && D.kizuna.her[s]; return k && k.near && !k.missing ? '　……感覺我們越來越熟了。' : ''; }
 function resThanks(s) {
   const gifts = (S.save.purchases || []).filter(p => p.furniture && p.for === s);
   const d = S.save['daily:' + S.today], l = d && d.lines && d.lines[s];   // 寫信之後又送了新家具，就用內建句
@@ -1488,11 +1553,11 @@ function viewResHouse(s) {
   const r = resident(s), daily = S.save['daily:' + S.today], cur = wallFor(s);
   const sw = `<div class="emojis">${[RES_WALL[s]].concat(WALL_COLORS).map(c => `<button type="button" class="${cur === c ? 'on' : ''}" style="width:34px;height:34px;background:${c}" onclick="setResWall('${s}','${c}')" aria-label="${c}"></button>`).join('')}</div>`;
   return `<div class="card" style="background:${esc(cur)}"><div class="row" style="flex-wrap:nowrap"><span class="avatar">${r.pic}</span>
-      <div class="grow"><h2 style="margin:0">${esc(r.name)}的家</h2><div class="muted">${SUBJECT_NAME[s]}街${r.personality ? '・' + esc(r.personality) : ''}</div></div></div>
+      <div class="grow"><h2 style="margin:0">${esc(r.name)}的家</h2><div class="muted">${SUBJECT_NAME[s]}街${r.personality ? '・' + esc(r.personality) : ''}${kzBadge(s)}</div></div></div>
       ${r.intro ? `<div style="margin-top:8px;font-size:14px;white-space:pre-wrap">${esc(r.intro)}</div>` : ''}</div>
     <div class="card"><h3>🛋️ 客廳</h3>${roomHtml(s, s)}
-      <div class="speech" style="margin-top:10px"><b>${esc(r.name)}</b>：${esc(resThanks(s))}</div>
-      ${daily && daily.messages && daily.messages[s] ? `<div class="muted" style="margin-top:6px">📮 今天的信：${esc(daily.messages[s])}</div>` : ''}
+      <div class="speech" style="margin-top:10px"><b>${esc(r.name)}</b>：${esc(kzLead(s) + resThanks(s) + kzTail(s))}</div>
+      ${daily && daily.messages && daily.messages[s] ? `<div class="muted" style="margin-top:6px">📮 今天的信：${esc(daily.messages[s])}</div>${replyRow(s)}` : ''}
       <label style="margin-top:10px">牆壁顏色</label>${sw}
       <div class="muted" style="margin-top:6px">島民的客廳可以擺 ${RES_SLOTS} 件家具。送的家具是島民的，不會占你家的位置。</div></div>
     ${furnShop(s)}
@@ -2713,7 +2778,7 @@ async function storyNextLater(q) {
   const n = q.chapter + 1; if (storyOf(q.lane).ch.some(c => c.n === n)) return;
   const who = laneWho(q.lane), s = GROUP[q.lane] || q.lane, r = resident(s), arc = storyOf(q.lane), cur = arc.ch.find(c => c.n === q.chapter);
   const others = SUBJECTS.filter(x => x !== s).map(x => { const o = resident(x); return { name: o.name, subject: SUBJECT_NAME[x], relation: o.relation }; });
-  const ctx = { place: SUBS[s] ? q.lane + '巷' : SUBJECT_NAME[s] + '街', who: { name: who.name, personality: who.personality, speech: who.speech, relation: who.relation }, others,
+  const ctx = { place: SUBS[s] ? q.lane + '巷' : SUBJECT_NAME[s] + '街', who: { name: who.name, personality: who.personality, speech: who.speech, relation: who.relation, kizuna: D.kizuna.her[s].name }, others,
     chapter: n, last: cur ? cur.text : String(q.story).replace('{who}', who.name), sum: arc.sum, season: solarTerm(S.today), guide: guide().name };
   try { S = await call('storyNext', q.lane, ctx); D = derive(S); if (tab === 'home') softRender(); } catch (e) { /* 下次再寫 */ }
 }
@@ -4534,11 +4599,11 @@ async function familyAsk() {
 
 /* --- 更多 --- */
 function viewMore() {
-  const pairs = Object.entries(D.bond).sort((a, b) => b[1] - a[1]);
+  const pairs = Object.keys(D.kizuna.pair).filter(k => D.kizuna.pair[k].score > 0).map(k => [k, D.kizuna.pair[k]]);
   return `<div class="card"><h2>👥 島民關係</h2>${SUBJECTS.map(s => { const r = resident(s);
-      return `<div class="item"><span class="avatar">${r.pic}</span><div class="name"><b>${esc(r.name)}</b>（${SUBJECT_NAME[s]}）<div class="muted">${esc(r.personality)}${r.relation ? '・' + esc(r.relation) : ''}</div>${r.intro ? `<div style="font-size:13px;margin-top:2px">${esc(r.intro)}</div>` : ''}</div></div>`; }).join('')}
-    <h3 style="margin-top:12px">💞 好感度</h3>${pairs.length ? pairs.map(([k, v]) =>
-      `<div>${resident(k[0]).ipic} ${esc(resident(k[0]).name)} × ${resident(k[1]).ipic} ${esc(resident(k[1]).name)}：${'💗'.repeat(Math.min(v, 10))}</div>`).join('') : '<div class="muted">還沒有跨科連結，在「確認這週」頁可以記錄。</div>'}
+      return `<div class="item"><span class="avatar">${r.pic}</span><div class="name"><b>${esc(r.name)}</b>（${SUBJECT_NAME[s]}）${kzBadge(s)}<div class="muted">${esc(r.personality)}${r.relation ? '・' + esc(r.relation) : ''}</div>${r.intro ? `<div style="font-size:13px;margin-top:2px">${esc(r.intro)}</div>` : ''}</div></div>`; }).join('')}
+    <h3 style="margin-top:12px">💞 島民之間的交情</h3>${pairs.length ? pairs.map(([k, v]) =>
+      `<div>${resident(k[0]).ipic} ${esc(resident(k[0]).name)} × ${resident(k[1]).ipic} ${esc(resident(k[1]).name)}：${v.name}</div>`).join('') : '<div class="muted">同一天讀兩科、寫跨科連結，島民之間就會越來越熟。</div>'}
     ${D.links.length ? `<h3 style="margin-top:12px">🔗 連結筆記</h3>` + D.links.slice().reverse().map(l => `<div class="muted">${esc(l.date)}・${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}：${esc(l.note)}</div>`).join('') : ''}
     ${D.autoLinks.length ? `<h3 style="margin-top:12px">🤖 任務裡發現的跨科題</h3>` + D.autoLinks.slice().reverse().slice(0, 20).map(x => `<div class="muted">${esc(x.at)}・${x.lanes.map(esc).join(' × ')}：${esc(x.why)}</div>`).join('') : ''}
   </div>
@@ -4625,6 +4690,9 @@ function viewGuide() {
     p('哪一週真的沒空，休息卡會自動幫你守住連續週數，不用擔心一斷就歸零。'))}
   ${sec('💞', '跨科連結和好感度', p('發現兩科之間的關係時（例如數學的比例和理化的密度），在「確認這週」頁記下來。兩位島民的好感度會上升，可以在「更多」看到他們的關係。') +
     p('你做過的挑戰任務和故事任務，島也會請 AI 看看是不是跨科題（例如理化題要列方程式，就是理化 × 數學）。是的話會跳出提示，兩條街的島民好感度也會上升，在「更多」的「任務裡發現的跨科題」看得到。自動發現的不加經驗值和島幣，自己寫下的連結才有。'))}
+  ${sec('🤝', '和島民的絆', p('你和每位島民之間都有一段交情，從「はじめまして」開始，慢慢變成「顔見知り」「聊得來」「好朋友」「好夥伴」，最後是「一生的朋友」。讀他那一科的計畫、做他那條街的故事任務、挑戰任務答對、請他講解、把他那一科的瓶子變成燈籠、送他家具、去他家作客、回他的信（每天一個表情），交情都會慢慢變深，每位一天最多前進一點點。') +
+    p('好幾天沒去找他，交情會慢慢變淡，他會說有點想你；回來找他就補得回來。會考那週不會變淡。交情只寫等級，不算分數、也不排名次。交情越深，島民寫信和故事的語氣就越親近。') +
+    p('島民之間也有交情：你同一天讀了兩科、寫了跨科連結、AI 發現跨科題，或故事裡兩位一起出場，他們就會越來越熟，3D 小島上的連線也會變粗。'))}
   ${sec('🏝️', '衛星小島', p('在商店的兌換卡下面，可以用經驗值換一座衛星小島：挑一種樣子（沙洲小島、松樹岩島、漁港小島、茶園小島）、一個方向，也可以幫它取名字。小島會出現在本島旁邊的海上，用紅色太鼓橋接回來，在 3D 小島上點小島或橋就能過去。') +
     p('第一座 300 點，之後 500、800、1200、1600、2000 點，最多六座。換小島和換島幣用的是同一包「可換的經驗值」：換了之後經驗值總數和島嶼等級都不會變，房子也不會變小，只是用掉的那些點數不能再換島幣。') +
     p('每座小島可以請一位你自己設定的管理員（名字、樣子、個性），第一次去他會先打招呼，之後每天寫一句話給你。'))}
