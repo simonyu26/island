@@ -508,7 +508,7 @@
       if (old.has(k)) return;
       const av = avatarSprite(r.emoji, ctx.imgOf(s));
       av.position.copy(anchors[s]); av.userData.key = k; av.userData.subject = s; av.userData.avatar = true;
-      const lb = labelSprite(r.name, `${ctx.subjectName[s]}街${gr ? '・' + gr : ''}`, { scale: 1.15 });
+      const lb = labelSprite(r.name, `${ctx.subjIc && ctx.subjIc[s] ? ctx.subjIc[s] + ' ' : ''}${ctx.subjectName[s]}街${gr ? '・' + gr : ''}`, { scale: 1.15 });
       lb.position.set(anchors[s].x, anchors[s].y + 1.8, anchors[s].z);
       const grp = new THREE.Group(); grp.add(av, lb); grp.userData.key = k; grp.userData.subject = s;
       buildLayer.add(grp);
@@ -1426,6 +1426,9 @@
     const deck = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 16), std(0x3a2a33)); deck.position.y = 2.84; tower.add(deck);
     lamp = std(0xfff1c2, { emissive: 0xffd36b, emissiveIntensity: 0.5 });
     const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.45, 12), lamp); glass.position.y = 3.1; tower.add(glass);
+    // v2.31：頂樓的燈室，點燈的地方就進燈室（學習分析）；窗框讓燈室看起來像一間房間
+    glass.userData.lampRoom = true;
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3, f = new THREE.Mesh(bx(0.04, 0.45, 0.04), std(0x3a2a33)); f.position.set(Math.cos(a) * 0.35, 3.1, Math.sin(a) * 0.35); f.userData.lampRoom = true; tower.add(f); }
     const cap = new THREE.Mesh(new THREE.ConeGeometry(0.46, 0.45, 12), red); cap.position.y = 3.55; tower.add(cap);
     const door = new THREE.Mesh(bx(0.26, 0.42, 0.05), std(0x8a5a3c)); door.position.set(0, 0.42, 0.53); tower.add(door);
     // 守燈人的小屋（暖簾的日式小屋）
@@ -1442,9 +1445,17 @@
     hut.position.set(hp.x, 0.05, hp.z); hut.rotation.y = -CAPE - Math.PI / 2;
     lightLayer.add(tower, hut);
     if (L) {
-      const lb = labelSprite('🗼 ' + (L.name || '燈塔'), L.due ? '🍶 今天漂回 ' + L.due + ' 個' : null, { scale: 1.0, color: '#3a2a33' });
+      const lb = labelSprite('🗼 ' + (L.name || '燈塔'), L.due ? '🍶 今天漂回 ' + L.due + ' 個' + (L.friends ? '・🏮 老朋友 ' + L.friends : '') : null, { scale: 1.0, color: '#3a2a33' });
       lb.position.set(tp.x, 4.9, tp.z); lb.userData.light = true; lightLayer.add(lb);
       // 漂流瓶不畫在 3D 島上了（v2.30.1：她說瓶子看起來像垃圾）；今天漂回幾個看燈塔標籤，瓶子都在燈塔頁
+      // v2.31：今天當「老朋友」漂回來的燈籠（最多 2 盞）：浮在岬角前面的水上、比較亮，不放在沙灘上（她說沙灘上的瓶子像垃圾）
+      const fr = Math.min(L.friends || 0, 2), fpaper = std(0xfff1d6, { emissive: 0xffa94d, emissiveIntensity: 1.2 }), fbase = std(0x7a5236);
+      for (let i = 0; i < fr; i++) {
+        const p = at(17.3, (i ? 0.12 : -0.12)), lt = new THREE.Group(); lt.userData.light = true;
+        const box = new THREE.Mesh(bx(0.3, 0.28, 0.3), fpaper); box.position.y = 0.22; lt.add(box);
+        const raft = new THREE.Mesh(bx(0.38, 0.05, 0.38), fbase); lt.add(raft);
+        lt.position.set(p.x, -0.55, p.z); lt.userData.phase = i * 2.3; lightLayer.add(lt); floats.push(lt);
+      }
       // 海上的紙燈籠（最多 40 盞），慢慢上下漂
       const k = Math.min(L.lanterns || 0, 40), paper = std(0xfff1d6, { emissive: 0xffa94d, emissiveIntensity: 0.8 }), base = std(0x7a5236);
       for (let i = 0; i < k; i++) {
@@ -1486,6 +1497,8 @@
       let o = h.object; while (o && !o.userData.subject) o = o.parent; return !!o;
     });
     if (homeHit && (!hit || homeHit.distance <= hit.distance)) { if (ctx.onHome) ctx.onHome(); return; }
+    const lampHit = hits.find(h => h.object.userData.lampRoom);
+    if (lampHit && ctx.onLamp && (!hit || lampHit.distance <= hit.distance)) { ctx.onLamp(); return; }
     const lightHit = hits.find(h => { let o = h.object; while (o && !o.userData.light && !o.userData.subject) o = o.parent; return o && o.userData.light; });
     if (lightHit && ctx.onLight && (!hit || lightHit.distance <= hit.distance)) { ctx.onLight(); return; }
     const mHit = hits.find(h => { let o = h.object; while (o && o.userData.mark == null && !o.userData.subject) o = o.parent; return o && o.userData.mark != null; });
