@@ -304,10 +304,11 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.30.3';
+const APP_VERSION = '2.30.4';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）16:30', items: ['🔭 燈塔頂樓開一間「燈室」：看看哪些題大家會、你還沒會，還有跟一開始的自己比', '🍶 漂流瓶複習的間隔會慢慢拉長，變成燈籠後偶爾也會回來看你', '💞 交情的算法微調', '👀 新增「誰看得到什麼」：一張表說清楚家人和訪客看得到你的哪些東西', '⚡ 打開小島會更快：自訂圖片存在手機裡，不用每次重新下載'] };
 const CHANGELOG = [
+  { v: '2.30.4', date: '2026-10-26', items: ['🏷️ 右上角 ❓ 說明頁的最上面可以看到目前的版本和下次更新的時間'] },
   { v: '2.30.3', date: '2026-10-26', items: ['🏮 島の屋台出現在 3D 小島上了：島前面海邊的小攤子，晚上紅燈籠會亮，點它就能進去做料理'] },
   { v: '2.30.2', date: '2026-10-26', items: ['🍁 楓葉飄落加回來了：葉子只在空中飄，不會掉在草地上'] },
   { v: '2.30.1', date: '2026-10-26', items: ['🧹 3D 小島上不再擺漂流瓶，島變乾淨了；今天漂回幾個瓶子，看燈塔上的標籤或去燈塔就知道'] },
@@ -4897,7 +4898,11 @@ function viewGuide() {
   const sec = (ic, title, body) => `<div class="card"><h3>${ic} ${title}</h3>${body}</div>`;
   const p = t => `<p style="margin:6px 0;line-height:1.7">${t}</p>`;
   const row = (a, b) => `<tr><td style="text-align:left">${a}</td><td>${b}</td></tr>`;
-  return `<div class="card"><div class="row"><span class="avatar">${g.pic}</span>
+  const cur = CHANGELOG.find(c => c.v === APP_VERSION) || CHANGELOG[0];
+  return `<div class="card" style="border:2px solid var(--plum-light)"><div class="row"><b class="grow">🏷️ 目前版本 v${APP_VERSION}</b><span class="muted">${esc(cur ? cur.date : '')}</span></div>
+      ${NEXT_UP && NEXT_UP.items.length ? `<div class="muted" style="margin-top:4px;font-size:13px">下次更新：${esc(NEXT_UP.when)}，預計會有：<ul style="margin:4px 0 0;padding-left:20px">${NEXT_UP.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : ''}
+      <button class="ghost" style="margin-top:8px;padding:4px 10px;font-size:13px" onclick="local.del('islandSeenVersion');go('mail')">看這次更新了什麼 ›</button></div>
+    <div class="card"><div class="row"><span class="avatar">${g.pic}</span>
       <div class="speech grow"><b>${esc(g.name)}</b>：歡迎來到${esc(D.cfg.islandName || '你的島')}！我來帶你看看這座島怎麼玩。</div></div></div>
   ${sec('🏝️', '這座島是什麼', p('你讀過的每一項，都會變成島上的房子。島上有五條街，各住著一位島民，代表會考的五科。你讀哪一科，就是在幫那條街蓋房子、培養那位島民。') +
     p('手寫計畫書照常寫。小島幫你做三件事：把計畫排進每一天、記下你做了什麼、週末確認這週，並自動寫回爸爸的週檢討表。'))}
