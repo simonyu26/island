@@ -40,6 +40,8 @@
   let lightLayer, lightSig = null, lamp = null, beam = null, floats = [];
   // 節氣：草地、樹葉的顏色與飄落的花瓣／楓葉／螢火蟲
   let grassMat, leafMats = [], seasonFx, seasonNow = null;
+  // v2.30 省電：系統開「減少動態效果」時，海浪、雲、船這些裝飾動畫停住（還是可以轉動、點選）；App 切到背景時不畫
+  const CALM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   // 植樹（v2.10）：她用綠點種在街道之間空地格上的植物，和碼頭旁的植木屋
   let gardenLayer, gardenSig = null;
   // 獨立書店（v2.17）：碼頭左前方的巷口小書店
@@ -296,9 +298,9 @@
       c.userData.speed = 0.15 + r() * 0.2; clouds.add(c);
     }
     clouds.userData.mat = cm; clouds.visible = false; scene.add(clouds);
-    // 季節飄落物：花瓣、楓葉（白天）或螢火蟲（夏天晚上）
+    // 季節飄落物：花瓣、楓葉（白天）或螢火蟲（夏天晚上）；v2.30 從 140 片減到 60 片，停住的時候不顯示（散在草地上看起來很亂）
     const fg = new THREE.BufferGeometry(), fp = [];
-    for (let i = 0; i < 140; i++) fp.push((r() - 0.5) * 26, r() * 9, (r() - 0.5) * 26);
+    for (let i = 0; i < 60; i++) fp.push((r() - 0.5) * 26, r() * 9, (r() - 0.5) * 26);
     fg.setAttribute('position', new THREE.Float32BufferAttribute(fp, 3));
     seasonFx = new THREE.Points(fg, new THREE.PointsMaterial({ color: 0xf4b6c8, size: 0.22, transparent: true, opacity: 0.9 })); lin(seasonFx.material.color);
     seasonFx.visible = false; scene.add(seasonFx);
@@ -332,7 +334,7 @@
   function showSeasonFx() {
     if (!seasonFx) return;
     const k = seasonFx.userData.kind, night = envNow.phase === 'night', wet = envNow.weather === 'rain' || envNow.weather === 'storm';
-    seasonFx.visible = !!k && !wet && (k === 'firefly' ? night : !night);
+    seasonFx.visible = !!k && !wet && !CALM && (k === 'firefly' ? night : !night);
   }
   const SKY = { dawn: 0xf6c9a8, day: 0xcfe8f3, dusk: 0xf2a07b, night: 0x1b2440 };
   const GREY = { dawn: 0xb9aaa4, day: 0xaab6c0, dusk: 0x9c8f92, night: 0x151b28 };
@@ -424,7 +426,7 @@
       });
     }
     if (beam && beam.visible) beam.rotation.y += dt * 0.7;
-    if (floats.length) { const t = performance.now() / 1000; floats.forEach(f => { f.position.y = waterY + 0.05 + Math.sin(t * 1.2 + f.userData.phase) * 0.06; f.rotation.y = Math.sin(t * 0.4 + f.userData.phase) * 0.3; }); }
+    if (floats.length) { const t = CALM ? 0 : performance.now() / 1000; floats.forEach(f => { f.position.y = waterY + 0.05 + Math.sin(t * 1.2 + f.userData.phase) * 0.06; f.rotation.y = Math.sin(t * 0.4 + f.userData.phase) * 0.3; }); }
     // 雷雨偶爾閃電
     if (envNow.weather === 'storm') {
       if (flash <= 0 && Math.random() < dt * 0.15) flash = 0.35;
@@ -1408,15 +1410,15 @@
     if (L) {
       const lb = labelSprite('🗼 ' + (L.name || '燈塔'), L.due ? '🍶 今天漂回 ' + L.due + ' 個' : null, { scale: 1.0, color: '#3a2a33' });
       lb.position.set(tp.x, 4.9, tp.z); lb.userData.light = true; lightLayer.add(lb);
-      // 海灘上的瓶子（最多 14 個），今天漂回來的會發亮
+      // 漂流瓶（最多 14 個）漂在燈塔外的海上，不靠岸（她說停在岸邊島看起來很亂，v2.30）；今天漂回來的會發亮
       const n = Math.min(L.sea || 0, 14), glow = std(0x7fd3c3, { emissive: 0x7fd3c3, emissiveIntensity: 0.6, transparent: true, opacity: 0.9 }), dull = std(0x8fbfa8, { transparent: true, opacity: 0.85 });
       for (let i = 0; i < n; i++) {
-        const p = at(15.9 + (i % 2) * 0.5, -0.3 + i * 0.045), b = new THREE.Group(); b.userData.light = true;
+        const p = at(19.2 + (i % 4) * 1.15, ((i * 0.382 + 0.19) % 1 - 0.5) * 1.3), b = new THREE.Group(); b.userData.light = true; b.userData.phase = i * 2.3 + 0.5;
         const m = i < (L.due || 0) ? glow : dull;
         const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.3, 8), m); bottle.position.y = 0.15; b.add(bottle);
         const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 6), m); neck.position.y = 0.36; b.add(neck);
-        b.position.set(p.x, 0.02, p.z); b.rotation.z = 1.2 + (i % 3) * 0.2; b.rotation.y = i;
-        lightLayer.add(b);
+        b.position.set(p.x, -0.55, p.z); b.rotation.z = 1.2 + (i % 3) * 0.2; b.rotation.y = i;
+        lightLayer.add(b); floats.push(b);
       }
       // 海上的紙燈籠（最多 40 盞），慢慢上下漂
       const k = Math.min(L.lanterns || 0, 40), paper = std(0xfff1d6, { emissive: 0xffa94d, emissiveIntensity: 0.8 }), base = std(0x7a5236);
@@ -1501,14 +1503,15 @@
   }
   function loop() {
     if (!renderer.domElement.isConnected) { running = false; return; }
-    const dt = Math.min(clock.getDelta(), 0.1), now = performance.now() / 1000;
+    if (document.hidden) { setTimeout(() => requestAnimationFrame(loop), 1000); return; }
+    const realDt = Math.min(clock.getDelta(), 0.1), dt = CALM ? 0 : realDt, now = CALM ? 0 : performance.now() / 1000;
     animateSky(dt);
     animateSea(now);
     if (HQ && (shadowDirty || popping.length || now - lastShadow > 1)) { if (shadowDirty) shadowize(); renderer.shadowMap.needsUpdate = true; lastShadow = now; shadowDirty = false; }
     spinners.forEach(sp => { sp.m.rotation[sp.axis] += sp.v * dt; });
     if (ferryBoat) { ferryBoat.position.y = -0.45 + Math.sin(now * 1.3) * 0.05; ferryBoat.rotation.z = Math.sin(now * 0.9) * 0.03; }
     popping = popping.filter(p => {
-      p.t += dt / 0.45;
+      p.t += realDt / 0.45;
       const t = Math.min(p.t, 1);
       if (p.bounce) { p.m.position.y = 0.2 + Math.sin(t * Math.PI) * 0.25; }
       else { const e = 1 - Math.pow(1 - t, 3); p.m.scale.setScalar(Math.max(0.01, e * (p.to || 1) * (1 + 0.15 * Math.sin(t * Math.PI)))); }
@@ -1523,7 +1526,7 @@
     container = el; ctx = context;
     if (!renderer) {
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));   // v2.30 省電：上限 1.5
       if (CM) renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.82;
       if (HQ) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false; }
       renderer.domElement.style.display = 'block';

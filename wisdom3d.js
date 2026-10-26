@@ -321,9 +321,12 @@
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
     if (!framed) { framed = true; camera.position.set(0, 11, 15.5).normalize().multiplyScalar(Math.min(32, 23 * Math.pow(Math.max(1, h / w), 0.75))); }
   }
+  // v2.30 省電：系統開「減少動態效果」時，海浪、雲、船這些裝飾動畫停住（還是可以轉動、點選）；App 切到背景時不畫
+  const CALM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function loop() {
     if (!renderer.domElement.isConnected) { running = false; return; }
-    const dt = Math.min(clock.getDelta(), 0.1); t += dt;
+    if (document.hidden) { setTimeout(() => requestAnimationFrame(loop), 1000); return; }
+    const dt = CALM ? 0 : Math.min(clock.getDelta(), 0.1); t += dt;
     const p = sea.geometry.attributes.position, a = p.array;
     for (let i = 0; i < a.length; i += 3) { const x = seaBase[i], z = seaBase[i + 2]; a[i + 1] = Math.sin(x * 0.35 + t * 1.1) * 0.08 + Math.cos(z * 0.3 + t * 0.8) * 0.08; }
     p.needsUpdate = true; sea.geometry.computeVertexNormals();
@@ -342,7 +345,7 @@
     container = el; opts = o || {};
     if (!renderer) {
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));   // v2.30 省電：上限 1.5
       if (CM) renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.7;
       if (HQ) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
       Object.assign(renderer.domElement.style, { display: 'block', width: '100%', height: '100%', touchAction: 'none' });

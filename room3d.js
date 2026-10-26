@@ -2,7 +2,8 @@
  * 會考小島 3D 房間：我的家、島民的家的室內
  * 依賴 three.min.js 與 OrbitControls.js（同資料夾），由 index.html 在需要時才載入。
  * Room3D.mount(container, opts)
- *   opts = { wall: '#rrggbb', accent: '#rrggbb', items: [{ ic, z: 'wall'|'floor'|'out' }], visitor: { emoji, img }, night }
+ *   opts = { wall: '#rrggbb', accent: '#rrggbb', items: [{ ic, z: 'wall'|'floor'|'out', cell?, flip? }], visitor: { emoji, img }, visitorCell?, night }
+ *   cell：地上 5×5 格（0 在左後角，往右、往前數）；沒有 cell 的照舊依序擺
  */
 (function () {
   // 紫色的烏龜：🐢 先畫在另一張畫布，把綠色轉成紫色再貼上（和 CSS 的 hue-rotate(185deg) saturate(1.4) 一樣）
@@ -30,18 +31,19 @@
   const std = (color, extra) => new THREE.MeshStandardMaterial(Object.assign({ color, flatShading: true, roughness: 0.9, metalness: 0 }, extra));
   const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 
-  function emojiTexture(emoji) {
+  function emojiTexture(emoji, flip) {
     const N = 256, cv = document.createElement('canvas'); cv.width = cv.height = N;
     const g = cv.getContext('2d');
+    if (flip) { g.translate(N, 0); g.scale(-1, 1); }
     g.font = `${N * 0.78}px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
     drawEmoji(g, emoji, N / 2, N / 2 + 12);
     const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
     return tex;
   }
   // 地上的家具：像紙偶一樣永遠面向你，底下有一圈影子
-  function floorItem(emoji, x, z, size) {
+  function floorItem(emoji, x, z, size, flip) {
     const g = new THREE.Group();
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: emojiTexture(emoji), transparent: true }));
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: emojiTexture(emoji, flip), transparent: true }));
     sp.scale.set(size, size, 1); sp.position.y = size * 0.46;
     const sh = new THREE.Mesh(new THREE.CircleGeometry(size * 0.36, 24), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.14 }));
     sh.rotation.x = -Math.PI / 2; sh.position.y = 0.02;
@@ -78,6 +80,7 @@
   // 牆上的位置：[在左牆？, 沿牆位置, 高度]
   const WALL_SPOTS = [[false, -2.2, 2.9], [false, 2.6, 2.9], [true, -1.4, 2.9], [true, 1.8, 2.9], [false, 0.2, 3.7], [true, 0.2, 3.7], [false, -3, 1.9], [true, 3, 1.9]];
 
+  const cellPos = c => [-3 + 1.5 * (c % 5), -3 + 1.5 * Math.floor(c / 5)];
   function build(o) {
     if (content) scene.remove(content);
     content = new THREE.Group(); scene.add(content);
@@ -115,14 +118,16 @@
     items.forEach(it => {
       if (it.z === 'wall' && wi < WALL_SPOTS.length) { const w = WALL_SPOTS[wi++]; content.add(wallItem(it.ic, w[0], w[1], w[2], 1.1)); }
       else if (it.z === 'out') { const f = floorItem(it.ic, 0, 0, 0.7); f.rotation.y = Math.PI / 2; f.position.set(-3.6, 1.62, -0.4); content.add(f); }   // 窗台上
+      else if (it.cell != null) { const p = cellPos(it.cell); content.add(floorItem(it.ic, p[0], p[1], 1.35, it.flip)); }
       else if (fi < FLOOR_SPOTS.length) { const p = FLOOR_SPOTS[fi++]; content.add(floorItem(it.ic, p[0], p[1], 1.45)); }
     });
     visitorSp = null;
     if (o.visitor) {
+      const vp = o.visitorCell != null ? cellPos(o.visitorCell) : [1.4, 1.9];
       visitorSp = avatarSprite(o.visitor.emoji, o.visitor.img);
-      visitorSp.position.set(1.4, 0.95, 1.9); content.add(visitorSp);
+      visitorSp.position.set(vp[0], 0.95, vp[1]); content.add(visitorSp);
       const sh = new THREE.Mesh(new THREE.CircleGeometry(0.45, 24), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.14 }));
-      sh.rotation.x = -Math.PI / 2; sh.position.set(1.4, 0.02, 1.9); content.add(sh);
+      sh.rotation.x = -Math.PI / 2; sh.position.set(vp[0], 0.02, vp[1]); content.add(sh);
     }
     scene.background = new THREE.Color(o.night ? 0x2a2440 : 0xf6efe6);
     lamp.intensity = o.night ? 0.9 : 0.35;
@@ -140,9 +145,12 @@
     }
   }
   let framed = false;
+  // v2.30 省電：系統開「減少動態效果」時，海浪、雲、船這些裝飾動畫停住（還是可以轉動、點選）；App 切到背景時不畫
+  const CALM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function loop() {
     if (!renderer.domElement.isConnected) { running = false; return; }
-    const dt = Math.min(clock.getDelta(), 0.1); t += dt;
+    if (document.hidden) { setTimeout(() => requestAnimationFrame(loop), 1000); return; }
+    const dt = CALM ? 0 : Math.min(clock.getDelta(), 0.1); t += dt;
     if (visitorSp) visitorSp.position.y = 0.95 + Math.abs(Math.sin(t * 2.2)) * 0.18;
     controls.update(); renderer.render(scene, camera);
     requestAnimationFrame(loop);
@@ -151,7 +159,7 @@
     container = el;
     if (!renderer) {
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));   // v2.30 省電：上限 1.5
       Object.assign(renderer.domElement.style, { display: 'block', width: '100%', height: '100%', touchAction: 'none' });
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
