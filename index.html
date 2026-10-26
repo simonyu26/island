@@ -307,10 +307,11 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.34';
+const APP_VERSION = '2.34.1';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 const CHANGELOG = [
+  { v: '2.34.1', date: '2026-10-26', items: ['⛴️ 智慧島前六講的內容校正過了：幾處事實和用詞更精確，愛因斯坦第 3 講改名〈瑪麗・居禮的兩座獎〉', '🗼 燈塔上的倒數改成「離會考還有 N 天」'] },
   { v: '2.34', date: '2026-10-26', items: ['🎻 上音樂課、練樂器也能換綠點：在「我的家」按「開始練習」，每 25 分鐘一個音符 🎵 +10 綠點，練多久都算'] },
   { v: '2.33', date: '2026-10-26', items: ['📋 首頁的「今日のおつとめ」只放每天要做的事：讀書計畫排第一，紙本檢討變成可選', '🗺️ 書店、智慧島改從島上進去；用清單模式時，板子下面多一列「去島上走走」', '🖌️ 3D 小島的街名牌加上科目小圖示', '🎓 智慧島一本書蓋滿 13 個章，老師會送一件畢業禮物到你家', '⛴️ 渡船屋可以請一位主人，幫你開船去智慧島'] },
   { v: '2.32', date: '2026-10-26', items: ['⚡ 打開小島更快：自訂圖片存在手機裡，換了新圖才重新下載'] },
@@ -2519,7 +2520,7 @@ function viewLight() {
   const say = (daily && daily.messages && daily.messages.lighthouse) || lightKeeperLine(st), intro = fam ? '' : placeIntro('lighthouse');
   const examLeft = Math.round((parseD(EXAM_DATES[0]) - parseD(S.today)) / 86400000);
   return `<div class="card"><h2>🗼 ${esc(lightTitle())}</h2>
-      ${examLeft >= 0 ? `<div class="muted">⏰ 會考倒數 <b>${examLeft}</b> 天（${EXAM_DATES.map(short).join('、')}）</div>` : ''}
+      ${examLeft >= 0 ? `<div class="muted">⏰ 離會考還有 <b>${examLeft}</b> 天（${EXAM_DATES.map(short).join('、')}）</div>` : ''}
       ${intro || (kp ? `<div class="row" style="flex-wrap:nowrap;cursor:pointer" onclick="${fam ? '' : "openKeeper('lighthouse')"}"><span style="font-size:32px">${kpPic(kp)}</span>
         <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(say)}</div></div>`
         : fam ? '' : `<button class="ghost" style="width:100%" onclick="openKeeper('lighthouse')">🧓 燈塔還沒有守燈人，請一位來守燈吧</button>`)}
