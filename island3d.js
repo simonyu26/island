@@ -334,7 +334,7 @@
   function showSeasonFx() {
     if (!seasonFx) return;
     const k = seasonFx.userData.kind, night = envNow.phase === 'night', wet = envNow.weather === 'rain' || envNow.weather === 'storm';
-    seasonFx.visible = !!k && !wet && !CALM && (k === 'firefly' ? night : !night);
+    seasonFx.visible = false;   // v2.30.1：飄落的花瓣、楓葉散在島上像小紅點垃圾，先不顯示（節氣的草地和樹葉顏色照舊）
   }
   const SKY = { dawn: 0xf6c9a8, day: 0xcfe8f3, dusk: 0xf2a07b, night: 0x1b2440 };
   const GREY = { dawn: 0xb9aaa4, day: 0xaab6c0, dusk: 0x9c8f92, night: 0x151b28 };
@@ -1410,16 +1410,7 @@
     if (L) {
       const lb = labelSprite('🗼 ' + (L.name || '燈塔'), L.due ? '🍶 今天漂回 ' + L.due + ' 個' : null, { scale: 1.0, color: '#3a2a33' });
       lb.position.set(tp.x, 4.9, tp.z); lb.userData.light = true; lightLayer.add(lb);
-      // 漂流瓶（最多 14 個）漂在燈塔外的海上，不靠岸（她說停在岸邊島看起來很亂，v2.30）；今天漂回來的會發亮
-      const n = Math.min(L.sea || 0, 14), glow = std(0x7fd3c3, { emissive: 0x7fd3c3, emissiveIntensity: 0.6, transparent: true, opacity: 0.9 }), dull = std(0x8fbfa8, { transparent: true, opacity: 0.85 });
-      for (let i = 0; i < n; i++) {
-        const p = at(19.2 + (i % 4) * 1.15, ((i * 0.382 + 0.19) % 1 - 0.5) * 1.3), b = new THREE.Group(); b.userData.light = true; b.userData.phase = i * 2.3 + 0.5;
-        const m = i < (L.due || 0) ? glow : dull;
-        const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.3, 8), m); bottle.position.y = 0.15; b.add(bottle);
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 6), m); neck.position.y = 0.36; b.add(neck);
-        b.position.set(p.x, -0.55, p.z); b.rotation.z = 1.2 + (i % 3) * 0.2; b.rotation.y = i;
-        lightLayer.add(b); floats.push(b);
-      }
+      // 漂流瓶不畫在 3D 島上了（v2.30.1：她說瓶子看起來像垃圾）；今天漂回幾個看燈塔標籤，瓶子都在燈塔頁
       // 海上的紙燈籠（最多 40 盞），慢慢上下漂
       const k = Math.min(L.lanterns || 0, 40), paper = std(0xfff1d6, { emissive: 0xffa94d, emissiveIntensity: 0.8 }), base = std(0x7a5236);
       for (let i = 0; i < k; i++) {
