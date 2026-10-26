@@ -257,6 +257,7 @@
     gardenLayer = new THREE.Group(); root.add(gardenLayer);
     bookLayer = new THREE.Group(); root.add(bookLayer);
     ferryLayer = new THREE.Group(); root.add(ferryLayer);
+    isletLayer = new THREE.Group(); root.add(isletLayer);
     markLayer = new THREE.Group(); root.add(markLayer);
   }
 
@@ -515,6 +516,7 @@
     buildGarden();
     buildBook();
     buildFerry();
+    buildIslets();
     buildMarks();
   }
 
@@ -726,6 +728,86 @@
     [[0, 2.6], [-0.8, 2.1], [0.9, 2.3]].forEach(([x, y]) => fa(new THREE.ConeGeometry(0.45, 1.3, 6), 0x3f7a45, x, y, -0.3));
     far.position.set(Math.cos(FERRY.a) * 34, 0, Math.sin(FERRY.a) * 34); ferryLayer.add(far);
     setEnvironment(envNow);
+  }
+
+  // ---------- 衛星小島（v2.26）----------
+  // ctx.islets = [{ key, slot, style, name, ic, keeper }]：本島外的海上排好六個位置（避開燈塔岬 -0.62π、渡船 0.9π 和遠方的智慧島），
+  // 每座小島用紅色太鼓橋接回本島；點小島或橋就呼叫 ctx.onIslet(key)
+  const ISLET_A = [0.3, 0.06, -0.18, -0.4, 0.62, 1.15].map(k => k * Math.PI), ISLET_R = 21.5;
+  let isletLayer, isletSig = null;
+  function isletMesh(style) {
+    const g = new THREE.Group();
+    const add = (geo, c, x, y, z) => { const o = new THREE.Mesh(geo, c.isMaterial ? c : std(c)); o.position.set(x, y, z); g.add(o); return o; };
+    add(new THREE.CylinderGeometry(3.3, 3.8, 0.9, 28), 0xe6c98e, 0, -0.4, 0);   // 沙灘
+    const red = std(0xc0392b), wood = std(0x9a6b4a);
+    const pine = (x, z, s) => { add(new THREE.CylinderGeometry(0.06 * s, 0.1 * s, 0.9 * s, 6), wood, x, 0.45 * s + 0.1, z);
+      [0.75, 1.05, 1.3].forEach((y, i) => add(new THREE.CylinderGeometry(0.15 * s, (0.62 - i * 0.16) * s, 0.22 * s, 8), 0x3f7a45, x + (i - 1) * 0.08 * s, y * s + 0.1, z)); };
+    const lantern = (x, z) => { add(bx(0.22, 0.5, 0.22), 0xb9b4a8, x, 0.35, z); add(new THREE.ConeGeometry(0.24, 0.18, 4), 0x9c978c, x, 0.68, z).rotation.y = Math.PI / 4; };
+    if (style === 'sand') {
+      add(new THREE.CylinderGeometry(2.9, 3.3, 0.12, 28), 0xf3e2b8, 0, 0.1, 0);
+      add(new THREE.CylinderGeometry(1.4, 1.6, 0.14, 18), 0x9fd27e, -0.6, 0.18, -0.5);
+      [[-1.1, -0.8], [-0.2, -1.1]].forEach(([x, z]) => { add(new THREE.CylinderGeometry(0.06, 0.08, 1.3, 6), wood, x, 0.8, z);
+        for (let k = 0; k < 5; k++) { const l = add(bx(0.7, 0.04, 0.18), 0x5fae5a, x + Math.cos(k * 1.26) * 0.3, 1.45, z + Math.sin(k * 1.26) * 0.3); l.rotation.y = -k * 1.26; l.rotation.z = 0.35; } });
+      add(bx(0.5, 0.4, 0.45), 0xf3ead6, 0.9, 0.35, -0.4); add(new THREE.ConeGeometry(0.45, 0.32, 4), red, 0.9, 0.72, -0.4).rotation.y = Math.PI / 4;   // 小祠
+      [[1.6, 1.2, 0xf6c7c0], [0.4, 1.9, 0xfdf6ec], [-1.5, 1.4, 0xf3c98a]].forEach(([x, z, c]) => add(new THREE.SphereGeometry(0.12, 8, 6), c, x, 0.18, z));
+    } else if (style === 'pine') {
+      const rock = std(0x9a9a92);
+      [[0, 0, 1.9, 1.3], [-1.2, 0.6, 1.1, 0.8], [1.1, -0.7, 1.2, 0.9]].forEach(([x, z, r, h]) => { const m = add(new THREE.DodecahedronGeometry(r, 0), rock, x, h * 0.35, z); m.scale.y = h / r; });
+      add(new THREE.CylinderGeometry(1.2, 1.5, 0.2, 12), 0x86b86a, 0, 1.05, 0);
+      pine(0.2, 0.1, 1.2); pine(-1.1, 0.7, 0.8); pine(1.2, -0.6, 0.9);
+      lantern(1.8, 1.2);
+    } else if (style === 'port') {
+      add(new THREE.CylinderGeometry(2.6, 2.9, 0.3, 24), 0x8cc56c, -0.3, 0.05, -0.3);
+      add(bx(1.0, 0.6, 0.8), 0xf3ead6, -0.6, 0.5, -0.6); add(new THREE.ConeGeometry(0.85, 0.45, 4), red, -0.6, 1.02, -0.6).rotation.y = Math.PI / 4;   // 漁寮
+      for (let i = 0; i < 6; i++) add(bx(0.5, 0.06, 0.45), 0xb08356, 1.6 + i * 0.4, 0.12, 1.1);   // 小碼頭
+      const boat = new THREE.Group(); boat.position.set(2.6, -0.45, 1.75); g.add(boat);
+      [[bx(0.5, 0.25, 1.3), 0x2f6fae, 0.05], [bx(0.52, 0.06, 1.32), 0xfdfaf2, 0.18]].forEach(([geo, c, y]) => { const o = new THREE.Mesh(geo, std(c)); o.position.y = y; boat.add(o); });
+      boat.rotation.y = Math.PI / 2; g.userData.boat = boat;
+      [[0.6, 0.4], [1.3, -0.2]].forEach(([x, z]) => add(new THREE.CylinderGeometry(0.03, 0.04, 1.0, 5), wood, x, 0.6, z));
+      [0.75, 0.95, 1.15].forEach((t, i) => add(new THREE.SphereGeometry(0.08, 8, 6), std(0xfff1d6, { emissive: 0xffb347, emissiveIntensity: 0.6 }), 0.6 + i * 0.35, 1.0 - i * 0.04, 0.4 - i * 0.3));
+    } else {   // tea：茶園梯田＋涼亭
+      [[2.7, 0.3, 0.1], [2.1, 0.3, 0.4], [1.5, 0.3, 0.7]].forEach(([r, h, y]) => {
+        add(new THREE.CylinderGeometry(r, r + 0.1, h, 24), 0x8cc56c, 0, y, 0);
+        add(new THREE.TorusGeometry(r - 0.2, 0.12, 6, 28), 0x4f8f4a, 0, y + h / 2 + 0.04, 0).rotation.x = Math.PI / 2;
+      });
+      [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]].forEach(([x, z]) => add(new THREE.CylinderGeometry(0.04, 0.04, 0.7, 5), red, x, 1.2, z));
+      add(new THREE.ConeGeometry(0.85, 0.4, 4), 0x4a4f5a, 0, 1.75, 0).rotation.y = Math.PI / 4;
+    }
+    return g;
+  }
+  // 紅色太鼓橋：從本島的沙灘拱到小島
+  function drumBridge(a) {
+    const g = new THREE.Group(), red = std(0xc0392b), plank = std(0xb08356), r0 = 14.4, r1 = ISLET_R - 3.4, N = 14, H = 1.15;
+    const P = t => new THREE.Vector3(0, 0.15 + Math.sin(t * Math.PI) * H, 0).add(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)).multiplyScalar(r0 + (r1 - r0) * t));
+    for (let i = 0; i < N; i++) {
+      const p0 = P(i / N), p1 = P((i + 1) / N), mid = p0.clone().add(p1).multiplyScalar(0.5), len = p0.distanceTo(p1);
+      const b = new THREE.Mesh(bx(0.9, 0.08, len + 0.02), plank); b.position.copy(mid);
+      b.lookAt(p1); g.add(b);
+      [-0.45, 0.45].forEach(s => {
+        const side = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)).multiplyScalar(s);
+        const rail = new THREE.Mesh(bx(0.06, 0.06, len + 0.02), red); rail.position.copy(mid).add(side); rail.position.y += 0.42; rail.lookAt(p1.clone().add(side).setY(p1.y + 0.42)); g.add(rail);
+        if (i % 2 === 0) { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.45, 6), red); post.position.copy(p0).add(side); post.position.y += 0.2; g.add(post); }
+      });
+    }
+    [0, 1].forEach(t => { const p = P(t); [-0.45, 0.45].forEach(s => { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.2, 6), red); leg.position.copy(p).add(new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)).multiplyScalar(s)); leg.position.y = -0.3; g.add(leg); }); });
+    return g;
+  }
+  function buildIslets() {
+    const L = ctx.islets || [], sig = JSON.stringify(L);
+    if (sig === isletSig) return;
+    isletSig = sig;
+    while (isletLayer.children.length) isletLayer.remove(isletLayer.children[0]);
+    L.forEach(it => {
+      const a = ISLET_A[it.slot]; if (a == null) return;
+      const g = isletMesh(it.style); g.userData.islet = it.key;
+      g.position.set(Math.cos(a) * ISLET_R, 0, Math.sin(a) * ISLET_R); g.rotation.y = -a + Math.PI / 2;
+      isletLayer.add(g);
+      const br = drumBridge(a); br.userData.islet = it.key; isletLayer.add(br);
+      const lb = labelSprite(it.ic + ' ' + it.name, it.keeper || '還沒有管理員', { scale: 0.75, color: '#3a2a33' });
+      lb.position.set(Math.cos(a) * ISLET_R, 3.0, Math.sin(a) * ISLET_R); lb.userData.islet = it.key; isletLayer.add(lb);
+    });
+    if (controls) controls.maxDistance = L.length ? 66 : 50;
+    shadowDirty = true;
   }
 
   // ---------- 讀完書長出的地標（v2.19） ----------
@@ -1385,6 +1467,8 @@
     if (bHit && ctx.onBook && (!hit || bHit.distance <= hit.distance)) { ctx.onBook(); return; }
     const fHit = hits.find(h => { let o = h.object; while (o && !o.userData.ferry && !o.userData.subject) o = o.parent; return o && o.userData.ferry; });
     if (fHit && ctx.onFerry && (!hit || fHit.distance <= hit.distance)) { ctx.onFerry(); return; }
+    const iHit = hits.find(h => { let o = h.object; while (o && !o.userData.islet && !o.userData.subject) o = o.parent; return o && o.userData.islet; });
+    if (iHit && ctx.onIslet && (!hit || iHit.distance <= hit.distance)) { let o = iHit.object; while (!o.userData.islet) o = o.parent; ctx.onIslet(o.userData.islet); return; }
     const gHit = hits.find(h => { let o = h.object; while (o && !o.userData.garden && !o.userData.plant && !o.userData.subject) o = o.parent; return o && (o.userData.garden || o.userData.plant); });
     if (gHit && (!hit || gHit.distance <= hit.distance)) {
       let o = gHit.object; while (!o.userData.garden && !o.userData.plant) o = o.parent;
@@ -1411,7 +1495,7 @@
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
     if (!framed && w && h) {      // 直式手機畫面要拉遠一點，整座島才放得下
       framed = true;
-      const d = Math.min(48, 31 * Math.pow(Math.max(1, h / w), 0.9));
+      const d = Math.min(62, 31 * Math.pow(Math.max(1, h / w), 0.9) * (ctx.islets && ctx.islets.length ? 1.32 : 1));   // 有衛星小島時再拉遠一點
       camera.position.copy(new THREE.Vector3(0, 21, 23).normalize().multiplyScalar(d));
     }
   }
@@ -1461,7 +1545,7 @@
     if (ctx.season && ctx.season !== seasonNow) setSeason(ctx.season);
     el.appendChild(renderer.domElement);
     resize();
-    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden, ctx.marks]) + weekIdx;
+    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden, ctx.marks, ctx.islets]) + weekIdx;
     if (sig !== signature) { signature = sig; buildDynamic(false); }
     shadowDirty = true;
     if (selected && ctx.onSelect) ctx.onSelect(selected);

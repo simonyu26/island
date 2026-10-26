@@ -301,8 +301,9 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.25';
+const APP_VERSION = '2.26';
 const CHANGELOG = [
+  { v: '2.26', date: '2026-10-26', items: ['🏝️ 可以用經驗值換衛星小島了：在商店的兌換卡下面，自己挑樣子（沙洲、松樹岩島、漁港、茶園）、方向和名字', '🌉 每座小島都用紅色太鼓橋接回本島，在 3D 小島上點小島就能過去', '🧑‍🌾 每座小島可以請一位你自己設定的管理員，第一次去他會先打招呼', '⭐ 換小島和換島幣用同一包可換的經驗值；經驗值總數和等級都不會變'] },
   { v: '2.25', date: '2026-10-26', items: ['🗣️ 島民設定多了「說話方式／口頭禪」：寫信、故事、挑戰任務、講解都會照著說', '🏘️ 理化、生物、地科、歷史、地理、公民巷的室友，也可以設定自己的個性和說話方式', '📝 每位島民可以寫一段介紹，會出現在島民的家和「更多」頁；智慧島四位老師也有介紹了', '💬 島民家裡的道謝和島上消息，改成島民每天照自己的口吻寫'] },
   { v: '2.24', date: '2026-10-26', items: ['⛴️ 智慧島開航了！島左前方的海邊多了一座渡船碼頭，坐船就能到智慧島上課。', '🏯 智慧島是一座 3D 小島，可以轉來轉去，點小屋或老師就能進去。', '🪶 老師一天搬來一位：今天隆中草廬的孔明先開門教《孫子兵法》，明天 NASA 分站的愛因斯坦，後天湯屋的小苗，大後天巷口柑仔店的阿律。', '📖 每一講四步：聽故事、你來選、搬到你的生活、寫一句。寫的那一句交給老師，老師會回你一句話，集章冊蓋一個章。', '🗓️ 每天可以上一講，同一位老師每週一講，上過的課可以回看，也會擺到書店的書架上。'] },
   { v: '2.23.1', date: '2026-10-26', items: ['📖 故事任務變難了：島民改拿這條巷子的會考考古題來找你，大多是中級題（四到七成考生答對），有時候是進階題', '🧮 數學和自然不再出題組題（要先讀一段共用文章或圖的那種），挑戰任務、故事任務、漂流瓶的替代題都一樣', '🙋 故事任務做完也可以請島民講解這一題'] },
@@ -591,7 +592,7 @@ function derive(S) {
     { ic: '⛵', name: '紙船 ×10', ok: sessions.length >= 10 }
   ];
 
-  return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor((coinXp - exXp) / 10), xqCoins, exCoins, paperCoins, spent }, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
+  return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent }, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond,
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
            exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps,
            // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計－種樹花掉的；只從計時來，不扣經驗值、不影響等級
@@ -665,6 +666,7 @@ function residentEvent() {
 
 /* ===== 畫面 ===== */
 function render() {
+  if (S && S.save) syncIsletPlaces();
   const app = document.getElementById('app');
   const nav = document.getElementById('nav');
   if (isFamily() && !D.cfg) {
@@ -680,10 +682,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', isleNew: 'shop', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, isleNew: viewIsleNew, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -716,7 +718,7 @@ function migrateXpEx() {   // 舊版是自動換：第一次打開新版時，�
 // 商店最上面的兌換卡：經驗值換島幣（Simon：兌換放在商店）
 function xpExCard() {
   if (isFamily()) return '';
-  const c = D.coinParts, left = 10 - ((c.coinXp - c.exXp) % 10);
+  const c = D.coinParts, left = 10 - (c.avail % 10);
   return `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>⭐ 經驗值換島幣</b>
       <div class="muted">每 10 點經驗值換 1 枚。換了經驗值不會減少，島嶼等級和房子都不會變小。</div>
       <div style="margin-top:4px">${c.canEx ? `現在可以換 <b>🪙 ${c.canEx}</b> 枚` : `再 <b>${left}</b> 點經驗值就能換 1 枚`}</div></div>
@@ -725,14 +727,14 @@ function xpExCard() {
 }
 // 島幣明細：每一筆來源
 function viewCoins() {
-  const c = D.coinParts, left = 10 - ((c.coinXp - c.exXp) % 10);
+  const c = D.coinParts, left = 10 - (c.avail % 10);
   const row = (ic, name, n, note) => `<div class="row" style="flex-wrap:nowrap;padding:8px 0;border-bottom:1px dashed var(--plum-light)"><span style="font-size:22px">${ic}</span>
     <div class="grow"><b>${name}</b>${note ? `<div class="muted">${note}</div>` : ''}</div><b>${n >= 0 ? '+' : '−'}${Math.abs(n)}</b></div>`;
   return `<div class="card"><h2>🪙 島幣明細</h2>
       <div class="muted">每 10 點經驗值可以換 1 枚島幣。換了之後經驗值<b>不會減少</b>，島嶼等級和房子都不會變小。</div>
       <div class="muted" style="margin:8px 0">兌換在商店：${c.canEx ? `現在可以換 <b>🪙 ${c.canEx}</b> 枚` : `再 <b>${left}</b> 點經驗值就能換 1 枚`}。</div>
       ${row('🎁', '開島禮物', c.gift)}
-      ${row('⭐', '經驗值換來的', c.fromXp, `已經換了 ${c.exXp} 點（開島後的計畫、故事任務、試煉才能換；開島前補記的舊紀錄只算經驗值）`)}
+      ${row('⭐', '經驗值換來的', c.fromXp, `已經換了 ${c.exXp} 點（開島後的計畫、故事任務、試煉才能換；開島前補記的舊紀錄只算經驗值）${c.landXp ? '；另外 ' + c.landXp + ' 點換了衛星小島' : ''}`)}
       ${row('⚔️', '挑戰任務答對', c.xqCoins, '直接給的，不再從經驗值換')}
       ${row('🏃', '運動達標', c.exCoins, '一週集滿 3 章 +3')}
       ${row('⛵', '紙本檢討', c.paperCoins)}
@@ -1197,6 +1199,7 @@ function daysAway(s) {
   return last ? Math.round((parseD(S.today) - parseD(last)) / 86400000) : null;
 }
 function dailyCtx() {
+  syncIsletPlaces();
   const g = guide();
   return {
     residents: SUBJECTS.map(s => { const r = resident(s);
@@ -1677,6 +1680,71 @@ PLACES.bookcat = { name: '書店', ic: '🐈', tab: 'bookstore', title: '🐈 �
   persHint: '例如：很黏人、喜歡睡在書上、看到雨會發呆',
   about: ['牠會在書架、平台桌、窗邊和櫃台之間走走、坐坐、洗臉、睡覺', '晚上比較愛睡，下雨天會坐在窗邊看雨', '點牠一下會有反應'],
   roles: ['橘貓', '三花', '虎斑', '黑貓', '白貓', '賓士貓'], emojis: ['🐈', '🐈‍⬛', '🐱', '😺', '😸', '😼'] };
+/* --- 衛星小島（v2.26）：用經驗值換一座小島，紅色太鼓橋接回本島；和島幣共用同一包可換的經驗值，經驗值總數不扣（Simon，2026-10-26） --- */
+const ISLET_COST = [300, 500, 800, 1200, 1600, 2000];
+const ISLET_DIRS = ['右前方', '右邊', '右後方', '後方', '左前方', '左後方'];   // 位置的角度在 island3d.js 的 ISLET_A，避開燈塔岬和渡船
+const ISLET_KEYS = ['islea', 'isleb', 'islec', 'isled', 'islee', 'islef'];   // 管理員存在 keeper:<key>
+const ISLET_STYLES = {
+  sand: { name: '沙洲小島', ic: '🏖️', desc: '白沙灘、貝殼，還有一座小小的祠', roles: ['撿貝殼的島主', '海龜', '寄居蟹', '海邊小屋的店長'], emojis: ['🐢', '🦀', '🐚', '🦭', '🧑‍🦱', '👧'] },
+  pine: { name: '松樹岩島', ic: '🌲', desc: '灰色的岩石上長著彎彎的松樹，旁邊立著石燈籠', roles: ['守松的老爺爺', '石燈籠的狐狸', '寫生的畫家', '松鼠'], emojis: ['👴', '🦊', '🧑‍🎨', '🐿️', '🦉', '🐒'] },
+  port: { name: '漁港小島', ic: '⚓', desc: '小小的漁港、紅屋頂的漁寮，停著一艘漁船', roles: ['漁夫', '漁港的貓', '老船長', '賣魚丸的阿姨'], emojis: ['🧑‍✈️', '🐈', '👵', '🧔', '🐧', '🦭'] },
+  tea: { name: '茶園小島', ic: '🍵', desc: '一層一層的茶園梯田，最上面有一座看海的涼亭', roles: ['採茶的阿嬤', '茶師', '涼亭的看守', '茶園的白鷺鷥'], emojis: ['👵', '🧑‍🌾', '🧓', '🕊️', '🐸', '🦉'] }
+};
+let isleKey = null;
+function islets() { return ((S.save.land && S.save.land.list) || []).map((x, i) => Object.assign({ key: ISLET_KEYS[x.slot], n: i + 1 }, x)).filter(x => x.key && ISLET_STYLES[x.style]); }
+function isletName(x) { return x.name || ISLET_STYLES[x.style].name; }
+// 每座小島都是一個「地方」，管理員照 PLACES／keeper 的做法由她自創
+function syncIsletPlaces() {
+  islets().forEach(x => { const st = ISLET_STYLES[x.style];
+    PLACES[x.key] = { name: isletName(x), ic: st.ic, tab: 'isle', roles: st.roles, emojis: st.emojis,
+      about: ['這座小島是你用經驗值換來的，經驗值和等級都沒有減少', '小島用紅色太鼓橋接回本島，在 3D 小島上點小島或橋就能過來', '我每天會寫一句話給你，聊聊小島上的風景', '以後島上新的地方，也可以蓋在小島上'] }; });
+}
+function openIsle(key) { isleKey = key; go('isle'); }
+function isletCard() {
+  if (isFamily()) return '';
+  const c = D.coinParts, have = islets(), n = have.length, cost = ISLET_COST[n];
+  const list = have.length ? `<div class="row" style="gap:6px;margin-top:8px">${have.map(x => `<button class="ghost" style="padding:6px 10px" onclick="openIsle('${x.key}')">${ISLET_STYLES[x.style].ic} ${esc(isletName(x))}</button>`).join('')}</div>` : '';
+  return `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🏝️ 經驗值換衛星小島</b>
+      <div class="muted">海上會多一座小島，用紅色太鼓橋接回本島。換了經驗值不會減少，島嶼等級和房子都不會變；只是用掉的經驗值不能再換島幣。</div>
+      <div style="margin-top:4px">${cost == null ? '六座小島都蓋好了！' : `第 ${n + 1} 座要 <b>${cost}</b> 點，現在可以換的經驗值有 <b>${c.avail}</b> 點`}</div></div>
+      ${cost == null ? '' : `<button ${c.avail >= cost ? '' : 'disabled'} onclick="draft={};tab='isleNew';render();window.scrollTo(0,0)">去挑</button>`}</div>${list}</div>`;
+}
+function viewIsleNew() {
+  const c = D.coinParts, n = islets().length, cost = ISLET_COST[n], used = islets().map(x => x.slot);
+  if (cost == null) return `<div class="card">六座小島都蓋好了！</div><div class="row"><button class="ghost grow" onclick="go('shop')">回商店</button></div>`;
+  const f = draft.isle || (draft.isle = { style: 'sand', slot: [0, 1, 2, 3, 4, 5].find(i => !used.includes(i)), name: '' });
+  return `<div class="card"><h2>🏝️ 第 ${n + 1} 座小島</h2><div class="muted">挑一種樣子和方向，小島會出現在本島旁邊的海上，用紅色太鼓橋接回來。要用掉 <b>${cost}</b> 點可換的經驗值（現在有 ${c.avail} 點），經驗值總數和等級都不會變。</div>
+      <label>樣子</label><div class="tiers">${Object.keys(ISLET_STYLES).map(k => { const st = ISLET_STYLES[k];
+        return `<button class="${f.style === k ? '' : 'ghost'}" onclick="isleKeep();draft.isle.style='${k}';render()">${st.ic} ${st.name}<small>${st.desc}</small></button>`; }).join('')}</div>
+      <label>方向（從 3D 小島的正面看）</label><div class="row" style="gap:6px">${ISLET_DIRS.map((d, i) => `<button class="${f.slot === i ? '' : 'ghost'}" style="padding:6px 12px" ${used.includes(i) ? 'disabled' : ''} onclick="isleKeep();draft.isle.slot=${i};render()">${d}${used.includes(i) ? '（已有）' : ''}</button>`).join('')}</div>
+      <label>名字（選填，不填就叫「${ISLET_STYLES[f.style].name}」）</label><input id="isleName" maxlength="12" value="${esc(f.name)}" placeholder="例如：貝殼島">
+      <div class="row" style="margin-top:14px"><button class="grow" ${c.avail >= cost ? '' : 'disabled'} onclick="buyIsletNow()">用 ${cost} 點經驗值換這座小島</button><button class="ghost" onclick="go('shop')">取消</button></div></div>`;
+}
+function isleKeep() { const el = document.getElementById('isleName'); if (el && draft.isle) draft.isle.name = el.value; }
+async function buyIsletNow() {
+  isleKeep(); const f = draft.isle, n = islets().length, cost = ISLET_COST[n];
+  if (cost == null || D.coinParts.avail < cost || f.slot == null) return;
+  if (!confirm('用 ' + cost + ' 點經驗值換一座' + ISLET_STYLES[f.style].name + '？經驗值總數和等級都不會變。')) return;
+  try { await flush(); S = await call('buyIslet', f.slot, f.style, f.name.trim(), cost); D = derive(S); }
+  catch (e) { return toast('換小島失敗：' + (e.message || e)); }
+  toast('🏝️ 海上多了一座小島！'); openIsle(ISLET_KEYS[f.slot]);
+}
+function viewIsle() {
+  syncIsletPlaces();
+  const x = islets().find(y => y.key === isleKey);
+  if (!x) return `<div class="card">找不到這座小島。</div><div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+  const st = ISLET_STYLES[x.style], k = keeperOf(x.key), d = S.save['daily:' + S.today], msg = d && d.messages && d.messages[x.key];
+  const lines = ['海風今天很舒服，過來坐坐吧。', '橋那頭的燈都亮了，今天辛苦了。', '我把小島整理好了，隨時歡迎你來。', '從這裡看本島，房子又變多了呢。'];
+  return `<div class="card"><h2 style="margin:0">${st.ic} ${esc(isletName(x))}</h2>
+      <div class="muted">${ISLET_DIRS[x.slot]}的海上・第 ${x.n} 座小島・${short(x.at)} 蓋好</div>
+      <div style="margin-top:6px">${esc(st.desc)}。</div>
+      ${k ? placeIntro(x.key) + `<div class="row" style="margin-top:10px;flex-wrap:nowrap;align-items:flex-start"><span class="avatar">${kpPic(k)}</span><div class="speech grow"><b>${esc(k.name)}</b>：${esc(msg || lines[(daySeed() + x.n) % lines.length])}</div></div>
+        ${isFamily() ? '' : `<button class="ghost" style="margin-top:8px;padding:4px 10px;font-size:13px" onclick="openKeeper('${x.key}')">✏️ 改管理員</button>`}`
+      : isFamily() ? '<div class="muted" style="margin-top:8px">這座小島還沒有管理員。</div>'
+      : `<div class="speech" style="margin-top:10px">這座小島還沒有管理員。請一位住進來吧：取名字、選樣子、寫個性，他每天會用自己的個性跟你說話。</div>
+        <button style="width:100%;margin-top:8px" onclick="openKeeper('${x.key}')">請一位管理員</button>`}</div>
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button>${isFamily() ? '' : `<button class="ghost" onclick="go('shop')">🛍️ 商店</button>`}</div>`;
+}
 function keeperOf(place) { const k = S.save['keeper:' + place]; return k ? Object.assign({}, k, { img: imgOf('keeper:' + place) || '' }) : null; }
 // 管理員的樣子：她上傳了自己的圖就用圖，不然用 emoji（和島民一樣，Simon，2026-10-25）
 function kpPic(k) { return k && k.img ? `<img class="kpic" src="${k.img}" alt="">` : esc((k && k.emoji) || '🙂'); }
@@ -2714,6 +2782,7 @@ async function mount3D() {
       light: (st => ({ name: lightTitle(), sea: st.sea, due: st.due, lanterns: st.lanterns }))(lightStats()), onLight: () => go('light'),
       garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),
       ferry: wisdomOn() ? { open: !wisdomTodayDone() } : null, onFerry: () => go('wisdom'),
+      islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
       book: { name: bookTitle(), sub: newCards().length ? '📮 ' + newCards().length + ' 張新明信片' : null }, onBook: () => go('bookstore'),
       marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })), onMark: id => { const m = landmarkList().find(x => x.id === id); if (m) openBook(m.key); },
       grade: s => D.grades[s] && D.grades[s].level,
@@ -3610,6 +3679,7 @@ function viewShop() {
   const bought = (S.save.purchases || []).slice().reverse();
   return `<div class="card"><h2>🛍️ 島嶼商店</h2><div class="muted">你有 <b>${D.coins}</b> 枚島幣。一般一週大約可以賺 10 到 15 枚，挑戰任務可以再多賺一些。商品可以在「更多 → 修改島嶼設定」新增。</div></div>
     ${xpExCard()}
+    ${isletCard()}
     <div class="card"><div class="item" style="border:none"><div class="name"><b>🏠 家具店</b><div class="muted">幫你的家買家具，也可以送家具給島民布置他們的家</div></div>
       <button onclick="openHouse('me')">去逛逛</button></div></div>
     <div class="card"><div class="item" style="border:none"><div class="name"><b>⚔️ 挑戰任務</b><div class="muted">每天最多 ${XQ_DAILY} 題，自己選難度，答對賺 🪙 1～3 枚</div></div>
@@ -4555,6 +4625,9 @@ function viewGuide() {
     p('哪一週真的沒空，休息卡會自動幫你守住連續週數，不用擔心一斷就歸零。'))}
   ${sec('💞', '跨科連結和好感度', p('發現兩科之間的關係時（例如數學的比例和理化的密度），在「確認這週」頁記下來。兩位島民的好感度會上升，可以在「更多」看到他們的關係。') +
     p('你做過的挑戰任務和故事任務，島也會請 AI 看看是不是跨科題（例如理化題要列方程式，就是理化 × 數學）。是的話會跳出提示，兩條街的島民好感度也會上升，在「更多」的「任務裡發現的跨科題」看得到。自動發現的不加經驗值和島幣，自己寫下的連結才有。'))}
+  ${sec('🏝️', '衛星小島', p('在商店的兌換卡下面，可以用經驗值換一座衛星小島：挑一種樣子（沙洲小島、松樹岩島、漁港小島、茶園小島）、一個方向，也可以幫它取名字。小島會出現在本島旁邊的海上，用紅色太鼓橋接回來，在 3D 小島上點小島或橋就能過去。') +
+    p('第一座 300 點，之後 500、800、1200、1600、2000 點，最多六座。換小島和換島幣用的是同一包「可換的經驗值」：換了之後經驗值總數和島嶼等級都不會變，房子也不會變小，只是用掉的那些點數不能再換島幣。') +
+    p('每座小島可以請一位你自己設定的管理員（名字、樣子、個性），第一次去他會先打招呼，之後每天寫一句話給你。'))}
   ${sec('🎨', '打扮你的島', p('在「⚙️ 更多 → 修改島嶼設定」可以改島名、嚮導的說話風格、島民和室友的名字與個性，也可以上傳自己的圖片當頭像。') +
     p('每位島民和室友都可以填「說話方式／口頭禪」（例如句尾愛加「啦」、自稱「本大爺」），寫信、故事、挑戰任務和講解都會照著說。島民還可以寫一段 80 字內的介紹，會出現在島民的家和「更多」頁，來參觀的家人和朋友也看得到。'))}
   ${sec('🏠', '我的家', p('島中央的碼頭是你的家。按右上角的房子圖示（或在 3D 小島點中間的房子）就能回家。第一次回家先幫它取名字、選屋頂和牆壁的顏色，之後隨時可以改。') +
