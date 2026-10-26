@@ -6,6 +6,7 @@
  *   opts = { phase: dawn|day|dusk|night, weather: clear|cloudy|fog|rain|storm,
  *            huts: [{ key, name, place, ic, color, st, can }], onHut(key) }
  *   can：今天可以上這位老師的課（小屋前的地上亮一圈、老師會跳）
+ *   closed：還沒開門（逐步開島），老師不在、門口掛「準備中」
  */
 (function () {
   const HQ = (() => { try { const v = localStorage.getItem('island3dHQ'); if (v) return v === '1'; } catch (e) {} return !(navigator.deviceMemory && navigator.deviceMemory < 4); })();
@@ -286,6 +287,13 @@
       // 老師站在門口（小苗站左邊，右邊是露天溫泉）
       const ry = g.rotation.y, side = h.key === 'xiaomiao' ? -0.55 : 0.35;
       const tx = g.position.x + Math.sin(ry) * 1.55 + Math.cos(ry) * side, tz = g.position.z + Math.cos(ry) * 1.55 - Math.sin(ry) * side;
+      if (h.closed) {   // 還沒開門：門口立一塊「準備中」的木牌
+        const sg = new THREE.Group(); sg.position.set(tx, 0, tz); sg.rotation.y = ry; sg.userData.hut = h.key; labelLayer.add(sg);
+        const wood = std(0x7a5236);
+        [-0.28, 0.28].forEach(x => mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.75, 6), wood, x, 0.37, 0, sg));
+        const pl = textPlane('準備中', 0.78, 0.32, '#f4e7cc', '#8a3a2a', 30); pl.position.set(0, 0.62, 0.04); sg.add(pl);
+        return;
+      }
       const sp = avatarSprite(h.ic, h.color, 0.95); sp.position.set(tx, 0.75, tz); sp.userData = { hut: h.key, can: h.can, y: 0.75, ph: teachers.length }; labelLayer.add(sp); teachers.push(sp);
       if (h.can) {
         const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.56, 28), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.8, toneMapped: false, depthWrite: false }));
