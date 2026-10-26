@@ -307,10 +307,11 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.35';
+const APP_VERSION = '2.35.1';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 const CHANGELOG = [
+  { v: '2.35.1', date: '2026-10-26', items: ['🥤 喝水也能換綠點：在「我的家」的喝水卡記一筆，每 250cc（一杯）+10 綠點，一天最多算 2,000cc；喝水的紀錄只有你自己看得到'] },
   { v: '2.35', date: '2026-10-26', items: ['🧭 答錯的題可以一鍵記下原因：一時看錯／算錯、觀念不熟、看不懂題目、用猜的', '🫧 答對但有點猜的題，會變成輕輕的瓶子漂回來；下次有把握答對，它就變成燈籠', '🏮 燈室多了「正在補強／已補強」：考古題每一題都標好了單元，做滿 5 題的單元才會列出來', '🔤 英文的題型分得更細了，文法分成 15 個主題，例如時態、被動語態、關係代名詞'] },
   { v: '2.34.2', date: '2026-10-26', items: ['🫶 如果你寫給老師或燈塔的話讓人擔心，回應會附上可以求助的地方（學校輔導室、1925 安心專線），也會請爸爸來關心你；爸爸看不到你寫的字', '💬 島民很久沒見到你，只會說想你，不會抱怨'] },
   { v: '2.34.1', date: '2026-10-26', items: ['⛴️ 智慧島前六講的內容校正過了：幾處事實和用詞更精確，愛因斯坦第 3 講改名〈瑪麗・居禮的兩座獎〉', '🗼 燈塔上的倒數改成「離會考還有 N 天」'] },
@@ -682,6 +683,12 @@ function derive(S) {
     moveDays[k.slice(5)] = { min: list.reduce((a, m) => a + (m.min || 0), 0), steps };
     moveSteps += steps;
   });
+  // 喝水（water:日期，v2.35.1）：每 250cc +10 綠點，一天最多算 2,000cc；超過的照樣記，只是不給點（工程顧問，Simon 2026-10-26 同意）
+  const waterDays = {}; let waterGreen = 0;
+  Object.keys(save).filter(k => k.startsWith('water:') && save[k]).forEach(k => {
+    const cc = (save[k].list || []).reduce((a, w) => a + (w.cc || 0), 0), g = Math.floor(Math.min(cc, WATER_CAP) / WATER_CUP) * WATER_GREEN;
+    waterDays[k.slice(6)] = { cc, green: g }; waterGreen += g;
+  });
   const focusDays = {}; let focusGlass = 0;
   Object.keys(save).filter(k => k.startsWith('focus:') && save[k]).forEach(k => {
     const per = {}, d = { min: 0, glass: 0 };
@@ -749,9 +756,9 @@ function derive(S) {
 
   return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent }, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
-           exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps,
-           // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計－種樹花掉的；只從計時來，不扣經驗值、不影響等級
-           green: (save['keeper:garden'] ? GARDEN_GIFT : 0) + focusGlass * FOCUS_GREEN + moveSteps * MOVE_GREEN - ((save.garden && save.garden.spent) || 0) };
+           exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps, waterDays, waterGreen,
+           // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計＋運動／練習＋喝水－種樹花掉的；不扣經驗值、不影響等級
+           green: (save['keeper:garden'] ? GARDEN_GIFT : 0) + focusGlass * FOCUS_GREEN + moveSteps * MOVE_GREEN + waterGreen - ((save.garden && save.garden.spent) || 0) };
 }
 
 /* ===== 共用 ===== */
@@ -1713,6 +1720,7 @@ function viewHouse() {
     <button class="ghost" style="width:100%;margin-bottom:12px" onclick="draft={};tab='kizuna';render();window.scrollTo(0,0)">📔 絆の手帖：你和島民、老師的交情</button>
     ${diaryCard()}
     ${moveBlock('art')}
+    ${waterCard()}
     <div class="card"><h3>🛋️ 房間</h3>${roomHtml('me', vs)}
       <div class="speech" style="margin-top:10px"><b>${esc(vr.name)}</b>來作客：${esc(vline)}</div>
       ${isFamily() ? '' : draft.arrange ? arrangeHtml() : `<button class="ghost" style="width:100%;margin-top:10px" onclick="draft.arrange=true;draft.pick=null;render()">🧩 自己擺家具</button>`}
@@ -1925,7 +1933,7 @@ function viewWalk() {
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 地方的管理角色：她自己取名、選樣子、寫個性；每天的訊息由 AI 依個性寫（getDaily 的 keepers）
-const PLACES = { home: { name: '我的家', ic: '🏠', tab: 'house', about: ['我住在這裡陪你，你回家的時候我會說「おかえり」', '牆上有一本日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，寫完我會回你一個表情，也可以翻回去看', '日めくり只有你自己看得到；想給家人看的那一頁，按「分享給家人」就好', '上音樂課、練樂器的時候，在家裡按「🎻 開始練習」計時，每 25 分鐘 +10 綠點，跟運動一樣', '房間的家具、暖簾和門牌都可以自己布置，按「🧩 自己擺家具」就能把家具搬到你喜歡的位置'],
+const PLACES = { home: { name: '我的家', ic: '🏠', tab: 'house', about: ['我住在這裡陪你，你回家的時候我會說「おかえり」', '牆上有一本日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，寫完我會回你一個表情，也可以翻回去看', '日めくり只有你自己看得到；想給家人看的那一頁，按「分享給家人」就好', '上音樂課、練樂器的時候，在家裡按「🎻 開始練習」計時，每 25 分鐘 +10 綠點，跟運動一樣', '喝了水就在家裡的「🥤 喝水」記一筆，每 250cc +10 綠點，一天最多算 2,000cc', '房間的家具、暖簾和門牌都可以自己布置，按「🧩 自己擺家具」就能把家具搬到你喜歡的位置'],
     roles: ['貓咪室友', '狗狗室友', '兔子室友', '人類室友'], emojis: ['🐱', '🐈‍⬛', '🐶', '🐕', '🐰', '🐹', '🦊', '🐧', '🦉', '🐢', '👧', '🧑'] },
   walk: { name: '海邊步道', ic: '🏃', tab: 'walk', about: ['出門運動前按「出發」、回來按「回來了」，每運動 25 分鐘留下一個足あと 👣 +10 綠點，動多久都算', '一次滿 20 分鐘自動蓋今天的章；沒帶手機就按「今天運動了」手動蓋章', '一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️', '🐢'] },
   lighthouse: { name: '燈塔', ic: '🗼', tab: 'light', about: ['挑戰任務和故事任務答錯的題，會變成漂流瓶漂到燈塔海灘', '瓶子隔天漂回來，撿起來會出一題 AI 類題：同一個觀念，換了數字和情境，也會寫是改編自哪一題', '類題連續三次答對（間隔 1、3、7 天），瓶子就變成紙燈籠放到海上，還有島幣；燈籠之後每個月會當老朋友漂回來一次', '在瓶子上記下為什麼錯；想問爸爸的題按「給爸爸看」', '紙本考卷上答錯的題，可以拍照收進海灘，也一樣會漂回來', '錯題類型會整理你最常錯哪一類題，按「練一題」就照這類題出新題', '紙本考卷檢討完，可以在燈塔的小碼頭放紙船', '每週按「確認這週」之後，我會寫下燈塔的話：做得好的、值得照亮的、下週一件小事', '頂樓的燈室可以看大家會、你還沒會的題，還有各科花了多少時間'], roles: ['守燈的老爺爺', '燈塔的貓', '退休的船長', '海鷗郵差'], emojis: ['👴', '👵', '🧓', '👩‍✈️', '🧑‍🎨', '🐈', '🐈‍⬛', '🦉', '🐢', '🦭', '🐙', '🦀'] },
@@ -2112,7 +2120,7 @@ function viewGarden() {
   const head = `<div class="card"><div class="row"><h2 class="grow" style="margin:0">🌱 植木屋</h2><span class="muted">你有 <b>${D.green}</b> 綠點</span></div>
     ${placeIntro('garden')}
     ${kp && local.get('islandMet:garden') ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.garden) || gardenKeeperLine())}</div></div>` : ''}
-    <div class="muted" style="margin-top:8px">綠點從計時來：讀書每專心 ${FOCUS_GLASS} 分鐘一顆砂時計 +${FOCUS_GREEN}（沒有上限）；運動、練樂器每 ${MOVE_STEP} 分鐘 +${MOVE_GREEN}（沒有上限）。現在的節氣是${solarTerm(S.today)}。</div></div>`;
+    <div class="muted" style="margin-top:8px">綠點從計時來：讀書每專心 ${FOCUS_GLASS} 分鐘一顆砂時計 +${FOCUS_GREEN}（沒有上限）；運動、練樂器每 ${MOVE_STEP} 分鐘 +${MOVE_GREEN}（沒有上限）；喝水每 ${WATER_CUP}cc +${WATER_GREEN}（一天最多算 ${WATER_CAP}cc）。現在的節氣是${solarTerm(S.today)}。</div></div>`;
   const plantCard = p => { const pl = plantOf(p.k);
     return `<div class="card" style="border:2px solid var(--plum)"><div class="row" style="flex-wrap:nowrap"><span style="font-size:40px">${pl.ic}</span>
       <div class="grow"><b>${pl.name}</b>・${STAGE_NAME[plantStage(p)]}<div class="muted">${esc(slotName(p.slot))}・${short(p.at)} 種的</div></div></div>
@@ -3655,6 +3663,36 @@ function bindFocusStop() {
     draft = {}; tab = 'home'; boardOpen = 'plan'; render(); window.scrollTo(0, 0);
   };
 }
+/* --- 喝水（v2.35.1）：我的家按 +100／+250／+500cc 記一筆，存 water:日期 = { list: [{ at, cc }] }；家人和訪客看不到 --- */
+const WATER_CUP = 250, WATER_GREEN = 10, WATER_CAP = 2000, WATER_MIN = 100, WATER_MAX = 500, WATER_WIN = 30;   // 幾 cc 一份、一份幾綠點、一天最多算幾 cc、一筆最少／最多幾 cc、幾分鐘內最多記 WATER_MAX
+function waterList() { return ((S.save['water:' + S.today] || {}).list || []).slice(); }
+function waterCard() {
+  if (isFamily()) return '';
+  const list = waterList(), cc = list.reduce((a, w) => a + w.cc, 0), d = D.waterDays[S.today] || { green: 0 };
+  return `<div class="card"><h3 style="margin:0">🥤 喝水</h3>
+      <div class="muted" style="margin-top:4px">喝了水就記一筆。每 ${WATER_CUP}cc（一杯）+${WATER_GREEN} 綠點，一天最多算 ${WATER_CAP}cc。只有你自己看得到。</div>
+      <div class="row" style="margin-top:10px">${[100, 250, 500].map(n => `<button class="${n === WATER_CUP ? '' : 'ghost'} grow" onclick="waterAdd(${n})">+${n}cc</button>`).join('')}</div>
+      ${list.length ? `<div style="margin-top:10px">今天喝了 <b>${cc}cc</b>${d.green ? '・🌱 +' + d.green + ' 綠點' : ''}${cc >= WATER_CAP ? '<div class="speech" style="margin-top:6px">今天的份量喝到了 👍</div>' : ''}</div>
+      <div class="muted" style="margin-top:6px">${list.map((w, i) => `${hhmm(w.at)} ${w.cc}cc <a href="#" onclick="waterDel(${i});return false" aria-label="刪掉這筆">✕</a>`).join('　')}</div>` : ''}</div>`;
+}
+function waterAdd(cc) {
+  const now = Date.now(), list = waterList();
+  const recent = list.filter(w => w.at > now - WATER_WIN * 60000).reduce((a, w) => a + w.cc, 0);
+  if (recent + cc > WATER_MAX) return toast(WATER_WIN + ' 分鐘內最多記 ' + WATER_MAX + 'cc，慢慢喝，等一下再記');
+  list.push({ at: now, cc });
+  waterPut(list);
+  const before = Math.floor(Math.min(list.reduce((a, w) => a + w.cc, 0) - cc, WATER_CAP) / WATER_CUP), after = Math.floor(Math.min(list.reduce((a, w) => a + w.cc, 0), WATER_CAP) / WATER_CUP);
+  toast('🥤 +' + cc + 'cc' + (after > before ? '　🌱 +' + (after - before) * WATER_GREEN + ' 綠點' : ''));
+}
+function waterDel(i) {
+  const list = waterList(); if (!list[i] || !confirm('刪掉 ' + hhmm(list[i].at) + ' 這筆 ' + list[i].cc + 'cc？')) return;
+  list.splice(i, 1); waterPut(list);
+}
+function waterPut(list) {
+  S.save['water:' + S.today] = list.length ? { list } : null;
+  queueSave('water:' + S.today, 'saveWater', S.today, list);
+  D = derive(S); render();
+}
 /* --- 運動計時（v2.12）：海邊步道按「出發／回來了」；計時中的狀態存在 localStorage（moveActive），回來了、存好才寫回 move:日期 --- */
 const MOVE_STEP = 25, MOVE_GREEN = 10, MOVE_MAX = 120, MOVE_STAMP = 20, MOVE_MIN = 5;   // 一個足あと幾分鐘、幾綠點、一次最多算幾分鐘（防忘了按停止）、滿幾分鐘自動蓋章、少於幾分鐘先問
 // 計時的種類：運動（步道）或藝文練習（我的家）；綠點算法一樣，只有藝文不會蓋運動章
@@ -5195,7 +5233,7 @@ function viewGuide() {
   ${sec('📝', '記錄你做了什麼', p('首頁「今日のおつとめ」的「📝 讀書計畫」會列出今天排的項目，做完就點「完成」，做了一半就點「部分」，再點一次可以取消。按了就會自動存好，右上角會顯示「✓ 已存到試算表」。') +
     p('做了計畫外的項目？按「＋ 記錄計畫外的項目」。忘了記也沒關係，到計畫頁點那一天就能補，或週末確認時一次補。<b>想每天記、或只在週日記都可以</b>，小島兩種都接受。'))}
   ${sec('🌱', '植木屋（種樹）', p('碼頭旁有一間植木屋，第一次去要先幫它請一位管理員（取名字、選樣子、寫個性），見面時送你 ' + GARDEN_GIFT + ' 綠點當開張禮。點首頁上方的「🌱 綠點」，或在 3D 小島點那間小屋就能進去。') +
-    p('綠點只從<b>讀書計時</b>來：每專心 ' + FOCUS_GLASS + ' 分鐘一顆砂時計 +' + FOCUS_GREEN + ' 綠點。種樹花的是綠點，經驗值、島幣和島嶼等級都不會少。') +
+    p('綠點從<b>計時</b>和<b>喝水</b>來：讀書每專心 ' + FOCUS_GLASS + ' 分鐘一顆砂時計 +' + FOCUS_GREEN + ' 綠點；運動、練樂器每 ' + MOVE_STEP + ' 分鐘 +' + MOVE_GREEN + '；喝水每 ' + WATER_CUP + 'cc +' + WATER_GREEN + '（一天最多算 ' + WATER_CAP + 'cc）。種樹花的是綠點，經驗值、島幣和島嶼等級都不會少。') +
     p('選一種植物，再點地圖上白色的空地格，就種下去了。可以寫一塊小木牌（最多 20 字），之後在 3D 小島點那棵樹就看得到。種下 7 天變小樹、14 天長大，不用澆水，也不會枯掉。種錯地方可以免費移植；拔掉的話綠點不會退回。') +
     `<table><tr><th>種類</th><th>綠點</th><th>植物</th></tr>${['花草', '灌木', '樹', '名木'].map(k => `<tr><td>${k}</td><td>${PLANTS.find(p => p.kind === k).price}</td><td style="text-align:left">${PLANTS.filter(p => p.kind === k).map(p => p.ic + ' ' + p.name + (p.lv > 1 ? '（Lv.' + p.lv + '）' : '')).join('、')}</td></tr>`).join('')}</table>` +
     p('每種植物都有自己最好看的節氣，例如櫻花在驚蟄到清明開、楓樹在寒露到立冬變紅、鳳凰木在芒種到小暑開花（剛好是會考完、畢業的時候）。植木屋標著「當季」的，就是現在最漂亮的。') +
@@ -5249,6 +5287,7 @@ function viewGuide() {
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
     p('拿到的 🏅 徽章也掛在家裡，在最下面。'))}
   ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎻 上音樂課、練樂器也算：在「我的家」按「開始練習」，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，練多久都算。藝文練習不會蓋運動的章，運動和練習一次只能開一個計時。'))}
+  ${sec('🥤', '喝水', p('在「我的家」的喝水卡按 +100cc、+250cc 或 +500cc，喝了多少就記多少。每 ' + WATER_CUP + 'cc（大約一杯）+' + WATER_GREEN + ' 🌱 綠點。') + p('一天最多算 ' + WATER_CAP + 'cc 的綠點，再喝還是可以記，只是不加綠點，水不是喝越多越好。' + WATER_WIN + ' 分鐘內最多記 ' + WATER_MAX + 'cc，按錯了可以按 ✕ 刪掉今天的那筆。') + p('喝水的紀錄只有你自己看得到，家人和訪客都看不到。'))}
   ${sec('🏃', '運動集章卡', p('首頁「今日のおつとめ」的「🏃 運動」那一行，或海邊步道頁的集章卡，就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
     p('每蓋一章 +5 經驗值，島的海邊會多鋪一段木棧道，每三章多一盞燈籠。一週（週一到週日）集滿 3 章，🪙 +3。') +
     `<table><tr><th>連續達標</th><th>解鎖的家具</th></tr>${EX_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}<tr><td>會考那週（5/10～5/16）也達標、連續沒斷</td><td>${EX_MEDAL.ic} ${EX_MEDAL.name}（金牌，掛在我的家）</td></tr></table>` +
