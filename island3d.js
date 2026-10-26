@@ -48,6 +48,7 @@
   let bookLayer, bookSig = null;
   // 智慧島的渡船碼頭（v2.24）：島左前方的海邊
   let ferryLayer, ferrySig = null, ferryBoat = null;
+  let yataiLayer, yataiSig = null;
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
   // v2.22 畫質：高畫質開陰影、海浪細一點（舊手機可以在「更多」關掉）；色調映射和圓角方塊都開
   const HQ = (() => { try { const v = localStorage.getItem('island3dHQ'); if (v) return v === '1'; } catch (e) {} return !(navigator.deviceMemory && navigator.deviceMemory < 4); })();
@@ -259,6 +260,7 @@
     gardenLayer = new THREE.Group(); root.add(gardenLayer);
     bookLayer = new THREE.Group(); root.add(bookLayer);
     ferryLayer = new THREE.Group(); root.add(ferryLayer);
+    yataiLayer = new THREE.Group(); root.add(yataiLayer);
     isletLayer = new THREE.Group(); root.add(isletLayer);
     markLayer = new THREE.Group(); root.add(markLayer);
   }
@@ -362,6 +364,7 @@
     homeLayer && homeLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0; });
     bookLayer && bookLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0.15; });
     ferryLayer && ferryLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0.15; });
+    yataiLayer && yataiLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || ph === 'dusk' || wet ? 1.2 : 0.35; });
     if (lamp) lamp.emissiveIntensity = night ? 1.4 : ph === 'dusk' || wet ? 0.9 : 0.4;
     if (beam) beam.visible = night || ph === 'dusk' || w === 'fog';
     stars.visible = night && !wet && w !== 'fog';
@@ -518,6 +521,7 @@
     buildGarden();
     buildBook();
     buildFerry();
+    buildYatai();
     buildIslets();
     buildMarks();
   }
@@ -536,6 +540,7 @@
   const GARDEN_SLOTS = Array.from({ length: 40 }, (_, i) => gardenSlot(i));
   const HUT = { x: Math.cos(Math.PI / 10) * 3.2, z: Math.sin(Math.PI / 10) * 3.2 };   // 植木屋：碼頭右前方
   const BOOK = { x: Math.cos(Math.PI * 9 / 10) * 3.2, z: Math.sin(Math.PI * 9 / 10) * 3.2 };   // 獨立書店：碼頭左前方（和植木屋對稱）
+  const YATAI = { a: Math.PI * 0.5 + 0.22, r: 12.2 };   // 島の屋台（v2.30.3）：島正前方的海邊（數學街和自然街之間），一打開就看得到
   const FERRY = { a: Math.PI * 0.9, x: Math.cos(Math.PI * 0.9) * 13.2, z: Math.sin(Math.PI * 0.9) * 13.2 };   // 智慧島渡船碼頭：島左前方的海邊（v2.24）
   const TERM_ORDER = ['立春', '雨水', '驚蟄', '春分', '清明', '穀雨', '立夏', '小滿', '芒種', '夏至', '小暑', '大暑',
     '立秋', '處暑', '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'];
@@ -729,6 +734,35 @@
     [[-2, 1.3, 0xb38a4f], [1.9, 1.1, 0x4a4f5a], [-1.2, -2, 0xc0392b], [1.4, -1.8, 0xdfe6ee]].forEach(([x, z, c]) => { fa(bx(0.9, 0.6, 0.8), 0xf3ead6, x, 1.1, z); fa(new THREE.ConeGeometry(0.75, 0.5, 4), c, x, 1.65, z).rotation.y = Math.PI / 4; });
     [[0, 2.6], [-0.8, 2.1], [0.9, 2.3]].forEach(([x, y]) => fa(new THREE.ConeGeometry(0.45, 1.3, 6), 0x3f7a45, x, y, -0.3));
     far.position.set(Math.cos(FERRY.a) * 34, 0, Math.sin(FERRY.a) * 34); ferryLayer.add(far);
+    setEnvironment(envNow);
+  }
+
+  // ---------- 島の屋台（v2.30.3）----------
+  // ctx.yatai = { name }：碼頭邊的小攤子（日本屋台＋台灣夜市攤）：木頭攤車、紅白條紋暖簾、兩盞紅燈籠（晚上亮）、兩張小板凳；點它呼叫 ctx.onYatai
+  function buildYatai() {
+    const Y = ctx.yatai || null, sig = JSON.stringify(Y);
+    if (sig === yataiSig) return;
+    yataiSig = sig;
+    while (yataiLayer.children.length) yataiLayer.remove(yataiLayer.children[0]);
+    if (!Y) return;
+    const cart = new THREE.Group(); cart.userData.yatai = true;
+    const box = (w, h, d, x, y, z, m) => { const b = new THREE.Mesh(bx(w, h, d), m.isMaterial ? m : std(m)); b.position.set(x, y, z); cart.add(b); return b; };
+    const wood = std(0xa0703f), dark = std(0x6b4a2b);
+    box(1.1, 0.5, 0.55, 0, 0.35, 0, wood);                  // 攤車
+    box(1.2, 0.06, 0.7, 0, 0.63, 0.06, 0xd9b98a);           // 檯面
+    [-0.5, 0.5].forEach(x => box(0.06, 0.75, 0.06, x, 1.0, -0.2, dark));   // 柱子
+    const roof = box(1.35, 0.06, 0.85, 0, 1.4, 0.02, 0x8a3b2e); roof.rotation.x = -0.15;
+    for (let i = 0; i < 6; i++) box(0.17, 0.2, 0.02, -0.43 + i * 0.172, 1.25, 0.38, i % 2 ? 0xfdfaf2 : 0xc0392b);   // 紅白暖簾
+    const glow = std(0xff8a65, { emissive: 0xff5a36, emissiveIntensity: 0.35 });
+    [-0.62, 0.62].forEach(x => { const l = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), glow); l.scale.y = 1.3; l.position.set(x, 1.15, 0.36); cart.add(l); });
+    [[-0.32, 0.78], [0.32, 0.78]].forEach(([x, z]) => { box(0.22, 0.04, 0.22, x, 0.3, z, 0xc9a77c); box(0.05, 0.28, 0.05, x, 0.14, z, dark); });   // 小板凳
+    [[0.25, 0.04, 0xfdfaf2], [-0.2, 0.05, 0xe8442e]].forEach(([x, r, c]) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.08, 10), std(c)); b.position.set(x, 0.7, 0.1); cart.add(b); });   // 檯面上的碗
+    const p = new THREE.Vector3(Math.cos(YATAI.a) * YATAI.r, 0.05, Math.sin(YATAI.a) * YATAI.r);
+    cart.position.copy(p); cart.lookAt(new THREE.Vector3(p.x * 2, 0.05, p.z * 2));   // 正面朝海、朝鏡頭 cart.scale.setScalar(1.1);
+    cart.userData.glass = glow;
+    yataiLayer.add(cart);
+    const lb = labelSprite('🏮 ' + (Y.name || '島の屋台'), Y.sub || null, { scale: 0.75, color: '#3a2a33' });
+    lb.position.set(p.x, 2.35, p.z); lb.userData.yatai = true; yataiLayer.add(lb);
     setEnvironment(envNow);
   }
 
@@ -1460,6 +1494,8 @@
     if (bHit && ctx.onBook && (!hit || bHit.distance <= hit.distance)) { ctx.onBook(); return; }
     const fHit = hits.find(h => { let o = h.object; while (o && !o.userData.ferry && !o.userData.subject) o = o.parent; return o && o.userData.ferry; });
     if (fHit && ctx.onFerry && (!hit || fHit.distance <= hit.distance)) { ctx.onFerry(); return; }
+    const yHit = hits.find(h => { let o = h.object; while (o && !o.userData.yatai && !o.userData.subject) o = o.parent; return o && o.userData.yatai; });
+    if (yHit && ctx.onYatai && (!hit || yHit.distance <= hit.distance)) { ctx.onYatai(); return; }
     const iHit = hits.find(h => { let o = h.object; while (o && !o.userData.islet && !o.userData.subject) o = o.parent; return o && o.userData.islet; });
     if (iHit && ctx.onIslet && (!hit || iHit.distance <= hit.distance)) { let o = iHit.object; while (!o.userData.islet) o = o.parent; ctx.onIslet(o.userData.islet); return; }
     const gHit = hits.find(h => { let o = h.object; while (o && !o.userData.garden && !o.userData.plant && !o.userData.subject) o = o.parent; return o && (o.userData.garden || o.userData.plant); });

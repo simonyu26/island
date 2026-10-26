@@ -304,10 +304,11 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.30.2';
+const APP_VERSION = '2.30.3';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）16:30', items: ['🔭 燈塔頂樓開一間「燈室」：看看哪些題大家會、你還沒會，還有跟一開始的自己比', '🍶 漂流瓶複習的間隔會慢慢拉長，變成燈籠後偶爾也會回來看你', '💞 交情的算法微調', '👀 新增「誰看得到什麼」：一張表說清楚家人和訪客看得到你的哪些東西', '⚡ 打開小島會更快：自訂圖片存在手機裡，不用每次重新下載'] };
 const CHANGELOG = [
+  { v: '2.30.3', date: '2026-10-26', items: ['🏮 島の屋台出現在 3D 小島上了：島前面海邊的小攤子，晚上紅燈籠會亮，點它就能進去做料理'] },
   { v: '2.30.2', date: '2026-10-26', items: ['🍁 楓葉飄落加回來了：葉子只在空中飄，不會掉在草地上'] },
   { v: '2.30.1', date: '2026-10-26', items: ['🧹 3D 小島上不再擺漂流瓶，島變乾淨了；今天漂回幾個瓶子，看燈塔上的標籤或去燈塔就知道'] },
   { v: '2.30', date: '2026-10-26', items: ['🍵 家具店多了三種風格：和の家具、台灣味、海邊風，可以慢慢蒐集，例如こたつ、大同電鍋、衝浪板', '🧩 我的家可以自己擺家具了：按「自己擺家具」，點一件家具、再點想放的格子就搬過去，也可以轉個方向', '🏮 燈籠送的家具，進度改在燈塔看，送到的家具一樣擺在我的家', '🔋 3D 小島、智慧島和房間比較省電了：App 切到背景就不畫；手機開了「減少動態效果」，海浪和雲會停住', '🍶 漂流瓶改成漂在燈塔外的海上，不會再堆在岸邊'] },
@@ -3106,6 +3107,7 @@ async function mount3D() {
       light: (st => ({ name: lightTitle(), sea: st.sea, due: st.due, lanterns: st.lanterns }))(lightStats()), onLight: () => go('light'),
       garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),
       ferry: wisdomOn() ? { open: !wisdomTodayDone() } : null, onFerry: () => go('wisdom'),
+      yatai: !isFamily() || keeperOf('yatai') ? { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null } : null, onYatai: () => openYatai(),
       islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
       book: { name: bookTitle(), sub: newCards().length ? '📮 ' + newCards().length + ' 張新明信片' : null }, onBook: () => go('bookstore'),
       marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })), onMark: id => { const m = landmarkList().find(x => x.id === id); if (m) openBook(m.key); },
@@ -4052,7 +4054,7 @@ function islandSnapshot(withStats) {
     guide: { name: g.name, emoji: g.emoji }, residents, roommates, pts: pointsUntil(null), bond: D.bond,
     mate: keeperOf('home') ? { name: keeperOf('home').name, emoji: keeperOf('home').emoji } : null,
     diary: diaryPages().filter(dt => S.save['diary:' + dt].shared).slice(-14).map(dt => ({ date: dt, text: S.save['diary:' + dt].text, emoji: S.save['diary:' + dt].emoji || '' })),
-    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx(), book: { name: bookTitle() }, marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s })) };
+    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx(), book: { name: bookTitle() }, yatai: keeperOf('yatai') ? { name: '島の屋台' } : null, marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s })) };
   if (withStats) snap.stats = { streakWeeks: D.streak, weekDone: weekDoneCount() };
   return snap;
 }
