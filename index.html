@@ -2949,14 +2949,26 @@ async function pickBank(tier, lane) {
 // v2.36 錯題循環②：撿瓶子時照錯因換練法。觀念不熟、用猜的→先看觀念小卡；看不懂題目→先選「這題在問什麼」；一時看錯→同單元的題先提醒
 const xqSeen = {};   // 這次打開 App 已經看過（或跳過）小卡、選過「這題在問什麼」的題；c<id>、a<id>
 const LANE_FULL = { 國: '國文', 英: '英文', 數: '數學' };
-function cardOf(q) { const c = q.card && S.save['cc:' + q.card]; return c && c.points && c.points.length ? c : null; }
+// 觀念小卡（Simon 2026-10-26）：全部先寫好、人工審過才上。exam/cards.json 只收審過的卡；這個單元還沒有審過的卡，就跳過小卡直接答題
+let cardsData = null, cardsLoad = null;
+function loadCards() {
+  if (!cardsLoad) cardsLoad = (BETA3D ? fetch('exam/cards.json').then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null))
+    .then(c => { cardsData = c && c.cards ? c.cards : false; if (cardsData) softRender(); return cardsData; });
+  return cardsLoad;
+}
+function cardOf(q) {
+  if (!q.card) return null;
+  if (cardsData === null) { loadCards(); return null; }
+  const c = cardsData && cardsData[q.card];
+  return c && c.reviewed === true && c.points && c.points.length ? Object.assign({ lane: q.card.split('|')[0], unit: q.card.split('|').slice(1).join('|') }, c) : null;
+}
 function conceptCardHtml(q, c) {
   const src = (LANE_FULL[c.lane] || c.lane) + '『' + c.unit + '』';
   return `<div class="speech" style="margin:8px 0"><b>📘 觀念小卡・${esc(laneLabel(c.lane))}・${esc(c.unit)}</b>
       <div class="muted" style="font-size:13px">答題前，先花一分鐘看看這個單元的重點。</div>
       <ul style="margin:6px 0 4px 18px;padding:0">${c.points.map(x => `<li style="margin:2px 0">${esc(x)}</li>`).join('')}</ul>
       ${c.trap ? `<div style="margin-top:4px">⚠️ 常見的陷阱：${esc(c.trap)}</div>` : ''}
-      <div class="muted" style="font-size:12px;margin-top:6px">${c.reviewed ? '📘 依 108 課綱國中' + esc(src) + '整理，已經人工核對過。' : '🤖 AI 依 108 課綱國中' + esc(src) + '整理，可能有不夠精確的地方，有疑問就問老師或翻課本。'}</div>
+      <div class="muted" style="font-size:12px;margin-top:6px">📘 依 108 課綱國中${esc(src)}整理，已經人工核對過。有疑問就問老師或翻課本。</div>
       <div class="row" style="gap:6px;margin-top:8px"><button onclick="xqSeen['c${q.id}']=1;softRender()">看完了，開始答題</button><button class="ghost" onclick="xqSeen['c${q.id}']=1;softRender()">先不看，直接答</button></div></div>`;
 }
 function askHtml(q) {
