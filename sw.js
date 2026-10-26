@@ -1,5 +1,7 @@
 // 快取 App 外殼，讓小島打開更快；資料仍以伺服器為準
-const CACHE = 'island-v53b';
+const CACHE = 'island-v53c';
+// 不會改版的檔案（函式庫、考古題圖片）照一般快取，不用每次問伺服器
+const FIXED = /\/(exam|wisdom)\/|three\.min\.js$|OrbitControls\.js$|qrcode\.js$|\.(png|jpe?g|webp)$/;
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png'];
 
 self.addEventListener('install', e => {
@@ -14,7 +16,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request, { cache: 'no-cache' }).then(r => {   // GitHub Pages 有 10 分鐘的瀏覽器快取；no-cache 每次跟伺服器確認（沒變只回 304），新版馬上生效
+    fetch(e.request, FIXED.test(url.pathname) ? {} : { cache: 'no-cache' }).then(r => {   // GitHub Pages 有 10 分鐘的瀏覽器快取；會改版的檔案用 no-cache 每次跟伺服器確認（沒變只回 304），新版馬上生效
       const copy = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;
