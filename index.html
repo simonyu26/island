@@ -311,11 +311,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.42';
+const APP_VERSION = '2.42.1';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.42.1', date: '2026-10-27', items: ['🔭 燈室也變短了：正在補強、再看一眼、大家會你還沒會放在上面；已補強、跟一開始的自己比、時間花在哪裡、最常錯的原因收起來，點標題才打開。'] },
   { v: '2.42', date: '2026-10-27', items: ['🗼 燈塔最上面多了一列樓層：1F 海灘、2F 航海日誌、3F 燈室、碼頭，一按就過去。還在海上漂的瓶子、燈籠和家具收起來了，點標題才打開，畫面短很多。'] },
   { v: '2.41', date: '2026-10-27', items: ['🧺 商店多了素材櫃：常見素材一個 🪙 2，一天可以買 5 個，買了放進竹籃，到屋台做料理', '💰 做好的料理可以賣給商店：一天最多賣得 🪙 10，也不超過當天讀書拿到的素材數'] },
   { v: '2.40.4', date: '2026-10-27', minor: true, items: ['📷 拍錯題的照片一天不限張數了；每天的前 10 題有經驗值，超過的還是會收進海灘'] },
@@ -2764,11 +2765,11 @@ function viewLamp() {
       <ul style="margin:6px 0 6px 18px;padding:0"><li>正在補強的單元：最值得先追回來的地方</li><li>再看一眼：老朋友漂回來時沒答到的題</li><li>大家會、你還沒會的題：最值得先追回來</li><li>跟一開始的自己比，每一科的考古題有沒有更穩</li><li>最近 4 週，時間花在哪幾科</li><li>錯的時候，最常是哪一種原因</li></ul>
       這裡只是看看，不加分也不扣分。<button style="padding:6px 12px;font-size:13px" onclick="local.set('islandMet:lamp', S.today);render()">知道了！</button></div></div>` : '';
   const maxMin = Math.max(1, ...SUBJECTS.map(s => d.inv[s].min)), maxPts = Math.max(1, ...SUBJECTS.map(s => d.inv[s].pts));
-  const invCard = `<div class="card"><h3>⏳ 最近 4 週，時間花在哪裡</h3>
+  const invCard = `<details class="card" ${lightDet('inv')}><summary><b>⏳ 最近 4 週，時間花在哪裡</b></summary>
     <div class="muted" style="font-size:12px;margin-bottom:6px">${short(addD(S.today, -(LAMP_DAYS - 1)))}–${short(S.today)}。分鐘是<b>有用計時器</b>的時間，沒計時不代表沒讀書。</div>
     ${SUBJECTS.map(s => { const v = d.inv[s]; return `<div style="margin-top:8px"><div class="row"><b class="grow">${SUBJ_IC[s]} ${SUBJECT_NAME[s]}</b><span class="muted" style="font-size:12px">⏳ ${v.min} 分・✅ ${v.pts} 點・📜 ${v.bank} 題</span></div>
       ${lampBar(v.min / maxMin * 100, 'var(--plum-mid)')}${lampBar(v.pts / maxPts * 100, 'var(--gold)')}</div>`; }).join('')}
-    <div class="muted" style="font-size:12px;margin-top:6px"><span style="color:var(--plum-mid)">■</span> 計時分鐘　<span style="color:var(--gold)">■</span> 計畫完成點數（各自跟最多的那一科比）</div></div>`;
+    <div class="muted" style="font-size:12px;margin-top:6px"><span style="color:var(--plum-mid)">■</span> 計時分鐘　<span style="color:var(--gold)">■</span> 計畫完成點數（各自跟最多的那一科比）</div></details>`;
   if (unitsData === null) loadUnits();
   const um = unitsData ? unitMap() : null, sea = lightStats().sea, uName = t => `${esc(laneLabel(t.lane))}・${esc(t.unit)}`;
   const unitCard = `<div class="card"><h3>🧭 正在補強</h3>
@@ -2778,34 +2779,34 @@ function viewLamp() {
         + (fam || !UNIT_TOOLS ? '' : `<div class="muted" style="font-size:12px;margin-top:6px">按「練一題」，會從這個單元你還沒做過的考古題抽一題，算在每天 ${XQ_DAILY} 題挑戰裡。</div>`)
       : `<div class="muted">還沒有要補強的單元。每個單元做滿 ${UNIT_MIN} 題，這裡才會出現。</div>`}
     ${sea >= GUESS_CAP ? `<div class="muted" style="font-size:13px;margin-top:6px">海灘上的瓶子有點多了（${sea} 個）。有點猜的題這陣子先不收進來，一次撿幾個就好。</div>` : ''}</div>
-    <div class="card"><h3>🏮 已補強</h3>
+    <details class="card" ${lightDet('done')}><summary><b>🏮 已補強</b><span class="muted">・${um && um.done.length ? um.done.length + ' 個單元' : '還沒有'}</span></summary>
     <div class="muted" style="font-size:12px;margin-bottom:6px">以前常錯、現在穩下來的單元。</div>
-    ${um && um.done.length ? `<div class="row" style="gap:6px">${um.done.map(t => `<span class="pill">${uName(t)}・🏮 ${t.lanterns}</span>`).join('')}</div>` : '<div class="muted">補好的單元會列在這裡。</div>'}</div>`;
+    ${um && um.done.length ? `<div class="row" style="gap:6px">${um.done.map(t => `<span class="pill">${uName(t)}・🏮 ${t.lanterns}</span>`).join('')}</div>` : '<div class="muted">補好的單元會列在這裡。</div>'}</details>`;
   const look = lookAgain();
   const lookCard = look.length ? `<div class="card"><h3>👀 再看一眼</h3>
     <div class="muted" style="font-size:12px;margin-bottom:6px">老朋友漂回來時，這幾題沒答到。再看一眼就好，一週後會再漂回來。</div>
     ${look.map(b => `<div class="item" style="cursor:pointer" onclick="openBottle('${b.id}')"><span style="font-size:22px">🏮</span>
       <div class="name grow"><b>${esc(laneLabel(laneOf(b.rec, b.lane)))}</b><div class="muted">${esc(b.label)}・${short(b.missAt)} 漂回來${b.due ? '・' + (b.due <= S.today ? '今天會再來' : short(b.due) + ' 再來') : ''}</div></div>›</div>`).join('')}</div>` : '';
-  const all = !!draft.lampAll, easy = all ? d.easy : d.easy.slice(0, 5);
+  const all = !!draft.lampAll, easy = all ? d.easy : d.easy.slice(0, 3);
   const easyCard = `<div class="card"><h3>🌟 大家會、你還沒會</h3>
     <div class="muted" style="font-size:12px;margin-bottom:6px">全國 ${LAMP_EASY}% 以上考生答對、${fam ? '她' : '你'}答錯、還沒變成燈籠的考古題。這種題通常差一個觀念就能拿回來，最值得先追。</div>
     ${easy.length ? easy.map(b => `<div class="item" style="cursor:pointer" onclick="openBottle('${b.id}')"><span style="font-size:22px">🍶</span>
       <div class="name grow"><b>${esc(laneLabel(laneOf(b.rec, b.lane)))}</b><div class="muted">${esc(b.label)}・全國 ${b.rec.pass}% 答對${b.due ? '・' + (b.due <= S.today ? '今天漂回來' : short(b.due) + ' 漂回') : ''}</div></div>›</div>`).join('')
       : '<div class="muted">目前沒有這種題。答錯的考古題裡，全國答對率高的會列在這裡。</div>'}
-    ${d.easy.length > 5 ? `<button class="ghost" style="width:100%;margin-top:6px" onclick="draft.lampAll=${!all};render()">${all ? '▲ 收起' : '看全部 ' + d.easy.length + ' 題 ▼'}</button>` : ''}</div>`;
-  const selfCard = `<div class="card"><h3>📈 跟一開始的自己比</h3>
+    ${d.easy.length > 3 ? `<button class="ghost" style="width:100%;margin-top:6px" onclick="draft.lampAll=${!all};render()">${all ? '▲ 收起' : '看全部 ' + d.easy.length + ' 題 ▼'}</button>` : ''}</div>`;
+  const selfCard = `<details class="card" ${lightDet('self')}><summary><b>📈 跟一開始的自己比</b></summary>
     <div class="muted" style="font-size:12px;margin-bottom:6px">每一科做過的考古題，一開始的一批和最近的一批（各最多 ${LAMP_BATCH} 題）答對率。灰線是同一批題的全國平均，只當參考。</div>
     ${d.self.map(x => `<div style="margin-top:10px"><b>${SUBJ_IC[x.s]} ${SUBJECT_NAME[x.s]}</b><span class="muted" style="font-size:12px">　做過 ${x.total} 題</span>
       ${x.total < LAMP_MIN ? `<div class="muted" style="font-size:13px">再做 ${LAMP_MIN - x.total} 題才看得出來。</div>`
         : `<div class="row" style="flex-wrap:nowrap;font-size:13px"><span style="width:7em">一開始 ${x.first.n} 題</span><div class="grow">${lampBar(x.first.me, 'var(--plum-light)', x.first.nat)}</div><span style="width:3em;text-align:right">${x.first.me}%</span></div>
           <div class="row" style="flex-wrap:nowrap;font-size:13px"><span style="width:7em">最近 ${x.last.n} 題</span><div class="grow">${lampBar(x.last.me, 'var(--plum-mid)', x.last.nat)}</div><span style="width:3em;text-align:right">${x.last.me}%</span></div>
-          <div class="muted" style="font-size:12px">${x.last.me > x.first.me ? '答對率比一開始高了 ' + (x.last.me - x.first.me) + ' 個百分點。' : x.last.me === x.first.me ? '跟一開始一樣穩。' : '最近的題比較難抓，可以先撿這一科的瓶子。'}　最近這批題的全國平均 ${x.last.nat}%</div>`}</div>`).join('')}</div>`;
-  const whyCard = `<div class="card"><h3>🔍 錯的時候，最常是哪一種</h3>
+          <div class="muted" style="font-size:12px">${x.last.me > x.first.me ? '答對率比一開始高了 ' + (x.last.me - x.first.me) + ' 個百分點。' : x.last.me === x.first.me ? '跟一開始一樣穩。' : '最近的題比較難抓，可以先撿這一科的瓶子。'}　最近這批題的全國平均 ${x.last.nat}%</div>`}</div>`).join('')}</details>`;
+  const whyCard = `<details class="card" ${lightDet('why')}><summary><b>🔍 錯的時候，最常是哪一種</b><span class="muted">・記了 ${d.whyN} 題</span></summary>
     <div class="muted" style="font-size:12px;margin-bottom:6px">合計漂流瓶上記的「為什麼會錯」和紙船、親子船填的錯因（<b>含紙本檢討</b>）。${fam ? '瓶子只算她按了「給爸爸看」的。' : ''}</div>
     ${REASONS.map(r => { const v = d.why[r[0]], n = v.bottle + v.paper; return `<div style="margin-top:6px"><div class="row"><b class="grow">${r[1]}</b><span class="muted" style="font-size:12px">🍶 ${v.bottle}・⛵ ${v.paper}${d.whyN >= LAMP_MIN ? '・' + pctOf(n, d.whyN) + '%' : ''}</span></div>
       ${d.whyN >= LAMP_MIN ? lampBar(pctOf(n, d.whyN), 'var(--plum-mid)') : ''}</div>`; }).join('')}
-    <div class="muted" style="font-size:12px;margin-top:6px">${d.whyN >= LAMP_MIN ? '一共記了 ' + d.whyN + ' 題。' : '已經記了 ' + d.whyN + ' 題，滿 ' + LAMP_MIN + ' 題再算比例。在瓶子上點「為什麼會錯」就會記進來。'}</div></div>`;
-  return `${lightFloors('lamp')}<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓。用${fam ? '她' : '你'}已經做過的題和紀錄，照照哪裡還沒會、時間花在哪裡。這裡不加分也不扣分。${fam ? '' : '家人碼也看得到燈室的四張卡；瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。'}</div>${greet}</div>
+    <div class="muted" style="font-size:12px;margin-top:6px">${d.whyN >= LAMP_MIN ? '一共記了 ' + d.whyN + ' 題。' : '已經記了 ' + d.whyN + ' 題，滿 ' + LAMP_MIN + ' 題再算比例。在瓶子上點「為什麼會錯」就會記進來。'}</div></details>`;
+  return `${lightFloors('lamp')}<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓，照照哪裡還沒會、時間花在哪裡。不加分也不扣分。下面收起來的卡，點標題就會打開。</div>${fam ? '' : '<details class="muted" style="font-size:13px;margin-top:4px"><summary>爸爸看得到哪些？</summary>家人碼也看得到燈室的卡；瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。</details>'}${greet}</div>
     ${advisorCard()}${unitCard}${lookCard}${easyCard}${selfCard}${invCard}${whyCard}
     <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
@@ -5682,7 +5683,7 @@ function viewGuide() {
     p('燈塔最上面有一列樓層：1F 是海灘（撿瓶子）、2F 是航海日誌（學習歷程，還在整修，之後會開放）、3F 是燈室，旁邊是紙船停靠的小碼頭，按一下就過去。還在海上漂的瓶子、放走的燈籠和燈籠送的家具平常收起來，點標題才打開。') +
     p('👀 <b>再看一眼</b>：變成燈籠的題會當老朋友漂回來；那時沒答到的，會列在燈室的「再看一眼」，最多 5 題。燈籠不會變回瓶子，一週後會再漂回來，答到了就不再列。') +
     p('📷 <b>收這場的錯題</b>：記完 Boss 戰，只要有一科不是 A++，會問你要不要把這場的錯題拍照收進燈塔海灘；按「先不用」就回小島。') +
-    p('🔭 <b>燈室</b>（燈塔頂樓）：四張卡。①「大家會、你還沒會」：全國 60% 以上考生答對、你答錯、還沒變成燈籠的考古題，一次列 5 題，點了打開瓶子。②「跟一開始的自己比」：每一科做過的考古題，一開始和最近各一批的答對率，灰線是同一批題的全國平均，一科做滿 10 題才會顯示。③「時間花在哪裡」：最近 4 週有用計時器的分鐘、計畫完成點數、做過的考古題數。④「最常錯的原因」：漂流瓶和紙船填的錯因合計，滿 10 題才算比例。燈室不加分也不扣分。家人碼也看得到這四張卡，但瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。') +
+    p('🔭 <b>燈室</b>（燈塔頂樓）：四張卡。①「大家會、你還沒會」：全國 60% 以上考生答對、你答錯、還沒變成燈籠的考古題，先列 3 題（可以按「看全部」），點了打開瓶子。②「跟一開始的自己比」：每一科做過的考古題，一開始和最近各一批的答對率，灰線是同一批題的全國平均，一科做滿 10 題才會顯示。③「時間花在哪裡」：最近 4 週有用計時器的分鐘、計畫完成點數、做過的考古題數。④「最常錯的原因」：漂流瓶和紙船填的錯因合計，滿 10 題才算比例。②③④和「已補強」平常收起來，點標題才打開。燈室不加分也不扣分。家人碼也看得到這四張卡，但瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。') +
     p('🧭 <b>燈室的學習顧問（AI）</b>：燈室可以請一位學習顧問（AI），名字、樣子、個性由你決定，名字後面一律加「（AI）」。學習顧問看得到你在計畫頁按「給學習顧問（AI）看」交出去的計畫，還有爸爸給的每週檢討和大考成績；日めくり、瓶子上寫的話看不到。爸爸跟學習顧問討論完，會把下週的建議貼在燈室的「下週的航線」，「學習顧問（AI）的建議」和「爸爸的話」分開放。只是建議，不打勾、不算分數，要不要照做由你決定。只有你和爸爸看得到。不想要的時候，按「請學習顧問先休息」就會收起來，想再聽的時候再請回來。') +
     p('🏷️ <b>解說的來源標籤</b>：📜 心測中心＝官方的題目、答案和全國答對率；📘 課本觀念＝AI 指出這題用到的觀念；📖 島上題庫＝故事任務寫好的題目；🤖 AI 推論＝AI 自己推的解題步驟，可能會錯，覺得怪怪的就跟爸爸說。'))}
   ${sec('🍁', '二十四節氣', p('整座島會跟著節氣換季：立春到清明櫻花慢慢開、花瓣飄落；芒種到小暑的夜晚有螢火蟲；寒露到立冬楓葉轉紅、紅葉飄下；冬天換上深綠的冬裝。右上角會顯示今天的節氣，嚮導打招呼時也可能聊到。'))}
