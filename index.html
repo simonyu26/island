@@ -307,11 +307,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.39';
+const APP_VERSION = '2.39.1';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.39.1', date: '2026-10-27', items: ['👀 燈室多了「再看一眼」：老朋友漂回來時沒答到的題會列在這裡', '📷 記完 Boss 戰，可以順手把這場的錯題拍照收進燈塔', '🗼 燈塔的話會提到這週補起來的地方'] },
   { v: '2.39', date: '2026-10-27', items: ['🧭 燈室的「正在補強」可以按「練一題」，從那個單元你還沒做過的考古題抽一題；挑戰任務選「隨便一條」時，每天前 3 題會從正在補強的單元出，不想要可以在挑戰卡上關掉。', '📘 撿瓶子時，如果你記的原因是觀念不熟或用猜的，會先看一張這個單元的觀念小卡，可以跳過。', '🗂️ 考古題的單元重新整理過，有幾題換到更合適的單元或科目，燈室的「正在補強」會跟著更新。'] },
   { v: '2.38.1', date: '2026-10-27', minor: true, items: ['島民和店主講話改用台灣的說法，例如「午安」'] },
   { v: '2.38', date: '2026-10-27', items: ['💊 首頁的おつとめ板多了「吃藥」：早上和晚上各問一聲，吃了就按一下；時間可以自己改，也可以加到 Google 日曆每天提醒。只記有沒有勾，預設只有你自己看得到。'] },
@@ -2545,11 +2546,18 @@ function lightWordCtx(wk) {
     subjects: Object.keys(bySub).map(k => ({ name: k, n: bySub[k] })), note: set.note || '',
     wrong: all.filter(b => inWk(b.wrongAt)).length, lanterns: all.filter(b => inWk(b.lantern)).length,
     reviewed: all.reduce((n, b) => n + ((b.rv && b.rv.tries) || []).filter(t => inWk(t.at)).length, 0),
-    sea: all.filter(b => !b.lantern).length, links: links.slice(0, 5) };
+    sea: all.filter(b => !b.lantern).length, links: links.slice(0, 5), fixed: weekFixed(all, inWk),
+    friendsOk: all.reduce((n, b) => n + ((b.rv && b.rv.tries) || []).filter(t => t.friend && t.ok && inWk(t.at)).length, 0) };
+}
+// 錯題循環③：這週變成燈籠的瓶子，照科目和單元分組，最多 3 組（只送名稱和數字，不送她寫的字）
+function weekFixed(all, inWk) {
+  const m = {};
+  all.filter(b => inWk(b.lantern)).forEach(b => { const u = unitsData ? unitOf(b.rec, b.id) : null, l = laneOf(b.rec, b.lane), k = (SUBS[GROUP[l]] ? l : SUBJECT_NAME[l] || l) + (u ? '・' + u : ''); m[k] = (m[k] || 0) + 1; });
+  return Object.keys(m).map(name => ({ name, n: m[name] })).sort((a, b) => b.n - a.n).slice(0, 3);
 }
 async function lightWordLater(wk) {
   if (lwBusy[wk]) return; lwBusy[wk] = true;
-  try { S = await call('lightWord', wk, lightWordCtx(wk)); D = derive(S); } catch (e) { /* 燈塔頁可以再請守燈人寫一次 */ }
+  try { await loadUnits(); S = await call('lightWord', wk, lightWordCtx(wk)); D = derive(S); } catch (e) { /* 燈塔頁可以再請守燈人寫一次 */ }
   lwBusy[wk] = false;
   if (tab === 'lightword' || tab === 'light') render();
 }
@@ -2652,6 +2660,12 @@ function bankDone() {
   return out.sort((a, b) => a.at.localeCompare(b.at));
 }
 const pctOf = (n, d) => d ? Math.round(n / d * 100) : 0;
+// 再看一眼（錯題循環③）：最近一次老朋友漂回來沒答到的燈籠，最新的先，最多 5 個；下次老朋友答對就不列。只用 rv.tries，家人碼也算得出來，不會露出原因
+function lookAgain() {
+  const last = b => { const f = ((b.rv && b.rv.tries) || []).filter(t => t.friend); return f[f.length - 1]; };
+  return bottles().filter(b => b.lantern && last(b) && !last(b).ok).map(b => Object.assign(b, { missAt: last(b).at }))
+    .sort((a, b) => b.missAt.localeCompare(a.missAt)).slice(0, 5);
+}
 function lampData() {
   const done = bankDone(), from = addD(S.today, -(LAMP_DAYS - 1)), g = l => GROUP[l] || l;
   // 各科投入度：有用計時器的分鐘、計畫完成點數、做過的考古題，都看最近 4 週
@@ -2719,7 +2733,7 @@ function viewLamp() {
   const fam = isFamily(), d = lampData(), kp = keeperOf('lighthouse');
   const greet = !fam && kp && !local.get('islandMet:lamp') ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap;align-items:flex-start"><span style="font-size:28px">${kpPic(kp)}</span>
     <div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>：歡迎來到頂樓的燈室！燈塔的光從這裡照出去，也可以照照你自己走過的路：
-      <ul style="margin:6px 0 6px 18px;padding:0"><li>正在補強的單元：最值得先追回來的地方</li><li>大家會、你還沒會的題：最值得先追回來</li><li>跟一開始的自己比，每一科的考古題有沒有更穩</li><li>最近 4 週，時間花在哪幾科</li><li>錯的時候，最常是哪一種原因</li></ul>
+      <ul style="margin:6px 0 6px 18px;padding:0"><li>正在補強的單元：最值得先追回來的地方</li><li>再看一眼：老朋友漂回來時沒答到的題</li><li>大家會、你還沒會的題：最值得先追回來</li><li>跟一開始的自己比，每一科的考古題有沒有更穩</li><li>最近 4 週，時間花在哪幾科</li><li>錯的時候，最常是哪一種原因</li></ul>
       這裡只是看看，不加分也不扣分。<button style="padding:6px 12px;font-size:13px" onclick="local.set('islandMet:lamp', S.today);render()">知道了！</button></div></div>` : '';
   const maxMin = Math.max(1, ...SUBJECTS.map(s => d.inv[s].min)), maxPts = Math.max(1, ...SUBJECTS.map(s => d.inv[s].pts));
   const invCard = `<div class="card"><h3>⏳ 最近 4 週，時間花在哪裡</h3>
@@ -2739,6 +2753,11 @@ function viewLamp() {
     <div class="card"><h3>🏮 已補強</h3>
     <div class="muted" style="font-size:12px;margin-bottom:6px">以前常錯、現在穩下來的單元。</div>
     ${um && um.done.length ? `<div class="row" style="gap:6px">${um.done.map(t => `<span class="pill">${uName(t)}・🏮 ${t.lanterns}</span>`).join('')}</div>` : '<div class="muted">補好的單元會列在這裡。</div>'}</div>`;
+  const look = lookAgain();
+  const lookCard = look.length ? `<div class="card"><h3>👀 再看一眼</h3>
+    <div class="muted" style="font-size:12px;margin-bottom:6px">老朋友漂回來時，這幾題沒答到。再看一眼就好，一週後會再漂回來。</div>
+    ${look.map(b => `<div class="item" style="cursor:pointer" onclick="openBottle('${b.id}')"><span style="font-size:22px">🏮</span>
+      <div class="name grow"><b>${esc(laneLabel(laneOf(b.rec, b.lane)))}</b><div class="muted">${esc(b.label)}・${short(b.missAt)} 漂回來${b.due ? '・' + (b.due <= S.today ? '今天會再來' : short(b.due) + ' 再來') : ''}</div></div>›</div>`).join('')}</div>` : '';
   const all = !!draft.lampAll, easy = all ? d.easy : d.easy.slice(0, 5);
   const easyCard = `<div class="card"><h3>🌟 大家會、你還沒會</h3>
     <div class="muted" style="font-size:12px;margin-bottom:6px">全國 ${LAMP_EASY}% 以上考生答對、${fam ? '她' : '你'}答錯、還沒變成燈籠的考古題。這種題通常差一個觀念就能拿回來，最值得先追。</div>
@@ -2759,7 +2778,7 @@ function viewLamp() {
       ${d.whyN >= LAMP_MIN ? lampBar(pctOf(n, d.whyN), 'var(--plum-mid)') : ''}</div>`; }).join('')}
     <div class="muted" style="font-size:12px;margin-top:6px">${d.whyN >= LAMP_MIN ? '一共記了 ' + d.whyN + ' 題。' : '已經記了 ' + d.whyN + ' 題，滿 ' + LAMP_MIN + ' 題再算比例。在瓶子上點「為什麼會錯」就會記進來。'}</div></div>`;
   return `<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓。用${fam ? '她' : '你'}已經做過的題和紀錄，照照哪裡還沒會、時間花在哪裡。這裡不加分也不扣分。${fam ? '' : '家人碼也看得到燈室的四張卡；瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。'}</div>${greet}</div>
-    ${advisorCard()}${unitCard}${easyCard}${selfCard}${invCard}${whyCard}
+    ${advisorCard()}${unitCard}${lookCard}${easyCard}${selfCard}${invCard}${whyCard}
     <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 /* --- 燈室的學習顧問（AI）：她自己請一位（keeper:advisor）；爸爸把和學習顧問（AI）討論好的建議貼回來（advice:<週一>，後端 Advisor.gs）。
@@ -4519,7 +4538,10 @@ function viewExam() {
   const sel = s => `<select data-sub="${s}"><option value="">沒考</option>${LEVELS.map(l => `<option>${l}</option>`).join('')}</select>`;
   const rows = S.assessments.slice().sort((a, b) => assessDate(b.date) - assessDate(a.date)).map(a =>
     `<tr><td>${esc(a.date)}</td>${SUBJECTS.map(s => `<td>${esc(a[s])}</td>`).join('')}<td>${esc(String(a['文']).replace('級分', ''))}</td><td>${esc(a.source)}</td></tr>`).join('');
-  return `<div class="card"><h2>⚔️ Boss 戰紀錄</h2>
+  const ask = draft.bossWrong ? `<div class="card"><h3>📷 收這場的錯題</h3>
+    <div class="muted">「${esc(draft.bossWrong)}」記好了。要把這場答錯的題拍照收進燈塔海灘嗎？挑幾題就好，不用全部拍。收進去的題會變成漂流瓶，之後漂回來出類題。</div>
+    <div class="row" style="margin-top:10px"><button class="grow" onclick="go('wrongScan')">📷 收這場的錯題</button><button class="ghost grow" onclick="go('home')">先不用</button></div></div>` : '';
+  return `${ask}<div class="card"><h2>⚔️ Boss 戰紀錄</h2>
     <div class="muted">模擬考或寫完一整份考古題後填這裡。只有試煉結果會更新島民等級，每場 +50 經驗值。</div>
     <label>日期</label><input type="date" id="exDate" value="${S.today}">
     <label>考卷來源</label><input id="exSrc" placeholder="例如：115北模#1、113考古題">
@@ -4536,7 +4558,9 @@ async function submitExam() {
   document.getElementById('exGo').disabled = true;
   try {
     S = await call('addAssessment', rec); D = derive(S);
-    toast('Boss 戰結果已記錄，島民等級更新！'); go('home');
+    // 錯題循環③：有一科不是 A++ 才問要不要收錯題（小卡上已經說記好了，不另外跳提示）；「先不用」不留紀錄、不再問
+    const lv = Object.values(levels).filter(Boolean);
+    if (lv.some(x => x !== 'A++')) { go('exam'); draft.bossWrong = rec.source; render(); } else { toast('Boss 戰結果已記錄，島民等級更新！'); go('home'); }
   } catch (e) { toast('寫入失敗：' + (e.message || e)); document.getElementById('exGo').disabled = false; }
 }
 
@@ -5583,6 +5607,8 @@ function viewGuide() {
     p('📷 <b>拍錯題</b>：紙本考卷、講義上答錯的題，在燈塔按「拍照」，先選科目再拍。AI 會讀出題目、你寫的答案和正確答案，分好題型（國文像字音字形、修辭、文意理解；英文像時態、片語、閱讀），你確認、勾好要收的題，它們就變成漂流瓶，明天開始漂回來出類題。讀錯的字可以直接改；照片上看不到答案時，AI 會自己解，請你對一下。收進一題 +5 經驗值，一天最多算 5 題，一天最多拍 10 張。') +
     p('🧭 <b>錯題類型</b>：燈塔會整理你最常錯哪一類題。按「練一題」，會照你收集的這一類錯題出一題新題，算在每天 ' + XQ_DAILY + ' 題挑戰裡，答對一樣有經驗值和島幣，答錯也會變成漂流瓶。') +
     p('紙本考卷檢討的紙船、親子船也停在燈塔的小碼頭。燈塔二樓的航海日誌（學習歷程）還在整修，之後會開放。') +
+    p('👀 <b>再看一眼</b>：變成燈籠的題會當老朋友漂回來；那時沒答到的，會列在燈室的「再看一眼」，最多 5 題。燈籠不會變回瓶子，一週後會再漂回來，答到了就不再列。') +
+    p('📷 <b>收這場的錯題</b>：記完 Boss 戰，只要有一科不是 A++，會問你要不要把這場的錯題拍照收進燈塔海灘；按「先不用」就回小島。') +
     p('🔭 <b>燈室</b>（燈塔頂樓）：四張卡。①「大家會、你還沒會」：全國 60% 以上考生答對、你答錯、還沒變成燈籠的考古題，一次列 5 題，點了打開瓶子。②「跟一開始的自己比」：每一科做過的考古題，一開始和最近各一批的答對率，灰線是同一批題的全國平均，一科做滿 10 題才會顯示。③「時間花在哪裡」：最近 4 週有用計時器的分鐘、計畫完成點數、做過的考古題數。④「最常錯的原因」：漂流瓶和紙船填的錯因合計，滿 10 題才算比例。燈室不加分也不扣分。家人碼也看得到這四張卡，但瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。') +
     p('🧭 <b>燈室的學習顧問（AI）</b>：燈室可以請一位學習顧問（AI），名字、樣子、個性由你決定，名字後面一律加「（AI）」。學習顧問看得到你在計畫頁按「給學習顧問（AI）看」交出去的計畫，還有爸爸給的每週檢討和大考成績；日めくり、瓶子上寫的話看不到。爸爸跟學習顧問討論完，會把下週的建議貼在燈室的「下週的航線」，「學習顧問（AI）的建議」和「爸爸的話」分開放。只是建議，不打勾、不算分數，要不要照做由你決定。只有你和爸爸看得到。不想要的時候，按「請學習顧問先休息」就會收起來，想再聽的時候再請回來。') +
     p('🏷️ <b>解說的來源標籤</b>：📜 心測中心＝官方的題目、答案和全國答對率；📘 課本觀念＝AI 指出這題用到的觀念；📖 島上題庫＝故事任務寫好的題目；🤖 AI 推論＝AI 自己推的解題步驟，可能會錯，覺得怪怪的就跟爸爸說。'))}
