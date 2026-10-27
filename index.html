@@ -307,11 +307,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.40.3';
+const APP_VERSION = '2.40.4';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.40.4', date: '2026-10-27', minor: true, items: ['📷 拍錯題的照片一天不限張數了；每天的前 10 題有經驗值，超過的還是會收進海灘'] },
   { v: '2.40.3', date: '2026-10-27', items: ['📷 拍照收錯題現在一天可以算到 10 題了！這幾天超過 5 題的那 5 題，經驗值 +25 已經補上。謝謝你這麼認真把這些題目收好。'] },
   { v: '2.40.2', date: '2026-10-27', items: ['🔐 你在智慧島、紙船、這週一句話和跨科連結寫的字，家人碼看不到了；願望只給爸爸看，送書的那句話只給收書的人。「誰看得到什麼」也一起更新'] },
   { v: '2.40', date: '2026-10-27', items: ['🎞️ 3D 畫面不順時會自動調低畫質，順了再調回來（小島、智慧島、我的家都會）'] },
@@ -3057,7 +3058,7 @@ function viewWrongScan() {
         <label>這是哪一科？</label>
         <div class="row" style="gap:6px">${big.map(l => `<button class="${w.lane === l ? '' : 'ghost'}" style="padding:8px 18px" onclick="draft.ws.lane='${l}';render()">${subIc(l)} ${esc(SUBJECT_NAME[l] || l)}</button>`).join('')}
           <select style="width:auto" onchange="draft.ws.lane=this.value||draft.ws.lane;render()"><option value="">其他科…</option>${rest.map(l => `<option value="${l}"${w.lane === l ? ' selected' : ''}>${esc(laneLabel(l))}</option>`).join('')}</select></div>
-        <div class="muted" style="margin-top:10px">💡 一次拍一頁就好，光線亮一點、字要拍清楚；有紅筆訂正的話，AI 會照訂正的答案。一天最多拍 10 張。</div>
+        <div class="muted" style="margin-top:10px">💡 一次拍一頁就好，光線亮一點、字要拍清楚；有紅筆訂正的話，AI 會照訂正的答案。</div>
         <label class="btn" style="display:block;text-align:center;margin-top:12px">📷 拍${esc(laneLabel(w.lane))}的錯題<input type="file" accept="image/*" hidden onchange="scanWrongPhoto(this)"></label></div>${back}`;
   }
   const ABCDE = 'ABCDE', types = PQ_TYPES[w.lane], n = w.items.filter(x => x.use).length;
@@ -3073,7 +3074,7 @@ function viewWrongScan() {
       <label>為什麼會錯？（選填）</label><div class="row" style="gap:6px">${REASONS.map(r => `<button class="${x.why === r[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" onclick="draft.ws.items[${i}].why=draft.ws.items[${i}].why==='${r[0]}'?null:'${r[0]}';render()">${r[1]}</button>`).join('')}</div>
       ${x.ex ? `<div class="muted" style="margin-top:8px">💡 ${esc(x.ex)}</div>` : ''}</div>`).join('');
   return `<div class="card"><h2>📷 ${esc(laneLabel(w.lane))}：讀到 ${w.items.length} 題</h2>
-      <div class="muted">${w.items.length ? '勾選要收進海灘的題，讀錯的地方直接改。收進一題 +' + 5 + ' 經驗值（一天最多算 10 題）。' : '照片上沒讀到題目，換個角度、拍亮一點再試一次。'}</div></div>
+      <div class="muted">${w.items.length ? '勾選要收進海灘的題，讀錯的地方直接改。收進一題 +' + 5 + ' 經驗值（每天的前 10 題有經驗值，超過的還是會收進海灘）。' : '照片上沒讀到題目，換個角度、拍亮一點再試一次。'}</div></div>
     ${cards}
     <div class="row">${w.items.length ? `<button class="grow" id="pqGo" onclick="collectWrongQ()" ${n ? '' : 'disabled'}>收進海灘（${n} 題）🍶</button>` : ''}<button class="ghost" onclick="draft.ws.items=null;render()">重拍</button><button class="ghost" onclick="go('light')">返回</button></div>`;
 }
@@ -5614,7 +5615,7 @@ function viewGuide() {
     p('🩹 <b>照原因換練法</b>：撿瓶子的時候，會照你記的原因換一種練法：' + (UNIT_TOOLS ? '觀念不熟或用猜的，先看一張這個單元的觀念小卡；' : '') + '一時看錯／算錯，在瓶子上寫一句下次要檢查的事，之後同一個單元的題會先提醒你；看不懂題目，先選這題在問什麼，再答題。' + (UNIT_TOOLS ? '小卡可以跳過，跳過也不影響經驗值和島幣。' : '')) +
     (UNIT_TOOLS ? p('🧭 <b>練一題、從補強單元出題</b>：燈室的「正在補強」可以按「練一題」，從那個單元你還沒做過的考古題抽一題。挑戰任務選「隨便一條」時，每天前 ' + XQ_WEAK + ' 題會從正在補強的單元抽，不想要可以在挑戰卡上關掉。題數和島幣都不變。') : '') +
     p('點一個瓶子可以看原題、記下為什麼會錯（一時看錯／算錯、觀念不熟、看不懂題目、用猜的），也可以寫一句想對自己說的話。這些只有你看得到；想問爸爸的題，勾「👀 給爸爸看」，家人才看得到你寫的原因和那句話。') +
-    p('📷 <b>拍錯題</b>：紙本考卷、講義上答錯的題，在燈塔按「拍照」，先選科目再拍。AI 會讀出題目、你寫的答案和正確答案，分好題型（國文像字音字形、修辭、文意理解；英文像時態、片語、閱讀），你確認、勾好要收的題，它們就變成漂流瓶，明天開始漂回來出類題。讀錯的字可以直接改；照片上看不到答案時，AI 會自己解，請你對一下。收進一題 +5 經驗值，一天最多算 10 題，一天最多拍 10 張。') +
+    p('📷 <b>拍錯題</b>：紙本考卷、講義上答錯的題，在燈塔按「拍照」，先選科目再拍。AI 會讀出題目、你寫的答案和正確答案，分好題型（國文像字音字形、修辭、文意理解；英文像時態、片語、閱讀），你確認、勾好要收的題，它們就變成漂流瓶，明天開始漂回來出類題。讀錯的字可以直接改；照片上看不到答案時，AI 會自己解，請你對一下。收進一題 +5 經驗值，每天的前 10 題有經驗值；超過 10 題還是會收進海灘，只是不加經驗值。照片想拍幾張都可以。') +
     p('🧭 <b>錯題類型</b>：燈塔會整理你最常錯哪一類題。按「練一題」，會照你收集的這一類錯題出一題新題，算在每天 ' + XQ_DAILY + ' 題挑戰裡，答對一樣有經驗值和島幣，答錯也會變成漂流瓶。') +
     p('紙本考卷檢討的紙船、親子船也停在燈塔的小碼頭。燈塔二樓的航海日誌（學習歷程）還在整修，之後會開放。') +
     p('👀 <b>再看一眼</b>：變成燈籠的題會當老朋友漂回來；那時沒答到的，會列在燈室的「再看一眼」，最多 5 題。燈籠不會變回瓶子，一週後會再漂回來，答到了就不再列。') +
