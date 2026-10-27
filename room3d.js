@@ -26,7 +26,7 @@
     t.putImageData(d, 0, 0); g.drawImage(c, 0, 0);
   }
 
-  let renderer, scene, camera, controls, clock, container, content, visitorSp;
+  let renderer, guard = null, scene, camera, controls, clock, container, content, visitorSp;
   let running = false, signature = '', t = 0;
   const std = (color, extra) => new THREE.MeshStandardMaterial(Object.assign({ color, flatShading: true, roughness: 0.9, metalness: 0 }, extra));
   const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
@@ -153,6 +153,7 @@
     const dt = CALM ? 0 : Math.min(clock.getDelta(), 0.1); t += dt;
     if (visitorSp) visitorSp.position.y = 0.95 + Math.abs(Math.sin(t * 2.2)) * 0.18;
     controls.update(); renderer.render(scene, camera);
+    if (guard) guard.frame();
     requestAnimationFrame(loop);
   }
   function mount(el, opts) {
@@ -175,6 +176,7 @@
       lamp = new THREE.PointLight(0xffd59a, 0.35, 14); lamp.position.set(0, 4, 0); scene.add(lamp);
       window.addEventListener('resize', resize);
       clock = new THREE.Clock();
+      if (window.FpsGuard) guard = FpsGuard.create({ renderer });
     }
     el.appendChild(renderer.domElement);
     resize();

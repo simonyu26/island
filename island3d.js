@@ -52,7 +52,7 @@
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
   // v2.22 畫質：高畫質開陰影、海浪細一點（舊手機可以在「更多」關掉）；色調映射和圓角方塊都開
   const HQ = (() => { try { const v = localStorage.getItem('island3dHQ'); if (v) return v === '1'; } catch (e) {} return !(navigator.deviceMemory && navigator.deviceMemory < 4); })();
-  let shadowDirty = true, lastShadow = 0, foam = null, capeFoam = null, waterY = -0.6, tideAt = 0;
+  let guard = null, shadowOn = true, shadowDirty = true, lastShadow = 0, foam = null, capeFoam = null, waterY = -0.6, tideAt = 0;
 
   // ---------- 小工具 ----------
   // 顏色都用 sRGB 的 16 進位寫，轉成線性空間再算光（輸出是 sRGB＋ACES 色調映射）
@@ -1547,7 +1547,7 @@
     const realDt = Math.min(clock.getDelta(), 0.1), dt = CALM ? 0 : realDt, now = CALM ? 0 : performance.now() / 1000;
     animateSky(dt);
     animateSea(now);
-    if (HQ && (shadowDirty || popping.length || now - lastShadow > 1)) { if (shadowDirty) shadowize(); renderer.shadowMap.needsUpdate = true; lastShadow = now; shadowDirty = false; }
+    if (HQ && shadowOn && (shadowDirty || popping.length || now - lastShadow > 1)) { if (shadowDirty) shadowize(); renderer.shadowMap.needsUpdate = true; lastShadow = now; shadowDirty = false; }
     spinners.forEach(sp => { sp.m.rotation[sp.axis] += sp.v * dt; });
     if (ferryBoat) { ferryBoat.position.y = -0.45 + Math.sin(now * 1.3) * 0.05; ferryBoat.rotation.z = Math.sin(now * 0.9) * 0.03; }
     popping = popping.filter(p => {
@@ -1559,6 +1559,7 @@
     });
     controls.update();
     renderer.render(scene, camera);
+    if (guard) guard.frame();
     requestAnimationFrame(loop);
   }
 
@@ -1583,6 +1584,7 @@
       window.addEventListener('resize', resize);
       clock = new THREE.Clock();
       buildStatic();
+      if (window.FpsGuard) guard = FpsGuard.create({ renderer, hasShadow: HQ, shadows: on => { shadowOn = on; sun.castShadow = HQ && on; shadowDirty = true; } });
     }
     setEnvironment(envNow);
     if (ctx.season && ctx.season !== seasonNow) setSeason(ctx.season);

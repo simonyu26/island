@@ -172,6 +172,7 @@
     try {
       if (!window.THREE) await loadScript('three.min.js');
       if (!THREE.OrbitControls) await loadScript('OrbitControls.js');
+      if (!window.FpsGuard) await loadScript('fpsguard.js').catch(() => {});   // 載不到就照原本的畫質
       if (!window.Island3D) await loadScript('island3d.js');
       el.querySelector('.loading').remove();
       const holder = document.createElement('div'); holder.style.cssText = 'position:absolute;inset:0'; el.appendChild(holder);
@@ -218,6 +219,7 @@
     try {
       if (!window.THREE) await loadScript('three.min.js');
       if (!THREE.OrbitControls) await loadScript('OrbitControls.js');
+      if (!window.FpsGuard) await loadScript('fpsguard.js').catch(() => {});   // 載不到就照原本的畫質
       if (!window.Room3D) await loadScript('room3d.js');
       el.innerHTML = '';
       Room3D.mount(el, { wall: room.wall, accent: room.accent || '#741b47', night: phaseOf(taipeiHour()) === 'night', items: room.items || [], visitor: null });
