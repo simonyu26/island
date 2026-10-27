@@ -311,11 +311,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.45.1';
+const APP_VERSION = '2.46';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，玉山聚會所蓋在山頂（12 月開門），從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.46', date: '2026-10-27', items: ['📅 照計畫完成一項的經驗值，從 +10 提高到 +25（做了一部分從 +5 提高到 +12，Boss 項目一樣雙倍）。讀完一項通常要花不少時間，比做一題久很多，所以多給一些。上週（10/19）起完成的項目都照新的算，經驗值和可以換的島幣會多一些。'] },
   { v: '2.45.1', date: '2026-10-27', minor: true, items: ['🗼 燈塔不再顯示海灘上一共有幾個瓶子，只告訴你今天漂回來幾個'] },
   { v: '2.45', date: '2026-10-28', items: ['📜 瓶子第三次漂回來時，改放一題同單元、你還沒做過的會考考古題。答對變成燈籠，多一個「考古題也答對」；沒答對的話，原本的瓶子留著、再答對一次就好，這題另外變成新瓶子。', '⭐ 已補強的單元，最近 5 題至少對 4 題，會多一顆星。'] },
   { v: '2.44.1', date: '2026-10-27', minor: true, items: ['🗼 燈室的單元重新整理過：生物的「神經與內分泌」改叫「感應與協調」，植物的感應也算在裡面；另外有十幾題考古題換到更準的單元，有些從生物、地科換到理化'] },
@@ -633,6 +634,13 @@ function replyRow(s) {
   if (r) return `<div class="muted" style="font-size:12px;margin-top:4px">你回了 ${esc(r)}</div>`;
   return `<div class="row" style="gap:4px;margin-top:4px">${KZ_REPLY.map(e => `<button class="ghost" style="padding:2px 8px;font-size:16px" aria-label="回 ${e}" onclick="kzSave('${s}',{reply:'${e}'});softRender()">${e}</button>`).join('')}</div>`;
 }
+// v2.46 計畫格子經驗值（Simon 2026-10-27）：讀完一項通常要 40 分鐘，完成一格 +10 → +25、部分完成 +5 → +12（Boss 照樣雙倍）。
+// 依週生效：2026-10-19 那一週起用新值（追補至少 3 天），以前的週照舊，不會整個重算。後端 Coins.gs 的 ledgerPlanXp_ 要一樣。
+const PLAN_XP_FROM = '2026-10-19';
+function planXp(u, boss, start) {
+  const x = start >= PLAN_XP_FROM ? Math.floor(u) * 25 + Math.round((u % 1) * 24) : u * 10;
+  return x * (boss ? 2 : 1);
+}
 function derive(S) {
   const save = S.save || {};
   const cfg = save.config || null;
@@ -657,7 +665,7 @@ function derive(S) {
       if (!it || !(u > 0)) return;
       any = true;
       const g = GROUP[it.subject] || it.subject;
-      wxp += u * 10 * (isBoss(it.name) ? 2 : 1);
+      wxp += planXp(u, isBoss(it.name), start);
       if (pts[g] !== undefined) pts[g] += u;
       ptsBy[it.subject] = (ptsBy[it.subject] || 0) + u;
       wp[it.subject] = (wp[it.subject] || 0) + u;
@@ -5692,13 +5700,13 @@ function viewGuide() {
       <li>接著排下週的計畫，拍照或自己加都可以。</li></ol>` +
     p('<b>達成率</b>＝計畫的次數裡完成了幾次。例如英文單字排了 5 次、做了 4 次，就是 4/5；計畫外多做的不會拉低達成率，還是照樣蓋房子。') +
     p('週檢討表的顏色會自動塗好：排了幾次就做滿幾次是深色，做了一部分是中間色，沒做是淺色。計畫外做過的項目也會塗上。'))}
-  ${sec('⭐', '經驗值怎麼算', `<table>${row('完成一次', '+10')}${row('部分完成一次', '+5')}${row('Boss 項目（歷屆、模卷、學測題）', '雙倍')}
+  ${sec('⭐', '經驗值怎麼算', `<table>${row('完成一次', '+25')}${row('部分完成一次', '+12')}${row('Boss 項目（歷屆、模卷、學測題）', '雙倍')}
       ${row('週末確認這週', '+20')}${row('計畫達成一半／80%／全部', '+10／+25／+40')}${row('故事任務答對／答錯', '+15／+5')}${row('挑戰任務答對（基礎／中級／進階）', '+10／+15／+20')}${row('記錄一場 Boss 戰', '+50')}${row('發現一條跨科連結', '+15')}${row('燈塔撿瓶子答對', '基礎 +10、中級 +15、進階 +20')}${row('燈塔撿瓶子沒答對', '+3')}${row('拍照收錯題（一天最多算 10 題，不換島幣）', '每題 +5')}${row('運動蓋一章', '+5')}</table>` +
-    p('同一項做幾次就算幾次，例如英文單字做了 5 天就是 5 × 10 = 50。') +
+    p('同一項做幾次就算幾次，例如英文單字做了 5 天就是 5 × 25 = 125。') +
     p('經驗值會讓島嶼升級。全部達成就是 <b>FULL COMBO</b>！'))}
   ${sec('⚔️', 'Boss 戰', p('寫完模擬考或一整份考古題後，到「⚔️ 大考」記錄各科等級。島民頭上的等級，只看最近一次 Boss 戰的結果。') +
     p('就像音遊重打同一首歌，你只跟上一次的自己比。'))}
-  ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：到商店最上面按「兌換」（點首頁的「🪙 島幣」也會到商店）。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚，一般一週大約賺 10 到 15 枚。挑戰任務答對另外直接給 1～3 枚。') +
+  ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：到商店最上面按「兌換」（點首頁的「🪙 島幣」也會到商店）。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚，一般一週大約賺 25 到 30 枚。挑戰任務答對另外直接給 1～3 枚。') +
     p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。') +
     p('🧺 <b>素材櫃</b>：常見的素材一個 🪙 2，一天最多買 5 個。稀有素材（抹茶粉、蜂蜜、紅豆、糯米、螢石、柴魚）和智慧島的珍品不賣，要讀書才拿得到。') +
     p('💰 <b>收購</b>：屋台做好的料理可以賣給商店，一般料理 🪙 3～5、珍珠奶茶和溫泉蛋 🪙 8。一天最多賣得 🪙 10，而且不超過當天讀書拿到的素材數。賣掉的料理不會影響島民的交情。'))}
@@ -5867,7 +5875,7 @@ function viewSetup() {
           <input class="grow" data-f="roommates.${sub}.name" value="${esc(c.roommates[sub].name)}" placeholder="名字"></div>
           <div class="row" style="margin-top:4px;padding-left:44px;gap:4px"><input class="grow" data-f="roommates.${sub}.personality" maxlength="60" value="${esc(c.roommates[sub].personality || '')}" placeholder="個性（選填）">
           <input class="grow" data-f="roommates.${sub}.speech" maxlength="60" value="${esc(c.roommates[sub].speech || '')}" placeholder="說話方式（選填）"></div>${upl('sub:' + sub)}`).join('')}` : ''}</div>`; }).join('')}</div>
-  <div class="card"><h3>4. 島嶼商店</h3><div class="muted">你想用島幣換什麼？價格你自己訂，再跟爸媽討論。一般一週大約賺 10 到 15 枚。</div>
+  <div class="card"><h3>4. 島嶼商店</h3><div class="muted">你想用島幣換什麼？價格你自己訂，再跟爸媽討論。一般一週大約賺 25 到 30 枚。</div>
     <div id="shopRows">${c.shop.map((x, i) => `<div class="row" style="margin-top:6px"><input class="grow" data-f="shop.${i}.name" value="${esc(x.name)}" placeholder="例如：追劇一集"><input style="width:80px" type="number" min="1" data-f="shop.${i}.price" value="${x.price}"></div>`).join('')}</div>
     <div style="margin-top:8px"><button class="ghost" type="button" id="addShop">＋ 新增商品</button></div></div>
   <div class="row"><button id="saveCfg" class="grow">${D.cfg ? '儲存' : '開島！'}</button>${D.cfg ? `<button class="ghost" onclick="go('more')">取消</button>` : ''}</div>`;
