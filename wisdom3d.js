@@ -52,7 +52,7 @@
     const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
     return (t = new THREE.CanvasTexture(cv)); }; })();
 
-  let renderer, scene, camera, controls, clock, container, opts = {}, running = false, t = 0, framed = false;
+  let renderer, guard = null, scene, camera, controls, clock, container, opts = {}, running = false, t = 0, framed = false;
   let hemi, sun, sky, sea, seaBase, foam, stars, moon, sunBall, rain, mist = [], steam = [], glass = [], lanterns = [], spin = [];
   let labelLayer, teachers = [], rings = [], boat, signature = '', envSig = '';
   const WY = -0.35;   // 海面高度
@@ -339,6 +339,7 @@
     rings.forEach(r => { const k = 1 + (Math.sin(t * 2.4) + 1) * 0.12; r.scale.set(k, k, 1); r.material.opacity = 0.55 + Math.sin(t * 2.4) * 0.3; });
     if (rain.visible) { const ra = rain.geometry.attributes.position.array; for (let i = 1; i < ra.length; i += 3) { ra[i] -= dt * 14; if (ra[i] < WY) ra[i] += 16; } rain.geometry.attributes.position.needsUpdate = true; }
     controls.update(); renderer.render(scene, camera);
+    if (guard) guard.frame();
     requestAnimationFrame(loop);
   }
   function mount(el, o) {
@@ -367,6 +368,7 @@
       renderer.domElement.addEventListener('pointerup', onUp);
       window.addEventListener('resize', resize);
       clock = new THREE.Clock();
+      if (window.FpsGuard) guard = FpsGuard.create({ renderer, hasShadow: HQ, shadows: on => { sun.castShadow = HQ && on; } });
     }
     el.appendChild(renderer.domElement);
     resize(); setEnvironment();
