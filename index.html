@@ -2883,7 +2883,7 @@ async function reviewBottle(id) {
     const src = b.item ? { q: b.item.q, o: b.item.o, a: b.item.a, ex: b.item.ex }
       : b.rec.src === 'photo' ? {}
       : b.rec.bank ? { img: await examImage(b.rec.img), ctx: await examImage(b.rec.ctx) } : {};
-    const fallback = await pickBank(b.tier, b.lane);
+    await loadUnits(); const fallback = await pickBank(b.tier, laneOf(b.rec, b.lane));   // v2.39 換了分科的題，備用考古題照新分科找
     await loadUnits(); src.unit = unitOf(b.rec, b.id) || ''; src.lane = laneOf(b.rec, b.lane);   // v2.36：後端照單元找觀念小卡（v2.39 換了分科的考古題用新分科）
     S = await call('reviewQuest', id, src, fallback); D = derive(S);
   } catch (e) { toast('撿瓶子失敗：' + (e.message || e)); }
