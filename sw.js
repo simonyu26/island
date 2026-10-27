@@ -1,5 +1,5 @@
 // 快取 App 外殼，讓小島打開更快；資料仍以伺服器為準
-const CACHE = 'island-v85';
+const CACHE = 'island-v86';
 // 不會改版的檔案（函式庫、考古題圖片）照一般快取，不用每次問伺服器；exam/units.json 修標籤、exam/cards.json 加審過的觀念小卡會改版，要每次確認
 const FIXED = /\/exam\/(?!(units|cards)\.json$)|three\.min\.js$|OrbitControls\.js$|qrcode\.js$|\.(png|jpe?g|webp)$/;
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png'];
