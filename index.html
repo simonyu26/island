@@ -307,11 +307,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.37.4';
+const APP_VERSION = '2.38';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.38', date: '2026-10-27', items: ['💊 首頁的おつとめ板多了「吃藥」：早上和晚上各問一聲，吃了就按一下；時間可以自己改，也可以加到 Google 日曆每天提醒。只記有沒有勾，預設只有你自己看得到。'] },
   { v: '2.37.4', date: '2026-10-27', minor: true, items: ['🔭 愛因斯坦講話更好玩了。'] },
   { v: '2.37.3', date: '2026-10-27', items: ['🔭 愛因斯坦第 7～13 講上架，小苗的課也全部到齊了。'] },
   { v: '2.37.2', date: '2026-10-27', items: ['🪶 智慧島孔明和阿律的第 7～13 講上架了。', '♨️ 小苗的課換了順序：第 2 講先出去走一走。'] },
@@ -986,6 +987,14 @@ const BOARD = [
       const n = D.exWeeks[mondayOf(S.today)] || 0; return exToday() ? { t: '今天蓋章了', c: 'done' } : n >= EX_GOAL ? { t: '本週達標 ' + n + '／' + EX_GOAL, c: 'done' } : { t: '本週 ' + n + '／' + EX_GOAL + ' 章', c: 'todo' }; },
     todo() { return !exToday() && (D.exWeeks[mondayOf(S.today)] || 0) < EX_GOAL; },
     body() { return exerciseMini(); } },
+  { key: 'med', ic: '💊', name: '吃藥', on: () => !isFamily() || medShared(),
+    st() { const m = medDay(S.today), w = medNow(), c = medCfg(), h = new Date().getHours();
+      if (w && !m[w] && !isFamily()) return { t: MED_NAME[w] + '的藥吃了嗎？', c: 'todo' };
+      // 早晚分開：勾了「早上 ✓」；時段過了沒勾，淡淡寫「早上 可補勾」；還沒到的不寫（審查意見 13）
+      const parts = MED_SLOTS.map(k => m[k] ? MED_NAME[k] + ' ✓' : h >= c[k][1] && !isFamily() ? MED_NAME[k] + ' 可補勾' : '').filter(Boolean);
+      return { t: parts.join('・') || '還沒到時間', c: MED_SLOTS.every(k => m[k]) ? 'done' : 'info' }; },
+    todo() { const w = medNow(); return !isFamily() && !!w && !medDay(S.today)[w]; },
+    body() { return medCard(); } },
   { key: 'paper', ic: '⛵', name: '紙本檢討 <small class="muted">可選</small>', go: 'paper',
     st() { const n = D.paperSessions.filter(x => x.date === S.today); return n.length ? { t: '今天放了 ' + n.map(x => x.kind === 'parent' ? '親子船' : '紙船').join('、'), c: 'done' } : { t: '檢討完放一艘', c: 'info' }; },
     todo() { return false; } }
@@ -1343,6 +1352,46 @@ function exerciseMini() {
     <button class="ghost" style="width:100%;margin-top:8px" onclick="go('walk')">${moveActive() ? '去步道看計時 ›' : '去海邊步道（運動計時）›'}</button>`;
 }
 
+/* --- 吃藥（v2.38）：med:日期 = { am, pm }（勾的時間）；設定 med = { am: [開始, 結束], pm: [開始, 結束], share }
+   只存有沒有勾、幾點勾，不存藥名劑量；不送 AI、不進每日訊息和燈塔的話；家人碼要她打開 share 才看得到（後端 medFamily_） --- */
+const MED_SLOTS = ['am', 'pm'], MED_NAME = { am: '早上', pm: '晚上' }, MED_DEFAULT = { am: [7, 10], pm: [19, 22] };
+function medCfg() { const c = S.save.med || {}; return { am: c.am || MED_DEFAULT.am, pm: c.pm || MED_DEFAULT.pm, share: !!c.share }; }
+function medShared() { return !!(S.save.med && S.save.med.share); }
+function medDay(date) { return S.save['med:' + date] || {}; }
+function medNow() { const h = new Date().getHours(), c = medCfg(); return MED_SLOTS.find(k => h >= c[k][0] && h < c[k][1]) || ''; }
+function medHour(h) { return (h < 12 ? '早上 ' : '晚上 ') + (h % 12 || 12) + ' 點'; }
+function medCal(k) {
+  const c = medCfg(), h = String(c[k][0]).padStart(2, '0'), d = S.today.replace(/-/g, '');
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('💊 ' + MED_NAME[k]) + '&dates=' + d + 'T' + h + '0000/' + d + 'T' + h + '1000&ctz=Asia/Taipei&recur=' + encodeURIComponent('RRULE:FREQ=DAILY');
+}
+function medCard() {
+  const m = medDay(S.today), c = medCfg();
+  if (isFamily()) return `<div class="muted">${MED_SLOTS.map(k => MED_NAME[k] + (m[k] ? ' ✓ ' + hhmm(m[k]) : '：還沒勾')).join('　')}</div>`;
+  const hours = (k, i) => `<select onchange="medSetHour('${k}', ${i}, this.value)" style="width:auto">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${c[k][i] === h ? 'selected' : ''}>${h}:00</option>`).join('')}</select>`;
+  return `<div class="row" style="gap:8px">${MED_SLOTS.map(k => m[k]
+      ? `<button class="ghost grow" onclick="medTap('${k}')">💊 ${MED_NAME[k]} ✓ ${hhmm(m[k])}</button>`
+      : `<button class="grow" onclick="medTap('${k}')">💊 ${MED_NAME[k]}的吃了</button>`).join('')}</div>
+    <div class="muted" style="margin-top:6px;font-size:13px">吃了就按一下，時間過了也可以補勾。按錯了再按一次就取消。</div>
+    <details style="margin-top:8px"><summary class="muted">⚙️ 提醒時間和手機提醒</summary>
+      ${MED_SLOTS.map(k => `<div class="row" style="margin-top:6px;gap:6px"><span>${MED_NAME[k]}</span>${hours(k, 0)}<span>到</span>${hours(k, 1)}</div>`).join('')}
+      <div class="muted" style="margin-top:6px;font-size:13px">這段時間打開小島，おつとめ板會問一聲。小島沒打開就不會叫你，要準時提醒，可以用手機的鬧鐘，或加到 Google 日曆（每天重複）：</div>
+      <div class="row" style="margin-top:6px;gap:6px">${MED_SLOTS.map(k => `<a class="ghost" style="padding:6px 10px;border-radius:8px" href="${medCal(k)}" target="_blank" rel="noopener">📅 ${MED_NAME[k]} ${c[k][0] % 12 || 12}:00</a>`).join('')}</div>
+      <label class="row" style="margin-top:10px;gap:6px;align-items:center"><input type="checkbox" style="width:auto" ${c.share ? 'checked' : ''} onchange="medSetShare(this.checked)"> 讓爸爸也看得到今天的吃藥紀錄</label>
+      <div class="muted" style="font-size:12px">爸爸只會看到有沒有勾、幾點勾，看不到別的。隨時可以關。</div></details>`;
+}
+function medTap(k) {
+  const m = Object.assign({}, medDay(S.today)), on = !m[k];
+  if (on) m[k] = Date.now(); else delete m[k];
+  S.save['med:' + S.today] = Object.keys(m).length ? m : null;
+  queueSave('med:' + S.today, 'saveMed', S.today, k, on);
+  toast(on ? '💊 記下了' : '取消了');
+  D = derive(S); softRender();
+}
+function medPut(c) { S.save.med = c; queueSave('med', 'saveMedCfg', c); D = derive(S); softRender(); }
+function medSetHour(k, i, v) { const c = medCfg(); c[k] = c[k].slice(); c[k][i] = Number(v);
+  if (c[k][1] <= c[k][0]) return toast('結束要比開始晚喔'), softRender();
+  medPut(c); }
+function medSetShare(on) { const c = medCfg(); c.share = !!on; medPut(c); toast(on ? '爸爸看得到了' : '只有你自己看得到'); }
 /* --- 郵便受け：小島更新、家人的明信片、邀請、爸爸的回覆都寄到這裡，首頁右上角亮紅點 --- */
 function newsItems() {
   const seen = local.get('islandSeenVersion');
@@ -1919,7 +1968,7 @@ const LANTERN_REWARDS = [
 ];
 const WISDOM_GRADS = [
   { book: 'kongming', id: 'wd-fan', z: 'wall', ic: '🪶', name: '孔明的羽扇' },
-  { book: 'xiaomiao', id: 'wd-oke', ic: '🛁', name: '小苗的檜木澡桶' },
+  { book: 'xiaomiao', id: 'wd-oke', ic: '🪣', name: '小苗的檜木湯桶' },
   { book: 'alu', id: 'wd-typer', ic: '⌨️', name: '阿律的打字機' },
   { book: 'einstein', id: 'wd-scope', z: 'out', ic: '🔭', name: '愛因斯坦的航海望遠鏡' }];
 function wisdomGrads() { return WISDOM_GRADS.filter(g => Object.keys(wisdomDone(g.book)).length >= 13).map(g => g.id); }
@@ -5382,6 +5431,7 @@ const WHO_SEES = [
   ['如果 AI 覺得你寫給老師或燈塔的話讓人擔心，會寄信請爸爸關心你（信裡不會有你寫的字）', '✅', '爸爸收到一封信', '—'],
   ['分享的日めくり', '✅', '✅', '✅'],
   ['喝水紀錄', '✅', '—', '—'],
+  ['吃藥紀錄（只有勾了沒、幾點勾的）', '✅', '你打開才有，只給爸爸', '—'],
   ['大考成績和等級', '✅', '✅', '—'],
   ['燈室「下週的航線」：學習顧問（AI）的建議、爸爸的話', '✅', '只有爸爸', '—'],
   ['島的樣子、島名、等級、島民和家的擺設', '✅', '✅', '✅'],
@@ -5390,7 +5440,7 @@ function privacyCard() {
   return `<div class="card"><h3>🔐 誰看得到什麼</h3>
     <div style="overflow-x:auto"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人碼</th><th>訪客</th></tr>
       ${WHO_SEES.map(r => `<tr><td style="text-align:left;white-space:normal">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div>
-    <div style="margin-top:8px;font-size:13px">沒分享的日めくり和燈塔的話，家人在 App 裡看不到。這些資料存在爸爸管理的試算表裡，所以爸爸技術上打得開；他答應過，不會去讀你沒分享的內容。有疑問，隨時可以直接問爸爸。</div>
+    <div style="margin-top:8px;font-size:13px">沒分享的日めくり、燈塔的話和吃藥紀錄，家人在 App 裡看不到。這些資料存在爸爸管理的試算表裡，所以爸爸技術上打得開；他答應過，不會去讀你沒分享的內容。有疑問，隨時可以直接問爸爸。</div>
     <div class="muted" style="margin-top:6px;font-size:12px">你寫給智慧島老師和燈塔的一句話，會交給 AI 產生回覆；AI 不會把內容告訴家人。每週檢討和大考成績，爸爸會交給 AI 學習顧問分析讀書方法。家人碼只能看、寄明信片、送書和鼓勵卡，不能改你的紀錄。漂流瓶要按「給爸爸看」才算分享。訪客只看得到你確認過的那張邀請裡的快照；連續週數要發邀請時有勾才給看；邀請到期或收回就看不到。用到 AI 的功能（拍照讀計畫和錯題、出題、講解、島民的話）會把那一次的內容送到 Google 的 Gemini 產生回答。</div>
     <button class="ghost" style="width:100%;margin-top:10px" onclick="logoutPhone()">🚪 登出這支手機</button>
     <div class="muted" style="margin-top:4px;font-size:12px">清掉這支手機上的配對碼和存著的資料。島上的紀錄都還在，之後輸入配對碼就能回來。</div></div>`;
@@ -5502,6 +5552,7 @@ function viewGuide() {
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
     p('拿到的 🏅 徽章也掛在家裡，在最下面。'))}
   ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎻 上音樂課、練樂器也算：在「我的家」按「開始練習」，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，練多久都算。藝文練習不會蓋運動的章，運動和練習一次只能開一個計時。'))}
+  ${sec('💊', '吃藥', p('首頁「今日のおつとめ」有一行「💊 吃藥」。早上和晚上各有一段時間（一開始是早上 7～10 點、晚上 7～10 點，可以自己改），這段時間打開小島，它會問一聲；吃了就按一下。時間過了也可以補勾，按錯再按一次就取消。補勾只是補記錄；忘了吃要不要補吃，請照醫師或藥師說的做。') + p('這裡不給綠點、島幣或經驗值，也不算連續天數，只是幫你記得。小島沒打開不會叫你，要準時提醒，可以用手機鬧鐘，或在設定裡按「📅 加到 Google 日曆」。') + p('只記有沒有勾、幾點勾的，不記吃什麼藥，也不會送給 AI。預設只有你自己看得到；想讓爸爸看到，可以在設定裡打開，隨時可以關。'))}
   ${sec('🥤', '喝水', p('在「我的家」的喝水卡按 +100cc、+250cc 或 +500cc，喝了多少就記多少。每 ' + WATER_CUP + 'cc（大約一杯）+' + WATER_GREEN + ' 🌱 綠點。') + p('一天最多算 ' + WATER_CAP + 'cc 的綠點，再喝還是可以記，只是不加綠點，水不是喝越多越好。' + WATER_WIN + ' 分鐘內最多記 ' + WATER_MAX + 'cc，按錯了可以按 ✕ 刪掉今天的那筆。') + p('喝水的紀錄只有你自己看得到，家人和訪客都看不到。'))}
   ${sec('🏃', '運動集章卡', p('首頁「今日のおつとめ」的「🏃 運動」那一行，或海邊步道頁的集章卡，就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
     p('每蓋一章 +5 經驗值，島的海邊會多鋪一段木棧道，每三章多一盞燈籠。一週（週一到週日）集滿 3 章，🪙 +3。') +
@@ -5547,7 +5598,7 @@ function viewGuide() {
     p('每一講都是四步：聽故事、你來選、搬到你的生活、寫一句。最後寫的那一句交給老師，老師會回你一句話，集章冊就蓋一個章。') +
     p('<b>每天可以上一講</b>，同一位老師<b>每週一講</b>（週一重新算），所以四位老師剛好一週各上一次，不用急。上過的課可以在小屋或集章冊回看，也會擺到書店的「你的書架」上。') +
     p('渡船屋可以請一位主人：名字、樣子、個性都由你決定，他會幫你開船，每天跟你說一句話。') +
-    p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木澡桶、阿律的打字機、愛因斯坦的航海望遠鏡。不用島幣，在我的家的家具店最下面可以擺出來。')) : ''}
+    p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木湯桶、阿律的打字機、愛因斯坦的航海望遠鏡。不用島幣，在我的家的家具店最下面可以擺出來。')) : ''}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
   ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊節氣、天氣和生活小事，有的會關心你；很久沒去找他，他會說想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性或說話方式。島民家裡的道謝和島上消息，也是島民每天照自己的口吻寫的。') +
     p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
