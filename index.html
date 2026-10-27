@@ -33,6 +33,10 @@
            background: var(--plum); color: #fff; }
   button.ghost { background: var(--plum-light); color: var(--plum); }
   button:disabled { opacity: .5; cursor: default; }
+  .floors { display: flex; gap: 6px; margin-bottom: 10px; }
+  .floors button { flex: 1; padding: 8px 4px; font-size: 14px; line-height: 1.25; background: var(--plum-light); color: var(--plum); }
+  .floors button small { display: block; font-size: 11px; opacity: .8; }
+  .floors button.on { background: var(--plum); color: #fff; opacity: 1; }
   input, select, textarea { font: inherit; padding: 8px 10px; border: 1.5px solid var(--plum-light);
            border-radius: 10px; background: #fff; color: var(--ink); width: 100%; }
   textarea { min-height: 60px; }
@@ -307,11 +311,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.41';
+const APP_VERSION = '2.42';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.42', date: '2026-10-27', items: ['🗼 燈塔最上面多了一列樓層：1F 海灘、2F 航海日誌、3F 燈室、碼頭，一按就上樓。還在海上漂的瓶子、燈籠和家具收起來了，點標題才打開，畫面短很多。'] },
   { v: '2.41', date: '2026-10-27', items: ['🧺 商店多了素材櫃：常見素材一個 🪙 2，一天可以買 5 個，買了放進竹籃，到屋台做料理', '💰 做好的料理可以賣給商店：一天最多賣得 🪙 10，也不超過當天讀書拿到的素材數'] },
   { v: '2.40.4', date: '2026-10-27', minor: true, items: ['📷 拍錯題的照片一天不限張數了；每天的前 10 題有經驗值，超過的還是會收進海灘'] },
   { v: '2.40.3', date: '2026-10-27', items: ['📷 拍照收錯題現在一天可以算到 10 題了！這幾天超過 5 題的那 5 題，經驗值 +25 已經補上。謝謝你這麼認真把這些題目收好。'] },
@@ -2453,7 +2458,7 @@ function viewPaper() {
   const used = k => D.paperSessions.some(x => x.date === S.today && x.kind === k);
   const gain = f.lanes.length ? Math.min(PAPER_MAX, 1 + f.lanes.length) : 0;
   const list = D.paperSessions.slice().reverse().slice(0, 20);
-  return `<div class="card"><h2>⛵ 紙船碼頭</h2><div class="muted">寫完紙本考卷或練習、檢討完錯題，就放一艘船。自己檢討是紙船，爸爸陪你檢討是親子船。船會停在燈塔的小碼頭。</div></div>
+  return `${lightFloors('paper')}<div class="card"><h2>⛵ 紙船碼頭</h2><div class="muted">寫完紙本考卷或練習、檢討完錯題，就放一艘船。自己檢討是紙船，爸爸陪你檢討是親子船。船會停在燈塔的小碼頭。</div></div>
     <div class="card">
       <div class="row" style="gap:6px">${[['self', '⛵ 紙船（自己檢討）'], ['parent', '🚢 親子船（和爸爸）']].map(k => `<button class="${f.kind === k[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" onclick="paperKeep();draft.paper.kind='${k[0]}';render()">${k[1]}</button>`).join('')}</div>
       <label style="margin-top:10px">這次檢討了哪幾科（可以多選）</label>
@@ -2618,6 +2623,12 @@ function lightCard() {
         ${kp ? `<div class="speech" style="font-size:14px;margin-top:6px"><b>${esc(kp.name)}</b>：${esc(say)}</div>` : ''}</div>
       <button class="ghost" onclick="go('light')">去燈塔</button></div></div>`;
 }
+// v2.42 燈塔的樓層列（Simon 2026-10-27：燈塔頁太長、上樓不明顯，最上方放一列到各樓層）
+function lightFloors(cur) {
+  const f = [['light', '1F', '🌊 海灘'], ['log', '2F', '📖 航海日誌'], ['lamp', '3F', '🔭 燈室'], ['paper', '', '⛵ 碼頭']];
+  return `<div class="floors">${f.map(([t, n, name]) => t === 'log' ? `<button disabled><small>${n}</small>${name}<small>整修中</small></button>`
+    : `<button class="${cur === t ? 'on' : ''}" ${cur === t ? 'disabled' : `onclick="go('${t}');window.scrollTo(0,0)"`}><small>${n || '岬角下'}</small>${name}</button>`).join('')}</div>`;
+}
 function viewLight() {
   if (!lighthouseName() && !isFamily()) {
     const v = draft.lightName != null ? draft.lightName : '';
@@ -2640,7 +2651,7 @@ function viewLight() {
       <div class="name grow"><b>${b.lantern && b.due <= S.today ? '老朋友・' : ''}${tagOf(b)}</b><div class="muted">${esc(b.label)}・${short(b.wrongAt)} ${b.guess ? '答對但有點猜' : '答錯'}${fam && !b.rv.share ? '' : why(b)}${b.rv.share ? '・👀 給爸爸看' : ''}</div></div>${btn || ''}</div>`;
   const say = (daily && daily.messages && daily.messages.lighthouse) || lightKeeperLine(st), intro = fam ? '' : placeIntro('lighthouse');
   const examLeft = Math.round((parseD(EXAM_DATES[0]) - parseD(S.today)) / 86400000);
-  return `<div class="card"><h2>🗼 ${esc(lightTitle())}</h2>
+  return `${lightFloors('light')}<div class="card"><h2>🗼 ${esc(lightTitle())}</h2>
       ${examLeft >= 0 ? `<div class="muted">⏰ 離會考還有 <b>${examLeft}</b> 天（${EXAM_DATES.map(short).join('、')}）</div>` : ''}
       ${intro || (kp ? `<div class="row" style="flex-wrap:nowrap;cursor:pointer" onclick="${fam ? '' : "openKeeper('lighthouse')"}"><span style="font-size:32px">${kpPic(kp)}</span>
         <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(say)}</div></div>`
@@ -2648,7 +2659,7 @@ function viewLight() {
       <div class="hud" style="margin-top:10px"><div><b>${st.sea}</b><span class="muted">🍶 海灘上的瓶子</span></div><div><b>${st.due}</b><span class="muted">🌊 今天漂回來</span></div><div><b>${st.lanterns}</b><span class="muted">🏮 放走的燈籠</span></div></div></div>
     ${(open && (open.review || open.practice)) || (!open && lastXq && (lastXq.review || lastXq.practice) && lastXq.at === S.today) ? xqCard(true) : ''}
     <div class="card"><h3>🌊 今天漂回來的瓶子</h3>
-      <div class="muted" style="margin-bottom:6px">撿起瓶子會出一題 AI 類題：考同一個觀念，但數字和情境都換過。答錯隔 1 天再漂回來；答對後隔 3 天、再答對隔 7 天，連續三次答對就變成紙燈籠放到海上。燈籠 3 週後會當「老朋友」漂回來一次，之後每個月一次，看看你還記不記得；答錯也不會變回瓶子。撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個。</div>
+      <details class="muted" style="margin-bottom:6px;font-size:13px"><summary>瓶子怎麼漂回來？</summary>撿起瓶子會出一題 AI 類題：考同一個觀念，但數字和情境都換過。答錯隔 1 天再漂回來；答對後隔 3 天、再答對隔 7 天，連續三次答對就變成紙燈籠放到海上。燈籠 3 週後會當「老朋友」漂回來一次，之後每個月一次，看看你還記不記得；答錯也不會變回瓶子。撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個。</details>
       ${due.length ? due.map(b => row(b, fam ? '' : `<button style="padding:6px 12px" onclick="event.stopPropagation();reviewBottle('${b.id}')" ${lightBusy || open || full ? 'disabled' : ''}>撿起來</button>`)).join('')
         : `<div class="muted">${room ? (st.sea ? '今天沒有瓶子漂回來。' : '海灘上還沒有瓶子。挑戰任務或故事任務答錯的題，會漂到這裡。') : '今天已經撿了 ' + REVIEW_DAILY + ' 個瓶子，明天再來。'}</div>`}
       ${lightBusy ? '<div class="muted" style="margin-top:6px">✍️ 守燈人正在打開瓶子、寫類題…（大約 10～20 秒）</div>' : full && due.length ? '<div class="muted" style="margin-top:6px">今天的 ' + XQ_DAILY + ' 題挑戰都做完了，明天再來撿。</div>' : ''}</div>
@@ -2657,16 +2668,11 @@ function viewLight() {
         <div class="muted">紙本考卷、講義上答錯的題拍下來（國文、英文最好用），AI 讀出題目，確認後變成漂流瓶，隔天一樣漂回來出類題。</div></div>
       <button onclick="openWrongScan()">拍照</button></div></div>`}
     ${wrongTypesCard(fam, open || full)}
-    ${later.length ? `<div class="card"><h3>🌫️ 還在海上漂的瓶子（${later.length}）</h3>${later.slice(0, 30).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.due)} 漂回</span>`)).join('')}</div>` : ''}
-    <div class="card"><h3>🎁 燈籠送的家具</h3><div class="muted">放走的紙燈籠累積起來，守燈人會送你燈塔風格的家具，不用島幣，送了就不會收回，可以擺在我的家。</div>
+    ${later.length ? `<details class="card"><summary><b>🌫️ 還在海上漂的瓶子（${later.length}）</b></summary>${later.slice(0, 30).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.due)} 漂回</span>`)).join('')}</details>` : ''}
+    <details class="card"><summary><b>🎁 燈籠送的家具</b><span class="muted">・${LANTERN_REWARDS.filter(f => st.lanterns >= f.lanterns).length}／${LANTERN_REWARDS.length} 件</span></summary><div class="muted" style="margin-top:6px">放走的紙燈籠累積起來，守燈人會送你燈塔風格的家具，不用島幣，送了就不會收回，可以擺在我的家。</div>
       <div class="furn">${LANTERN_REWARDS.map(f => { const has = st.lanterns >= f.lanterns;
-        return `<button class="${has ? 'has' : ''}" disabled><span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? '已經送到家了' : st.lanterns + '／' + f.lanterns + ' 盞'}</small></button>`; }).join('')}</div></div>
-    ${lanterns.length ? `<div class="card"><h3>🏮 放到海上的燈籠（${lanterns.length}）</h3>${lanterns.slice(0, 20).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.lantern)}</span>`)).join('')}</div>` : ''}
-    <div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>⛵ 燈塔的小碼頭</b><div class="muted">紙本考卷檢討完，放一艘紙船或親子船（${D.paperSessions.length} 艘停在這裡）</div></div>
-      <button class="ghost" onclick="go('paper')">去碼頭</button></div></div>
-    <div class="card"><div class="row" style="flex-wrap:nowrap"><span style="font-size:28px">🔭</span><div class="grow"><b>頂樓的燈室</b><div class="muted">大家會、你還沒會的題，跟一開始的自己比，時間花在哪，最常錯的原因。</div></div>
-      <button class="ghost" onclick="go('lamp')">上去看看</button></div></div>
-    <div class="card"><div class="muted">🔧 燈塔二樓的「航海日誌」（學習歷程）還在整修中，之後會開放。</div></div>
+        return `<button class="${has ? 'has' : ''}" disabled><span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? '已經送到家了' : st.lanterns + '／' + f.lanterns + ' 盞'}</small></button>`; }).join('')}</div></details>
+    ${lanterns.length ? `<details class="card"><summary><b>🏮 放到海上的燈籠（${lanterns.length}）</b></summary>${lanterns.slice(0, 20).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.lantern)}</span>`)).join('')}</details>` : ''}
     <div class="row">${fam ? '' : `<button class="ghost" onclick="renameLighthouse()">✏️ 改燈塔的名字</button>`}<button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 /* --- 燈室（v2.31，燈塔頂樓的學習分析）：只從現有存檔算，不存新資料、不給獎勵。家人碼四張都看得到，但瓶子上的原因和那一句話照舊要她按「給爸爸看」（Simon，2026-10-26） --- */
@@ -2796,7 +2802,7 @@ function viewLamp() {
     ${REASONS.map(r => { const v = d.why[r[0]], n = v.bottle + v.paper; return `<div style="margin-top:6px"><div class="row"><b class="grow">${r[1]}</b><span class="muted" style="font-size:12px">🍶 ${v.bottle}・⛵ ${v.paper}${d.whyN >= LAMP_MIN ? '・' + pctOf(n, d.whyN) + '%' : ''}</span></div>
       ${d.whyN >= LAMP_MIN ? lampBar(pctOf(n, d.whyN), 'var(--plum-mid)') : ''}</div>`; }).join('')}
     <div class="muted" style="font-size:12px;margin-top:6px">${d.whyN >= LAMP_MIN ? '一共記了 ' + d.whyN + ' 題。' : '已經記了 ' + d.whyN + ' 題，滿 ' + LAMP_MIN + ' 題再算比例。在瓶子上點「為什麼會錯」就會記進來。'}</div></div>`;
-  return `<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓。用${fam ? '她' : '你'}已經做過的題和紀錄，照照哪裡還沒會、時間花在哪裡。這裡不加分也不扣分。${fam ? '' : '家人碼也看得到燈室的四張卡；瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。'}</div>${greet}</div>
+  return `${lightFloors('lamp')}<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓。用${fam ? '她' : '你'}已經做過的題和紀錄，照照哪裡還沒會、時間花在哪裡。這裡不加分也不扣分。${fam ? '' : '家人碼也看得到燈室的四張卡；瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。'}</div>${greet}</div>
     ${advisorCard()}${unitCard}${lookCard}${easyCard}${selfCard}${invCard}${whyCard}
     <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
@@ -5670,7 +5676,7 @@ function viewGuide() {
     p('點一個瓶子可以看原題、記下為什麼會錯（一時看錯／算錯、觀念不熟、看不懂題目、用猜的），也可以寫一句想對自己說的話。這些只有你看得到；想問爸爸的題，勾「👀 給爸爸看」，家人才看得到你寫的原因和那句話。') +
     p('📷 <b>拍錯題</b>：紙本考卷、講義上答錯的題，在燈塔按「拍照」，先選科目再拍。AI 會讀出題目、你寫的答案和正確答案，分好題型（國文像字音字形、修辭、文意理解；英文像時態、片語、閱讀），你確認、勾好要收的題，它們就變成漂流瓶，明天開始漂回來出類題。讀錯的字可以直接改；照片上看不到答案時，AI 會自己解，請你對一下。收進一題 +5 經驗值，每天的前 10 題有經驗值；超過 10 題還是會收進海灘，只是不加經驗值。照片想拍幾張都可以。') +
     p('🧭 <b>錯題類型</b>：燈塔會整理你最常錯哪一類題。按「練一題」，會照你收集的這一類錯題出一題新題，算在每天 ' + XQ_DAILY + ' 題挑戰裡，答對一樣有經驗值和島幣，答錯也會變成漂流瓶。') +
-    p('紙本考卷檢討的紙船、親子船也停在燈塔的小碼頭。燈塔二樓的航海日誌（學習歷程）還在整修，之後會開放。') +
+    p('燈塔最上面有一列樓層：1F 是海灘（撿瓶子）、2F 是航海日誌（學習歷程，還在整修，之後會開放）、3F 是燈室，旁邊是紙船停靠的小碼頭，按一下就過去。還在海上漂的瓶子、放走的燈籠和燈籠送的家具平常收起來，點標題才打開。') +
     p('👀 <b>再看一眼</b>：變成燈籠的題會當老朋友漂回來；那時沒答到的，會列在燈室的「再看一眼」，最多 5 題。燈籠不會變回瓶子，一週後會再漂回來，答到了就不再列。') +
     p('📷 <b>收這場的錯題</b>：記完 Boss 戰，只要有一科不是 A++，會問你要不要把這場的錯題拍照收進燈塔海灘；按「先不用」就回小島。') +
     p('🔭 <b>燈室</b>（燈塔頂樓）：四張卡。①「大家會、你還沒會」：全國 60% 以上考生答對、你答錯、還沒變成燈籠的考古題，一次列 5 題，點了打開瓶子。②「跟一開始的自己比」：每一科做過的考古題，一開始和最近各一批的答對率，灰線是同一批題的全國平均，一科做滿 10 題才會顯示。③「時間花在哪裡」：最近 4 週有用計時器的分鐘、計畫完成點數、做過的考古題數。④「最常錯的原因」：漂流瓶和紙船填的錯因合計，滿 10 題才算比例。燈室不加分也不扣分。家人碼也看得到這四張卡，但瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。') +
