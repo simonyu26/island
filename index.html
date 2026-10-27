@@ -316,7 +316,7 @@ const APP_VERSION = '2.42.1';
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
-  { v: '2.42.1', date: '2026-10-27', items: ['🔭 燈室也變短了：正在補強、再看一眼、大家會你還沒會放在上面；已補強、跟一開始的自己比、時間花在哪裡、最常錯的原因收起來，點標題才打開。'] },
+  { v: '2.42.1', date: '2026-10-27', items: ['🔭 燈室也變短了：正在補強、再看一眼、大家會、你還沒會放在上面；已補強、跟一開始的自己比、時間花在哪裡、最常錯的原因收起來，點標題才打開。'] },
   { v: '2.42', date: '2026-10-27', items: ['🗼 燈塔最上面多了一列樓層：1F 海灘、2F 航海日誌、3F 燈室、碼頭，一按就過去。還在海上漂的瓶子、燈籠和家具收起來了，點標題才打開，畫面短很多。'] },
   { v: '2.41', date: '2026-10-27', items: ['🧺 商店多了素材櫃：常見素材一個 🪙 2，一天可以買 5 個，買了放進竹籃，到屋台做料理', '💰 做好的料理可以賣給商店：一天最多賣得 🪙 10，也不超過當天讀書拿到的素材數'] },
   { v: '2.40.4', date: '2026-10-27', minor: true, items: ['📷 拍錯題的照片一天不限張數了；每天的前 10 題有經驗值，超過的還是會收進海灘'] },
@@ -2806,7 +2806,7 @@ function viewLamp() {
     ${REASONS.map(r => { const v = d.why[r[0]], n = v.bottle + v.paper; return `<div style="margin-top:6px"><div class="row"><b class="grow">${r[1]}</b><span class="muted" style="font-size:12px">🍶 ${v.bottle}・⛵ ${v.paper}${d.whyN >= LAMP_MIN ? '・' + pctOf(n, d.whyN) + '%' : ''}</span></div>
       ${d.whyN >= LAMP_MIN ? lampBar(pctOf(n, d.whyN), 'var(--plum-mid)') : ''}</div>`; }).join('')}
     <div class="muted" style="font-size:12px;margin-top:6px">${d.whyN >= LAMP_MIN ? '一共記了 ' + d.whyN + ' 題。' : '已經記了 ' + d.whyN + ' 題，滿 ' + LAMP_MIN + ' 題再算比例。在瓶子上點「為什麼會錯」就會記進來。'}</div></details>`;
-  return `${lightFloors('lamp')}<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓，照照哪裡還沒會、時間花在哪裡。不加分也不扣分。下面收起來的卡，點標題就會打開。</div>${fam ? '' : '<details class="muted" style="font-size:13px;margin-top:4px"><summary>爸爸看得到哪些？</summary>家人碼也看得到燈室的卡；瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。</details>'}${greet}</div>
+  return `${lightFloors('lamp')}<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓，照照哪裡還沒會、時間花在哪裡。不加分也不扣分。下面收起來的卡，點標題就會打開。</div>${fam ? '' : '<details class="muted" style="font-size:13px;margin-top:4px"><summary>家人看得到哪些？</summary>家人碼也看得到燈室的卡；瓶子上寫的原因和那一句話，照舊要你按「給爸爸看」才看得到。</details>'}${greet}</div>
     ${advisorCard()}${unitCard}${lookCard}${easyCard}${selfCard}${invCard}${whyCard}
     <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
