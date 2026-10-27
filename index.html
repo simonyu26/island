@@ -316,7 +316,7 @@ const APP_VERSION = '2.46';
 const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，玉山聚會所蓋在山頂（12 月開門），從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
-  { v: '2.46', date: '2026-10-27', items: ['📅 照計畫完成一項的經驗值，從 +10 提高到 +25（做了一部分從 +5 提高到 +12，Boss 項目一樣雙倍）。讀完一項通常要花不少時間，比做一題久很多，所以多給一些。上週（10/19）起完成的項目都照新的算，經驗值和可以換的島幣會多一些。'] },
+  { v: '2.46', date: '2026-10-27', items: ['📅 照計畫完成一項的經驗值，從 +10 提高到 +25（做了一部分從 +5 提高到 +12，Boss 項目一樣雙倍）。讀完一項通常要花不少時間，比做一題久很多，所以多給一些。上週一（10/19）起完成的項目都照新的算，多出來的{補}已經補進去了。'] },
   { v: '2.45.1', date: '2026-10-27', minor: true, items: ['🗼 燈塔不再顯示海灘上一共有幾個瓶子，只告訴你今天漂回來幾個'] },
   { v: '2.45', date: '2026-10-28', items: ['📜 瓶子第三次漂回來時，改放一題同單元、你還沒做過的會考考古題。答對變成燈籠，多一個「考古題也答對」；沒答對的話，原本的瓶子留著、再答對一次就好，這題另外變成新瓶子。', '⭐ 已補強的單元，最近 5 題至少對 4 題，會多一顆星。'] },
   { v: '2.44.1', date: '2026-10-27', minor: true, items: ['🗼 燈室的單元重新整理過：生物的「神經與內分泌」改叫「感應與協調」，植物的感應也算在裡面；另外有十幾題考古題換到更準的單元，有些從生物、地科換到理化'] },
@@ -648,7 +648,7 @@ function derive(S) {
   let xp = 0, coinXp = 0;   // 島幣只從開島後的活動計算，過去的紀錄只換成經驗值和房子
   const pts = { 國: 0, 英: 0, 數: 0, 自: 0, 社: 0 };
   const ptsBy = {};   // 依試算表上的科目（理化、生物…）分開累計
-  let bossDone = 0, fullCombo = 0;
+  let bossDone = 0, fullCombo = 0, planBonus = 0;   // v2.46 planBonus：10/19 起格子新舊經驗值的差，給版本說明用
   const log = [];
 
   // 每週紀錄、連續週數與休息卡；一週做了幾次看 App 的紀錄，舊的週看試算表顏色
@@ -666,6 +666,7 @@ function derive(S) {
       any = true;
       const g = GROUP[it.subject] || it.subject;
       wxp += planXp(u, isBoss(it.name), start);
+      if (start >= PLAN_XP_FROM) planBonus += planXp(u, isBoss(it.name), start) - u * 10 * (isBoss(it.name) ? 2 : 1);
       if (pts[g] !== undefined) pts[g] += u;
       ptsBy[it.subject] = (ptsBy[it.subject] || 0) + u;
       wp[it.subject] = (wp[it.subject] || 0) + u;
@@ -798,7 +799,7 @@ function derive(S) {
     { ic: '⛵', name: '紙船 ×10', ok: sessions.length >= 10 }
   ];
 
-  return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent, matSpent: shop.matSpent, sellEarned: shop.sellEarned }, shop, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
+  return { cfg, xp, coins, planBonus: Math.round(planBonus), coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent, matSpent: shop.matSpent, sellEarned: shop.sellEarned }, shop, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
            exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps, waterDays, waterGreen,
            // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計＋運動／練習＋喝水－種樹花掉的；不扣經驗值、不影響等級
@@ -1435,6 +1436,11 @@ function medSetHour(k, i, v) { const c = medCfg(); c[k] = c[k].slice(); c[k][i] 
   medPut(c); }
 function medSetShare(on) { const c = medCfg(); c.share = !!on; medPut(c); toast(on ? '爸爸看得到了' : '只有你自己看得到'); }
 /* --- 郵便受け：小島更新、家人的明信片、邀請、爸爸的回覆都寄到這裡，首頁右上角亮紅點 --- */
+// v2.46 版本說明裡的 {補}：照她自己的紀錄寫補了多少經驗值
+function newsText(i) {
+  const n = (D && D.planBonus) || 0;
+  return i.replace('{補}', n > 0 ? ' +' + n + ' 經驗值（大約可以多換 ' + Math.floor(n / 10) + ' 枚島幣）' : '經驗值');
+}
 function newsItems() {
   const seen = local.get('islandSeenVersion');
   // 沒看過的版本都列出來；舊玩家第一次遇到更新提示時，只列最新一版。minor 的小修摺起來，只有小修時不亮紅點（Simon，2026-10-26）
@@ -1457,7 +1463,7 @@ function minorFold(list) {
 function viewMail() {
   const g = guide(), news = newsItems(), n = mailCount();
   const newsCard = news.length ? `<div class="card" style="border:2px solid var(--plum)"><h3>✨ 小島更新了（v${APP_VERSION}）</h3>
-    <ul style="margin:6px 0 10px;padding-left:20px">${news.filter(c => !c.minor).flatMap(c => c.items).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+    <ul style="margin:6px 0 10px;padding-left:20px">${news.filter(c => !c.minor).flatMap(c => c.items).map(i => `<li>${esc(newsText(i))}</li>`).join('')}</ul>
     ${minorFold(news.filter(c => c.minor))}
     ${NEXT_UP && NEXT_UP.items.length ? `<div class="muted" style="margin:-4px 0 10px"><b>下次更新（${esc(NEXT_UP.when)}）預計會有：</b><ul style="margin:4px 0 0;padding-left:20px">${NEXT_UP.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : ''}
     <div class="row"><button onclick="local.set('islandSeenVersion', APP_VERSION); go('guide')">看玩法說明</button>
@@ -5706,7 +5712,7 @@ function viewGuide() {
     p('經驗值會讓島嶼升級。全部達成就是 <b>FULL COMBO</b>！'))}
   ${sec('⚔️', 'Boss 戰', p('寫完模擬考或一整份考古題後，到「⚔️ 大考」記錄各科等級。島民頭上的等級，只看最近一次 Boss 戰的結果。') +
     p('就像音遊重打同一首歌，你只跟上一次的自己比。'))}
-  ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：到商店最上面按「兌換」（點首頁的「🪙 島幣」也會到商店）。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚，一般一週大約賺 25 到 30 枚。挑戰任務答對另外直接給 1～3 枚。') +
+  ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：到商店最上面按「兌換」（點首頁的「🪙 島幣」也會到商店）。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚；照計畫完成一項 +25 經驗值，大約是 2.5 枚。挑戰任務答對另外直接給 1～3 枚。') +
     p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。') +
     p('🧺 <b>素材櫃</b>：常見的素材一個 🪙 2，一天最多買 5 個。稀有素材（抹茶粉、蜂蜜、紅豆、糯米、螢石、柴魚）和智慧島的珍品不賣，要讀書才拿得到。') +
     p('💰 <b>收購</b>：屋台做好的料理可以賣給商店，一般料理 🪙 3～5、珍珠奶茶和溫泉蛋 🪙 8。一天最多賣得 🪙 10，而且不超過當天讀書拿到的素材數。賣掉的料理不會影響島民的交情。'))}
@@ -5811,7 +5817,7 @@ function viewGuide() {
     p('手機比較舊、覺得卡的話，按「📋 清單」就會回到原本的畫面。')) : ''}
   ${sec('🏘️', '房子怎麼長大', p('每 2 個達成點蓋一棟 🏠，5 棟變成 🏘️，4 個 🏘️ 變成 🏢，4 棟 🏢 變成 🏰。自然街和社會街還分成小巷，哪條巷子比較空，一眼就看得到。'))}
   <div class="card"><h3>📜 更新紀錄</h3>${CHANGELOG.map(c => c.minor ? minorFold([c]) : `<div style="margin-top:8px"><b>v${c.v}</b> <span class="muted">${c.date}</span>
-    <ul style="margin:4px 0;padding-left:20px">${c.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}</div>
+    <ul style="margin:4px 0;padding-left:20px">${c.items.map(i => `<li>${esc(newsText(i))}</li>`).join('')}</ul></div>`).join('')}</div>
   <div class="row"><button class="grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 
@@ -5875,7 +5881,7 @@ function viewSetup() {
           <input class="grow" data-f="roommates.${sub}.name" value="${esc(c.roommates[sub].name)}" placeholder="名字"></div>
           <div class="row" style="margin-top:4px;padding-left:44px;gap:4px"><input class="grow" data-f="roommates.${sub}.personality" maxlength="60" value="${esc(c.roommates[sub].personality || '')}" placeholder="個性（選填）">
           <input class="grow" data-f="roommates.${sub}.speech" maxlength="60" value="${esc(c.roommates[sub].speech || '')}" placeholder="說話方式（選填）"></div>${upl('sub:' + sub)}`).join('')}` : ''}</div>`; }).join('')}</div>
-  <div class="card"><h3>4. 島嶼商店</h3><div class="muted">你想用島幣換什麼？價格你自己訂，再跟爸媽討論。一般一週大約賺 25 到 30 枚。</div>
+  <div class="card"><h3>4. 島嶼商店</h3><div class="muted">你想用島幣換什麼？價格你自己訂，再跟爸媽討論。照計畫完成一項大約是 2.5 枚島幣。</div>
     <div id="shopRows">${c.shop.map((x, i) => `<div class="row" style="margin-top:6px"><input class="grow" data-f="shop.${i}.name" value="${esc(x.name)}" placeholder="例如：追劇一集"><input style="width:80px" type="number" min="1" data-f="shop.${i}.price" value="${x.price}"></div>`).join('')}</div>
     <div style="margin-top:8px"><button class="ghost" type="button" id="addShop">＋ 新增商品</button></div></div>
   <div class="row"><button id="saveCfg" class="grow">${D.cfg ? '儲存' : '開島！'}</button>${D.cfg ? `<button class="ghost" onclick="go('more')">取消</button>` : ''}</div>`;
