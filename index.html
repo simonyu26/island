@@ -307,11 +307,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.40.4';
+const APP_VERSION = '2.41';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.41', date: '2026-10-27', items: ['🧺 商店多了素材櫃：常見素材一個 🪙 2，一天可以買 5 個，買了放進竹籃，到屋台做料理', '💰 做好的料理可以賣給商店：一天最多賣得 🪙 10，也不超過當天讀書拿到的素材數'] },
   { v: '2.40.4', date: '2026-10-27', minor: true, items: ['📷 拍錯題的照片一天不限張數了；每天的前 10 題有經驗值，超過的還是會收進海灘'] },
   { v: '2.40.3', date: '2026-10-27', items: ['📷 拍照收錯題現在一天可以算到 10 題了！這幾天超過 5 題的那 5 題，經驗值 +25 已經補上。謝謝你這麼認真把這些題目收好。'] },
   { v: '2.40.2', date: '2026-10-27', items: ['🔐 你在智慧島、紙船、這週一句話和跨科連結寫的字，家人碼看不到了；願望只給爸爸看，送書的那句話只給收書的人。「誰看得到什麼」也一起更新'] },
@@ -734,7 +735,13 @@ function derive(S) {
   const spent = (save.purchases || []).filter(p => !RETIRED_FURN.includes(p.furniture)).reduce((a, p) => a + p.price, 0);   // 退役的家具（會考倒數鐘）退還島幣
   // 經驗值換島幣要她自己按「兌換」（Simon，2026-10-25）；經驗值本身不扣，所以島嶼等級和房子不會因為兌換而降級
   const exXp = save.xpEx ? save.xpEx.xp : coinXp;   // 已經換過的經驗值；還沒有紀錄時當作全部換過（舊版是自動換）。v2.31：不再取 min(xpEx, coinXp)，改紀錄後島幣不會縮水，補回時也不會沒按兌換就自己回來
-  const coins = 20 + Math.floor(exXp / 10) + xqCoins + exCoins + paperCoins - spent;   // 開島禮物 20 枚
+  // v2.41 素材櫃與收購：craft:YYYY-MM 的 buy／sell（和後端 Coins.gs 的 ledger_ 同一套，改一邊就要改另一邊）
+  const shop = { buyToday: 0, soldToday: 0, matSpent: 0, sellEarned: 0 };
+  Object.keys(save).filter(k => k.startsWith('craft:') && save[k]).sort().forEach(k => (save[k].log || []).forEach(e => {
+    if (e.t === 'buy') { const n = Number(e.n) || 0; shop.matSpent += n * MAT_PRICE; if (e.at === S.today) shop.buyToday += n; }
+    if (e.t === 'sell') { shop.sellEarned += Number(e.price) || 0; if (e.at === S.today) shop.soldToday += Number(e.price) || 0; }
+  }));
+  const coins = 20 + Math.floor(exXp / 10) + xqCoins + exCoins + paperCoins - spent - shop.matSpent + shop.sellEarned;   // 開島禮物 20 枚
   const level = Math.floor(Math.sqrt(xp / 60)) + 1;
   const lvBase = 60 * Math.pow(level - 1, 2), lvNext = 60 * Math.pow(level, 2);
 
@@ -772,7 +779,7 @@ function derive(S) {
     { ic: '⛵', name: '紙船 ×10', ok: sessions.length >= 10 }
   ];
 
-  return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent }, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
+  return { cfg, xp, coins, coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent, matSpent: shop.matSpent, sellEarned: shop.sellEarned }, shop, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
            exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps, waterDays, waterGreen,
            // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計＋運動／練習＋喝水－種樹花掉的；不扣經驗值、不影響等級
@@ -887,7 +894,7 @@ function go(t) { if (t === 'plan') { planWeek = null; planDay = null; } tab = t;
 async function exchangeXpNow() {
   const c = D.coinParts; if (!c.canEx) return;
   const xp = c.exXp + c.canEx * 10;
-  try { await flush(); S = await call('exchangeXp', xp); D = derive(S); }
+  try { await flush(); S = await call('exchangeXp', xp, c.avail); D = derive(S); }
   catch (e) { return toast('兌換失敗：' + (e.message || e)); }
   toast('🪙 +' + c.canEx + ' 枚島幣！經驗值和等級都沒有變'); render();
 }
@@ -920,6 +927,8 @@ function viewCoins() {
       ${row('🏃', '運動達標', c.exCoins, '一週集滿 3 章 +3')}
       ${row('⛵', '紙本檢討', c.paperCoins)}
       ${row('🛍️', '在商店花掉', -c.spent)}
+      ${c.matSpent ? row('🧺', '素材櫃花掉', -c.matSpent) : ''}
+      ${c.sellEarned ? row('💰', '收購賣得', c.sellEarned) : ''}
       <div class="row" style="margin-top:10px"><b class="grow">現在有</b><b style="font-size:20px">🪙 ${D.coins}</b></div>
       <div class="row" style="margin-top:12px"><button class="grow" onclick="go('shop')">去商店兌換、逛逛</button><button class="ghost" onclick="go('home')">回到小島</button></div></div>`;
 }
@@ -1936,7 +1945,7 @@ async function buyFurniture(who, id) {
   if (D.coins < f.price || !confirm(r ? '用 ' + f.price + ' 枚島幣買「' + f.name + '」送給' + r.name + '？' : '用 ' + f.price + ' 枚島幣買「' + f.name + '」？')) return;
   try {
     await flush();
-    S = await call('buy', { name: (r ? '送' + r.name + '・' : '家具・') + f.name, price: f.price, furniture: f.id, for: r ? who : undefined }); D = derive(S);
+    S = await call('buy', { name: (r ? '送' + r.name + '・' : '家具・') + f.name, price: f.price, furniture: f.id, for: r ? who : undefined }, D.coins); D = derive(S);
     const h = roomOf(who);
     if (Array.isArray(h.shown) && shownFor(who).length < slotsFor(who)) {
       if (who === 'me') { S = await call('saveHome', Object.assign({}, h, { shown: h.shown.concat([id]) })); }
@@ -2083,7 +2092,7 @@ async function buyIsletNow() {
   isleKeep(); const f = draft.isle, n = islets().length, cost = ISLET_COST[n];
   if (cost == null || D.coinParts.avail < cost || f.slot == null) return;
   if (!confirm('用 ' + cost + ' 點經驗值換一座' + ISLET_STYLES[f.style].name + '？經驗值總數和等級都不會變。')) return;
-  try { await flush(); S = await call('buyIslet', f.slot, f.style, f.name.trim(), cost); D = derive(S); }
+  try { await flush(); S = await call('buyIslet', f.slot, f.style, f.name.trim(), cost, D.coinParts.avail); D = derive(S); }
   catch (e) { return toast('換小島失敗：' + (e.message || e)); }
   toast('🏝️ 海上多了一座小島！'); openIsle(ISLET_KEYS[f.slot]);
 }
@@ -2319,14 +2328,17 @@ function matsOf(save, itemsByRow, today) {
   });
   const ls = (save.wisdom && save.wisdom.lessons) || {};
   Object.keys(ls).forEach(b => Object.keys(ls[b] || {}).forEach(n => { const L = ls[b][n], m = MAT_TUTOR[b.replace(/2$/, '')]; if (L && L.at && m) add(m, String(L.at).slice(0, 10), 'wisdom'); }));
-  const used = {}, cooked = {}, cooks = [];
+  const used = {}, cooked = {}, cooks = [], bought = {}, sold = {};
   Object.keys(save).filter(k => k.startsWith('craft:')).sort().forEach(k => ((save[k] && save[k].log) || []).forEach(e => {
+    if (e.t === 'buy' && MATS[e.mat]) { bought[e.mat] = (bought[e.mat] || 0) + (Number(e.n) || 0); return; }
+    if (e.t === 'sell') { sold[e.dish] = (sold[e.dish] || 0) + 1; return; }
     const d = e.t === 'cook' && dishOf(e.dish); if (!d) return;
     cooked[d.id] = (cooked[d.id] || 0) + 1; cooks.push(e);
     Object.keys(d.use).forEach(m => used[m] = (used[m] || 0) + d.use[m]);
   }));
-  const have = {}; Object.keys(MATS).forEach(m => have[m] = Math.max(0, (got[m] || 0) - (used[m] || 0)));   // 取消勾選讓存量變少時最低 0，做好的料理不收回
-  return { got, used, have, cooked, cooks, by };
+  const have = {}; Object.keys(MATS).forEach(m => have[m] = Math.max(0, (got[m] || 0) + (bought[m] || 0) - (used[m] || 0)));   // 取消勾選讓存量變少時最低 0，做好的料理不收回
+  const left = {}; DISHES.forEach(d => left[d.id] = Math.max(0, (cooked[d.id] || 0) - (sold[d.id] || 0)));
+  return { got, used, have, cooked, cooks, by, bought, sold, left };
 }
 function canCook(d) { return Object.keys(d.use).every(m => (D.mats.have[m] || 0) >= d.use[m]); }
 function knowDish(d) { return Object.keys(d.use).some(m => D.mats.got[m] > 0) || D.mats.cooked[d.id] > 0; }   // 拿到其中一種素材，店主就教你這道
@@ -2364,14 +2376,14 @@ function viewYatai() {
     return `<div class="item"><span class="avatar">${d.ic}</span><div class="name"><b>${d.n}</b>${d.rare ? ' <span class="pill" style="font-size:11px">稀有</span>' : ''}${n ? `<span class="muted">・做過 ${n} 次</span>` : ''}
         <div class="muted" style="font-size:13px">${Object.keys(d.use).map(m => `<span style="${(M.have[m] || 0) >= d.use[m] ? '' : 'opacity:.45'}">${matText(m)}</span>`).join('＋')}</div>${fans(d)}</div>
       ${fam ? '' : `<button class="${ok ? '' : 'ghost'}" style="padding:6px 12px" ${ok ? `onclick="cookDish('${d.id}')"` : 'disabled'}>做</button>`}</div>`; }).join('');
-  const done = DISHES.filter(d => M.cooked[d.id]);
+  const done = DISHES.filter(d => M.left[d.id]);
   return `<div class="card"><h2 style="margin:0">🏮 島の屋台</h2><div class="muted">碼頭邊的小攤子。用讀書拿到的素材做料理。</div>
       ${placeIntro('yatai')}
       ${kp && local.get('islandMet:yatai') ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.yatai) || yataiLine())}</div></div>` : ''}</div>
     <div class="card"><h3>🧺 你的竹籃</h3>${basket || '<div class="muted">還空空的。在首頁把今天的計畫格勾「完成」，那條街的島民就會塞素材給你（每條街一天最多 3 個）。</div>'}
       <div class="muted" style="margin-top:8px;font-size:13px">Boss 項目（歷屆、模卷）或某一科這週全部做完，會拿到稀有素材；智慧島每上完一講，老師會送一樣珍品。</div></div>
     <div class="card"><h3>📜 食譜</h3>${menu}</div>
-    ${done.length ? `<div class="card"><h3>🍱 做好的料理</h3><div class="row" style="gap:6px">${done.map(d => `<span class="pill">${d.ic} ${d.n} ×${M.cooked[d.id]}</span>`).join('')}</div>
+    ${done.length ? `<div class="card"><h3>🍱 做好的料理</h3><div class="row" style="gap:6px">${done.map(d => `<span class="pill">${d.ic} ${d.n} ×${M.left[d.id]}</span>`).join('')}</div>
       <div class="muted" style="margin-top:6px;font-size:13px">之後就能把料理送給島民和智慧島的老師囉。</div></div>` : ''}
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button>${kp && !fam ? `<button class="ghost" onclick="openKeeper('yatai')">${kpPic(kp)} 店主設定</button>` : ''}</div>`;
 }
@@ -4579,6 +4591,8 @@ function viewShop() {
   return `<div class="card"><h2>🛍️ 島嶼商店</h2><div class="muted">你有 <b>${D.coins}</b> 枚島幣。一般一週大約可以賺 10 到 15 枚，挑戰任務可以再多賺一些。商品可以在「更多 → 修改島嶼設定」新增。</div></div>
     ${xpExCard()}
     ${isletCard()}
+    ${matShelfCard()}
+    ${buyBackCard()}
     <div class="card"><div class="item" style="border:none"><div class="name"><b>🏠 家具店</b><div class="muted">幫你的家買家具，也可以送家具給島民布置他們的家</div></div>
       <button onclick="openHouse('me')">去逛逛</button></div></div>
     <div class="card"><div class="item" style="border:none"><div class="name"><b>⚔️ 挑戰任務</b><div class="muted">每天最多 ${XQ_DAILY} 題，自己選難度，答對賺 🪙 1～3 枚</div></div>
@@ -4587,10 +4601,47 @@ function viewShop() {
       <button ${D.coins < x.price ? 'disabled' : ''} onclick="buyItem(${i})">兌換</button></div>`).join('') : '<div class="muted">商店還是空的。</div>'}</div>
     ${bought.length ? `<div class="card"><h3>兌換紀錄</h3>${bought.map(p => `<div class="item"><div class="name">${esc(p.name)}</div><span class="muted">${esc(p.date)}・🪙${p.price}</span></div>`).join('')}</div>` : ''}`;
 }
+// v2.41 素材櫃（常見素材 🪙2、一天 5 個）與收購（料理；一天最多賣得 min(10, 當天讀書拿到的素材數)）。後端 Coins.gs 照同一套檢查
+const MAT_PRICE = 2, MAT_BUY_DAILY = 5, SELL_DAILY = 10;
+const DISH_PRICE = { onigiri: 3, matcha: 3, qiu: 5, taiyaki: 5, zongzi: 5, miso: 5, boba: 8, onsentama: 8, pancake: 5, scone: 5, pasta: 5, soup: 5 };
+let shopBusy = false;
+function studyMatsToday() { return D.mats.by.filter(x => x.date === S.today && x.why !== 'week').length; }
+function sellCap() { return Math.min(SELL_DAILY, studyMatsToday()); }
+function matShelfCard() {
+  if (isFamily()) return '';
+  const left = Math.max(0, MAT_BUY_DAILY - D.shop.buyToday), shelf = Object.keys(MATS).filter(m => !MATS[m].rare && MATS[m].s !== '智');
+  return `<div class="card"><h3>🧺 素材櫃</h3>
+    <div class="muted">常見的素材一個 🪙 ${MAT_PRICE}，一天最多買 ${MAT_BUY_DAILY} 個，今天還能買 <b>${left}</b> 個。稀有素材和智慧島的珍品不賣，要讀書才拿得到。按一下買一個，括號裡是你現在有幾個。</div>
+    <div class="row" style="gap:6px;margin-top:8px">${shelf.map(m => `<button class="ghost" style="padding:6px 10px" ${left < 1 || D.coins < MAT_PRICE || shopBusy ? 'disabled' : ''} onclick="buyMatNow('${m}')">${MATS[m].ic} ${MATS[m].n}（${D.mats.have[m] || 0}）</button>`).join('')}</div></div>`;
+}
+function buyBackCard() {
+  if (isFamily()) return '';
+  const study = studyMatsToday(), left = Math.max(0, sellCap() - D.shop.soldToday), list = DISHES.filter(d => D.mats.left[d.id] > 0);
+  return `<div class="card"><h3>💰 收購</h3>
+    <div class="muted">做好的料理可以賣給商店。一天最多賣得 🪙 ${SELL_DAILY}，也不超過當天讀書拿到的素材數（拿到 5 個，最多賣得 🪙 5）。今天拿到 ${study} 個，還能賣得 <b>🪙 ${left}</b>。島民的回禮和紀念品不收購。</div>
+    ${list.length && list.every(d => DISH_PRICE[d.id] > left) ? '<div class="muted" style="margin-top:6px">今天的收購額度不夠了，明天再來。</div>' : ''}
+    ${list.length ? list.map(d => `<div class="item"><div class="name grow">${d.ic} ${d.n}<span class="muted"> ×${D.mats.left[d.id]}</span></div><span>🪙 ${DISH_PRICE[d.id]}</span>
+      <button class="ghost" style="padding:6px 12px" ${DISH_PRICE[d.id] > left || shopBusy ? 'disabled' : ''} onclick="sellDishNow('${d.id}')">賣</button></div>`).join('')
+      : '<div class="muted" style="margin-top:6px">還沒有做好的料理，到島の屋台做一道吧。</div>'}</div>`;
+}
+async function buyMatNow(m) {
+  if (shopBusy) return; shopBusy = true; render();
+  try { await flush(); S = await call('buyMat', m, 1, D.coins); D = derive(S); toast('買了一個 ' + MATS[m].ic + ' ' + MATS[m].n + '，放進竹籃了'); }
+  catch (e) { toast('沒買成：' + (e.message || e)); }
+  shopBusy = false; render();
+}
+async function sellDishNow(id) {
+  const d = dishOf(id);
+  if (!confirm('要把一份' + d.n + '賣給商店嗎？會拿到 🪙 ' + DISH_PRICE[id] + ' 枚。')) return;
+  if (shopBusy) return; shopBusy = true; render();
+  try { await flush(); S = await call('sellDish', id, D.coins); D = derive(S); toast('🪙 +' + DISH_PRICE[id] + ' 枚，' + d.n + '賣給商店了'); }
+  catch (e) { toast('沒賣成：' + (e.message || e)); }
+  shopBusy = false; render();
+}
 async function buyItem(i) {
   const x = D.cfg.shop.filter(x => x.name)[i];
   if (!confirm('用 ' + x.price + ' 枚島幣兌換「' + x.name + '」？')) return;
-  S = await call('buy', x); D = derive(S);
+  S = await call('buy', x, D.coins); D = derive(S);
   toast('兌換成功！記得跟爸媽說一聲 🎁'); render();
 }
 
@@ -5564,7 +5615,9 @@ function viewGuide() {
   ${sec('⚔️', 'Boss 戰', p('寫完模擬考或一整份考古題後，到「⚔️ 大考」記錄各科等級。島民頭上的等級，只看最近一次 Boss 戰的結果。') +
     p('就像音遊重打同一首歌，你只跟上一次的自己比。'))}
   ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：到商店最上面按「兌換」（點首頁的「🪙 島幣」也會到商店）。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚，一般一週大約賺 10 到 15 枚。挑戰任務答對另外直接給 1～3 枚。') +
-    p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。'))}
+    p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。') +
+    p('🧺 <b>素材櫃</b>：常見的素材一個 🪙 2，一天最多買 5 個。稀有素材（抹茶粉、蜂蜜、紅豆、糯米、螢石、柴魚）和智慧島的珍品不賣，要讀書才拿得到。') +
+    p('💰 <b>收購</b>：屋台做好的料理可以賣給商店，一般料理 🪙 3～5、珍珠奶茶和溫泉蛋 🪙 8。一天最多賣得 🪙 10，而且不超過當天讀書拿到的素材數。賣掉的料理不會影響島民的交情。'))}
   ${sec('🔥', '連續週數和休息卡', p('每週有確認或有紀錄，連續週數就 +1。每累積 6 週紀錄會得到 1 張 🛌 休息卡。') +
     p('哪一週真的沒空，休息卡會自動幫你守住連續週數，不用擔心一斷就歸零。'))}
   ${sec('💞', '跨科連結和好感度', p('發現兩科之間的關係時（例如數學的比例和理化的密度），在「確認這週」頁記下來。兩位島民的好感度會上升，可以在「更多」看到他們的關係。') +
