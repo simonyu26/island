@@ -311,11 +311,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.44';
+const APP_VERSION = '2.44.1';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.44.1', date: '2026-10-27', minor: true, items: ['🗼 燈室的單元重新整理過：生物的「神經與內分泌」改叫「感應與協調」，植物的感應也算在裡面；另外有十幾題考古題換到更準的單元，有些從生物、地科換到理化'] },
   { v: '2.44', date: '2026-10-27', items: ['🎼 島上多了一座音樂廳：上課練習、樂團排練、聽音樂會看展覽、畫畫寫書法都可以來計時，每 25 分鐘一個音符 🎵 +10 綠點，跟以前一樣；第一次去可以請一位自己的管理員。這週有來，晚上音樂廳的玻璃會亮著。'] },
   { v: '2.43', date: '2026-10-27', items: ['📷 拍錯題更快了：首頁「今日のおつとめ」多了「拍錯題」，一按就進去，也會記得你上次選的科目。燈塔的拍照卡移到瓶子上面，不用往下找。', '讀出來的題先只列題目開頭和答案，AI 讀錯了再點開修改；沒讀出來時，可以用同一張照片再試一次，不用重拍。'] },
   { v: '2.42.1', date: '2026-10-27', items: ['🔭 燈室也變短了：正在補強、再看一眼、大家會、你還沒會放在上面；已補強、跟一開始的自己比、時間花在哪裡、最常錯的原因收起來，點標題才打開。'] },
@@ -2777,9 +2778,11 @@ function laneOf(rec, fb) {
   const l = rec && rec.bank && unitsData && unitsData.lanes && unitsData.lanes[rec.bank];
   return l || (rec && rec.lane) || fb;
 }
+// v2.44.1 cap-exam v1.2 把「神經與內分泌」改名，舊紀錄存的是舊名，用 units.json 的 renamed（科目|舊名 → 新名）換成新名
+function newUnit(lane, t) { return ((unitsData && unitsData.renamed) || {})[lane + '|' + t] || t; }
 function unitOf(rec, id) {
-  const u = unitsData || {}, list = (u.units || {})[laneOf(rec)] || [], xc = S.save['xc:' + id] || {};
-  const x = rec.bank ? (u.tags || {})[rec.bank] : [rec.type, rec.practice, xc.unit, xc.type].map(t => OLD_TYPES[t] || t).find(t => t && list.indexOf(t) >= 0);
+  const u = unitsData || {}, lane = laneOf(rec), list = (u.units || {})[lane] || [], xc = S.save['xc:' + id] || {};
+  const x = rec.bank ? (u.tags || {})[rec.bank] : [rec.type, rec.practice, xc.unit, xc.type].map(t => newUnit(lane, OLD_TYPES[t] || t)).find(t => t && list.indexOf(t) >= 0);
   return x && list.indexOf(x) >= 0 ? x : null;
 }
 // 每個單元：做過幾題、答錯幾題、還在海灘的瓶子、放走的燈籠（漂回來的類題不算題數，算在原瓶子上）
@@ -3070,7 +3073,7 @@ async function removeWrongQ(id) {
 function wrongTypes() {
   const out = {};
   bottles().filter(b => !b.guess).forEach(b => {
-    const type = b.rec.type || (S.save['xc:' + b.id] && S.save['xc:' + b.id].type); if (!type) return;
+    const type = newUnit(b.lane, b.rec.type || (S.save['xc:' + b.id] && S.save['xc:' + b.id].type)); if (!type) return;   // v2.44.1 舊單元名換成新名
     const k = b.lane + '|' + type, t = out[k] || (out[k] = { lane: b.lane, type, n: 0, lanterns: 0, text: 0 });
     t.n++; if (b.lantern) t.lanterns++; if (!b.rec.bank) t.text++;   // 練習題要拿有文字的錯題當例題，考古題圖不算
   });
@@ -3212,8 +3215,9 @@ function loadCards() {
 function cardOf(q) {
   if (!UNIT_TOOLS || !q.card) return null;
   if (cardsData === null) { loadCards(); return null; }
-  const c = cardsData && cardsData[q.card];
-  return c && c.reviewed === true && c.points && c.points.length ? Object.assign({ lane: q.card.split('|')[0], unit: q.card.split('|').slice(1).join('|') }, c) : null;
+  if (unitsData === null) { loadUnits(); return null; }   // 舊名要先用 units.json 換成新名
+  const lane = q.card.split('|')[0], unit = newUnit(lane, q.card.split('|').slice(1).join('|')), c = cardsData && cardsData[lane + '|' + unit];
+  return c && c.reviewed === true && c.points && c.points.length ? Object.assign({ lane, unit }, c) : null;
 }
 function conceptCardHtml(q, c) {
   const src = (LANE_FULL[c.lane] || c.lane) + '『' + c.unit + '』';
@@ -3231,7 +3235,7 @@ function askHtml(q) {
   return `<div class="muted" style="font-size:13px;margin:6px 0">${pick === k.a ? '對，這題就是在問這個。接著選答案吧。' : '這題其實是在問：' + esc(k.o[k.a]) + '。再讀一次題目，接著選答案。'}</div>`;
 }
 function checkNote(q) {   // 同一科、同一個單元的瓶子上寫過「下次要檢查」，題目上方先提醒
-  const fam = isFamily(), u = q.unit || (q.bank && unitsData ? (unitsData.tags || {})[q.bank] : '') || q.practice || q.type; if (!u) return '';
+  const fam = isFamily(), u = newUnit(laneOf(q), q.unit || (q.bank && unitsData ? (unitsData.tags || {})[q.bank] : '') || q.practice || q.type); if (!u) return '';
   const b = bottles().filter(x => x.rv.check && laneOf(x.rec, x.lane) === laneOf(q) && (!fam || x.rv.share) && unitOf(x.rec, x.id) === u)
     .sort((x, y) => (y.wrongAt || '').localeCompare(x.wrongAt || ''))[0];
   return b ? `<div class="muted" style="font-size:13px;margin:6px 0">📝 ${fam ? '她' : '你'}上次提醒自己：${esc(b.rv.check)}</div>` : '';
