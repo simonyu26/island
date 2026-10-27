@@ -49,6 +49,8 @@
   // 智慧島的渡船碼頭（v2.24）：島左前方的海邊
   let ferryLayer, ferrySig = null, ferryBoat = null;
   let yataiLayer, yataiSig = null;
+  // 音樂廳：碼頭廣場正前方的清水模現代音樂廳
+  let hallLayer, hallSig = null;
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
   // v2.22 畫質：高畫質開陰影、海浪細一點（舊手機可以在「更多」關掉）；色調映射和圓角方塊都開
   const HQ = (() => { try { const v = localStorage.getItem('island3dHQ'); if (v) return v === '1'; } catch (e) {} return !(navigator.deviceMemory && navigator.deviceMemory < 4); })();
@@ -241,7 +243,7 @@
       const a = rand() * Math.PI * 2, r = 4 + rand() * 8.6;
       const p = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
       if (SUBJECTS.some((s, j) => p.distanceTo(districtPos(j)) < 4.1)) continue;
-      if (GARDEN_SLOTS.some(q => Math.hypot(q.x - p.x, q.z - p.z) < 0.9) || Math.hypot(HUT.x - p.x, HUT.z - p.z) < 1.2 || Math.hypot(BOOK.x - p.x, BOOK.z - p.z) < 1.3 || Math.hypot(FERRY.x - p.x, FERRY.z - p.z) < 1.4) continue;
+      if (GARDEN_SLOTS.some(q => Math.hypot(q.x - p.x, q.z - p.z) < 0.9) || Math.hypot(HUT.x - p.x, HUT.z - p.z) < 1.2 || Math.hypot(BOOK.x - p.x, BOOK.z - p.z) < 1.3 || Math.hypot(FERRY.x - p.x, FERRY.z - p.z) < 1.4 || Math.hypot(Math.cos(HALL.a) * HALL.r - p.x, Math.sin(HALL.a) * HALL.r - p.z) < 1.5) continue;
       if (SUBJECTS.some((s, j) => MARK_SLOTS.some(([mr, da]) => { const a = -Math.PI / 2 + j * (Math.PI * 2 / 5) + da; return Math.hypot(Math.cos(a) * mr - p.x, Math.sin(a) * mr - p.z) < 0.9; }))) continue;
       const h = 0.7 + rand() * 0.6;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4, 5), std(0x9a6b4a)); trunk.position.set(p.x, 0.4, p.z);
@@ -261,6 +263,7 @@
     bookLayer = new THREE.Group(); root.add(bookLayer);
     ferryLayer = new THREE.Group(); root.add(ferryLayer);
     yataiLayer = new THREE.Group(); root.add(yataiLayer);
+    hallLayer = new THREE.Group(); root.add(hallLayer);
     isletLayer = new THREE.Group(); root.add(isletLayer);
     markLayer = new THREE.Group(); root.add(markLayer);
   }
@@ -365,6 +368,9 @@
     bookLayer && bookLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0.15; });
     ferryLayer && ferryLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || (wet && ph !== 'day') ? 0.9 : 0.15; });
     yataiLayer && yataiLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = night || ph === 'dusk' || wet ? 1.2 : 0.35; });
+    // 音樂廳：這週有藝文紀錄才亮大玻璃，亮度比燈塔（1.4）弱；門燈晚上一定亮
+    hallLayer && hallLayer.children.forEach(c => { if (c.userData.glass) c.userData.glass.emissiveIntensity = c.userData.lit && (night || (wet && ph !== 'day')) ? 0.6 : c.userData.lit && ph === 'dusk' ? 0.35 : 0.04;
+      if (c.userData.door) c.userData.door.emissiveIntensity = night || (wet && ph !== 'day') ? 0.7 : 0; });
     if (lamp) lamp.emissiveIntensity = night ? 1.4 : ph === 'dusk' || wet ? 0.9 : 0.4;
     if (beam) beam.visible = night || ph === 'dusk' || w === 'fog';
     stars.visible = night && !wet && w !== 'fog';
@@ -522,6 +528,7 @@
     buildBook();
     buildFerry();
     buildYatai();
+    buildHall();
     buildIslets();
     buildMarks();
   }
@@ -541,6 +548,7 @@
   const HUT = { x: Math.cos(Math.PI / 10) * 3.2, z: Math.sin(Math.PI / 10) * 3.2 };   // 植木屋：碼頭右前方
   const BOOK = { x: Math.cos(Math.PI * 9 / 10) * 3.2, z: Math.sin(Math.PI * 9 / 10) * 3.2 };   // 獨立書店：碼頭左前方（和植木屋對稱）
   const YATAI = { a: Math.PI * 0.5 + 0.22, r: 12.2 };   // 島の屋台（v2.30.3）：島正前方的海邊（數學街和自然街之間），一打開就看得到
+  const HALL = { a: Math.PI * 0.5, r: 3.3 };   // 音樂廳：碼頭廣場正前方（和植木屋、書店圍著廣場），直式手機一打開就看得到；海邊各街地標和步道都沒有空位
   const FERRY = { a: Math.PI * 0.9, x: Math.cos(Math.PI * 0.9) * 13.2, z: Math.sin(Math.PI * 0.9) * 13.2 };   // 智慧島渡船碼頭：島左前方的海邊（v2.24）
   const TERM_ORDER = ['立春', '雨水', '驚蟄', '春分', '清明', '穀雨', '立夏', '小滿', '芒種', '夏至', '小暑', '大暑',
     '立秋', '處暑', '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'];
@@ -763,6 +771,39 @@
     yataiLayer.add(cart);
     const lb = labelSprite('🏮 ' + (Y.name || '島の屋台'), Y.sub || null, { scale: 0.75, color: '#3a2a33' });
     lb.position.set(p.x, 2.35, p.z); lb.userData.yatai = true; yataiLayer.add(lb);
+    setEnvironment(envNow);
+  }
+
+  // ---------- 音樂廳----------
+  // ctx.hall = { name, sub, lit }：東京文化會館風的清水模現代音樂廳：邊緣往上翹的大屋頂、整片玻璃、四根柱子、門前小廣場；
+  // lit＝這週有藝文紀錄（晚上大玻璃亮）。點它呼叫 ctx.onHall。三角形數少：只有方塊和 4 根圓柱
+  function buildHall() {
+    const H = ctx.hall || null, sig = JSON.stringify(H);
+    if (sig === hallSig) return;
+    hallSig = sig;
+    while (hallLayer.children.length) hallLayer.remove(hallLayer.children[0]);
+    if (!H) return;
+    const g = new THREE.Group(); g.userData.hall = true;
+    const con = std(0xbfbab0), dk = std(0x4a4f5a);
+    const glass = std(0xcfe3ea, { emissive: 0xffc46b, emissiveIntensity: 0.04 }), door = std(0xfff1c2, { emissive: 0xffb347, emissiveIntensity: 0 });
+    const box = (w, h, d, x, y, z, m) => { const b = new THREE.Mesh(bx(w, h, d), m); b.position.set(x, y, z); g.add(b); return b; };
+    box(1.8, 0.7, 1.1, 0, 0.4, 0, glass);                       // 一樓整片玻璃
+    for (let k = -4; k <= 4; k++) box(0.03, 0.7, 0.03, k * 0.2, 0.4, 0.56, dk);   // 玻璃的直框
+    box(0.3, 0.42, 0.03, 0, 0.26, 0.57, door);                  // 大門（晚上亮）
+    box(1.1, 0.5, 0.7, 0.1, 1.0, -0.1, con);                    // 屋頂上的廳（大廳的量體）
+    box(1.0, 0.12, 0.02, 0.1, 1.1, 0.26, glass);                 // 大廳正面的一條高窗（從上面看得到，晚上跟著亮）
+    box(2.5, 0.1, 1.8, 0, 0.78, 0, con);                        // 大屋頂
+    [0.9, -0.9].forEach(z => { const e = box(2.5, 0.22, 0.12, 0, 0.86, z, con); e.rotation.x = z > 0 ? -0.5 : 0.5; });   // 往上翹的屋簷
+    [1.25, -1.25].forEach(x => { const e = box(0.12, 0.22, 1.8, x, 0.86, 0, con); e.rotation.z = x > 0 ? 0.5 : -0.5; });
+    [-1.0, -0.35, 0.35, 1.0].forEach(x => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.75, 8), con); c.position.set(x, 0.38, 0.75); g.add(c); });
+    box(2.2, 0.04, 0.6, 0, 0.02, 1.05, std(0xd9d2c3));         // 門前的小廣場
+    const p = new THREE.Vector3(Math.cos(HALL.a) * HALL.r, 0.05, Math.sin(HALL.a) * HALL.r);
+    g.position.copy(p); g.lookAt(new THREE.Vector3(p.x * 2, 0.05, p.z * 2));   // 正面朝海
+    g.scale.setScalar(0.8);
+    g.userData.glass = glass; g.userData.door = door; g.userData.lit = !!H.lit;
+    hallLayer.add(g);
+    const lb = labelSprite('🎼 ' + (H.name || '音樂廳'), H.sub || null, { scale: 0.75, color: '#3a2a33' });
+    lb.position.set(p.x, 2.0, p.z); lb.userData.hall = true; hallLayer.add(lb);
     setEnvironment(envNow);
   }
 
@@ -1509,6 +1550,8 @@
     if (fHit && ctx.onFerry && (!hit || fHit.distance <= hit.distance)) { ctx.onFerry(); return; }
     const yHit = hits.find(h => { let o = h.object; while (o && !o.userData.yatai && !o.userData.subject) o = o.parent; return o && o.userData.yatai; });
     if (yHit && ctx.onYatai && (!hit || yHit.distance <= hit.distance)) { ctx.onYatai(); return; }
+    const hHit = hits.find(h => { let o = h.object; while (o && !o.userData.hall && !o.userData.subject) o = o.parent; return o && o.userData.hall; });
+    if (hHit && ctx.onHall && (!hit || hHit.distance <= hit.distance)) { ctx.onHall(); return; }
     const iHit = hits.find(h => { let o = h.object; while (o && !o.userData.islet && !o.userData.subject) o = o.parent; return o && o.userData.islet; });
     if (iHit && ctx.onIslet && (!hit || iHit.distance <= hit.distance)) { let o = iHit.object; while (!o.userData.islet) o = o.parent; ctx.onIslet(o.userData.islet); return; }
     const gHit = hits.find(h => { let o = h.object; while (o && !o.userData.garden && !o.userData.plant && !o.userData.subject) o = o.parent; return o && (o.userData.garden || o.userData.plant); });
@@ -1590,7 +1633,7 @@
     if (ctx.season && ctx.season !== seasonNow) setSeason(ctx.season);
     el.appendChild(renderer.domElement);
     resize();
-    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden, ctx.marks, ctx.islets]) + weekIdx;
+    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden, ctx.marks, ctx.islets, ctx.hall]) + weekIdx;
     if (sig !== signature) { signature = sig; buildDynamic(false); }
     shadowDirty = true;
     if (selected && ctx.onSelect) ctx.onSelect(selected);
