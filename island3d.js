@@ -776,7 +776,7 @@
 
   // ---------- 音樂廳----------
   // ctx.hall = { name, sub, lit }：東京文化會館風的清水模現代音樂廳：邊緣往上翹的大屋頂、整片玻璃、四根柱子、門前小廣場；
-  // lit＝這週有藝文紀錄（晚上大玻璃亮）。點它呼叫 ctx.onHall。三角形數少：只有方塊和 4 根圓柱
+  // lit＝這週有藝文紀錄（晚上大玻璃亮）。點它呼叫 ctx.onHall。三角形數少：只有方塊和 4 根圓柱，同材質合併後只有 4 個網格
   function buildHall() {
     const H = ctx.hall || null, sig = JSON.stringify(H);
     if (sig === hallSig) return;
@@ -796,7 +796,17 @@
     [0.9, -0.9].forEach(z => { const e = box(2.5, 0.22, 0.12, 0, 0.86, z, con); e.rotation.x = z > 0 ? -0.5 : 0.5; });   // 往上翹的屋簷
     [1.25, -1.25].forEach(x => { const e = box(0.12, 0.22, 1.8, x, 0.86, 0, con); e.rotation.z = x > 0 ? 0.5 : -0.5; });
     [-1.0, -0.35, 0.35, 1.0].forEach(x => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.75, 8), con); c.position.set(x, 0.38, 0.75); g.add(c); });
-    box(2.2, 0.04, 0.6, 0, 0.02, 1.05, std(0xd9d2c3));         // 門前的小廣場
+    box(2.2, 0.04, 0.6, 0, 0.02, 1.05, con);         // 門前的小廣場
+    // 同材質的方塊合併成一個網格，一種材質只畫一次（工程顧問 10/27：draw call 增加不超過 6 個）
+    const byMat = new Map();
+    g.children.slice().forEach(m => { m.updateMatrix(); const geo = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(m.matrix);
+      if (!byMat.has(m.material)) byMat.set(m.material, []); byMat.get(m.material).push(geo); g.remove(m); });
+    byMat.forEach((list, mat) => {
+      const n = list.reduce((a, x) => a + x.attributes.position.count, 0), pos = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
+      list.forEach(x => { pos.set(x.attributes.position.array, o * 3); nor.set(x.attributes.normal.array, o * 3); o += x.attributes.position.count; x.dispose(); });
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      g.add(new THREE.Mesh(geo, mat));
+    });
     const p = new THREE.Vector3(Math.cos(HALL.a) * HALL.r, 0.05, Math.sin(HALL.a) * HALL.r);
     g.position.copy(p); g.lookAt(new THREE.Vector3(p.x * 2, 0.05, p.z * 2));   // 正面朝海
     g.scale.setScalar(0.8);
