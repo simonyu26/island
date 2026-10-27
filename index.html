@@ -311,11 +311,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.43';
+const APP_VERSION = '2.44';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11 月中（週五 16:30）', items: ['🏝️ 家人島第一版：每位家人在你的島旁邊也有一座自己的小島'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.44', date: '2026-10-27', items: ['🎼 島上多了一座音樂廳：上課練習、樂團排練、聽音樂會看展覽、畫畫寫書法都可以來計時，每 25 分鐘一個音符 🎵 +10 綠點，跟以前一樣；第一次去可以請一位自己的管理員。這週有來，晚上音樂廳的玻璃會亮著。'] },
   { v: '2.43', date: '2026-10-27', items: ['📷 拍錯題更快了：首頁「今日のおつとめ」多了「拍錯題」，一按就進去，也會記得你上次選的科目。燈塔的拍照卡移到瓶子上面，不用往下找。', '讀出來的題先只列題目開頭和答案，AI 讀錯了再點開修改；沒讀出來時，可以用同一張照片再試一次，不用重拍。'] },
   { v: '2.42.1', date: '2026-10-27', items: ['🔭 燈室也變短了：正在補強、再看一眼、大家會、你還沒會放在上面；已補強、跟一開始的自己比、時間花在哪裡、最常錯的原因收起來，點標題才打開。'] },
   { v: '2.42', date: '2026-10-27', items: ['🗼 燈塔最上面多了一列樓層：1F 海灘、2F 航海日誌、3F 燈室、碼頭，一按就過去。還在海上漂的瓶子、燈籠和家具收起來了，點標題才打開，畫面短很多。'] },
@@ -877,10 +878,10 @@ function render() {
   }
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -1355,6 +1356,7 @@ const PLACE_LINKS = [
   { key: 'books', ic: '📚', name: '書店', on: () => !!bookName(), go: () => go('bookstore') },
   { key: 'garden', ic: '🌱', name: '植木屋', on: () => !!keeperOf('garden'), go: () => openGarden() },
   { key: 'yatai', ic: '🏮', name: '屋台', on: () => !!keeperOf('yatai'), go: () => openYatai() },
+  { key: 'hall', ic: '🎼', name: '音樂廳', on: () => !isFamily() || !!keeperOf('hall'), go: () => openHall() },
   { key: 'wisdom', ic: '⛴️', name: '智慧島', on: () => wisdomOn(), go: () => go('wisdom') },
   { key: 'walk', ic: '🏃', name: '步道', on: () => true, go: () => go('walk') }];
 function placesRow() {
@@ -1485,7 +1487,7 @@ function dailyCtx() {
       return { key: s, name: r.name, personality: r.personality, speech: r.speech, relation: r.relation, kizuna: { level: kz.name, missing: kz.missing, back: kz.back }, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null,
         gifts: gifts.length, lastGift: f ? f.name : null }; }),
     guide: { name: g.name, tone: TONES[g.tone] || g.tone },
-    keepers: Object.keys(PLACES).filter(k => k !== 'home' && k !== 'bookcat' && k !== 'advisor' && keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : k === 'bookstore' ? { note: bookNote() } : k === 'yatai' ? { note: yataiNote() } : k === 'wisdom' ? { note: wisdomTodayDone() ? '她今天上過智慧島的課了' : '她今天還沒去智慧島上課' } : {})),
+    keepers: Object.keys(PLACES).filter(k => k !== 'home' && k !== 'bookcat' && k !== 'advisor' && keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : k === 'bookstore' ? { note: bookNote() } : k === 'yatai' ? { note: yataiNote() } : k === 'hall' ? { note: hallNote() } : k === 'wisdom' ? { note: wisdomTodayDone() ? '她今天上過智慧島的課了' : '她今天還沒去智慧島上課' } : {})),
     weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '') + '；今天的節氣是' + solarTerm(S.today) + '（' + TERM_NOTE[solarTerm(S.today)] + '）'
   };
 }
@@ -1816,7 +1818,7 @@ function viewHouse() {
     ${homeMateCard()}
     <button class="ghost" style="width:100%;margin-bottom:12px" onclick="draft={};tab='kizuna';render();window.scrollTo(0,0)">📔 絆の手帖：你和島民、老師的交情</button>
     ${diaryCard()}
-    ${moveBlock('art')}
+    ${isFamily() ? '' : `<button class="ghost" style="width:100%;margin-bottom:12px" onclick="openHall()">🎼 藝文計時搬到音樂廳了，去音樂廳 ›</button>`}
     ${waterCard()}
     <div class="card"><h3>🛋️ 房間</h3>${roomHtml('me', vs)}
       <div class="speech" style="margin-top:10px"><b>${esc(vr.name)}</b>來作客：${esc(vline)}</div>
@@ -2030,7 +2032,7 @@ function viewWalk() {
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 地方的管理角色：她自己取名、選樣子、寫個性；每天的訊息由 AI 依個性寫（getDaily 的 keepers）
-const PLACES = { home: { name: '我的家', ic: '🏠', tab: 'house', about: ['我住在這裡陪你，你回家的時候我會說「おかえり」', '牆上有一本日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，寫完我會回你一個表情，也可以翻回去看', '日めくり只有你自己看得到；想給家人看的那一頁，按「分享給家人」就好', '上音樂課、練樂器的時候，在家裡按「🎻 開始練習」計時，每 25 分鐘 +10 綠點，跟運動一樣', '喝了水就在家裡的「🥤 喝水」記一筆，每 250cc +10 綠點，一天最多算 2,000cc', '房間的家具、暖簾和門牌都可以自己布置，按「🧩 自己擺家具」就能把家具搬到你喜歡的位置'],
+const PLACES = { home: { name: '我的家', ic: '🏠', tab: 'house', about: ['我住在這裡陪你，你回家的時候我會說「おかえり」', '牆上有一本日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，寫完我會回你一個表情，也可以翻回去看', '日めくり只有你自己看得到；想給家人看的那一頁，按「分享給家人」就好', '上音樂課、練樂器、樂團排練、去聽音樂會看展覽，現在都到「🎼 音樂廳」計時，每 25 分鐘 +10 綠點，跟運動一樣', '喝了水就在家裡的「🥤 喝水」記一筆，每 250cc +10 綠點，一天最多算 2,000cc', '房間的家具、暖簾和門牌都可以自己布置，按「🧩 自己擺家具」就能把家具搬到你喜歡的位置'],
     roles: ['貓咪室友', '狗狗室友', '兔子室友', '人類室友'], emojis: ['🐱', '🐈‍⬛', '🐶', '🐕', '🐰', '🐹', '🦊', '🐧', '🦉', '🐢', '👧', '🧑'] },
   walk: { name: '海邊步道', ic: '🏃', tab: 'walk', about: ['出門運動前按「出發」、回來按「回來了」，每運動 25 分鐘留下一個足あと 👣 +10 綠點，動多久都算', '一次滿 20 分鐘自動蓋今天的章；沒帶手機就按「今天運動了」手動蓋章', '一週集滿 3 章送你 3 枚島幣', '每蓋一章，步道就多鋪一段木棧道，每三章多一盞燈籠', '連續幾週都達標，可以拿到排球、浴衣這些運動家具'], roles: ['陪跑的學姊', '排球教練', '愛散步的柴犬', '海邊救生員'], emojis: ['👧', '👩‍🦰', '🧑‍🦱', '🧢', '🏐', '🐕', '🦊', '🐧', '🦦', '🐬', '🐱', '🐻‍❄️', '🐢'] },
   lighthouse: { name: '燈塔', ic: '🗼', tab: 'light', about: ['挑戰任務和故事任務答錯的題，會變成漂流瓶漂到燈塔海灘', '瓶子隔天漂回來，撿起來會出一題 AI 類題：同一個觀念，換了數字和情境，也會寫是改編自哪一題', '類題連續三次答對（間隔 1、3、7 天），瓶子就變成紙燈籠放到海上，還有島幣；燈籠之後每個月會當老朋友漂回來一次', '在瓶子上記下為什麼錯；想問爸爸的題按「給爸爸看」', '紙本考卷上答錯的題，可以拍照收進海灘，也一樣會漂回來', '錯題類型會整理你最常錯哪一類題，按「練一題」就照這類題出新題', '紙本考卷檢討完，可以在燈塔的小碼頭放紙船', '每週按「確認這週」之後，我會寫下燈塔的話：做得好的、值得照亮的、下週一件小事', '頂樓的燈室可以看大家會、你還沒會的題，還有各科花了多少時間'], roles: ['守燈的老爺爺', '燈塔的貓', '退休的船長', '海鷗郵差'], emojis: ['👴', '👵', '🧓', '👩‍✈️', '🧑‍🎨', '🐈', '🐈‍⬛', '🦉', '🐢', '🦭', '🐙', '🦀'] },
@@ -2048,6 +2050,11 @@ PLACES.bookcat = { name: '書店', ic: '🐈', tab: 'bookstore', title: '🐈 �
 PLACES.yatai = { name: '島の屋台', ic: '🏮', tab: 'yatai',
   about: ['讀完一格計畫，那條街的島民會塞一個素材給你（每條街一天最多 3 個）', 'Boss 項目或某一科這週全部做完，會拿到稀有素材；智慧島每上完一講，老師會送一樣珍品', '料理大多要兩三條街的素材，湊齊了按「做」就好', '拿到新的素材，我就教你一道用得到它的料理'],
   roles: ['屋台的老闆', '賣飯糰的阿姨', '夜市攤的大叔', '愛做菜的狸貓'], emojis: ['🧑‍🍳', '👩‍🍳', '👨‍🍳', '👵', '🧔', '🦝', '🐻', '🐼', '🦊', '🐧', '🐱', '🐸'] };
+// 音樂廳（Simon 2026-10-27）：藝文活動比照運動計時換綠點；管理員由她自己設定，存在 keeper:hall
+PLACES.hall = { name: '音樂廳', ic: '🎼', tab: 'hall',
+  about: ['上音樂課、練樂器、樂團排練、去聽音樂會、看展覽和表演、畫畫寫書法，開始前在這裡按一下，結束再按一下', '每 25 分鐘一個音符 🎵 +10 綠點，多久都算；一次最多算 120 分鐘，忘了按可以把結束時間改早', '綠點可以去植木屋種樹。這裡不用拍照、不用證明，你自己按就好', '這週有來計時，晚上音樂廳的大玻璃就會亮起來，在 3D 小島碼頭廣場的正前方看得到', '讀書計時、運動計時和這裡，一次只能開一個'],
+  persHint: '例如：很安靜、耳朵很好，喜歡巴哈和老電影配樂',
+  roles: ['調音師', '指揮家', '領位的阿姨', '劇場的貓', '街頭藝人', '練習室的學姊'], emojis: ['🎻', '🎹', '🎺', '🎷', '🥁', '🧑‍🎤', '🧑‍🎨', '👩‍🎨', '👵', '🧔', '🐈', '🦉'] };
 PLACES.wisdom = { name: '渡船屋', ic: '⛴️', tab: 'wisdom', title: '⛴️ 渡船屋的主人', who: '渡船屋主人',
   lead: '去智慧島的渡船由你請一位主人來開：取名字、選樣子、寫個性。他每天會用自己的個性跟你說話。',
   about: ['每天從這裡開船去智慧島，一天可以上一講，同一位老師每週一講', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你家', '上過的課都收在書店的書架上，想回看筆記隨時可以去翻'],
@@ -2223,7 +2230,7 @@ function viewGarden() {
   const head = `<div class="card"><div class="row"><h2 class="grow" style="margin:0">🌱 植木屋</h2><span class="muted">你有 <b>${D.green}</b> 綠點</span></div>
     ${placeIntro('garden')}
     ${kp && local.get('islandMet:garden') ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.garden) || gardenKeeperLine())}</div></div>` : ''}
-    <div class="muted" style="margin-top:8px">綠點從計時來：讀書每專心 ${FOCUS_GLASS} 分鐘一顆砂時計 +${FOCUS_GREEN}（沒有上限）；運動、練樂器每 ${MOVE_STEP} 分鐘 +${MOVE_GREEN}（沒有上限）；喝水每 ${WATER_CUP}cc +${WATER_GREEN}（一天最多算 ${WATER_CAP}cc）。現在的節氣是${solarTerm(S.today)}。</div></div>`;
+    <div class="muted" style="margin-top:8px">綠點從計時來：讀書每專心 ${FOCUS_GLASS} 分鐘一顆砂時計 +${FOCUS_GREEN}（沒有上限）；運動、藝文活動每 ${MOVE_STEP} 分鐘 +${MOVE_GREEN}（沒有上限）；喝水每 ${WATER_CUP}cc +${WATER_GREEN}（一天最多算 ${WATER_CAP}cc）。現在的節氣是${solarTerm(S.today)}。</div></div>`;
   const plantCard = p => { const pl = plantOf(p.k);
     return `<div class="card" style="border:2px solid var(--plum)"><div class="row" style="flex-wrap:nowrap"><span style="font-size:40px">${pl.ic}</span>
       <div class="grow"><b>${pl.name}</b>・${STAGE_NAME[plantStage(p)]}<div class="muted">${esc(slotName(p.slot))}・${short(p.at)} 種的</div></div></div>
@@ -2363,6 +2370,39 @@ function matToast(before, wait) {
 function openYatai() {
   if (!keeperOf('yatai') && !isFamily()) return openKeeper('yatai');
   draft = {}; tab = 'yatai'; render(); window.scrollTo(0, 0);
+}
+function openHall() {
+  if (!keeperOf('hall') && !isFamily()) return openKeeper('hall');
+  draft = {}; tab = 'hall'; render(); window.scrollTo(0, 0);
+}
+// 這週（週一起）的藝文紀錄：只看 move:日期 裡 k:'art' 的分鐘數，不另存欄位（工程顧問 10/27）
+function hallWeek(wk) {
+  wk = wk || mondayOf(S.today); let n = 0, min = 0;
+  for (let i = 0; i < 7; i++) ((S.save['move:' + addD(wk, i)] || {}).list || []).forEach(r => { if (r.k === 'art') { n++; min += r.min || 0; } });
+  return { n, min };
+}
+function hallNote() { const w = hallWeek(); return '她這週來音樂廳計時 ' + w.n + ' 次、共 ' + w.min + ' 分鐘'; }
+function hallLine() {
+  const w = hallWeek();
+  const lines = w.n ? ['這週已經累積 ' + w.min + ' 分鐘了，每一分鐘我都有聽到。', '上次那段練得比之前順，是一次一次練出來的。', '今天想練什麼？我先幫你把譜架擺好。']
+    : ['今天想練什麼曲子？我先幫你把譜架擺好。', '聽完音樂會或看完展覽，最喜歡哪一段？下次跟我說說。', '卡住的那一小段，慢慢來，一次練一點就會順。'];
+  return lines[(daySeed() + w.n) % lines.length];
+}
+function viewHall() {
+  const kp = keeperOf('hall'), daily = S.save['daily:' + S.today], fam = isFamily(), w = hallWeek();
+  const days = [];
+  for (let i = 0; i < 14 && days.length < 8; i++) { const d = addD(S.today, -i), list = ((S.save['move:' + d] || {}).list || []).filter(r => r.k === 'art');
+    if (list.length) days.push({ d, min: list.reduce((a, r) => a + (r.min || 0), 0), n: list.length }); }
+  const notes = Math.floor(w.min / MOVE_STEP);
+  return `<div class="card"><h2 style="margin:0">🎼 音樂廳</h2><div class="muted">上課、練習、樂團排練、去聽去看、自己創作，都可以來這裡計時。</div>
+      ${fam ? '' : placeIntro('hall')}
+      ${kp && (fam || local.get('islandMet:hall')) ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(fam ? 'いらっしゃい～歡迎來音樂廳坐坐！' : (daily && daily.messages && daily.messages.hall) || hallLine())}</div></div>` : ''}</div>
+    ${moveBlock('art')}
+    <div class="card"><h3 style="margin:0 0 6px">🎵 這週</h3>
+      <div>${w.n ? `來了 ${w.n} 次、共 ${w.min} 分鐘${notes ? '・' + '🎵'.repeat(Math.min(notes, 20)) : ''}` : '這週還沒來過。'}</div>
+      <div class="muted" style="margin-top:4px;font-size:13px">${w.n ? '這週有來，晚上音樂廳的大玻璃會亮著。' : '這週來計時一次，晚上音樂廳的大玻璃就會亮起來。'}</div>
+      ${days.length ? `<div style="margin-top:8px">${days.map(x => `<div class="row" style="font-size:14px"><span class="grow">${short(x.d)}</span><span class="muted">${x.n} 次・${x.min} 分鐘</span></div>`).join('')}</div>` : ''}</div>
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button>${kp && !fam ? `<button class="ghost" onclick="openKeeper('hall')">${kpPic(kp)} 管理員設定</button>` : ''}</div>`;
 }
 function yataiNote() {
   const top = DISHES.filter(d => D.mats.cooked[d.id]).map(d => d.n + '×' + D.mats.cooked[d.id]).slice(0, 6);
@@ -3634,6 +3674,7 @@ async function mount3D() {
       garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),
       ferry: wisdomOn() ? { open: !wisdomTodayDone() } : null, onFerry: () => go('wisdom'),
       yatai: !isFamily() || keeperOf('yatai') ? { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null } : null, onYatai: () => openYatai(),
+      hall: !isFamily() || keeperOf('hall') ? (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()) : null, onHall: () => openHall(),
       islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
       book: { name: bookTitle(), sub: newCards().length ? '📮 ' + newCards().length + ' 張新明信片' : null }, onBook: () => go('bookstore'),
       marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })), onMark: id => { const m = landmarkList().find(x => x.id === id); if (m) openBook(m.key); },
@@ -3990,10 +4031,15 @@ function waterPut(list) {
 /* --- 運動計時（v2.12）：海邊步道按「出發／回來了」；計時中的狀態存在 localStorage（moveActive），回來了、存好才寫回 move:日期 --- */
 const MOVE_STEP = 25, MOVE_GREEN = 10, MOVE_MAX = 120, MOVE_STAMP = 20, MOVE_MIN = 5;   // 一個足あと幾分鐘、幾綠點、一次最多算幾分鐘（防忘了按停止）、滿幾分鐘自動蓋章、少於幾分鐘先問
 // 計時的種類：運動（步道）或藝文練習（我的家）；綠點算法一樣，只有藝文不會蓋運動章
-const MOVE_KIND = { move: { ic: '🏃', step: '👣', stepName: '足あと', doing: '運動中', did: '運動', page: 'walk' },
-  art: { ic: '🎻', step: '🎵', stepName: '音符', doing: '練習中', did: '練習', page: 'house' } };
-function mk(m) { return MOVE_KIND[(m && m.k) || 'move']; }
-function moveBack(k) { if (k === 'art') openHouse('me'); else go('walk'); }
+const MOVE_KIND = { move: { ic: '🏃', step: '👣', stepName: '足あと', doing: '運動中', did: '運動', end: '回來了', page: 'walk' },
+  art: { ic: '🎻', step: '🎵', stepName: '音符', doing: '練習中', did: '練習', end: '練完了', page: 'hall' } };
+// 音樂廳的三種藝文時間：只換文字和圖示，綠點算法一樣；種類只存在這支手機的計時中狀態，不存進紀錄
+const ART_T = { play: { ic: '🎻', name: '練習、上課', doing: '練習中', did: '練習', end: '練完了' },
+  see: { ic: '🎫', name: '聽音樂會、看展演', doing: '欣賞中', did: '欣賞', end: '散場了' },
+  band: { ic: '🥁', name: '樂團排練', doing: '排練中', did: '排練', end: '排練完了' },
+  make: { ic: '🎨', name: '畫畫、書法、創作', doing: '創作中', did: '創作', end: '完成了' } };
+function mk(m) { return m && m.k === 'art' ? Object.assign({}, MOVE_KIND.art, ART_T[m.t] || ART_T.play) : MOVE_KIND.move; }
+function moveBack(k) { if (k === 'art') openHall(); else go('walk'); }
 function moveActive() { if (isFamily()) return null; try { return JSON.parse(local.get('moveActive') || 'null'); } catch (e) { return null; } }
 function movePut(m) { if (m) local.set('moveActive', JSON.stringify(m)); else local.del('moveActive'); }
 function moveMs(m, now) { now = now || Date.now(); return Math.max(0, now - m.start - (m.pause || 0) - (m.pausedAt ? now - m.pausedAt : 0)); }
@@ -4005,28 +4051,28 @@ function stepText(min, date, k) {
 }
 function moveBlock(kind) {
   if (isFamily()) return '';
-  const m = moveActive(), kp = keeperOf('walk');
+  const m = moveActive(), kp = keeperOf(kind === 'art' ? 'hall' : 'walk');
   if (m && (m.k || 'move') !== (kind || 'move')) return `<div class="card muted">${mk(m).ic} ${mk(m).did}計時還在跑，<a href="#" onclick="moveBack('${m.k || 'move'}');return false">去那邊看 ›</a></div>`;
-  if (!m && kind === 'art') return `<div class="card"><h3 style="margin:0">🎻 藝文練習計時</h3>
-      <div class="muted" style="margin-top:4px">上音樂課、練樂器的時候按「開始練習」，練完按「練完了」。每 ${MOVE_STEP} 分鐘一個音符 🎵 +${MOVE_GREEN} 綠點，練多久都算，跟運動一樣。</div>
-      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<button style="width:100%;margin-top:10px" onclick="moveStart('art')">🎻 開始練習</button>`}</div>`;
+  if (!m && kind === 'art') return `<div class="card"><h3 style="margin:0">⏱️ 藝文計時</h3>
+      <div class="muted" style="margin-top:4px">開始前選一種，結束了再按一下。每 ${MOVE_STEP} 分鐘一個音符 🎵 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；不用拍照、不用證明。</div>
+      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<div style="display:grid;gap:8px;margin-top:10px">${Object.keys(ART_T).map(t => `<button onclick="moveStart('art','${t}')">${ART_T[t].ic} ${ART_T[t].name}</button>`).join('')}</div>`}</div>`;
   if (!m) return `<div class="card"><h3 style="margin:0">⏱️ 運動計時</h3>
       <div class="muted" style="margin-top:4px">出門運動前按「出發」，回來按「回來了」。每運動 ${MOVE_STEP} 分鐘一個足あと 👣 +${MOVE_GREEN} 綠點，動多久都算；一次滿 ${MOVE_STAMP} 分鐘自動蓋今天的章。沒帶手機（體育課、校隊）就用下面的「今天運動了」蓋章，只是沒有綠點。</div>
       ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再出發。</div>' : `<button style="width:100%;margin-top:10px" onclick="moveStart()">🏃 出發！</button>`}</div>`;
   const ms = moveMs(m), min = Math.floor(ms / 60000);
   const K = mk(m), art = m.k === 'art';
-  return `<div class="card"><div class="focus" style="margin:0"><div class="row"><b class="grow">${K.ic} ${K.doing}${m.date !== S.today ? '（' + short(m.date) + ' 開始）' : ''}</b>${kp && !art ? `<span>${kpPic(kp)} ${esc(kp.name)}陪你</span>` : ''}</div>
+  return `<div class="card"><div class="focus" style="margin:0"><div class="row"><b class="grow">${K.ic} ${K.doing}${m.date !== S.today ? '（' + short(m.date) + ' 開始）' : ''}</b>${kp ? `<span>${kpPic(kp)} ${esc(kp.name)}陪你</span>` : ''}</div>
       <div class="row"><span class="clock grow moveClock">${moveClockText(ms)}</span><span class="muted moveSteps">${stepText(min, m.date, m.k)}</span></div>
-      ${min >= MOVE_MAX ? `<div class="speech" style="margin:6px 0">已經 ${MOVE_MAX} 分鐘了，還在${K.did}嗎？如果早就結束了，按「${art ? '練完了' : '回來了'}」，可以把結束時間改早一點。</div>` : ''}
+      ${min >= MOVE_MAX ? `<div class="speech" style="margin:6px 0">已經 ${MOVE_MAX} 分鐘了，還在${K.did}嗎？如果早就結束了，按「${K.end}」，可以把結束時間改早一點。</div>` : ''}
       <div class="row" style="margin-top:6px"><button class="ghost" onclick="movePause()">${m.pausedAt ? '▶ 繼續' : '☕ 休息一下'}</button>
-        <button class="grow" onclick="moveStopOpen()">🏁 ${art ? '練完了' : '回來了'}</button></div></div></div>`;
+        <button class="grow" onclick="moveStopOpen()">🏁 ${K.end}</button></div></div></div>`;
 }
 function moveRefresh() { D = derive(S); if (tab === 'home') softRender(); else render(); moveTick(); }
-function moveStart(k) {
+function moveStart(k, t) {
   if (moveActive()) return toast('已經有一個在計時了');
   if (focusActive()) return toast('讀書計時還在跑，先停下來再開始');
-  const m = { date: S.today, start: Date.now(), pause: 0, pausedAt: null }; if (k === 'art') m.k = 'art';
-  movePut(m); moveRefresh(); toast(k === 'art' ? '🎻 開始練習，加油！' : '🏃 出發！路上小心～');
+  const m = { date: S.today, start: Date.now(), pause: 0, pausedAt: null }; if (k === 'art') { m.k = 'art'; m.t = ART_T[t] ? t : 'play'; }
+  movePut(m); moveRefresh(); toast(k === 'art' ? mk(m).ic + ' ' + { play: '開始練習，加油！', see: '好好欣賞，結束了再按一下～', band: '排練開始，跟大家一起加油！', make: '開始創作，慢慢來！' }[m.t] : '🏃 出發！路上小心～');
 }
 function movePause() {
   const m = moveActive(); if (!m) return; const now = Date.now();
@@ -4052,14 +4098,14 @@ function moveStopOpen() {
 function moveMinutes(st) { return Math.max(0, Math.floor(Math.min(st.endAt - st.m.start - st.m.pause, MOVE_MAX * 60000) / 60000)); }
 function viewMoveStop() {
   const st = draft.move; if (!st) { tab = 'walk'; return viewWalk(); }
-  const m = st.m, min = moveMinutes(st), art = m.k === 'art', K = mk(m), kp = keeperOf(art ? 'home' : 'walk');
+  const m = st.m, min = moveMinutes(st), art = m.k === 'art', K = mk(m), kp = keeperOf(art ? 'hall' : 'walk');
   const gain = Math.floor(min / MOVE_STEP);
   const stamp = !art && min >= MOVE_STAMP && !S.save['ex:' + m.date];
   const who = kp ? kpPic(kp) + ' ' + esc(kp.name) : guide().emoji + ' ' + esc(guide().name);
   return `<div class="card"><h2>🏁 這次${K.did}了 ${min} 分鐘</h2>
-      <div class="speech">${who}：「${min < MOVE_MIN ? '這次不到 ' + MOVE_MIN + ' 分鐘，要記下來嗎？' : '辛苦了！' + (gain ? '這次留下 ' + K.step.repeat(gain) + '，+' + gain * MOVE_GREEN + ' 綠點。' : '再多' + (art ? '練' : '動') + '一點，滿 ' + MOVE_STEP + ' 分鐘就有一個' + K.stepName + '喔。') + (stamp ? '今天的章也幫你蓋好了！' : '')}」</div>
+      <div class="speech">${who}：「${min < MOVE_MIN ? '這次不到 ' + MOVE_MIN + ' 分鐘，要記下來嗎？' : '辛苦了！' + (gain ? '這次留下 ' + K.step.repeat(gain) + '，+' + gain * MOVE_GREEN + ' 綠點。' : '再多' + (art ? '待' : '動') + '一點，滿 ' + MOVE_STEP + ' 分鐘就有一個' + K.stepName + '喔。') + (stamp ? '今天的章也幫你蓋好了！' : '')}」</div>
       ${gain ? `<div class="muted" style="margin-top:6px">🌱 你會有 ${D.green + gain * MOVE_GREEN} 綠點，可以去植木屋種樹。</div>` : ''}
-      <div class="row" style="margin-top:10px"><label class="grow" style="margin:0">什麼時候${art ? '練完' : '回來'}的？忘了按可以改早一點</label>
+      <div class="row" style="margin-top:10px"><label class="grow" style="margin:0">什麼時候${art ? '結束' : '回來'}的？忘了按可以改早一點</label>
         <input type="time" id="mEnd" value="${hhmm(st.endAt)}" style="width:auto" onchange="moveSetEnd(this.value)"></div>
       <div class="row" style="margin-top:12px"><button class="grow" onclick="moveSave()">${min < MOVE_MIN ? '還是記下來' : '存好 ✨'}</button><button class="ghost" onclick="draft={};moveBack('${m.k || 'move'}')">還在${K.did}，回去</button></div>
       <div style="margin-top:8px"><button class="ghost" onclick="moveDiscard()">這次不算，丟掉</button></div></div>`;
@@ -5617,7 +5663,7 @@ function viewGuide() {
   ${sec('📝', '記錄你做了什麼', p('首頁「今日のおつとめ」的「📝 讀書計畫」會列出今天排的項目，做完就點「完成」，做了一半就點「部分」，再點一次可以取消。按了就會自動存好，右上角會顯示「✓ 已存到試算表」。') +
     p('做了計畫外的項目？按「＋ 記錄計畫外的項目」。忘了記也沒關係，到計畫頁點那一天就能補，或週末確認時一次補。<b>想每天記、或只在週日記都可以</b>，小島兩種都接受。'))}
   ${sec('🌱', '植木屋（種樹）', p('碼頭旁有一間植木屋，第一次去要先幫它請一位管理員（取名字、選樣子、寫個性），見面時送你 ' + GARDEN_GIFT + ' 綠點當開張禮。點首頁上方的「🌱 綠點」，或在 3D 小島點那間小屋就能進去。') +
-    p('綠點從<b>計時</b>和<b>喝水</b>來：讀書每專心 ' + FOCUS_GLASS + ' 分鐘一顆砂時計 +' + FOCUS_GREEN + ' 綠點；運動、練樂器每 ' + MOVE_STEP + ' 分鐘 +' + MOVE_GREEN + '；喝水每 ' + WATER_CUP + 'cc +' + WATER_GREEN + '（一天最多算 ' + WATER_CAP + 'cc）。種樹花的是綠點，經驗值、島幣和島嶼等級都不會少。') +
+    p('綠點從<b>計時</b>和<b>喝水</b>來：讀書每專心 ' + FOCUS_GLASS + ' 分鐘一顆砂時計 +' + FOCUS_GREEN + ' 綠點；運動、藝文活動每 ' + MOVE_STEP + ' 分鐘 +' + MOVE_GREEN + '；喝水每 ' + WATER_CUP + 'cc +' + WATER_GREEN + '（一天最多算 ' + WATER_CAP + 'cc）。種樹花的是綠點，經驗值、島幣和島嶼等級都不會少。') +
     p('選一種植物，再點地圖上白色的空地格，就種下去了。可以寫一塊小木牌（最多 20 字），之後在 3D 小島點那棵樹就看得到。種下 7 天變小樹、14 天長大，不用澆水，也不會枯掉。種錯地方可以免費移植；拔掉的話綠點不會退回。') +
     `<table><tr><th>種類</th><th>綠點</th><th>植物</th></tr>${['花草', '灌木', '樹', '名木'].map(k => `<tr><td>${k}</td><td>${PLANTS.find(p => p.kind === k).price}</td><td style="text-align:left">${PLANTS.filter(p => p.kind === k).map(p => p.ic + ' ' + p.name + (p.lv > 1 ? '（Lv.' + p.lv + '）' : '')).join('、')}</td></tr>`).join('')}</table>` +
     p('每種植物都有自己最好看的節氣，例如櫻花在驚蟄到清明開、楓樹在寒露到立冬變紅、鳳凰木在芒種到小暑開花（剛好是會考完、畢業的時候）。植木屋標著「當季」的，就是現在最漂亮的。') +
@@ -5672,7 +5718,7 @@ function viewGuide() {
     p('牆上的 📆 日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，大約 30 字，寫完同住夥伴會回你一個表情；按 ◀ ▶ 可以翻回去看。不寫也沒關係，不會提醒、也沒有獎勵。每一頁預設只有你自己看得到，想給家人看的那頁按「分享給家人」，隨時可以收回。') +
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
     p('拿到的 🏅 徽章也掛在家裡，在最下面。'))}
-  ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎻 上音樂課、練樂器也算：在「我的家」按「開始練習」，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，練多久都算。藝文練習不會蓋運動的章，運動和練習一次只能開一個計時。'))}
+  ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎼 藝文活動也算：到「音樂廳」選「🎻 練習、上課」「🎫 聽音樂會、看展演」「🥁 樂團排練」或「🎨 畫畫、書法、創作」開始計時，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，多久都算，不用證明。藝文計時不會蓋運動的章，運動和藝文一次只能開一個計時。音樂廳在 3D 小島碼頭廣場的正前方，這週有來計時，晚上大玻璃會亮。'))}
   ${sec('💊', '吃藥', p('首頁「今日のおつとめ」有一行「💊 吃藥」。早上和晚上各有一段時間（一開始是早上 7～10 點、晚上 7～10 點，可以自己改），這段時間打開小島，它會問一聲；吃了就按一下。時間過了也可以補勾，按錯再按一次就取消。補勾只是補記錄；忘了吃要不要補吃，請照醫師或藥師說的做。') + p('這裡不給綠點、島幣或經驗值，也不算連續天數，只是幫你記得。小島沒打開不會叫你，要準時提醒，可以用手機鬧鐘，或在設定裡按「📅 加到 Google 日曆」。') + p('只記有沒有勾、幾點勾的，不記吃什麼藥，也不會送給 AI。預設只有你自己看得到；想讓爸爸看到，可以在設定裡打開，隨時可以關。'))}
   ${sec('🥤', '喝水', p('在「我的家」的喝水卡按 +100cc、+250cc 或 +500cc，喝了多少就記多少。每 ' + WATER_CUP + 'cc（大約一杯）+' + WATER_GREEN + ' 🌱 綠點。') + p('一天最多算 ' + WATER_CAP + 'cc 的綠點，再喝還是可以記，只是不加綠點，水不是喝越多越好。' + WATER_WIN + ' 分鐘內最多記 ' + WATER_MAX + 'cc，按錯了可以按 ✕ 刪掉今天的那筆。') + p('喝水的紀錄只有你自己看得到，家人和訪客都看不到。'))}
   ${sec('🏃', '運動集章卡', p('首頁「今日のおつとめ」的「🏃 運動」那一行，或海邊步道頁的集章卡，就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
