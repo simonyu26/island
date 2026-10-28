@@ -311,11 +311,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.47.2';
+const APP_VERSION = '2.47.3';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，山頂的玉山聚會所也會開門，從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.47.3', date: '2026-10-28', minor: true, items: ['🍶 「撿起來」按不了的時候，卡片上會寫原因：今天還有一題挑戰沒回答，或今天的 10 題挑戰都做完了'] },
   { v: '2.47.2', date: '2026-10-28', minor: true, items: ['🧭 「練一題」按不了的時候，卡片上會寫原因：今天還有一題挑戰沒回答，或今天的 10 題挑戰做完了'] },
   { v: '2.47.1', date: '2026-10-28', minor: true, items: ['📅 下次更新預告有新內容時，📮 郵便受け會多一張「下次更新預告」卡片，看過按「知道了」就收起來'] },
   { v: '2.47', date: '2026-10-27', items: ['🧮 數學瓶如果不是一時算錯，這次只要選怎麼列式、第一步怎麼做，不用算出答案；算錯的照舊完整算一次。第三次漂回來的考古題還是要完整算。', '🍶 每天撿的瓶子裡，數學最多 2 個，其他名額留給別科；別科沒有瓶子時，數學瓶照樣補上。'] },
@@ -2742,9 +2743,10 @@ function viewLight() {
       <button onclick="openWrongScan()">拍照</button></div></div>`}
     <div class="card"><h3>🌊 今天漂回來的瓶子</h3>
       <details class="muted" style="margin-bottom:6px;font-size:13px" ${lightDet('rules')}><summary>瓶子怎麼漂回來？</summary>撿起瓶子會出一題 AI 類題：考同一個觀念，但數字和情境都換過。答錯隔 1 天再漂回來；答對後隔 3 天、再答對隔 7 天，連續三次答對就變成紙燈籠放到海上。燈籠 3 週後會當「老朋友」漂回來一次，之後每個月一次，看看你還記不記得；答錯也不會變回瓶子。撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個。</details>
+      ${!fam && due.length && !lightBusy && (open || full) ? `<div style="margin-bottom:6px;color:var(--plum)">⏳ ${open ? '今天還有一題挑戰沒回答（在這一頁上方），答完就能撿瓶子。' : '今天的 ' + XQ_DAILY + ' 題挑戰都做完了，明天再來撿。'}</div>` : ''}
       ${due.length ? due.map(b => row(b, fam ? '' : `<button style="padding:6px 12px" onclick="event.stopPropagation();reviewBottle('${b.id}')" ${lightBusy || open || full ? 'disabled' : ''}>撿起來</button>`)).join('')
         : `<div class="muted">${room ? (st.sea ? '今天沒有瓶子漂回來。' : '海灘上還沒有瓶子。挑戰任務或故事任務答錯的題，會漂到這裡。') : '今天已經撿了 ' + REVIEW_DAILY + ' 個瓶子，明天再來。'}</div>`}
-      ${lightBusy ? '<div class="muted" style="margin-top:6px">✍️ 守燈人正在打開瓶子、寫類題…（大約 10～20 秒）</div>' : full && due.length ? '<div class="muted" style="margin-top:6px">今天的 ' + XQ_DAILY + ' 題挑戰都做完了，明天再來撿。</div>' : ''}</div>
+      ${lightBusy ? '<div class="muted" style="margin-top:6px">✍️ 守燈人正在打開瓶子、寫類題…（大約 10～20 秒）</div>' : ''}</div>
     ${fam ? '' : lightWordCard()}
     ${wrongTypesCard(fam, open ? '今天還有一題挑戰沒回答（在這一頁上方），答完就能按「練一題」。' : full ? '今天的 ' + XQ_DAILY + ' 題挑戰做完了，明天就能再按「練一題」。' : '')}
     ${later.length ? `<details class="card" ${lightDet('later')}><summary><b>🌫️ 還在海上漂的瓶子（${later.length}）</b></summary>${later.slice(0, 30).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.due)} 漂回</span>`)).join('')}</details>` : ''}
