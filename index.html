@@ -311,11 +311,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.47';
+const APP_VERSION = '2.47.1';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，山頂的玉山聚會所也會開門，從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.47.1', date: '2026-10-28', minor: true, items: ['📅 下次更新預告有新內容時，📮 郵便受け會多一張「下次更新預告」卡片，看過按「知道了」就收起來'] },
   { v: '2.47', date: '2026-10-27', items: ['🧮 數學瓶如果不是一時算錯，這次只要選怎麼列式、第一步怎麼做，不用算出答案；算錯的照舊完整算一次。第三次漂回來的考古題還是要完整算。', '🍶 每天撿的瓶子裡，數學最多 2 個，其他名額留給別科；別科沒有瓶子時，數學瓶照樣補上。'] },
   { v: '2.46', date: '2026-10-27', items: ['📅 照計畫完成一項的經驗值，從 +10 提高到 +25（做了一部分從 +5 提高到 +12，Boss 項目一樣雙倍）。讀完一項通常要花不少時間，比做一題久很多，所以多給一些。上週一（10/19）起完成的項目都照新的算，多出來的{補}已經補進去了。'] },
   { v: '2.45.1', date: '2026-10-27', minor: true, items: ['🗼 燈塔不再顯示海灘上一共有幾個瓶子，只告訴你今天漂回來幾個'] },
@@ -1451,9 +1452,11 @@ function newsItems() {
   return list.some(c => !c.minor) ? list : [];
 }
 function freshCards() { const seen = Number(S.save.cardsSeen || 0); return cardList().filter(c => c.ts > seen); }
+function nextUpKey() { return NEXT_UP && NEXT_UP.items.length ? NEXT_UP.when + '|' + NEXT_UP.items.join('|') : ''; }
+function nextUpNew() { const k = nextUpKey(); return !!k && !isFamily() && local.get('islandSeenNextUp') !== k; }
 function mailCount() {
   if (isFamily()) return 0;
-  return (newsItems().length ? 1 : 0) + (freshCards().length ? 1 : 0) + (freshBooks().length ? 1 : 0) + visitList().filter(v => v.status === 'pending').length + (wishNews() ? 1 : 0);
+  return (newsItems().length ? 1 : 0) + (freshCards().length ? 1 : 0) + (freshBooks().length ? 1 : 0) + visitList().filter(v => v.status === 'pending').length + (wishNews() ? 1 : 0) + (!newsItems().length && nextUpNew() ? 1 : 0);
 }
 // 小修摺起來：點開才看得到
 function minorFold(list) {
@@ -1467,8 +1470,11 @@ function viewMail() {
     <ul style="margin:6px 0 10px;padding-left:20px">${news.filter(c => !c.minor).flatMap(c => c.items).map(i => `<li>${esc(newsText(i))}</li>`).join('')}</ul>
     ${minorFold(news.filter(c => c.minor))}
     ${NEXT_UP && NEXT_UP.items.length ? `<div class="muted" style="margin:-4px 0 10px"><b>下次更新（${esc(NEXT_UP.when)}）預計會有：</b><ul style="margin:4px 0 0;padding-left:20px">${NEXT_UP.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : ''}
-    <div class="row"><button onclick="local.set('islandSeenVersion', APP_VERSION); go('guide')">看玩法說明</button>
-    <button class="ghost" onclick="local.set('islandSeenVersion', APP_VERSION); render()">知道了</button></div></div>` : '';
+    <div class="row"><button onclick="local.set('islandSeenVersion', APP_VERSION); local.set('islandSeenNextUp', nextUpKey()); go('guide')">看玩法說明</button>
+    <button class="ghost" onclick="local.set('islandSeenVersion', APP_VERSION); local.set('islandSeenNextUp', nextUpKey()); render()">知道了</button></div></div>`
+    : nextUpNew() ? `<div class="card" style="border:2px solid var(--plum)"><h3>📅 下次更新預告（${esc(NEXT_UP.when)}）</h3>
+    <ul style="margin:6px 0 10px;padding-left:20px">${NEXT_UP.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+    <div class="row"><button class="ghost" onclick="local.set('islandSeenNextUp', nextUpKey()); render()">知道了</button></div></div>` : '';
   const wish = wishNews() ? `<div class="card" style="border:2px solid var(--gold);cursor:pointer" onclick="go('wish')"><b>💡 爸爸回覆了你的 ${wishNews()} 則想法</b><div class="muted">點開「讓島順起來」看看</div></div>` : '';
   const fb = freshBooks(), fg = fb.filter(x => x.key.startsWith('gift:')).length, fc = fb.length - fg;
   const books = fb.length ? `<div class="card" style="border:2px solid var(--gold);cursor:pointer" onclick="go('bookstore')"><b>📚 ${[...new Set(fb.map(x => x.from))].map(esc).join('、')}送來了${bookGotText(fg, fc)}</b><div class="muted">書店店長幫你收著，去書店拿吧</div></div>` : '';
@@ -5674,7 +5680,7 @@ function viewGuide() {
     p('手寫計畫書照常寫。小島幫你做三件事：把計畫排進每一天、記下你做了什麼、週末確認這週，並自動寫回爸爸的週檢討表。'))}
   ${sec('📋', '首頁怎麼看', p('打開小島，最上面是「<b>今日のおつとめ</b>」：讀書計畫、挑戰任務、漂流瓶、故事任務、運動，一行一件；最後一行紙本檢討是可選的，沒做也不算未完成。右邊的小標籤告訴你做了沒：黃色是還沒做，綠色是完成了。點一行就會展開，直接在裡面記錄、答題，再點一次就收起來。') + p('書店、智慧島、屋台這些地方不在板子上，在 3D 小島上點建物就能進去；用清單模式時，板子下面有一列「🗺️ 去島上走走」，你開過的地方都在那裡。') +
     p('下面是 3D 小島，再往下是嚮導的「📰 回覧板」，島民的信和昨天的新聞點開就看得到。') +
-    p('右上角的 📮 是<b>郵便受け</b>：小島更新、家人寄的明信片、有人想邀請朋友來島上、爸爸回覆你的想法，都會寄到這裡，有新東西時會亮紅點。'))}
+    p('右上角的 📮 是<b>郵便受け</b>：小島更新、下次更新預告、家人寄的明信片、有人想邀請朋友來島上、爸爸回覆你的想法，都會寄到這裡，有新東西時會亮紅點。'))}
   ${sec('👥', '島民和室友有什麼不一樣', `<table>
       <tr><th></th><th>島民</th><th>室友</th></tr>
       <tr><td>幾位</td><td>5 位，一科一位</td><td>最多 6 位（選填）</td></tr>
