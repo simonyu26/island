@@ -323,11 +323,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.47.4';
+const APP_VERSION = '2.47.5';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，山頂的玉山聚會所也會開門，從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.47.5', date: '2026-10-28', items: ['📤 計畫頁多了「整理學習摘要給學習顧問（AI）看」：把這週或這個月的計畫、考古題、瓶子、錯因、補強的單元和模考分數整理成一段文字，只有數字和名稱，不含你寫的字。看過再決定要不要複製給爸爸。'] },
   { v: '2.47.4', date: '2026-10-28', items: ['📖 玩法說明變短了：分成五類，每一段先收起來，點標題才打開；每個地方右上角的「❓ 這裡怎麼玩」會直接打開那一段', '🏠 我的家分成三個分頁：🛋️ 房間、🛒 家具店、🏅 收藏（獎勵家具和徽章）', '⚙️ 「更多」的「誰看得到什麼」、商店的素材櫃、智慧島的集章冊都先收起來，點一下就打開'] },
   { v: '2.47.3', date: '2026-10-28', minor: true, items: ['🍶 「撿起來」按不了的時候，卡片上會寫原因：今天還有一題挑戰沒回答，或今天的 10 題挑戰都做完了'] },
   { v: '2.47.2', date: '2026-10-28', minor: true, items: ['🧭 「練一題」按不了的時候，卡片上會寫原因：今天還有一題挑戰沒回答，或今天的 10 題挑戰做完了'] },
@@ -4258,8 +4259,9 @@ function viewPlan() {
     ${wd.total ? `<div class="row"><div class="bar grow" style="margin-top:0"><i style="width:${pct}%"></i></div><b>${pct}%</b></div>
       <div class="muted" style="margin-top:4px">計畫 ${wd.total} 次，完成 ${wd.got} 次${doneUnits > wd.got ? `，另外多做了 ${doneUnits - wd.got} 次` : ''}</div>` : `<div class="muted">${doneUnits ? '這週記錄了 ' + doneUnits + ' 次。' : '這週還沒有計畫或紀錄。'}</div>`}
     ${wk <= thisMon ? `<div class="row" style="margin-top:10px"><button class="grow" onclick="openConfirm('${wk}')">${wd.settled ? '🔁 重新確認這週' : '✅ 確認這週（週日結算）'}</button></div>
-      <div class="muted" style="margin-top:6px">${wd.settled ? '這週已經確認過了，' + esc(wd.settled.at || '') + '。' : '週末打開這裡，把漏記的補上就完成這週了。'}</div>` : ''}
-    ${isFamily() ? '' : `<div style="margin-top:10px"><button class="ghost" style="width:100%" onclick="openAdv()">📤 整理這週計畫給學習顧問（AI）看</button></div>`}</div>`;
+      <div class="muted" style="margin-top:6px">${wd.settled ? '這週已經確認過了' + (wd.settled.at ? '，' + esc(wd.settled.at) : '') + '。' : '週末打開這裡，把漏記的補上就完成這週了。'}</div>` : ''}
+    ${isFamily() ? '' : `<div style="margin-top:10px"><button class="ghost" style="width:100%" onclick="openAdv()">📤 整理這週計畫給學習顧問（AI）看</button>
+      <button class="ghost" style="width:100%;margin-top:6px" onclick="openAdvSum('w0')">📤 整理學習摘要給學習顧問（AI）看（週／月）</button></div>`}</div>`;
 }
 function bindPlan() {
   const f = document.getElementById('scanFile');
@@ -4297,8 +4299,66 @@ function advText(wk) {
   out.push(...(all.length ? all.map(sub => sub + '：' + (ap[sub] || 0) + '／' + (am[sub] || 0) + ' 分') : ['沒有紀錄']));
   return out.join('\n');
 }
+// 學習摘要（週／月）：只放數字和名稱（科目、單元、題型、錯因類別）。她寫的字（一句話、瓶子和紙船上的話、跨科連結、項目名稱、模考名稱）一律不放（工程顧問 10/28）
+function monthOf(back) { const d = new Date(S.today + 'T00:00:00'); d.setDate(1); d.setMonth(d.getMonth() - back); const y = d.getFullYear(), m = d.getMonth() + 1;
+  const first = y + '-' + String(m).padStart(2, '0') + '-01', next = new Date(y, m, 1), last = addD(next.getFullYear() + '-' + String(next.getMonth() + 1).padStart(2, '0') + '-01', -1);
+  return { y, m, first, last }; }
+const ADV_SUM = { w0: '這週', w1: '上週', m0: '這個月', m1: '上個月' };
+function advSumText(mode) {
+  let first, last, title;
+  if (mode[0] === 'w') { first = addD(mondayOf(S.today), mode === 'w1' ? -7 : 0); last = addD(first, 6); title = '週摘要（' + short(first) + '–' + short(last) + '，'; }
+  else { const o = monthOf(mode === 'm1' ? 1 : 0); first = o.first; last = o.last; title = '月摘要（' + o.y + ' 年 ' + o.m + ' 月，' + short(first) + '–' + short(last < S.today ? last : S.today) + '，'; }
+  const inM = d => !!d && d >= first && d <= last;
+  const sub = l => SUBJECT_NAME[l] || l, num = x => Math.round(x * 10) / 10, out = [];
+  out.push('島嶼讀書' + title + '整理於 ' + short(S.today) + '）');
+  out.push('這份摘要只有數字和名稱，不含任何寫下來的句子。', '');
+  // 1. 每週：週一落在這個月的週
+  out.push(mode[0] === 'w' ? '【這週】達成率（完成／計畫）・各科完成次數' : '【每週】達成率（完成／計畫）・各科完成次數');
+  const weeks = mode[0] === 'w' ? [first].filter(w => w <= S.today) : weekList().filter(w => inM(w) && w <= S.today);
+  out.push(...(weeks.length ? weeks.map(w => { const wd = weekData(w), by = {};
+    Object.keys(wd.done).forEach(r => { const it = D.itemsByRow[r]; if (it) by[it.subject] = (by[it.subject] || 0) + wd.done[r]; });
+    return short(w) + ' 週：' + (wd.total ? Math.round(wd.got / wd.total * 100) + '%（' + num(wd.got) + '／' + wd.total + '）' : '沒排計畫') + (Object.keys(by).length ? '・' + Object.keys(by).map(k => k + ' ' + num(by[k])).join('、') : '') + (S.save['settled:' + w] ? '' : '（還沒確認）'); })
+    : ['還沒有紀錄']));
+  const min = {}; Object.keys(S.save).filter(k => k.startsWith('focus:') && S.save[k] && inM(k.slice(6))).forEach(k => (S.save[k].list || []).forEach(x => { const it = D.itemsByRow[x.row]; if (it) min[it.subject] = (min[it.subject] || 0) + (x.min || 0); }));
+  out.push('', '【計時分鐘】' + (Object.keys(min).length ? Object.keys(min).map(k => k + ' ' + min[k] + ' 分').join('、') : '沒有用計時器'));
+  // 2. 考古題
+  const bank = bankDone().filter(q => inM(q.at.slice(0, 10))), bl = [...new Set(bank.map(q => q.lane))];
+  out.push('', '【考古題】做了幾題／答對率／同一批題的全國答對率（看題目難不難）');
+  out.push(...(bl.length ? bl.map(l => { const qs = bank.filter(q => q.lane === l); return sub(l) + '：' + qs.length + ' 題／' + pctOf(qs.filter(q => q.ok).length, qs.length) + '%／' + Math.round(qs.reduce((a, q) => a + q.pass, 0) / qs.length) + '%'; }) : ['沒有做考古題']));
+  // 3. 錯題：這個月新漂來的瓶子、這個月變燈籠的，照科目和單元（題型）
+  const all = bottles().filter(b => !b.guess), g = {};
+  const key = b => sub(laneOf(b.rec, b.lane)) + '・' + (unitOf(b.rec, b.id) || '沒有標單元');
+  all.forEach(b => { const k = key(b), o = g[k] || (g[k] = { n: 0, l: 0 }); if (inM(String(b.wrongAt || '').slice(0, 10))) o.n++; if (inM(b.lantern)) o.l++; });
+  const gk = Object.keys(g).filter(k => g[k].n || g[k].l).sort((a, b) => (g[b].n - g[a].n) || a.localeCompare(b));
+  out.push('', '【錯題】新漂來的瓶子／變成燈籠');
+  out.push(...(gk.length ? gk.map(k => k + '：' + g[k].n + '／' + g[k].l) : ['沒有新瓶子']));
+  // 4. 錯因：這個月的瓶子（她標了才有）＋紙船、親子船
+  const why = {}; REASONS.forEach(r => why[r[0]] = { b: 0, p: 0 });
+  all.filter(b => inM(String(b.wrongAt || '').slice(0, 10)) && why[b.rv.why]).forEach(b => why[b.rv.why].b++);
+  D.paperSessions.filter(ss => inM(ss.date)).forEach(ss => ss.rows.forEach(r => Object.keys(r.reasons || {}).forEach(k => { if (why[k]) why[k].p += Number(r.reasons[k]) || 0; })));
+  out.push('', '【錯因】瓶子上標的＋紙本檢討（紙船、親子船）');
+  out.push(...REASONS.map(r => r[1] + '：' + (why[r[0]].b + why[r[0]].p) + '（瓶子 ' + why[r[0]].b + '、紙本 ' + why[r[0]].p + '）'));
+  out.push('紙本檢討：' + D.paperSessions.filter(ss => inM(ss.date)).length + ' 次（親子船 ' + D.paperSessions.filter(ss => inM(ss.date) && ss.kind === 'parent').length + ' 次）');
+  // 5. 補強的單元（整理這天的狀態）
+  const um = unitMap(), un = t => sub(t.lane) + '・' + t.unit;
+  out.push('', '【正在補強】' + (um.weak.length ? um.weak.map(t => un(t) + '（做過 ' + t.n + ' 題）').join('、') : '沒有'));
+  out.push('【已補強】' + (um.done.length ? um.done.map(t => un(t) + '（燈籠 ' + t.lanterns + (t.steady ? '，⭐ 最近 ' + RECENT_N + ' 題對 ' + t.recentOk + ' 題' : '') + '）').join('、') : '還沒有'));
+  // 6. 模考：只放日期和分數，不放考試名稱
+  const sc = v => { const x = String(v == null ? '' : v).trim(); return /^(A\+\+|A\+|A|B\+\+|B\+|B|C|\d{1,3}(\.\d+)?|[0-6] ?級分)$/.test(x) ? x : ''; };   // 只認等級、分數、級分，其他字不放
+  const ymdOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const ex = S.assessments.filter(a => inM(ymdOf(assessDate(a.date))));
+  out.push('', '【模考】' + (ex.length ? '' : '沒有紀錄'));
+  ex.forEach(a => { const d = assessDate(a.date); out.push((d.getMonth() + 1) + '/' + d.getDate() + '：' + SUBJECTS.filter(k => sc(a[k])).map(k => k + ' ' + sc(a[k])).join('、') + (sc(a['文']) ? '、作文 ' + sc(a['文']).replace(/ ?級分/, ' 級分') : '')); });
+  return out.join('\n');
+}
+async function openAdvSum(mode) { await loadUnits(); draft = { adv: advSumText(mode), advSum: mode }; render(); window.scrollTo(0, 0); }
 function openAdv() { draft = { adv: advText(planWeek) }; render(); window.scrollTo(0, 0); }
 function advCard() {
+  if (draft.advSum) return `<div class="card"><h3>📤 給學習顧問看的學習摘要</h3>
+    <div class="muted">下面是${ADV_SUM[draft.advSum]}的數字和名稱：計畫、考古題、瓶子、錯因、補強的單元、模考分數。不含你寫的字，也不會自動送出。看過覺得可以，再複製給爸爸，他會拿去跟學習顧問（AI）一起看。不想給也沒關係，關掉就好。</div>
+    <div class="row" style="gap:6px;margin-top:8px">${Object.keys(ADV_SUM).map(m => `<button class="${draft.advSum === m ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" onclick="openAdvSum('${m}')">${ADV_SUM[m]}</button>`).join('')}</div>
+    <textarea id="advText" readonly rows="14" style="width:100%;margin-top:8px;font-size:13px">${esc(draft.adv)}</textarea>
+    <div class="row" style="margin-top:8px"><button class="grow" onclick="copyAdv()">📋 複製</button><button class="ghost" onclick="draft={};render()">關掉</button></div></div>`;
   return `<div class="card"><h3>📤 給學習顧問看的計畫摘要</h3>
     <div class="muted">下面是這週的計畫和最近 4 週各科花的時間，不會自動送出。看過覺得可以，再複製給爸爸，他會拿去跟學習顧問（AI）討論下週怎麼排比較順。學習顧問是幫爸爸一起想讀書安排的 AI。不想給也沒關係，關掉就好。</div>
     <textarea id="advText" readonly rows="12" style="width:100%;margin-top:8px;font-size:13px">${esc(draft.adv)}</textarea>
