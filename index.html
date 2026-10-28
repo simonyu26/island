@@ -195,6 +195,18 @@
   .wscene { border-radius: 14px; overflow: hidden; margin-top: 6px; } .wscene svg { display: block; width: 100%; height: auto; }
   .whut { cursor: pointer; } .whut:hover rect:first-of-type, .whut:active rect:first-of-type { filter: brightness(1.05); }
   .whcard { cursor: pointer; }
+  /* 各頁縮短：收起來的區塊、分頁列、玩法說明目錄 */
+  details.fold > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 6px; }
+  details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary::before { content: '▸'; color: var(--muted); font-size: 13px; transition: transform .15s; }
+  details.fold[open] > summary::before { transform: rotate(90deg); }
+  details.fold > summary h3 { margin: 0; display: inline; }
+  .ghead { margin: 18px 4px 8px; color: var(--plum); }
+  .gsec { padding: 12px 16px; margin-bottom: 8px; }
+  .helpchip { display: flex; justify-content: flex-end; margin: -4px 0 6px; }
+  .helpchip button { padding: 4px 10px; font-size: 13px; }
+  .htabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .htabs button { padding: 8px 4px; font-size: 14px; }
   .wstamps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 6px; }
   .wstamp { aspect-ratio: 1; border: 2px dashed var(--plum-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; background: none; padding: 0; }
   .wstamp.on { border-style: solid; background: #fff5f3; font-weight: 700; font-size: 14px; transform: rotate(-8deg); }
@@ -311,11 +323,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.47.3';
+const APP_VERSION = '2.47.4';
 // 下次預計更新（Simon，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，山頂的玉山聚會所也會開門，從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（Simon，2026-10-26）
 const CHANGELOG = [
+  { v: '2.47.4', date: '2026-10-28', items: ['📖 玩法說明變短了：分成五類，每一段先收起來，點標題才打開；每個地方右上角的「❓ 這裡怎麼玩」會直接打開那一段', '🏠 我的家分成三個分頁：🛋️ 房間、🛒 家具店、🏅 收藏（獎勵家具和徽章）', '⚙️ 「更多」的「誰看得到什麼」、商店的素材櫃、智慧島的集章冊都先收起來，點一下就打開'] },
   { v: '2.47.3', date: '2026-10-28', minor: true, items: ['🍶 「撿起來」按不了的時候，卡片上會寫原因：今天還有一題挑戰沒回答，或今天的 10 題挑戰都做完了'] },
   { v: '2.47.2', date: '2026-10-28', minor: true, items: ['🧭 「練一題」按不了的時候，卡片上會寫原因：今天還有一題挑戰沒回答，或今天的 10 題挑戰做完了'] },
   { v: '2.47.1', date: '2026-10-28', minor: true, items: ['📅 下次更新預告有新內容時，📮 郵便受け會多一張「下次更新預告」卡片，看過按「知道了」就收起來'] },
@@ -898,6 +911,7 @@ function render() {
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
   app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, bottle: viewBottle, wrongScan: viewWrongScan, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  if (TAB_HELP[tab]) app.insertAdjacentHTML('afterbegin', helpChip());
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
   if (tab === 'visits' || tab === 'finvite') drawQrs();
@@ -1241,9 +1255,9 @@ function ferryKeeper(today) {
 function wisdomStampBook() {
   return `<div class="card"><h3 style="margin-top:0">📜 集章冊</h3>
     ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], book = wisdomCount(k) >= 13 ? k + '2' : k, d = wisdomDone(book);
-      return `<div style="margin-top:8px"><b style="color:${t.color}">${t.ic} ${esc((wisdomBook(book) || {}).title || t.name)}</b>
-        <div class="wstamps">${Array.from({ length: 13 }, (_, i) => d[i + 1] ? `<button class="wstamp on" style="border-color:${t.color};color:${t.color}" onclick="openWisdomLesson('${book}',${i + 1})">${i + 1}</button>` : `<span class="wstamp">${i + 1}</span>`).join('')}</div></div>`; }).join('')}
-    <div class="muted" style="margin-top:8px;font-size:13px">點蓋好的章可以回看那一講。上過的書也會擺在書店的「你的書架」上。</div></div>`;
+      return `<details class="fold" style="margin-top:8px"><summary><b style="color:${t.color}">${t.ic} ${esc((wisdomBook(book) || {}).title || t.name)}</b><span class="muted">${Object.keys(d).filter(n => d[n]).length}／13</span></summary>
+        <div class="wstamps">${Array.from({ length: 13 }, (_, i) => d[i + 1] ? `<button class="wstamp on" style="border-color:${t.color};color:${t.color}" onclick="openWisdomLesson('${book}',${i + 1})">${i + 1}</button>` : `<span class="wstamp">${i + 1}</span>`).join('')}</div></details>`; }).join('')}
+    <div class="muted" style="margin-top:8px;font-size:13px">點書名打開這本的章；點蓋好的章可以回看那一講。上過的書也會擺在書店的「你的書架」上。</div></div>`;
 }
 let wisdomHut = 'kongming';
 function openWisdomHut(k) { wisdomHut = k; draft = {}; tab = 'whut'; render(); window.scrollTo(0, 0); }
@@ -1692,7 +1706,8 @@ const RES_FURNITURE = {
 const RES_WALL = { 國: '#fbe3ee', 英: '#e3f0fb', 數: '#fdf1d6', 自: '#e3f5e5', 社: '#eee6fb' };
 const RES_SLOTS = 8;
 let houseWho = 'me';   // 'me' 是自己的家，或島民的科目（國、英…）
-function openHouse(who) { houseWho = who || 'me'; if (SUBJECTS.includes(houseWho) && !kzLike(houseWho).visit) kzSave(houseWho, { visit: true }); go('house'); }
+let houseTab = 'room';   // 我的家的分頁：room 房間、shop 家具店、keep 收藏
+function openHouse(who) { houseWho = who || 'me'; houseTab = 'room'; if (SUBJECTS.includes(houseWho) && !kzLike(houseWho).visit) kzSave(houseWho, { visit: true }); go('house'); }
 function houseTier() { let t = HOUSE_TIERS[0]; HOUSE_TIERS.forEach(x => { if (D.level >= x.lv) t = x; }); return t; }
 function homeOf() { return S.save.home || null; }
 // 家是休息的地方（Simon，2026-10-25）：會考倒數鐘不再當家具，搬到燈塔；已經買的退還島幣
@@ -1811,9 +1826,16 @@ function furnShop(who) {
         return `<button class="${has ? (on ? 'on' : 'has') : ''}" onclick="${has ? `toggleFurniture('${who}','${f.id}')` : `buyFurniture('${who}','${f.id}')`}" ${!has && D.coins < f.price ? 'disabled' : ''}>
         <span>${f.ic}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '🪙 ' + f.price}</small></button>`; };
       const cat = catalogFor(who), fav = who === 'me' ? [] : RES_FURNITURE[who];
+      let first = true;
       return (fav.length ? `<div class="furn">${fav.map(btn).join('')}</div>` : '') + FURN_STYLES.map(([st, title]) => { const list = cat.filter(f => !fav.includes(f) && (f.st || '') === st);
-        return list.length ? `<div class="muted" style="margin-top:10px"><b>${title}</b></div><div class="furn">${list.map(btn).join('')}</div>` : ''; }).join(''); })()}
-    ${who === 'me' ? `<h3 style="margin-top:14px">🏐 運動獎勵</h3><div class="muted">每週運動 3 天、連續達標就會解鎖，不用島幣。</div>
+        if (!list.length) return '';
+        const open = first; first = false;
+        return `<details class="fold" style="margin-top:10px" ${open ? 'open' : ''}><summary><b>${title}</b><span class="muted">${list.length} 件・有 ${list.filter(f => own.includes(f.id)).length} 件</span></summary><div class="furn">${list.map(btn).join('')}</div></details>`; }).join(''); })()}</div>`;
+}
+// 自己家的獎勵家具（不用島幣）：運動、燈塔、智慧島；放在我的家的「收藏」分頁
+function furnRewards() {
+  const who = 'me', own = ownedFor(who), shown = shownFor(who);
+  return `<div class="card">${who === 'me' ? `<h3 style="margin-top:0">🏐 運動獎勵</h3><div class="muted">每週運動 3 天、連續達標就會解鎖，不用島幣。</div>
     <div class="furn">${EX_REWARDS.concat([EX_MEDAL]).map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
         <span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : (f.lock || '連續 ' + f.weeks + ' 週')}</small></button>`; }).join('')}</div>
@@ -1823,7 +1845,8 @@ function furnShop(who) {
     ${wisdomOn() ? `<h3 style="margin-top:14px">⛴️ 智慧島的畢業禮物</h3><div class="muted">一本書蓋滿 13 個章，老師會送一件來。</div>
     <div class="furn">${WISDOM_GRADS.map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
-        <span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '《' + esc((WISDOM_BOOKS.find(b => b.key === f.book) || {}).title || '') + '》蓋滿'}</small></button>`; }).join('')}</div>` : ''}` : ''}</div>`;
+        <span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '《' + esc((WISDOM_BOOKS.find(b => b.key === f.book) || {}).title || '') + '》蓋滿'}</small></button>`; }).join('')}</div>` : ''}` : ''}
+    <div class="muted" style="margin-top:8px">拿到的家具點一下可以擺出來或收起來，房間的空位和家具店的家具共用。</div></div>`;
 }
 function visitRow(except) {
   return `<div class="card"><h3>🏘️ 去島民家作客</h3><div class="row" style="justify-content:space-around">${SUBJECTS.filter(s => s !== except).map(s => { const r = resident(s);
@@ -1841,6 +1864,9 @@ function viewHouse() {
       <div class="row"><span style="font-size:44px">${tier.ic}</span><div class="grow"><h2 style="margin:0"><span class="namePlate">${esc(h.name || '我的家')}</span></h2>
         <div class="muted">${tier.name}・島嶼 Lv.${D.level}${next ? `・Lv.${next.lv} 會擴建成${next.name}` : '・已經是最大的房子了'}</div></div>
         ${isFamily() ? '' : '<button class="ghost" style="padding:6px 10px" onclick="draft.editHome=true;render()">🎨 改外觀</button>'}</div></div>
+    <div class="htabs">${[['room', '🛋️ 房間'], ['shop', '🛒 家具店'], ['keep', '🏅 收藏']].map(([k, n]) =>
+      `<button class="${houseTab === k ? '' : 'ghost'}" onclick="houseTab='${k}';draft.arrange=false;render()">${n}</button>`).join('')}</div>
+    ${houseTab === 'room' ? `
     ${homeMateCard()}
     <button class="ghost" style="width:100%;margin-bottom:12px" onclick="draft={};tab='kizuna';render();window.scrollTo(0,0)">📔 絆の手帖：你和島民、老師的交情</button>
     ${diaryCard()}
@@ -1849,11 +1875,11 @@ function viewHouse() {
     <div class="card"><h3>🛋️ 房間</h3>${roomHtml('me', vs)}
       <div class="speech" style="margin-top:10px"><b>${esc(vr.name)}</b>來作客：${esc(vline)}</div>
       ${isFamily() ? '' : draft.arrange ? arrangeHtml() : `<button class="ghost" style="width:100%;margin-top:10px" onclick="draft.arrange=true;draft.pick=null;render()">🧩 自己擺家具</button>`}
-      <div class="muted" style="margin-top:6px">房間可以擺 ${tier.slots} 件家具，房子越大擺越多。點下面的家具可以收起來或擺出來。</div></div>
-    ${furnShop('me')}
-    ${visitRow('me')}
-    <div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
-      `<div class="badge ${b.ok ? '' : 'locked'}"><span class="ic">${b.ic}</span>${esc(b.name)}</div>`).join('')}</div></div>
+      <div class="muted" style="margin-top:6px">房間可以擺 ${tier.slots} 件家具，房子越大擺越多。買家具、把家具擺出來或收起來，在「🛒 家具店」和「🏅 收藏」。</div></div>
+    ${visitRow('me')}`
+      : houseTab === 'shop' ? furnShop('me') + `<div class="row" style="margin-bottom:10px"><button class="ghost grow" onclick="houseTab='room';render();window.scrollTo(0,0)">🛋️ 回房間看看擺好的樣子</button></div>`
+      : furnRewards() + `<div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
+      `<div class="badge ${b.ok ? '' : 'locked'}"><span class="ic">${b.ic}</span>${esc(b.name)}</div>`).join('')}</div></div>`}
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 島民的家：她送的家具越多，島民越開心
@@ -4718,15 +4744,15 @@ function viewShop() {
 // v2.41 素材櫃（常見素材 🪙2、一天 5 個）與收購（料理；一天最多賣得 min(10, 當天讀書拿到的素材數)）。後端 Coins.gs 照同一套檢查
 const MAT_PRICE = 2, MAT_BUY_DAILY = 5, SELL_DAILY = 10;
 const DISH_PRICE = { onigiri: 3, matcha: 3, qiu: 5, taiyaki: 5, zongzi: 5, miso: 5, boba: 8, onsentama: 8, pancake: 5, scone: 5, pasta: 5, soup: 5 };
-let shopBusy = false;
+let shopBusy = false, matOpen = false;
 function studyMatsToday() { return D.mats.by.filter(x => x.date === S.today && x.why !== 'week').length; }
 function sellCap() { return Math.min(SELL_DAILY, studyMatsToday()); }
 function matShelfCard() {
   if (isFamily()) return '';
   const left = Math.max(0, MAT_BUY_DAILY - D.shop.buyToday), shelf = Object.keys(MATS).filter(m => !MATS[m].rare && MATS[m].s !== '智');
-  return `<div class="card"><h3>🧺 素材櫃</h3>
-    <div class="muted">常見的素材一個 🪙 ${MAT_PRICE}，一天最多買 ${MAT_BUY_DAILY} 個，今天還能買 <b>${left}</b> 個。稀有素材和智慧島的珍品不賣，要讀書才拿得到。按一下買一個，括號裡是你現在有幾個。</div>
-    <div class="row" style="gap:6px;margin-top:8px">${shelf.map(m => `<button class="ghost" style="padding:6px 10px" ${left < 1 || D.coins < MAT_PRICE || shopBusy ? 'disabled' : ''} onclick="buyMatNow('${m}')">${MATS[m].ic} ${MATS[m].n}（${D.mats.have[m] || 0}）</button>`).join('')}</div></div>`;
+  return `<div class="card"><details class="fold" ${matOpen ? 'open' : ''} ontoggle="matOpen=this.open"><summary><h3>🧺 素材櫃</h3><span class="muted">今天還能買 ${left} 個</span></summary>
+    <div class="muted" style="margin-top:6px">常見的素材一個 🪙 ${MAT_PRICE}，一天最多買 ${MAT_BUY_DAILY} 個，今天還能買 <b>${left}</b> 個。稀有素材和智慧島的珍品不賣，要讀書才拿得到。按一下買一個，括號裡是你現在有幾個。</div>
+    <div class="row" style="gap:6px;margin-top:8px">${shelf.map(m => `<button class="ghost" style="padding:6px 10px" ${left < 1 || D.coins < MAT_PRICE || shopBusy ? 'disabled' : ''} onclick="buyMatNow('${m}')">${MATS[m].ic} ${MATS[m].n}（${D.mats.have[m] || 0}）</button>`).join('')}</div></details></div>`;
 }
 function buyBackCard() {
   if (isFamily()) return '';
@@ -5604,12 +5630,13 @@ function viewMore() {
     <button class="ghost" style="width:100%;margin-top:10px" onclick="draft={};tab='kizuna';render();window.scrollTo(0,0)">📔 翻開絆の手帖</button>
     <h3 style="margin-top:12px">💞 島民之間的交情</h3>${pairs.length ? pairs.map(([k, v]) =>
       `<div>${resident(k[0]).ipic} ${esc(resident(k[0]).name)} × ${resident(k[1]).ipic} ${esc(resident(k[1]).name)}：${v.name}</div>`).join('') : '<div class="muted">同一天讀兩科、寫跨科連結，島民之間就會越來越熟。</div>'}
-    ${D.links.length ? `<h3 style="margin-top:12px">🔗 連結筆記</h3>` + D.links.slice().reverse().map(l => `<div class="muted">${esc(l.date)}・${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}：${esc(l.note)}</div>`).join('') : ''}
-    ${D.autoLinks.length ? `<h3 style="margin-top:12px">🤖 任務裡發現的跨科題</h3>` + D.autoLinks.slice().reverse().slice(0, 20).map(x => `<div class="muted">${esc(x.at)}・${x.lanes.map(esc).join(' × ')}：${esc(x.why)}</div>`).join('') : ''}
+    ${D.links.length ? `<details class="fold" style="margin-top:12px"><summary><h3>🔗 連結筆記</h3><span class="muted">${D.links.length} 則</span></summary>` + D.links.slice().reverse().map(l => `<div class="muted">${esc(l.date)}・${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}：${esc(l.note)}</div>`).join('') + '</details>' : ''}
+    ${D.autoLinks.length ? `<details class="fold" style="margin-top:12px"><summary><h3>🤖 任務裡發現的跨科題</h3><span class="muted">${Math.min(D.autoLinks.length, 20)} 題</span></summary>` + D.autoLinks.slice().reverse().slice(0, 20).map(x => `<div class="muted">${esc(x.at)}・${x.lanes.map(esc).join(' × ')}：${esc(x.why)}</div>`).join('') + '</details>' : ''}
   </div>
-  <div class="card"><h3>📈 每週達成率</h3>${D.rates.length ? D.rates.slice(-10).reverse().map(x => { const pc = Math.round(x.got / x.total * 100);
+  <div class="card"><h3>📈 每週達成率</h3>${D.rates.length ? (() => { const rows = D.rates.slice(-10).reverse().map(x => { const pc = Math.round(x.got / x.total * 100);
       return `<div class="row" style="margin-top:6px"><span style="width:84px" class="muted">${short(x.start)} 週</span>
-        <div class="bar grow" style="margin-top:0"><i style="width:${pc}%"></i></div><span style="width:92px;text-align:right">${pc}%（${x.got}/${x.total}）</span></div>`; }).join('')
+        <div class="bar grow" style="margin-top:0"><i style="width:${pc}%"></i></div><span style="width:92px;text-align:right">${pc}%（${x.got}/${x.total}）</span></div>`; });
+      return rows.slice(0, 4).join('') + (rows.length > 4 ? `<details class="fold" style="margin-top:8px"><summary class="muted">再往前 ${rows.length - 4} 週</summary>${rows.slice(4).join('')}</details>` : ''); })()
       : '<div class="muted">排好一週的計畫、週末按「確認這週」後，這裡會開始記錄每週達成率。</div>'}</div>
   <div class="card"><h3>📊 紀錄</h3><div>有紀錄的週數：${D.recordedWeeks}　最長連續：${D.best} 週</div>
     <div>Boss 項目達成：${D.bossDone} 次　Full Combo：${D.fullCombo} 次</div>
@@ -5644,11 +5671,12 @@ const WHO_SEES = [
   ['島的樣子、島名、等級、島民和家的擺設', '✅', '✅', '✅'],
   ['連續週數、這週完成幾項', '✅', '✅', '有勾的']];
 function privacyCard() {
-  return `<div class="card"><h3>🔐 誰看得到什麼</h3>
-    <div style="overflow-x:auto"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人碼</th><th>訪客</th></tr>
+  return `<div class="card"><details class="fold"><summary><h3>🔐 誰看得到什麼</h3><span class="muted">點開看家人和訪客看得到哪些</span></summary>
+    <div style="overflow-x:auto;margin-top:8px"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人碼</th><th>訪客</th></tr>
       ${WHO_SEES.map(r => `<tr><td style="text-align:left;white-space:normal">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div>
     <div style="margin-top:8px;font-size:13px">家人在 App 裡看不到：沒分享的日めくり和燈塔的話、沒打開分享的吃藥紀錄，還有你在智慧島、紙船這些地方寫的字。這些資料存在爸爸管理的試算表裡，所以爸爸技術上打得開；他答應過，不會去讀你沒分享的內容。有疑問，隨時可以直接問爸爸。</div>
     <div class="muted" style="margin-top:6px;font-size:12px">你寫給智慧島老師和燈塔的一句話，會交給 AI 產生回覆；AI 不會把內容告訴家人。每週檢討和大考成績，爸爸會交給 AI 學習顧問分析讀書方法。家人碼只能看、寄明信片、送書和鼓勵卡，不能改你的紀錄。漂流瓶要按「給爸爸看」才算分享。訪客只看得到你確認過的那張邀請裡的快照；連續週數要發邀請時有勾才給看；邀請到期或收回就看不到。用到 AI 的功能（拍照讀計畫和錯題、出題、講解、島民的話）會把那一次的內容送到 Google 的 Gemini 產生回答。</div>
+    </details>
     <button class="ghost" style="width:100%;margin-top:10px" onclick="logoutPhone()">🚪 登出這支手機</button>
     <div class="muted" style="margin-top:4px;font-size:12px">清掉這支手機上的配對碼和存著的資料。島上的紀錄都還在，之後輸入配對碼就能回來。</div></div>`;
 }
@@ -5669,17 +5697,51 @@ function hqOn() { const v = local.get('island3dHQ'); return v ? v === '1' : !(na
 function toggleHQ() { local.set('island3dHQ', hqOn() ? '0' : '1'); local.del('island3dLv'); toast('換好了，重新打開小島'); setTimeout(() => location.reload(), 600); }
 
 /* --- 玩法說明（改版時一起更新） --- */
+// 玩法說明的分類：沒列到的章節自動放進「其他」，新增章節時記得放進一類
+const GUIDE_GROUPS = [
+  ['🏝️ 島和島民', ['這座島是什麼', '島民和室友有什麼不一樣', '跨科連結和好感度', '和島民的絆', '打扮你的島']],
+  ['☀️ 每天要做的事', ['首頁怎麼看', '排計畫', '記錄你做了什麼', '讀書計時（集中の砂時計）', '週末確認這週', '故事任務', '挑戰任務（賺島幣）', '運動集章卡', '運動計時', '吃藥', '喝水', '每天的招呼', '島民的訊息和每日新聞']],
+  ['🗺️ 島上的地方', ['我的家', '燈塔（錯題的漂流瓶）', '紙船碼頭（紙本檢討）', '植木屋（種樹）', '島の屋台（素材與料理）', '獨立書店', '智慧島', '衛星小島', '3D 小島和成長回放', '二十四節氣']],
+  ['🪙 經驗值、島幣和獎勵', ['經驗值怎麼算', '島幣和商店', 'Boss 戰', '連續週數和休息卡', '房子怎麼長大']],
+  ['💌 家人和朋友', ['邀請朋友來島上', '明信片冊', '讓島順起來']]
+];
+// 各頁右上角「❓ 這裡怎麼玩」打開的那一節
+const TAB_HELP = { plan: '排計畫', confirm: '週末確認這週', exam: 'Boss 戰', shop: '島幣和商店', coins: '島幣和商店', house: '我的家', walk: '運動集章卡', paper: '紙船碼頭（紙本檢討）',
+  light: '燈塔（錯題的漂流瓶）', bottle: '燈塔（錯題的漂流瓶）', garden: '植木屋（種樹）', yatai: '島の屋台（素材與料理）', bookstore: '獨立書店', wisdom: '智慧島',
+  visits: '邀請朋友來島上', cards: '明信片冊', wish: '讓島順起來', kizuna: '和島民的絆' };
+let guideOpen = '';
+function helpChip() {
+  const t = TAB_HELP[tab];
+  return t && !isFamily() ? `<div class="helpchip"><button class="ghost" onclick="openGuideSec('${t}')">❓ 這裡怎麼玩</button></div>` : '';
+}
+function openGuideSec(t) {
+  guideOpen = t;
+  if (tab === 'guide') render(); else { tab = 'guide'; draft = {}; render(); }
+  setTimeout(() => { const el = [...document.querySelectorAll('.gsec')].find(x => x.dataset.t === t);
+    if (el) el.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0); }, 0);
+}
+function guideToc(secs) {
+  const seen = secs.map(x => x.title), grp = GUIDE_GROUPS.map(([n, list]) => [n, list.filter(t => seen.includes(t))]);
+  const rest = seen.filter(t => !GUIDE_GROUPS.some(([, list]) => list.includes(t)));
+  if (rest.length) grp.push(['📎 其他', rest]);
+  const html = t => (secs.find(x => x.title === t) || {}).html || '';
+  return `<div class="muted" style="margin:0 4px 10px">點標題就會打開那一段，再點一次收起來。</div>`
+    + grp.filter(x => x[1].length).map(([n, list]) => `<h3 class="ghead">${n}</h3>${list.map(html).join('')}`).join('');
+}
 function viewGuide() {
-  const g = guide();
-  const sec = (ic, title, body) => `<div class="card"><h3>${ic} ${title}</h3>${body}</div>`;
+  const g = guide(), secs = [];
+  // 每一節先收起來放進 secs，最後依 GUIDE_GROUPS 分類排好，放在 %%GUIDE_TOC%% 的位置
+  const sec = (ic, title, body) => { secs.push({ ic, title,
+    html: `<details class="card fold gsec" data-t="${title}" ${guideOpen === title ? 'open' : ''}><summary><h3>${ic} ${title}</h3></summary><div style="margin-top:6px">${body}</div></details>` }); return ''; };
   const p = t => `<p style="margin:6px 0;line-height:1.7">${t}</p>`;
   const row = (a, b) => `<tr><td style="text-align:left">${a}</td><td>${b}</td></tr>`;
   const cur = CHANGELOG.find(c => c.v === APP_VERSION) || CHANGELOG[0];
-  return `<div class="card" style="border:2px solid var(--plum-light)"><div class="row"><b class="grow">🏷️ 目前版本 v${APP_VERSION}</b><span class="muted">${esc(cur ? cur.date : '')}</span></div>
+  return (`<div class="card" style="border:2px solid var(--plum-light)"><div class="row"><b class="grow">🏷️ 目前版本 v${APP_VERSION}</b><span class="muted">${esc(cur ? cur.date : '')}</span></div>
       ${NEXT_UP && NEXT_UP.items.length ? `<div class="muted" style="margin-top:4px;font-size:13px">下次更新：${esc(NEXT_UP.when)}，預計會有：<ul style="margin:4px 0 0;padding-left:20px">${NEXT_UP.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : ''}
       <button class="ghost" style="margin-top:8px;padding:4px 10px;font-size:13px" onclick="local.del('islandSeenVersion');go('mail')">看這次更新了什麼 ›</button></div>
     <div class="card"><div class="row"><span class="avatar">${g.pic}</span>
       <div class="speech grow"><b>${esc(g.name)}</b>：歡迎來到${esc(D.cfg.islandName || '你的島')}！我來帶你看看這座島怎麼玩。</div></div></div>
+  %%GUIDE_TOC%%
   ${sec('🏝️', '這座島是什麼', p('你讀過的每一項，都會變成島上的房子。島上有五條街，各住著一位島民，代表會考的五科。你讀哪一科，就是在幫那條街蓋房子、培養那位島民。') +
     p('手寫計畫書照常寫。小島幫你做三件事：把計畫排進每一天、記下你做了什麼、週末確認這週，並自動寫回爸爸的週檢討表。'))}
   ${sec('📋', '首頁怎麼看', p('打開小島，最上面是「<b>今日のおつとめ</b>」：讀書計畫、挑戰任務、漂流瓶、故事任務、運動，一行一件；最後一行紙本檢討是可選的，沒做也不算未完成。右邊的小標籤告訴你做了沒：黃色是還沒做，綠色是完成了。點一行就會展開，直接在裡面記錄、答題，再點一次就收起來。') + p('書店、智慧島、屋台這些地方不在板子上，在 3D 小島上點建物就能進去；用清單模式時，板子下面有一列「🗺️ 去島上走走」，你開過的地方都在那裡。') +
@@ -5759,7 +5821,7 @@ function viewGuide() {
     p('可以邀一位同住的夥伴（寵物或室友都可以，自己取名、選樣子或上傳圖、寫個性）。第一次進門他會跟你說明家裡有什麼，之後你回家他會說「おかえり」。') +
     p('牆上的 📆 日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，大約 30 字，寫完同住夥伴會回你一個表情；按 ◀ ▶ 可以翻回去看。不寫也沒關係，不會提醒、也沒有獎勵。每一頁預設只有你自己看得到，想給家人看的那頁按「分享給家人」，隨時可以收回。') +
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
-    p('拿到的 🏅 徽章也掛在家裡，在最下面。'))}
+    p('家裡上面有三個分頁：🛋️ 房間（日めくり、喝水、3D 房間、去島民家作客）、🛒 家具店、🏅 收藏（運動獎勵、燈塔和智慧島送的家具、徽章）。'))}
   ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎼 藝文活動也算：到「音樂廳」選「🎻 練習、上課」「🎫 聽音樂會、看展演」「🥁 樂團排練」或「🎨 畫畫、書法、創作」開始計時，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，多久都算，不用證明。藝文計時不會蓋運動的章，運動和藝文一次只能開一個計時。音樂廳在 3D 小島碼頭廣場的正前方，這週有來計時，晚上大玻璃會亮。'))}
   ${sec('💊', '吃藥', p('首頁「今日のおつとめ」有一行「💊 吃藥」。早上和晚上各有一段時間（一開始是早上 7～10 點、晚上 7～10 點，可以自己改），這段時間打開小島，它會問一聲；吃了就按一下。時間過了也可以補勾，按錯再按一次就取消。補勾只是補記錄；忘了吃要不要補吃，請照醫師或藥師說的做。') + p('這裡不給綠點、島幣或經驗值，也不算連續天數，只是幫你記得。小島沒打開不會叫你，要準時提醒，可以用手機鬧鐘，或在設定裡按「📅 加到 Google 日曆」。') + p('只記有沒有勾、幾點勾的，不記吃什麼藥，也不會送給 AI。預設只有你自己看得到；想讓爸爸看到，可以在設定裡打開，隨時可以關。'))}
   ${sec('🥤', '喝水', p('在「我的家」的喝水卡按 +100cc、+250cc 或 +500cc，喝了多少就記多少。每 ' + WATER_CUP + 'cc（大約一杯）+' + WATER_GREEN + ' 🌱 綠點。') + p('一天最多算 ' + WATER_CAP + 'cc 的綠點，再喝還是可以記，只是不加綠點，水不是喝越多越好。' + WATER_WIN + ' 分鐘內最多記 ' + WATER_MAX + 'cc，按錯了可以按 ✕ 刪掉今天的那筆。') + p('喝水的紀錄只有你自己看得到，家人和訪客都看不到。'))}
@@ -5832,9 +5894,11 @@ function viewGuide() {
     p('小島周圍有海浪，岸邊有一圈浪花一波一波湧上沙灘；下雨和打雷時浪會變大。海面一天漲退兩次潮（照月亮的位置推算，大約 12 小時 25 分一輪，不是精確的潮汐表），退潮時沙灘會露出比較寬。白天太陽會投下影子。手機變慢或發燙的話，到「更多」把「3D 高畫質」關掉，就不會有影子、海浪也會簡單一點。') +
     p('手機比較舊、覺得卡的話，按「📋 清單」就會回到原本的畫面。')) : ''}
   ${sec('🏘️', '房子怎麼長大', p('每 2 個達成點蓋一棟 🏠，5 棟變成 🏘️，4 個 🏘️ 變成 🏢，4 棟 🏢 變成 🏰。自然街和社會街還分成小巷，哪條巷子比較空，一眼就看得到。'))}
-  <div class="card"><h3>📜 更新紀錄</h3>${CHANGELOG.map(c => c.minor ? minorFold([c]) : `<div style="margin-top:8px"><b>v${c.v}</b> <span class="muted">${c.date}</span>
-    <ul style="margin:4px 0;padding-left:20px">${c.items.map(i => `<li>${esc(newsText(i))}</li>`).join('')}</ul></div>`).join('')}</div>
-  <div class="row"><button class="grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+  ${(() => { const one = c => c.minor ? minorFold([c]) : `<div style="margin-top:8px"><b>v${c.v}</b> <span class="muted">${c.date}</span>
+    <ul style="margin:4px 0;padding-left:20px">${c.items.map(i => `<li>${esc(newsText(i))}</li>`).join('')}</ul></div>`;
+    return `<div class="card"><h3>📜 更新紀錄</h3>${CHANGELOG.slice(0, 3).map(one).join('')}
+      ${CHANGELOG.length > 3 ? `<details class="fold" style="margin-top:10px"><summary><b>更早的 ${CHANGELOG.length - 3} 版</b></summary>${CHANGELOG.slice(3).map(one).join('')}</details>` : ''}</div>`; })()}
+  <div class="row"><button class="grow" onclick="go('home')">回到小島 🏝️</button></div>`).replace('%%GUIDE_TOC%%', guideToc(secs));
 }
 
 /* --- 自訂圖片：裁成正方形並縮小，才能存進試算表的一格 --- */
