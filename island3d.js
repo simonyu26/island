@@ -34,6 +34,11 @@
   let renderer, scene, camera, controls, clock, ctx, container;
   let root, buildLayer, linkLayer, plates = {}, anchors = {}, popping = [];
   let running = false, signature = '', weekIdx = null;
+  // 家人島（做法 B）：ctx.layout 決定靜態版面；沒傳就是她的島，和以前完全一樣
+  const LY = () => (ctx && ctx.layout) || {};
+  const BG = () => LY().bg === 'space' || LY().bg === 'sky' ? LY().bg : 'sea';   // 家人島的背景
+  const laneOf = s => LY().lanes === false ? null : LANES[s];
+  const isOff = s => (LY().off || []).indexOf(s) >= 0;
   // 天色與天氣
   let homeLayer, homeSig = '', walkLayer, walkSig = '';
   // 燈塔（學習中心）：岬角上的燈塔、海灘的漂流瓶、海上的紙燈籠
@@ -49,6 +54,8 @@
   // 智慧島的渡船碼頭（v2.24）：島左前方的海邊
   let ferryLayer, ferrySig = null, ferryBoat = null;
   let yataiLayer, yataiSig = null;
+  // 核心主島（家人島第二階段 2a）：遠海上的小剪影，只畫一次
+  let mainIsle = null;
   // 音樂廳：碼頭廣場正前方的清水模現代音樂廳
   let hallLayer, hallSig = null;
   let hemi, sun, moon, water, wallMat, stars, rain, clouds, flash = 0, envNow = { phase: 'day', weather: 'clear' };
@@ -75,8 +82,16 @@
       n.set(x - Math.sign(x) * half, y - Math.sign(y) * half, z - Math.sign(z) * half).normalize();
       pos[i] = bxh.x * Math.sign(x) + n.x * r; pos[i + 1] = bxh.y * Math.sign(y) + n.y * r; pos[i + 2] = bxh.z * Math.sign(z) + n.z * r;
     }
-    g.computeVertexNormals(); return (bxCache[key] = g);
+    g.computeVertexNormals(); g.userData.keep = 1; return (bxCache[key] = g);
   }
+  // 拿掉的物件把 geometry、材質、貼圖還給 GPU（互訪：島和島之間往返不累積）；共用的圓角方塊、Sprite 共用的板子不丟
+  function drop(o) {
+    if (o) o.traverse(x => {
+      if (x.geometry && !x.isSprite && !x.geometry.userData.keep) x.geometry.dispose();
+      [].concat(x.material || []).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+    });
+  }
+  function clearLayer(L) { while (L.children.length) { const c = L.children[0]; L.remove(c); drop(c); } }
   // 潮汐：用月齡推算月亮過中天的時間，一天漲退兩次（約 12 小時 25 分一輪），大潮小潮跟著月相；不是精確的潮汐表
   function tideNow() {
     const now = Date.now(), syn = 29.530589;
@@ -217,13 +232,15 @@
     const sand = new THREE.Mesh(new THREE.CylinderGeometry(14.2, 15, 0.8, 40), std(0xe6c98e)); sand.position.y = -0.4; root.add(sand);
     grassMat = std(0x8cc56c);
     const grass = new THREE.Mesh(new THREE.CylinderGeometry(13, 13.4, 0.5, 40), grassMat); grass.position.y = -0.05; root.add(grass);
+    floatBg = null;
 
     plates = {}; anchors = {};
     SUBJECTS.forEach((s, i) => {
       const c = districtPos(i);
-      const plate = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.75, 0.3, 6), std(PLATE[s]));
-      plate.position.set(c.x, 0.2, c.z); plate.userData.subject = s; root.add(plate); plates[s] = plate;
-      if (LANES[s]) {           // 三條小巷的分隔線
+      const plate = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.75, 0.3, 6), std(isOff(s) ? 0xd8d2c0 : PLATE[s]));
+      plate.position.set(c.x, 0.2, c.z); if (!isOff(s)) plate.userData.subject = s; root.add(plate); plates[s] = plate;
+      if (isOff(s)) return;   // 家人島還沒用到的區：只有一塊空地
+      if (laneOf(s)) {           // 三條小巷的分隔線
         for (let k = 0; k < 3; k++) {
           const a = -Math.PI / 2 + k * (Math.PI * 2 / 3) + Math.PI / 3;
           const line = new THREE.Mesh(bx(2.5, 0.04, 0.08), std(0xffffff));
@@ -383,10 +400,86 @@
     if (renderer) renderer.toneMappingExposure = (CM ? { dawn: 0.62, day: 0.58, dusk: 0.62, night: 0.75 } : { dawn: 0.75, day: 0.7, dusk: 0.75, night: 0.85 })[ph] * (wet ? 1.15 : 1);   // 白天光最強，曝光調低才不會一片淡
     shadowDirty = true;
     showSeasonFx();
+    if (BG() !== 'sea') floatEnv(ph, w);
+  }
+  // 浮島（家人島）：島底下倒過來的岩塊＋幾顆小石頭；宇宙加行星和星星，天空加雲海
+  let floatLayer = null, floatBg = null;
+  function applyBg() {   // 換背景不用重新整理：拿掉舊的浮島，重新對鏡頭
+    if (floatBg === BG()) return;
+    if (floatBg) framed = false;
+    floatBg = BG();
+    if (floatLayer) { root.remove(floatLayer); drop(floatLayer); floatLayer = null; }
+    if (!stars.userData.seaGeo) stars.userData.seaGeo = stars.geometry;
+    stars.geometry = stars.userData.seaGeo; stars.material.size = 0.7;
+    water.visible = foam.visible = floatBg === 'sea';
+    if (controls) controls.maxDistance = 50;
+    if (floatBg !== 'sea') buildFloat();
+  }
+  function buildFloat() {
+    floatLayer = new THREE.Group(); root.add(floatLayer);
+    const rock = std(0xa08a6e), dark = std(0x857260), r = rng(31);
+    const under = new THREE.Mesh(new THREE.ConeGeometry(15, 14, 14, 3), rock); under.rotation.x = Math.PI; under.position.y = -7.8; floatLayer.add(under);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(5, 6, 8), dark); tip.rotation.x = Math.PI; tip.position.y = -16.5; floatLayer.add(tip);
+    for (let i = 0; i < 9; i++) {
+      const a = r() * Math.PI * 2, d = 17 + r() * 9, sz = 0.5 + r() * 1.1;
+      const b = new THREE.Mesh(new THREE.DodecahedronGeometry(sz, 0), i % 2 ? rock : dark);
+      b.position.set(Math.cos(a) * d, -2 - r() * 6, Math.sin(a) * d); floatLayer.add(b);
+      if (sz > 1) { const g = new THREE.Mesh(new THREE.CylinderGeometry(sz * 0.9, sz * 0.9, 0.2, 7), grassMat); g.position.set(b.position.x, b.position.y + sz * 0.75, b.position.z); floatLayer.add(g); }
+    }
+    if (BG() === 'space') {
+      const planet = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 16), std(0xd9a066, { roughness: 1 }));
+      planet.position.set(-12, 20, -75); floatLayer.add(planet);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(12, 17, 48, 1), new THREE.MeshBasicMaterial({ color: 0xe8cfa0, side: THREE.DoubleSide, transparent: true, opacity: 0.55, fog: false })); lin(ring.material.color);
+      ring.position.copy(planet.position); ring.rotation.set(-1.2, 0.3, 0); floatLayer.add(ring);
+      const moonB = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 12), std(0xbfc6d6)); moonB.position.set(24, 14, -70); floatLayer.add(moonB);
+      // 宇宙：上下四周都有星星；沿用原本那一個星星 Points，只換形狀（1,100 顆，工程顧問上限 1,500）
+      const sg = new THREE.BufferGeometry(), sp = Array.from(stars.userData.seaGeo.attributes.position.array);
+      for (let i = 0; i < 700; i++) { const u = r() * 2 - 1, a = r() * Math.PI * 2, d = 90 + r() * 15, c = Math.sqrt(1 - u * u); sp.push(Math.cos(a) * c * d, u * d, Math.sin(a) * c * d); }
+      sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+      stars.geometry = sg; stars.material.size = 1.0;
+    } else {
+      const cm = std(0xffffff, { transparent: true, opacity: 0.95 });
+      for (let i = 0; i < 26; i++) {
+        const a = (i / 26) * Math.PI * 2 + r() * 0.2, d = i % 3 ? 19 + r() * 22 : 32 + r() * 12;   // 和島一樣高的雲放遠一點，不擋住島
+        const c = new THREE.Mesh(new THREE.IcosahedronGeometry(3 + r() * 3, 0), cm);
+        c.scale.set(1.6, 0.5, 1.2); c.position.set(Math.cos(a) * d, (i % 3 ? -6 - r() * 3 : -1 + r() * 3), Math.sin(a) * d); floatLayer.add(c);
+      }
+      floatLayer.userData.cloudMat = cm;
+    }
+    floatLayer.traverse(o => { o.raycast = () => {}; });   // 岩塊、雲海、行星都點不到，不會擋住剪影和小島
+  }
+  let fixLayer = null;
+  function floatFix() {   // 在 mount／setWeek 之後跑一次（不在每一幀）
+    if (fixLayer) { root.remove(fixLayer); drop(fixLayer); fixLayer = null; }
+    if (floatBg === 'sea' || !floatBg) { if (capeFoam) capeFoam.visible = true; floats.forEach(f => { f.visible = true; }); return; }
+    fixLayer = new THREE.Group(); root.add(fixLayer);
+    if (capeFoam) capeFoam.visible = false;
+    floats.forEach(f => { f.visible = false; });
+    const rock = std(0xa08a6e), under = (a, r, rad, h) => { const m = new THREE.Mesh(new THREE.ConeGeometry(rad, h, 9), rock); m.rotation.x = Math.PI; m.position.set(Math.cos(a) * r, -0.85 - h / 2, Math.sin(a) * r); fixLayer.add(m); };
+    if (LY().light !== false) under(CAPE, 14.6, 2.6, 3.5);
+    (ctx.islets || []).forEach(it => { const a = ISLET_A[it.slot]; if (a != null) under(a, ISLET_R, 3.8, 4.5); });
+    if (ctx.ferry && ctx.ferry.far !== false) under(FERRY.a, 34, 5, 5.5);
+    fixLayer.traverse(o => { o.raycast = () => {}; });   // 岩塊點不到，點擊穿過去給上面的島
+  }
+  const SPACE = { dawn: 0x1a1640, day: 0x141a3a, dusk: 0x1d1538, night: 0x0b0e22 };
+  function floatEnv(ph, w) {
+    if (BG() === 'space') {   // 宇宙沒有天氣：不下雨、沒有雲，星星一直都在
+      const sky = new THREE.Color(SPACE[ph]);
+      scene.background = sky; lin(scene.fog.color.copy(sky)); scene.fog.near = 90; scene.fog.far = 190;
+      if (container) container.style.background = '#' + sky.getHexString();
+      stars.visible = true; stars.material.opacity = 1; rain.visible = false; clouds.visible = false;
+      if (seasonFx) seasonFx.visible = false;
+      return;
+    }
+    // 天空：比海上的天色藍一點，雲海要看得到
+    if (ph === 'day' && w === 'clear') { const sky = new THREE.Color(0x9fd3f0); scene.background = sky; lin(scene.fog.color.copy(sky)); if (container) container.style.background = '#9fd3f0'; }
+    scene.fog.near = Math.max(scene.fog.near, 50); scene.fog.far = Math.max(scene.fog.far, 110);
+    const cm = floatLayer && floatLayer.userData.cloudMat;
+    if (cm) lin(cm.color.setHex(ph === 'night' ? 0x4a5370 : ph === 'dusk' ? 0xf4c2a8 : ph === 'dawn' ? 0xf8d8c4 : 0xffffff));
   }
   // 海浪與潮汐（v2.22）：海面用三組正弦波起伏，離岸越遠浪越大，下雨、颱風浪更大；岸邊的浪花一波一波湧上沙灘
   function animateSea(t) {
-    if (!water) return;
+    if (!water || !water.visible) return;
     if (t - tideAt > 10 || !tideAt) { tideAt = t; water.userData.tide = tideNow(); }
     const w = envNow.weather, big = w === 'storm' ? 3 : w === 'rain' ? 1.8 : 1;
     const swell = Math.sin(t * 1.6);
@@ -487,8 +580,9 @@
       }
     };
     SUBJECTS.forEach(s => {
-      if (LANES[s]) {
-        LANES[s].forEach((sub, k) => {
+      if (isOff(s)) return;
+      if (laneOf(s)) {
+        laneOf(s).forEach((sub, k) => {
           const a0 = -Math.PI / 2 + k * (Math.PI * 2 / 3) - Math.PI / 3, a1 = a0 + Math.PI * 2 / 3;
           const mate = ctx.roommate ? ctx.roommate(sub) : null;
           place(s, sub, pts[sub] || 0, a0 + 0.12, a1 - 0.12, (mate && mate.name) ? `${mate.name}（${sub}）` : sub);
@@ -509,6 +603,7 @@
     });
     // 島民頭像與名牌
     SUBJECTS.forEach(s => {
+      if (isOff(s)) return;
       const r = ctx.resident(s), gr = ctx.grade(s);
       const k = `who:${s}:${r.name}:${gr || ''}:${r.emoji}:${ctx.imgOf(s) ? ctx.imgOf(s).length : 0}`; keep.add(k);
       if (old.has(k)) return;
@@ -519,7 +614,7 @@
       const grp = new THREE.Group(); grp.add(av, lb); grp.userData.key = k; grp.userData.subject = s;
       buildLayer.add(grp);
     });
-    buildLayer.children.slice().forEach(m => { if (!keep.has(m.userData.key)) buildLayer.remove(m); });
+    buildLayer.children.slice().forEach(m => { if (!keep.has(m.userData.key)) { buildLayer.remove(m); drop(m); } });
     buildLinks();
     buildHome();
     buildWalk();
@@ -642,7 +737,7 @@
     const sig = JSON.stringify([G, ti]);
     if (sig === gardenSig) return;
     gardenSig = sig;
-    while (gardenLayer.children.length) gardenLayer.remove(gardenLayer.children[0]);
+    clearLayer(gardenLayer);
     if (!G) return;
     if (G.hut) {   // 植木屋：木造小棚、陶盆、綠色暖簾
       const hut = new THREE.Group(); hut.userData.garden = true;
@@ -673,7 +768,7 @@
     const B = ctx.book || null, sig = JSON.stringify(B);
     if (sig === bookSig) return;
     bookSig = sig;
-    while (bookLayer.children.length) bookLayer.remove(bookLayer.children[0]);
+    clearLayer(bookLayer);
     if (!B) return;
     const shop = new THREE.Group(); shop.userData.book = true;
     const box = (w, h, d, x, y, z, m) => { const b = new THREE.Mesh(bx(w, h, d), m.isMaterial ? m : std(m)); b.position.set(x, y, z); shop.add(b); return b; };
@@ -702,11 +797,12 @@
   // ---------- 智慧島的渡船碼頭（v2.24） ----------
   // ctx.ferry = { open }：碼頭在島左前方的海邊（理化…和社會街之間的空隙，植樹空地格的外側），木棧橋伸進海裡、停一艘小渡船；
   // 遠方海上的霧裡看得到智慧島。點碼頭、渡船或木牌就呼叫 ctx.onFerry
+  // 家人島的港口（10/27）：ctx.ferry 可再帶 label、sub（木牌的字）、far: false（不畫遠方的智慧島）；沒帶就照原本
   function buildFerry() {
     const F = ctx.ferry || null, sig = JSON.stringify(F);
     if (sig === ferrySig) return;
     ferrySig = sig;
-    while (ferryLayer.children.length) ferryLayer.remove(ferryLayer.children[0]);
+    clearLayer(ferryLayer);
     ferryBoat = null;
     if (!F) return;
     const pier = new THREE.Group(); pier.userData.ferry = true;
@@ -732,7 +828,7 @@
     pier.rotation.y = -FERRY.a - Math.PI / 2;   // -z 朝外海
     pier.userData.glass = glass;
     ferryLayer.add(pier);
-    const lb = labelSprite('⛴️ 智慧島渡船', F.open ? '今日開航' : '今天的課上完了', { scale: 0.75, color: '#3a2a33' });
+    const lb = labelSprite(F.label || '⛴️ 智慧島渡船', F.sub != null ? F.sub : F.open ? '今日開航' : '今天的課上完了', { scale: 0.75, color: '#3a2a33' });
     lb.position.set(FERRY.x, 2.2, FERRY.z); lb.userData.ferry = true; ferryLayer.add(lb);
     // 遠方霧裡的智慧島：小山丘、松樹、四間小屋的屋頂
     const far = new THREE.Group(); far.userData.ferry = true;
@@ -741,7 +837,7 @@
     fa(new THREE.ConeGeometry(2.4, 1.6, 10), 0x9fd27e, 0, 1.4, 0);
     [[-2, 1.3, 0xb38a4f], [1.9, 1.1, 0x4a4f5a], [-1.2, -2, 0xc0392b], [1.4, -1.8, 0xdfe6ee]].forEach(([x, z, c]) => { fa(bx(0.9, 0.6, 0.8), 0xf3ead6, x, 1.1, z); fa(new THREE.ConeGeometry(0.75, 0.5, 4), c, x, 1.65, z).rotation.y = Math.PI / 4; });
     [[0, 2.6], [-0.8, 2.1], [0.9, 2.3]].forEach(([x, y]) => fa(new THREE.ConeGeometry(0.45, 1.3, 6), 0x3f7a45, x, y, -0.3));
-    far.position.set(Math.cos(FERRY.a) * 34, 0, Math.sin(FERRY.a) * 34); ferryLayer.add(far);
+    far.position.set(Math.cos(FERRY.a) * 34, 0, Math.sin(FERRY.a) * 34); if (F.far !== false) ferryLayer.add(far);
     setEnvironment(envNow);
   }
 
@@ -751,7 +847,7 @@
     const Y = ctx.yatai || null, sig = JSON.stringify(Y);
     if (sig === yataiSig) return;
     yataiSig = sig;
-    while (yataiLayer.children.length) yataiLayer.remove(yataiLayer.children[0]);
+    clearLayer(yataiLayer);
     if (!Y) return;
     const cart = new THREE.Group(); cart.userData.yatai = true;
     const box = (w, h, d, x, y, z, m) => { const b = new THREE.Mesh(bx(w, h, d), m.isMaterial ? m : std(m)); b.position.set(x, y, z); cart.add(b); return b; };
@@ -781,7 +877,7 @@
     const H = ctx.hall || null, sig = JSON.stringify(H);
     if (sig === hallSig) return;
     hallSig = sig;
-    while (hallLayer.children.length) hallLayer.remove(hallLayer.children[0]);
+    clearLayer(hallLayer);
     if (!H) return;
     const g = new THREE.Group(); g.userData.hall = true;
     const con = std(0xbfbab0), dk = std(0x4a4f5a);
@@ -883,7 +979,7 @@
     const L = ctx.islets || [], sig = JSON.stringify(L);
     if (sig === isletSig) return;
     isletSig = sig;
-    while (isletLayer.children.length) isletLayer.remove(isletLayer.children[0]);
+    clearLayer(isletLayer);
     L.forEach(it => {
       const a = ISLET_A[it.slot]; if (a == null) return;
       const g = isletMesh(it.style); g.userData.islet = it.key;
@@ -1376,7 +1472,7 @@
     if (sig === markSig) return;
     const had = markSig === null ? null : new Set(markLayer.children.map(c => c.userData.mark));
     markSig = sig;
-    while (markLayer.children.length) markLayer.remove(markLayer.children[0]);
+    clearLayer(markLayer);
     spinners = [];
     const used = {};
     list.forEach(m => {
@@ -1398,7 +1494,7 @@
     const h = ctx.home, sig = JSON.stringify(h || null);
     if (sig === homeSig) return;
     homeSig = sig;
-    while (homeLayer.children.length) homeLayer.remove(homeLayer.children[0]);
+    clearLayer(homeLayer);
     if (!h) return;
     const g = new THREE.Group(); g.userData.home = true;
     const wall = std(new THREE.Color(h.wall).getHex(), { emissive: 0x000000 }), roof = std(new THREE.Color(h.roof).getHex());
@@ -1440,7 +1536,7 @@
     const n = Math.min(ctx.walk || 0, 120), sig = String(n);
     if (sig === walkSig) return;
     walkSig = sig;
-    while (walkLayer.children.length) walkLayer.remove(walkLayer.children[0]);
+    clearLayer(walkLayer);
     if (!n) return;
     const plank = std(0xb08356), post = std(0x7a5236), paper = std(0xfff1d6, { emissive: 0xffb347, emissiveIntensity: 0.6 });
     const R = 13.75, step = 0.075, a0 = Math.PI * 0.42;   // 從島的前方海邊開始往右鋪
@@ -1463,8 +1559,9 @@
     const L = ctx.light || null, sig = JSON.stringify(L);
     if (sig === lightSig) return;
     lightSig = sig;
-    while (lightLayer.children.length) lightLayer.remove(lightLayer.children[0]);
+    clearLayer(lightLayer);
     floats = []; lamp = null; beam = null;
+    if (LY().light === false) return;   // 家人島沒有燈塔
     const at = (r, da) => new THREE.Vector3(Math.cos(CAPE + (da || 0)) * r, 0, Math.sin(CAPE + (da || 0)) * r);
     const c = at(14.6);
     const sand = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.6, 0.78, 24), std(0xe6c98e)); sand.position.set(c.x, -0.41, c.z); lightLayer.add(sand);
@@ -1522,7 +1619,7 @@
   }
 
   function buildLinks() {
-    while (linkLayer.children.length) linkLayer.remove(linkLayer.children[0]);
+    clearLayer(linkLayer);
     const bond = ctx.bond || {};
     Object.keys(bond).forEach(k => {
       const a = anchors[k[0]], b = anchors[k[1]]; if (!a || !b) return;
@@ -1543,6 +1640,7 @@
     const v = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     const ray = new THREE.Raycaster(); ray.setFromCamera(v, camera);
     const hits = ray.intersectObjects(root.children, true);
+    if (hits.length && ctx.onMainIsle) { let o = hits[0].object; while (o && !o.userData.mainIsle) o = o.parent; if (o) { ctx.onMainIsle(); return; } }
     const homeHit = hits.find(h => { let o = h.object; while (o && !o.userData.home && !o.userData.subject) o = o.parent; return o && o.userData.home; });
     const hit = hits.find(h => {
       let o = h.object; while (o && !o.userData.subject) o = o.parent; return !!o;
@@ -1582,6 +1680,22 @@
     if (ctx.onSelect) ctx.onSelect(s);
   }
 
+  // 主島剪影：簡化的台灣外形（12 點）＋三座小山，浮在遠海上空、底下一塊岩塊，名牌小而淡
+  function buildMainIsle() {
+    const P = [[0.4, -2.6], [0.95, -2.2], [1.0, -1.2], [0.85, 0.2], [0.55, 1.4], [0.2, 2.6], [-0.05, 2.5], [-0.5, 1.2], [-0.95, 0.2], [-0.85, -0.9], [-0.55, -1.8], [-0.1, -2.5]];
+    const sh = new THREE.Shape(); P.forEach((p, i) => i ? sh.lineTo(p[0], -p[1]) : sh.moveTo(p[0], -p[1]));
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.35, bevelEnabled: false, curveSegments: 1 }); g.rotateX(-Math.PI / 2);
+    mainIsle = new THREE.Group(); mainIsle.userData.mainIsle = true;
+    const UP = 0.6;   // 浮起來的高度（剪影自己的單位，整組會再放大 1.6 倍）
+    const land = new THREE.Mesh(g, std(0x9cb89a)); land.position.y = -0.55 + UP; mainIsle.add(land);
+    const under = new THREE.Mesh(new THREE.ConeGeometry(0.85, 1.4, 5, 1), std(0x8a7a6a)); under.rotation.x = Math.PI; under.scale.set(1, 1, 2.6); under.position.y = -0.9 + UP; mainIsle.add(under);
+    [[0.1, -1.0, 0.9], [0.0, 0.0, 1.3], [-0.15, 1.0, 0.8]].forEach(m => { const c = new THREE.Mesh(new THREE.ConeGeometry(0.55, m[2], 5, 1), std(0x7f9f80)); c.position.set(m[0], m[2] / 2 - 0.2 + UP, m[1]); mainIsle.add(c); });
+    const sp = labelSprite('⛰️ 主島', null, { scale: 0.6, bg: 'rgba(255,255,255,0.6)', color: '#5a6a7a' }); sp.position.y = 1.5 + UP; mainIsle.add(sp);
+    const a = Math.PI * (ctx.mainIsle.a != null ? ctx.mainIsle.a : -0.5), R = 28;   // 主島在遠海的哪個方位：預設是島的正後方，打開就看得到（工程顧問 2a 完工審查）
+    mainIsle.position.set(Math.cos(a) * R, 0, Math.sin(a) * R); mainIsle.scale.setScalar(1.6);
+    root.add(mainIsle);
+  }
+
   // ---------- 主迴圈 ----------
   let framed = false;
   function resize() {
@@ -1592,6 +1706,7 @@
       framed = true;
       const d = Math.min(62, 31 * Math.pow(Math.max(1, h / w), 0.9) * (ctx.islets && ctx.islets.length ? 1.32 : 1));   // 有衛星小島時再拉遠一點
       camera.position.copy(new THREE.Vector3(0, 21, 23).normalize().multiplyScalar(d));
+      if (BG() !== 'sea') { camera.position.copy(new THREE.Vector3(0, 9, 26).normalize().multiplyScalar(Math.min(60, d * 1.2))); controls.maxDistance = 64; }   // 浮島：鏡頭低一點、遠一點，看得到島底下
     }
   }
   function loop() {
@@ -1641,10 +1756,13 @@
     }
     setEnvironment(envNow);
     if (ctx.season && ctx.season !== seasonNow) setSeason(ctx.season);
+    if (ctx.mainIsle && !mainIsle) buildMainIsle();
+    applyBg(); setEnvironment(envNow);
     el.appendChild(renderer.domElement);
     resize();
     const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden, ctx.marks, ctx.islets, ctx.hall]) + weekIdx;
     if (sig !== signature) { signature = sig; buildDynamic(false); }
+    floatFix();
     shadowDirty = true;
     if (selected && ctx.onSelect) ctx.onSelect(selected);
     if (!running) { running = true; clock.getDelta(); loop(); }
@@ -1654,8 +1772,25 @@
   function setWeek(i, animate) {
     weekIdx = i;
     signature = '';
-    buildDynamic(animate !== false); shadowDirty = true;
+    buildDynamic(animate !== false); floatFix(); shadowDirty = true;
   }
 
-  window.Island3D = { HQ, mount, setWeek, setEnvironment, setSeason, pointsUntil: w => pointsUntil(w), select, plantMesh: (k, ti, st) => plantMesh(k, ti, st), get selected() { return selected; } };
+  // 主島剪影在畫面上的位置（看不到時是 null），端到端測試點剪影用
+  function mainIsleAt() {
+    if (!mainIsle || !camera) return null;
+    const p = new THREE.Vector3(0, 1.0, 0).applyMatrix4(mainIsle.matrixWorld).project(camera), r = renderer.domElement.getBoundingClientRect();
+    return Math.abs(p.x) < 0.95 && Math.abs(p.y) < 0.95 && p.z < 1 ? { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height } : null;
+  }
+  // 端到端測試用：某一類可以點的東西（light、islet、ferry、mainIsle）在畫面上的位置，看不到時是 null
+  function pointAt(kind) {
+    if (!camera) return null;
+    const r = renderer.domElement.getBoundingClientRect(), out = [];
+    root.traverse(o => { if (o.userData && o.userData[kind] && o.visible && (o.isMesh || o.isSprite)) out.push(o); });
+    for (const o of out) {
+      const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld).project(camera);
+      if (Math.abs(p.x) < 0.9 && Math.abs(p.y) < 0.9 && p.z < 1) return { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height };
+    }
+    return null;
+  }
+  window.Island3D = { HQ, mount, mainIsleAt, pointAt, setWeek, setEnvironment, setSeason, pointsUntil: w => pointsUntil(w), select, plantMesh: (k, ti, st) => plantMesh(k, ti, st), get selected() { return selected; } };
 })();
