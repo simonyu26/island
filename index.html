@@ -191,7 +191,8 @@
   .furn button.on { border-color: var(--plum); background: var(--plum-light); } .furn button.has { background: var(--sand); }
   .agrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #d9b88f; padding: 6px; border-radius: 10px; border-top: 6px solid var(--plum-light); border-left: 6px solid var(--plum-light); max-width: 300px; margin: 0 auto; }
   .agrid button { aspect-ratio: 1; padding: 0; background: #f3e3c9; border: 1.5px dashed #c7a578; color: var(--ink); font-size: 24px; min-width: 0; }
-  .agrid button.on { background: var(--plum-light); border: 2px solid var(--plum); }
+  .wphoto{margin:4px 0 8px}.wphoto img{display:block;width:100%;max-height:260px;object-fit:contain;background:#f4efe6;border-radius:10px}.wphoto figcaption{font-size:13px;color:#6b5a4a;margin-top:4px;line-height:1.5}.wphoto figcaption span{display:block;font-size:11px;color:#9a8a7a}
+.agrid button.on { background: var(--plum-light); border: 2px solid var(--plum); }
   .arow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .arow.a3 { grid-template-columns: repeat(3, 1fr); }
   .arow button { height: 44px; padding: 0; background: #f3e3c9; border: 1.5px dashed #c7a578; color: var(--ink); font-size: 20px; min-width: 0; letter-spacing: -4px; }
@@ -328,11 +329,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.48.1.1';
+const APP_VERSION = '2.48.2';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
-const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，山頂的玉山聚會所也會開門，從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
+const NEXT_UP = { when: '11/4（三）', items: ['📖 預計 11/4（三）：燈塔 2F 的航海日誌會開放，一週一頁，看這週照計畫讀了多少、各科做了幾次。這裡只是紀錄，不加分也不扣分。', '📚 書店會多一個「親子共讀」計時：和家人一起讀書，每 25 分鐘一枚書籤 🔖 +10 綠點。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.48.2', date: '2026-10-30', items: ['⛴️ 智慧島來了三位新老師：老教室的宜蓉（11/1 開門）、暗房小屋的瞇（11/2）、海邊物理治療所的郭哥（11/3）。每位老師一週一講，想上哪一位、上幾位都可以。', '🖼️ 宜蓉的課會先看一張老照片，點開那一講就看得到', '🔐 「誰看得到什麼」多了一列：拍錯題的照片存在爸爸管理的雲端硬碟，家人和訪客在 App 裡看不到'] },
   { v: '2.48.1.1', date: '2026-10-30', minor: true, items: ['💬 提示訊息改到畫面下方，不會再蓋住標題和按鈕；連續好幾則時會一則接一則出現'] },
   { v: '2.48.1', date: '2026-10-31', items: ['🌉 島民之間的粉紅色拱橋平常先收起來了：點一位島民，才會出現和這位島民有關的橋，點空白處就收起來；成長回放照舊看得到全部的橋', '🖼️ 我的家：牆上、窗台和門口的東西也可以自己擺了。按「🧩 自己擺家具」，點一件，再點想掛或想放的位置；門口的東西也可以轉個方向', '⚔️ Boss 戰紀錄可以多填國文、英文沒答對幾題（選填）。離 A++ 還差多少一看就知道，學習摘要的模考也會寫出來。', '📝 拍錯題時可以選「這題是從哪裡來的」：哪一場模考、會考考古題或 3688，瓶子上會寫來源；記完 Boss 戰按「收這場的錯題」會自動選好那一場。學習摘要也會照來源分開算。'] },
   { v: '2.48', date: '2026-10-29', minor: true, items: ['🔧 在小島、智慧島和我的家之間切換時，3D 比較省記憶體，手機比較不會越用越慢'] },
@@ -662,12 +664,12 @@ function kizunaOf(save, itemsByRow, today) {
   };
   const her = {}, pair = {}, tutor = {};
   SUBJECTS.forEach(s => her[s] = run(s));
-  ['kongming', 'einstein', 'xiaomiao', 'alu'].forEach(t => tutor[t] = run('t:' + t, 7));
+  ['kongming', 'einstein', 'xiaomiao', 'alu', 'yirong', 'mi', 'guo'].forEach(t => tutor[t] = run('t:' + t, 7));
   for (let i = 0; i < SUBJECTS.length; i++) for (let j = i + 1; j < SUBJECTS.length; j++) { const k = pk(SUBJECTS[i], SUBJECTS[j]); pair[k] = run(k); }
   return { her, pair, tutor };
 }
 // 絆の手帖（v2.28）：我的家牆邊的一本手帖，只寫關係與回憶，不寫分數、讀了幾格。家人碼只看島民那一頁的等級名稱
-const KZ_TUTORS = ['kongming', 'einstein', 'xiaomiao', 'alu'];
+const KZ_TUTORS = ['kongming', 'einstein', 'xiaomiao', 'alu', 'yirong', 'mi', 'guo'];
 function viewKizuna() {
   const fam = isFamily(), pg = fam ? 0 : draft.kzPage || 0;
   const tabs = fam ? '' : `<div class="row" style="gap:6px;margin-top:8px">${['島民', '導師與管理員', '島民之間'].map((t, i) => `<button class="${pg === i ? '' : 'ghost'}" style="padding:6px 12px" onclick="draft.kzPage=${i};render()">${t}</button>`).join('')}</div>`;
@@ -1142,14 +1144,17 @@ const BOARD = [
    開關 WISDOM_OPEN：爸爸 決定哪天開島才改成 true；之前可以用網址加 ?wisdom=1 預覽（只有那支手機看得到） */
 const WISDOM_OPEN = true;
 // 逐步開島（爸爸，2026-10-26）：一天開一間，開門日之前小屋掛「準備中」、不能上課
-const WISDOM_OPEN_AT = { kongming: '2026-10-26', einstein: '2026-10-27', xiaomiao: '2026-10-28', alu: '2026-10-29' };
+const WISDOM_OPEN_AT = { kongming: '2026-10-26', einstein: '2026-10-27', xiaomiao: '2026-10-28', alu: '2026-10-29', yirong: '2026-11-01', mi: '2026-11-02', guo: '2026-11-03' };
 function wisdomClosed(teacher) { return S.today < (WISDOM_OPEN_AT[teacher] || ''); }
 function wisdomOpenDay(teacher) { const d = (WISDOM_OPEN_AT[teacher] || '').split('-'); return +d[1] + '/' + +d[2]; }
 const WISDOM_CLOSED_SAY = {
   kongming: d => '草廬尚未灑掃，' + d + ' 再來。',
   einstein: d => '我還在把望遠鏡搬上島，' + d + ' 開門，OK？到時候見！',
   xiaomiao: d => '湯還在燒，' + d + ' 才會剛剛好。到時候來泡湯喔～',
-  alu: d => '創刊號還在排版（不要催），' + d + ' 開張。'
+  alu: d => '創刊號還在排版（不要催），' + d + ' 開張。',
+  yirong: d => '老教室還在擦黑板，' + d + ' 開門。',
+  mi: d => '暗房裡的照片還在晾，' + d + ' 開門。',
+  guo: d => '治療所還在曬毛巾，' + d + ' 開門。'
 };
 function wisdomOn() {
   if (!window.ISLAND_API_URL || isFamily()) return false;   // 第一版只有網頁 App 版、只有她自己能上課（訪客、家人上課是第二版）
@@ -1190,9 +1195,34 @@ const WISDOM_T = {
     today: '今天已經學很多了，大腦也要休息，OK？明天見。',
     week: '這週的筆記翻過了，下週一再來，我會準備新的故事。',
     wait: '下一頁我還在寫，再等我幾天，OK？',
-    after: '今天就到這裡。想像力比知識更重要，記得喔。' }
+    after: '今天就到這裡。想像力比知識更重要，記得喔。' },
+  // v2.48.2：三位新老師（宜蓉、瞇是以真實人物為靈感的虛構角色）；圖示 10/29 定：宜蓉 🔔（走廊盡頭的鐘）、瞇 📷（暗房）
+  yirong: { name: '宜蓉', ic: '🔔', place: '老教室', color: '#9A5B3C',
+    intro: '紅磚老教室裡的中學歷史老師，講話很快、愛吐槽，吐槽完一定給重點。每講都會拿出一張老照片問你：如果你是當時的人，會怎麼選？她不替古人打分數，也不笑你選了哪一個。',
+    first: '欸，你來啦！這裡是老教室，椅子有點舊，但很好坐。我每講會拿一張老照片給你看，課本沒寫的那一題，我們一起想。',
+    hello: ['來，今天這張照片很有料，先坐。', '黑板我擦好了。今天換你出題也可以（開玩笑的，還是我出）。', '今天的照片我挑了很久，保證不是送分題。'],
+    today: '今天已經上過一講了。歷史跑不掉的，明天再來。',
+    week: '這週我的課上過了，下週一我再拿一張新照片給你看。',
+    wait: '下一張照片我還在查出處，再等我幾天。',
+    after: '今天就到這裡。課本沒寫的那一題，你今天已經答了一半。' },
+  mi: { name: '瞇', ic: '📷', place: '暗房小屋', color: '#B23A3A',
+    intro: '住在暗房小屋的詩人，桌上永遠攤著一本詩集。問題很多，最常問「為什麼？」；說話坦白，白話為主，只有引詩的時候才用原文。她不考你背詩，只陪你慢慢讀一首。',
+    first: '你好，進來吧，小心門口那盞紅燈。我叫瞇。這裡每次只讀一首詩，讀慢一點也沒關係，我也常常讀不懂。',
+    hello: ['今天我又冒出一個問題，等一下問你。', '詩集翻到哪裡了？我們從這一首開始。', '外面風有點大，進來坐，我泡了茶。'],
+    today: '今天已經讀了一首，讓它在心裡多待一下吧。明天見。',
+    week: '這週的詩讀過了。下週一，我會準備新的一首。',
+    wait: '下一首我還在讀，讀懂了再跟你說，再等我幾天。',
+    after: '今天就到這裡。哪一句還在你心裡，就讓它多待一會兒。' },
+  guo: { name: '郭哥', ic: '🧘', place: '海邊物理治療所', color: '#3E8A8C',
+    intro: '海邊物理治療所的物理治療師，三十歲左右，寶寶快出生了。說話風趣、很會聽，聽到意外的事會先說一句「真的假的」。教你吃、動、休息背後的道理；不談體重和身材，哪裡痛就請你去給醫師或物理治療師看。',
+    first: '歡迎來海邊物理治療所！先別緊張，這裡不用打針。我是郭哥，我們來聊聊你的身體每天都在忙什麼。',
+    hello: ['來來來，先坐。今天身體辛苦了，我們慢慢來。', '我剛剛又抱著米袋練習了一輪，手有點痠，哈哈。', '海風很舒服吧？先伸個懶腰再開始。'],
+    today: '今天已經上過一講了，剩下的時間讓身體休息一下吧。明天見。',
+    week: '這週的課上過了，下週一再來，我會準備新的一章。',
+    wait: '下一章我還在寫，再等我幾天。',
+    after: '今天就到這裡。累了就休息，哪裡痛別硬撐。' }
 };
-const WISDOM_ORDER = ['kongming', 'xiaomiao', 'alu', 'einstein'];
+const WISDOM_ORDER = ['kongming', 'xiaomiao', 'alu', 'einstein', 'yirong', 'mi', 'guo'];
 const wisdomFull = {};   // wisdom/<書>.json 的完整內容（書架的 wisdomJson 只留書名、顏色、章名）
 function wisdomLoad(key) {
   if (wisdomFull[key]) return wisdomFull[key].then ? wisdomFull[key] : Promise.resolve(wisdomFull[key]);
@@ -1271,14 +1301,29 @@ function wisdomScene() {
       <rect x="-6" y="18" width="12" height="12" fill="#2e3a59"/><rect x="-16" y="16" width="7" height="6" ${win}/><rect x="9" y="16" width="7" height="6" ${win}/>
       <text x="0" y="28" text-anchor="middle" font-size="5" font-weight="700" fill="#fff">NASA</text>
       <path d="M27 30 V12" stroke="#8a8a8a" stroke-width="1.5"/><path d="M19 8 Q 27 18 35 8" fill="#cfd6de" stroke="#8a8a8a" stroke-width="1"/>`)}
+    ${hut('yirong', 142, 188, `<g transform="scale(.8)"><!-- 宜蓉：紅磚老教室、人字屋頂、白柱子走廊、鐘（新的三間縮成 0.8，名牌照原本大小） -->
+      <rect x="-24" y="8" width="48" height="22" fill="#a9573f"/><path d="M-28 9 L0 -6 L28 9Z" fill="#6b7075"/>
+      <rect x="-26" y="12" width="52" height="3" fill="#efe8da"/>${[-22, -8, 8, 22].map(x => `<rect x="${x - 1.5}" y="14" width="3" height="16" fill="#efe8da"/>`).join('')}
+      <rect x="-17" y="17" width="8" height="7" ${win}/><rect x="-3" y="17" width="8" height="7" ${win}/><rect x="11" y="17" width="7" height="13" fill="#5b3a1e"/>
+      <path d="M-31 30 V4 H-26" stroke="#7a5236" stroke-width="1.5" fill="none"/><circle cx="-26" cy="7" r="2.5" fill="#c9a24a"/></g>`)}
+    ${hut('mi', 236, 134, `<g transform="scale(.8)"><!-- 瞇：白牆暗房、紅色安全燈的窗、晾著的照片、門口的大木桌 -->
+      <rect x="-18" y="6" width="36" height="24" fill="#f4f2ee"/><rect x="-21" y="3" width="42" height="4" fill="#6d6a66"/>
+      <rect x="-12" y="14" width="9" height="16" fill="#2f2a28"/><rect x="5" y="13" width="8" height="7" fill="#c8241a"/>
+      <path d="M0 10 H16" stroke="#3a3330" stroke-width=".6"/>${[3, 8, 13].map(x => `<rect x="${x - 1.5}" y="10" width="3" height="3" fill="#fbf8f0"/>`).join('')}
+      <rect x="14" y="22" width="16" height="2" fill="#8a5a32"/><path d="M16 24 V30 M28 24 V30" stroke="#7a5236" stroke-width="1"/></g>`)}
+    ${hut('guo', 258, 190, `<g transform="scale(.8)"><!-- 郭哥：海邊木屋、藍綠色屋頂、曬毛巾、滾筒 -->
+      <rect x="-20" y="8" width="40" height="22" fill="#c8995f"/>${[14, 20].map(y => `<path d="M-20 ${y} H20" stroke="#a97f4d" stroke-width=".8"/>`).join('')}
+      <path d="M-26 9 L0 -8 L26 9Z" fill="#4f8584"/><rect x="-12" y="15" width="8" height="15" fill="#5a3f2a"/><rect x="5" y="14" width="9" height="7" ${win}/>
+      <path d="M-30 30 V16 M-14 30 V16 M-30 17 H-14" stroke="#7a5236" stroke-width="1.2"/>${[['#f6f1e6', -28], ['#f2c94c', -23], ['#7fc4c6', -18]].map(([c, x]) => `<rect x="${x}" y="17" width="4" height="7" fill="${c}"/>`).join('')}
+      <rect x="20" y="20" width="4" height="10" rx="2" fill="#3e8a8c"/></g>`)}
     <!-- 碼頭和渡船 -->
     <path d="M176 206 L170 252 M224 206 L230 252" stroke="#7a5236" stroke-width="3"/>
     <path d="M178 204 H222 L226 246 H174Z" fill="#b08356"/>${[0, 1, 2, 3, 4].map(i => `<path d="M${176 - i * 0.5} ${212 + i * 8} H${224 + i * 0.5}" stroke="#8f6640" stroke-width="1"/>`).join('')}
     <rect x="185" y="186" width="30" height="13" rx="2" fill="#fbf4e4" stroke="#6b4a2b" stroke-width="1.5"/><text x="200" y="196" text-anchor="middle" font-size="7" font-weight="700" fill="#5b3a1e">智慧島</text>
     <path d="M190 199 V206 M210 199 V206" stroke="#6b4a2b" stroke-width="1.5"/>
-    <g transform="translate(262 234)"><path d="M-30 0 H30 L22 12 H-22Z" fill="#fdfaf2"/><path d="M-27 4 H27" stroke="#c0392b" stroke-width="2"/>
+    <g transform="translate(338 242)"><path d="M-30 0 H30 L22 12 H-22Z" fill="#fdfaf2"/><path d="M-27 4 H27" stroke="#c0392b" stroke-width="2"/>
       <rect x="-12" y="-10" width="22" height="10" fill="#f1e6d2"/><rect x="-9" y="-7" width="5" height="4" ${win}/><rect x="1" y="-7" width="5" height="4" ${win}/><rect x="-14" y="-12" width="26" height="3" fill="#2f6fae"/>
-      <animateTransform attributeName="transform" type="translate" values="262 234;262 236;262 234" dur="3s" repeatCount="indefinite"/></g>
+      <animateTransform attributeName="transform" type="translate" values="338 242;338 244;338 242" dur="3s" repeatCount="indefinite"/></g>
     <ellipse cx="200" cy="120" rx="220" ry="26" fill="url(#wMist)"/>
   </svg></div>`;
 }
@@ -1313,7 +1358,7 @@ function viewWisdom() {
     if (!wisdomFull[b]) wisdomLoad(b).then(() => { if (tab === 'wisdom' || tab === 'whut') render(); }); }));
   const today = wisdomTodayDone();
   return `<div class="card"><h2>⛴️ 智慧島</h2>${wisdomView3D()}
-      <div class="speech" style="margin-top:8px">${today ? '🌙 今天的課上完了。渡船照樣開，想回看筆記可以進小屋坐坐，明天再來上下一講。' : '⛴️ 小船靠岸了。霧散開，四間小屋的燈都亮著。今天想去哪一間上課？'}</div>
+      <div class="speech" style="margin-top:8px">${today ? '🌙 今天的課上完了。渡船照樣開，想回看筆記可以進小屋坐坐，明天再來上下一講。' : '⛴️ 小船靠岸了。霧散開，小屋的燈都亮著。今天想去哪一間上課？'}</div>
       <div class="muted" style="margin-top:6px;font-size:13px">點小屋就能進去。每天可以上一講，同一位老師每週一講。</div>${ferryKeeper(today)}</div>
     ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k);
       return `<div class="card whcard" style="border-left:5px solid ${t.color}" onclick="openWisdomHut('${k}')"><div class="row" style="flex-wrap:nowrap">
@@ -1387,8 +1432,9 @@ function viewWisdomLesson() {
     const reveal = !shown && !s.opts.length && s.after.length ? `<button class="ghost" style="width:100%;margin-top:8px" onclick="draft.wl.shown[${i}]=true;render()">看${t.name}怎麼說</button>` : '';
     const after = (shown || s.steps) ? s.after.map(p).join('') : '';
     const widget = i === 2 && L.widget ? wisdomWidget(L.widget) : '';
+    const photo = i === 0 && L.photo ? `<figure class="wphoto"><img src="${esc(L.photo.src)}" alt="${esc(L.photo.cap)}" loading="lazy"><figcaption>${esc(L.photo.cap)}${L.photo.credit ? '<span>' + esc(L.photo.credit) + '</span>' : ''}</figcaption></figure>` : '';
     const next = i === w.step && i < last ? `<button style="width:100%;margin-top:10px;background:${t.color}" ${needShow && !shown && !s.steps ? 'disabled' : ''} onclick="draft.wl.step++;render();setTimeout(()=>{const e=document.getElementById('wsec${i + 1}');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},30)">繼續 →</button>` : '';
-    return `<div class="card" id="wsec${i}"><h3 style="margin-top:0;color:${t.color}">${esc(s.h)}</h3>${s.q.map(p).join('')}${widget}${opts}${reveal}${after}${i === last ? wisdomNoteHtml(L, t, rec) : next}</div>`;
+    return `<div class="card" id="wsec${i}"><h3 style="margin-top:0;color:${t.color}">${esc(s.h)}</h3>${photo}${s.q.map(p).join('')}${widget}${opts}${reveal}${after}${i === last ? wisdomNoteHtml(L, t, rec) : next}</div>`;
   };
   return `<div class="card" style="border-top:5px solid ${t.color}"><div class="muted" style="font-size:13px">${t.ic} ${esc(t.place)}・《${esc(j.title)}》</div>
       <h2 style="margin:4px 0">第 ${w.n} 講　${esc(L.title)}</h2><div class="muted" style="font-size:13px">${esc(L.stamp)}</div>
@@ -2175,7 +2221,10 @@ const WISDOM_GRADS = [
   { book: 'kongming', id: 'wd-fan', z: 'wall', ic: '🪶', name: '孔明的羽扇' },
   { book: 'xiaomiao', id: 'wd-oke', ic: '🪣', name: '小苗的檜木湯桶' },
   { book: 'alu', id: 'wd-typer', ic: '⌨️', name: '阿律的打字機' },
-  { book: 'einstein', id: 'wd-scope', z: 'out', ic: '🔭', name: '愛因斯坦的航海望遠鏡' }];
+  { book: 'einstein', id: 'wd-scope', z: 'out', ic: '🔭', name: '愛因斯坦的航海望遠鏡' },
+  { book: 'yirong', id: 'wd-lectern', ic: '🪑', name: '宜蓉的木頭講桌' },
+  { book: 'mi', id: 'wd-safelight', z: 'wall', ic: '🔴', name: '瞇的紅色安全燈' },
+  { book: 'guo', id: 'wd-mat', ic: '🧘', name: '郭哥的瑜珈墊' }];
 function wisdomGrads() { return WISDOM_GRADS.filter(g => Object.keys(wisdomDone(g.book)).length >= 13).map(g => g.id); }
 function lanternCount() { try { return lightStats().lanterns; } catch (e) { return 0; } }
 function exUnlocked() { const n = lanternCount();
@@ -2470,13 +2519,14 @@ const MATS = {
   rice: { n: '米', ic: '🍚', s: '數' }, flour: { n: '麵粉', ic: '🌾', s: '數' }, azuki: { n: '紅豆', ic: '🫘', s: '數', rare: 1 }, mochi: { n: '糯米', ic: '🤍', s: '數', rare: 1 },
   salt: { n: '岩鹽', ic: '🧂', s: '自' }, imo: { n: '地瓜', ic: '🍠', s: '自' }, tomato: { n: '番茄', ic: '🍅', s: '自' }, clay: { n: '陶土', ic: '🟫', s: '自' }, fluorite: { n: '螢石', ic: '💎', s: '自', rare: 1 },
   hinoki: { n: '檜木', ic: '🪵', s: '社' }, kombu: { n: '昆布', ic: '🥬', s: '社' }, fish: { n: '魚', ic: '🐟', s: '社' }, cloth: { n: '布', ic: '🧵', s: '社' }, katsuo: { n: '柴魚', ic: '🍥', s: '社', rare: 1 },
-  feather: { n: '鶴羽', ic: '🪶', s: '智' }, onsen: { n: '溫泉水', ic: '♨️', s: '智' }, type: { n: '鉛字', ic: '🔤', s: '智' }, stardust: { n: '星砂', ic: '✨', s: '智' }
+  feather: { n: '鶴羽', ic: '🪶', s: '智' }, onsen: { n: '溫泉水', ic: '♨️', s: '智' }, type: { n: '鉛字', ic: '🔤', s: '智' }, stardust: { n: '星砂', ic: '✨', s: '智' },
+  photo: { n: '老照片', ic: '🖼️', s: '智' }, bookmark: { n: '書籤', ic: '🔖', s: '智' }, banana: { n: '香蕉', ic: '🍌', s: '智' }
 };
 // 哪一科給哪幾種（自然、社會照分科）；稀有素材從 Boss 項目或這科一週全部做完來
 const MAT_BY = { 國: ['tea', 'bamboo', 'shiso'], 英: ['sugar', 'milk'], 數: ['rice', 'flour'], 理化: ['salt'], 生物: ['imo', 'tomato'], 地科: ['clay'],
   歷史: ['hinoki'], 地理: ['kombu', 'fish'], 公民: ['cloth'], 自: ['salt', 'imo', 'tomato', 'clay'], 自然: ['salt', 'imo', 'tomato', 'clay'], 社: ['hinoki', 'kombu', 'fish', 'cloth'], 社會: ['hinoki', 'kombu', 'fish', 'cloth'] };
 const MAT_RARE = { 國: ['matcha'], 英: ['honey'], 數: ['azuki', 'mochi'], 自: ['fluorite'], 社: ['katsuo'] };
-const MAT_TUTOR = { kongming: 'feather', xiaomiao: 'onsen', alu: 'type', einstein: 'stardust' };   // 智慧島每上完一講給 1 個
+const MAT_TUTOR = { kongming: 'feather', xiaomiao: 'onsen', alu: 'type', einstein: 'stardust', yirong: 'photo', mi: 'bookmark', guo: 'banana' };   // 智慧島每上完一講給 1 個
 const DISHES = [
   { id: 'onigiri', n: '飯糰', ic: '🍙', use: { rice: 1, kombu: 1 } },
   { id: 'matcha', n: '抹茶', ic: '🍵', use: { matcha: 1, milk: 1 } },
@@ -2494,7 +2544,7 @@ const DISHES = [
 function dishOf(id) { return DISHES.find(d => d.id === id); }
 // 最喜歡的料理：島民可以在島嶼設定改，導師固定（爸爸，2026-10-26）；手帖裡交情到「聊得來」才看得到
 const FOOD_DEFAULT = { 國: 'matcha', 英: 'taiyaki', 數: 'onigiri', 自: 'miso', 社: 'qiu' };
-const FOOD_TUTOR = { kongming: 'zongzi', xiaomiao: 'onsentama', alu: 'boba', einstein: 'taiyaki' };
+const FOOD_TUTOR = { kongming: 'zongzi', xiaomiao: 'onsentama', alu: 'boba', einstein: 'taiyaki', yirong: 'qiu', mi: 'matcha', guo: 'onigiri' };
 function favFood(s) { const f = D.cfg && D.cfg.residents && D.cfg.residents[s] && D.cfg.residents[s].food; return dishOf(f) || dishOf(FOOD_DEFAULT[s]); }
 function matHash(str) { let h = 7; for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) % 1000003; return h; }
 function matsOf(save, itemsByRow, today) {
@@ -5128,7 +5178,8 @@ const WISDOM_BOOKS = [
   { key: 'kongming', title: '孫子兵法', color: '#8C2F2B' }, { key: 'xiaomiao', title: '湯屋的放鬆筆記', color: '#7FA88A' },
   { key: 'alu', title: '巷口小報', color: '#3B5B8C' }, { key: 'einstein', title: '愛因斯坦的科學筆記', color: '#2E3A59' },
   { key: 'kongming2', title: '三十六計', color: '#8C2F2B' }, { key: 'xiaomiao2', title: '湯屋的放鬆筆記・下冊', color: '#7FA88A' }, { key: 'alu2', title: '巷口小報・下冊', color: '#3B5B8C' },
-  { key: 'einstein2', title: '愛因斯坦的科學筆記・下冊', color: '#2E3A59' }];
+  { key: 'einstein2', title: '愛因斯坦的科學筆記・下冊', color: '#2E3A59' },
+  { key: 'yirong', title: '課本沒寫的那一題', color: '#9A5B3C' }, { key: 'mi', title: '一首詩的時間', color: '#B23A3A' }, { key: 'guo', title: '身體使用說明書', color: '#3E8A8C' }];
 const wisdomJson = {};
 // 店名：她自己取（存在 keeper:bookname 的 name，沿用 saveKeeper，後端不用改）
 const BOOK_NAMES = ['巷口書店', '小島書房', '海風書屋', '午後書店', '月見書房', '晴耕雨讀', '貓與書', '燈下書房'];
@@ -5174,7 +5225,7 @@ const BOOK_CATALOG = [{"id": "ginga","title": "銀河鐵道之夜","author": "�
    存檔（後端 Bookstore.gs）：gift:時間戳 = { from, at, book, note, emoji, readAt }、cheer:時間戳 = { from, at, text, emoji }、booksSeen
    書單 BOOK_CATALOG 由 make_catalog.py 從 bookstore/家人送書書單.md 產生；每位家人每週送一本、每天一張鼓勵卡；不給經驗值或島幣 */
 const BOOK_EMOJIS = ['😊', '🥹', '📖', '🙏', '⭐', '🐈'];
-const WISDOM_ICONS = { kongming: '🪶', xiaomiao: '♨️', alu: '📰', einstein: '🔭' };
+const WISDOM_ICONS = { kongming: '🪶', xiaomiao: '♨️', alu: '📰', einstein: '🔭', yirong: '🔔', mi: '📷', guo: '🧘' };
 const GIFT_WRAPS = ['kraft', '#e9d6c1', '#cfd9c7', 'kraft', '#d7cfe3', '#f0d9c4'];
 const BOOK_CATS = [['日本', '🗾 日本文學'], ['台灣', '🏝️ 台灣'], ['華文', '🏮 華文經典'], ['世界', '🌍 世界經典'], ['BL', '🌸 漫畫（請先自己看過）']];
 let bookKey = '', bookFreshKeys = [];
@@ -5188,6 +5239,7 @@ const LANDMARKS = {
   hakase: ['數', '小棒球場'], namiya: ['數', '老雜貨店'], yoru: ['數', '里程路標'], kongming: ['數', '八陣圖'], kinou: ['數', '兩個人的餐桌'],
   tetsudo: ['社', '鄉間小車站'], koto: ['社', '鳥居與北山杉'], saigon: ['社', '小吃攤'], saga: ['社', '河邊水車'], seirei: ['社', '山谷吊橋'],
   alu: ['社', '街角報亭'], alu2: ['社', '社區公布欄'],
+  yirong: ['社', '老照片牆'], mi: ['國', '稻田邊的詩牆'], guo: ['自', '海邊單槓'],   // v2.48.2；3D 模型還沒做，先用預設的小木牌
   // 第二批（v2.20）
   chengnan: ['國', '胡同口的駱駝隊'], shediao: ['國', '比武擂台'], xiyouji: ['國', '花果山水簾洞'], women: ['國', '三張書桌'], lupine: ['國', '茶園與魯冰花'], sakinu: ['國', '排灣族石板屋'],
   anne: ['英', '密室的書櫃門'], oldman: ['英', '小漁船與大魚骨'], charlotte: ['英', '穀倉的蜘蛛網'], hatchet: ['英', '湖邊營火'], giver: ['英', '雪丘上的紅雪橇'], alchemist: ['英', '沙漠金字塔'],
@@ -5857,6 +5909,7 @@ const WHO_SEES = [
   ['計畫、每日紀錄、讀書計時、每週達成率', '✅', '✅', '—'],
   ['考古題和挑戰任務的對錯、燈室的四張卡', '✅', '✅', '—'],
   ['漂流瓶上寫的原因和那一句話', '✅', '分享的', '—'],
+  ['拍錯題的照片', '✅', '—', '—'],
   ['燈塔的話、沒分享的日めくり', '✅', '—', '—'],
   ['如果 AI 覺得你寫給老師或燈塔的話讓人擔心，會寄信請爸爸關心你（信裡不會有你寫的字）', '✅', '爸爸收到一封信', '—'],
   ['分享的日めくり', '✅', '✅', '✅'],
@@ -5873,7 +5926,7 @@ function privacyCard() {
   return `<div class="card"><details class="fold"><summary><h3>🔐 誰看得到什麼</h3><span class="muted">點開看家人和訪客看得到哪些</span></summary>
     <div style="overflow-x:auto;margin-top:8px"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人碼</th><th>訪客</th></tr>
       ${WHO_SEES.map(r => `<tr><td style="text-align:left;white-space:normal">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div>
-    <div style="margin-top:8px;font-size:13px">家人在 App 裡看不到：沒分享的日めくり和燈塔的話、沒打開分享的吃藥紀錄，還有你在智慧島、紙船這些地方寫的字。這些資料存在爸爸管理的試算表裡，所以爸爸技術上打得開；他答應過，不會去讀你沒分享的內容。有疑問，隨時可以直接問爸爸。</div>
+    <div style="margin-top:8px;font-size:13px">家人在 App 裡看不到：沒分享的日めくり和燈塔的話、沒打開分享的吃藥紀錄，還有你在智慧島、紙船這些地方寫的字。這些資料存在爸爸管理的試算表和雲端硬碟裡，所以爸爸技術上打得開；他答應過，不會去讀你沒分享的內容。有疑問，隨時可以直接問爸爸。</div>
     <div class="muted" style="margin-top:6px;font-size:12px">你寫給智慧島老師和燈塔的一句話，會交給 AI 產生回覆；AI 不會把內容告訴家人。每週檢討和大考成績，爸爸會交給 AI 學習顧問分析讀書方法。家人碼只能看、寄明信片、送書和鼓勵卡，不能改你的紀錄。漂流瓶要按「給爸爸看」才算分享。訪客只看得到你確認過的那張邀請裡的快照；連續週數要發邀請時有勾才給看；邀請到期或收回就看不到。用到 AI 的功能（拍照讀計畫和錯題、出題、講解、島民的話）會把那一次的內容送到 Google 的 Gemini 產生回答。</div>
     </details>
     <button class="ghost" style="width:100%;margin-top:10px" onclick="logoutPhone()">🚪 登出這支手機</button>
@@ -6066,11 +6119,11 @@ function viewGuide() {
     p('你也可以送家人一本書：在書店按「🎁 送家人一本書」，選一位家人，從書單挑一本（讀過的書排在最前面），寫一句為什麼想送。店長會在他們下次來書店時轉交，他們讀完可以回你一個表情。每位家人每週可以送一本，送過的書收在「我送出的書」。') +
     p('讀完一本書，島上就會長出一個地標：每本書依內容對應國、英、數、自、社其中一條街，例如《銀河鐵道之夜》讀完，自然街靠海的草地會長出觀星丘。家人送的書按「📖 讀過了」、智慧島的書 13 章都蓋完章就會長出來。點地標可以打開那本書；點一條街，也看得到這條街長了哪些地標。打開還沒讀完的書，會告訴你讀完後會長出什麼。') +
     p('家人能挑的書單會自己補書：每次只剩十本還沒讀，就再上架三十本，都從國高中推薦閱讀清單挑，新上架的書會標「🆕」。'))}
-  ${wisdomOn() ? sec('⛴️', '智慧島', p('海邊有一座渡船碼頭，坐船就能到智慧島。島上住著四位老師：隆中草廬的孔明教《孫子兵法》、湯屋的小苗教放鬆和好好記住東西的方法、巷口柑仔店的阿律教你讀新聞、NASA 分站的愛因斯坦講數學和科學家的故事。') +
+  ${wisdomOn() ? sec('⛴️', '智慧島', p('海邊有一座渡船碼頭，坐船就能到智慧島。島上住著七位老師：') + `<ul style="margin:2px 0 8px;padding-left:22px;line-height:1.8">${['隆中草廬的孔明：《孫子兵法》', '湯屋的小苗：放鬆和好好記住東西的方法', '巷口柑仔店的阿律：讀新聞', 'NASA 分站的愛因斯坦：數學和科學家的故事', '老教室的宜蓉：用一張老照片講一段歷史', '暗房小屋的瞇：慢慢讀一首詩', '海邊物理治療所的郭哥：吃、動、休息背後的道理'].map(x => '<li>' + x + '</li>').join('')}</ul>` +
     p('每一講都是四步：聽故事、你來選、搬到你的生活、寫一句。最後寫的那一句交給老師，老師會回你一句話，集章冊就蓋一個章。') +
-    p('<b>每天可以上一講</b>，同一位老師<b>每週一講</b>（週一重新算），所以四位老師剛好一週各上一次，不用急。上過的課可以在小屋或集章冊回看，也會擺到書店的「你的書架」上。') +
+    p('<b>每天可以上一講</b>，同一位老師<b>每週一講</b>（週一重新算），想上幾位老師都可以，不用急。上過的課可以在小屋或集章冊回看，也會擺到書店的「你的書架」上。') +
     p('渡船屋可以請一位主人：名字、樣子、個性都由你決定，他會幫你開船，每天跟你說一句話。') +
-    p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木湯桶、阿律的打字機、愛因斯坦的航海望遠鏡。不用島幣，在我的家的家具店最下面可以擺出來。')) : ''}
+    p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木湯桶、阿律的打字機、愛因斯坦的航海望遠鏡、宜蓉的木頭講桌、瞇的紅色安全燈、郭哥的瑜珈墊。不用島幣，在我的家的家具店最下面可以擺出來。')) : ''}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
   ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊節氣、天氣和生活小事，有的會關心你；很久沒去找他，他會說想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性或說話方式。島民家裡的道謝和島上消息，也是島民每天照自己的口吻寫的。') +
     p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
