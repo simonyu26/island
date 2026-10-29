@@ -71,13 +71,13 @@
   #r3d { height: min(56vh, 400px); border-radius: 14px; overflow: hidden; background: #f6efe6; }
   .room { border-radius: 14px; padding: 12px; min-height: 180px; display: flex; flex-direction: column; gap: 10px; }
   .zone { display: flex; flex-wrap: wrap; gap: 8px; font-size: 30px; min-height: 40px; }
-  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px;
+  .toast { /* TOAST_v1 */ position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); pointer-events: none; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px;
            border-radius: 12px; display: none; z-index: 20; font-size: 14px; max-width: 90vw; }
 </style>
 </head>
 <body>
 <main id="app"><div class="loading">⛴️ 渡船準備中…</div></main>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="config.js"></script>
 <script src="visit.js"></script>
 </body>
