@@ -81,6 +81,9 @@
   const WALL_SPOTS = [[false, -2.2, 2.9], [false, 2.6, 2.9], [true, -1.4, 2.9], [true, 1.8, 2.9], [false, 0.2, 3.7], [true, 0.2, 3.7], [false, -3, 1.9], [true, 3, 1.9]];
 
   const cellPos = c => [-3 + 1.5 * (c % 5), -3 + 1.5 * Math.floor(c / 5)];
+  // v2.48.1（HOOKS_v1）窗台沿窗戶的三個位置（0 號是原本的位置）、門口石板上的三個位置
+  const SILL_U = [-0.4, -1.05, 0.25], DOOR_X = [-2.0, 0, 2.0];
+  const hookOk = (v, n) => Number.isInteger(v) && v >= 0 && v < n;
   function build(o) {
     if (content) scene.remove(content);
     content = new THREE.Group(); scene.add(content);
@@ -114,13 +117,19 @@
     rug.rotation.x = -Math.PI / 2; rug.position.set(0.4, 0.015, 0.6); content.add(rug);
 
     const items = o.items || [];
-    let fi = 0, wi = 0;
+    let fi = 0, wi = 0, door = false;
+    const usedW = {};   // 指定了牆上位置的先佔，其他的依序補空位
+    items.forEach(it => { if (it.z === 'wall' && hookOk(it.w, WALL_SPOTS.length) && !usedW[it.w]) usedW[it.w] = it; });
+    const nextW = () => { while (wi < WALL_SPOTS.length && usedW[wi]) wi++; return wi < WALL_SPOTS.length ? wi++ : -1; };
     items.forEach(it => {
-      if (it.z === 'wall' && wi < WALL_SPOTS.length) { const w = WALL_SPOTS[wi++]; content.add(wallItem(it.ic, w[0], w[1], w[2], 1.1)); }
-      else if (it.z === 'out') { const f = floorItem(it.ic, 0, 0, 0.7); f.rotation.y = Math.PI / 2; f.position.set(-3.6, 1.62, -0.4); content.add(f); }   // 窗台上
+      const wn = it.z === 'wall' ? (usedW[it.w] === it ? it.w : nextW()) : -1;
+      if (wn >= 0) { const w = WALL_SPOTS[wn]; content.add(wallItem(it.ic, w[0], w[1], w[2], 1.1)); }
+      else if (it.z === 'out' && hookOk(it.d, DOOR_X.length)) { content.add(floorItem(it.ic, DOOR_X[it.d], 4.75, 1.2, it.flip)); door = true; }   // 門口
+      else if (it.z === 'out') { const f = floorItem(it.ic, 0, 0, 0.7); f.rotation.y = Math.PI / 2; f.position.set(-3.6, 1.62, SILL_U[hookOk(it.s, SILL_U.length) ? it.s : 0]); content.add(f); }   // 窗台上
       else if (it.cell != null) { const p = cellPos(it.cell); content.add(floorItem(it.ic, p[0], p[1], 1.35, it.flip)); }
       else if (fi < FLOOR_SPOTS.length) { const p = FLOOR_SPOTS[fi++]; content.add(floorItem(it.ic, p[0], p[1], 1.45)); }
     });
+    if (door) { const st = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 1.5), std(0xcfc6b4)); st.rotation.x = -Math.PI / 2; st.position.set(0, 0.005, 4.75); content.add(st); }   // 門口的石板，有東西才畫
     visitorSp = null;
     if (o.visitor) {
       const vp = o.visitorCell != null ? cellPos(o.visitorCell) : [1.4, 1.9];

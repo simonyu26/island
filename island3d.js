@@ -1627,9 +1627,12 @@
       const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
       const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.06 + Math.min(bond[k], 6) * 0.03, 6, false),
         std(0xe05a9a, { emissive: 0x7a1f48, emissiveIntensity: 0.35, transparent: true, opacity: 0.85 }));
-      linkLayer.add(tube);
+      tube.userData.pair = k; linkLayer.add(tube);
     });
+    linkVis();
   }
+  // v2.48.1 拱橋不礙眼（ARCS_PICK_v1）：成長回放畫全部；平常只畫選到的島民的橋，沒選就都不畫
+  function linkVis() { if (linkLayer) linkLayer.children.forEach(t => { t.visible = weekIdx != null || (!!selected && String(t.userData.pair || '').indexOf(selected) >= 0); }); }
 
   // ---------- 互動 ----------
   let downAt = null;
@@ -1668,15 +1671,19 @@
       if (o.userData.plant && ctx.onPlant) { ctx.onPlant(o.userData.plant); return; }
       if (o.userData.garden && ctx.onGarden) { ctx.onGarden(); return; }
     }
-    if (!hit) return;
+    if (!hit) {   // 點空白處：收起拱橋和選取
+      if (selected) { selected = null; Object.keys(plates).forEach(k => plates[k].material.emissive = lin(new THREE.Color(0x000000))); linkVis(); }
+      return;
+    }
     let o = hit.object; while (!o.userData.subject) o = o.parent;
     select(o.userData.subject);
   }
   let selected = null;
   function select(s) {
     selected = s;
-    Object.keys(plates).forEach(k => plates[k].material.emissive = lin(new THREE.Color(k === s ? 0x553344 : 0x000000)));
+    Object.keys(plates).forEach(k => plates[k].material.emissive = lin(new THREE.Color(k === s ? 0x9a6f22 : 0x000000)));   // 選到的街：暖黃（美術 10/29）
     popping.push({ m: plates[s], t: 0, bounce: true });
+    linkVis();
     if (ctx.onSelect) ctx.onSelect(s);
   }
 

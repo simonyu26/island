@@ -191,6 +191,10 @@
   .agrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #d9b88f; padding: 6px; border-radius: 10px; border-top: 6px solid var(--plum-light); border-left: 6px solid var(--plum-light); max-width: 300px; margin: 0 auto; }
   .agrid button { aspect-ratio: 1; padding: 0; background: #f3e3c9; border: 1.5px dashed #c7a578; color: var(--ink); font-size: 24px; min-width: 0; }
   .agrid button.on { background: var(--plum-light); border: 2px solid var(--plum); }
+  .arow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .arow.a3 { grid-template-columns: repeat(3, 1fr); }
+  .arow button { height: 44px; padding: 0; background: #f3e3c9; border: 1.5px dashed #c7a578; color: var(--ink); font-size: 20px; min-width: 0; letter-spacing: -4px; }
+  .arow button.on { background: var(--plum-light); border: 2px solid var(--plum); }
   /* 智慧島（v2.24）：渡船靠岸的小島插畫、導師小屋、上課、集章冊 */
   .wscene { border-radius: 14px; overflow: hidden; margin-top: 6px; } .wscene svg { display: block; width: 100%; height: auto; }
   .whut { cursor: pointer; } .whut:hover rect:first-of-type, .whut:active rect:first-of-type { filter: brightness(1.05); }
@@ -323,11 +327,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.48';
+const APP_VERSION = '2.48.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，山頂的玉山聚會所也會開門，從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.48.1', date: '2026-10-31', items: ['🌉 島民之間的粉紅色拱橋平常先收起來了：點一位島民，才會出現和這位島民有關的橋，點空白處就收起來；成長回放照舊看得到全部的橋', '🖼️ 我的家：牆上、窗台和門口的東西也可以自己擺了。按「🧩 自己擺家具」，點一件，再點想掛或想放的位置；門口的東西也可以轉個方向', '⚔️ Boss 戰紀錄可以多填國文、英文沒答對幾題（選填）。離 A++ 還差多少一看就知道，學習摘要的模考也會寫出來。', '📝 拍錯題時可以選「這題是從哪裡來的」：哪一場模考、會考考古題或 3688，瓶子上會寫來源；記完 Boss 戰按「收這場的錯題」會自動選好那一場。學習摘要也會照來源分開算。'] },
   { v: '2.48', date: '2026-10-29', minor: true, items: ['🔧 在小島、智慧島和我的家之間切換時，3D 比較省記憶體，手機比較不會越用越慢'] },
   { v: '2.47.5', date: '2026-10-28', items: ['📤 計畫頁多了「整理學習摘要給學習顧問（AI）看」：把這週或這個月的計畫、考古題、瓶子、錯因、補強的單元和模考分數整理成一段文字，只有數字和名稱，不含你寫的字。看過再決定要不要複製給爸爸。'] },
   { v: '2.47.4', date: '2026-10-28', items: ['📖 玩法說明變短了：分成五類，每一段先收起來，點標題才打開；每個地方右上角的「❓ 這裡怎麼玩」會直接打開那一段', '🏠 我的家分成三個分頁：🛋️ 房間、🛒 家具店、🏅 收藏（獎勵家具和徽章）', '⚙️ 「更多」的「誰看得到什麼」、商店的素材櫃、智慧島的集章冊都先收起來，點一下就打開'] },
@@ -1766,35 +1771,77 @@ function floorCells(who) {
   floor.forEach(f => { if (cells[f.id] == null) { const c = ROOM_ORDER.find(x => !used[x]); if (c != null) { cells[f.id] = c; used[c] = 1; } } });
   return { cells, used };
 }
+// v2.48.1 牆上、窗台、門口的位置（HOOKS_v1）：w 牆上 0～7（room3d.js 的 WALL_SPOTS）、s 窗台 0～2（0 是原本的位置）、d 門口 0～2。
+// 沒寫位置的照舊排：牆上依序補空位、窗台都放 0 號；排法和 room3d.js 一樣，所以沒動過畫面就不變
+const HOOK_N = { w: 8, s: 3, d: 3 };
+function hookMap() {
+  const L = (homeOf() || {}).layout || {}, all = shownFor('me').map(furnOf).filter(Boolean), at = {}, usedW = {};
+  const ok = (q, k) => !!q && Number.isInteger(q[k]) && q[k] >= 0 && q[k] < HOOK_N[k];
+  all.forEach(f => { const q = L[f.id]; if (f.z === 'wall' && ok(q, 'w') && usedW[q.w] == null) usedW[q.w] = f.id; });
+  let wi = 0;
+  all.forEach(f => { const q = L[f.id];
+    if (f.z === 'wall') { let w = q && usedW[q.w] === f.id ? q.w : -1;
+      if (w < 0) { while (wi < HOOK_N.w && usedW[wi] != null) wi++; if (wi < HOOK_N.w) w = wi++; }
+      if (w >= 0) at[f.id] = { k: 'w', i: w }; }   // 牆上滿了的照舊放地上
+    else if (f.z === 'out') at[f.id] = ok(q, 'd') ? { k: 'd', i: q.d } : { k: 's', i: ok(q, 's') ? q.s : 0 };
+  });
+  return at;
+}
 function roomItems(who) {
-  const fc = who === 'me' ? floorCells('me') : null, L = (who === 'me' && (homeOf() || {}).layout) || {};
+  const fc = who === 'me' ? floorCells('me') : null, hk = who === 'me' ? hookMap() : {}, L = (who === 'me' && (homeOf() || {}).layout) || {};
   return shownFor(who).map(furnOf).filter(Boolean).map(f => { const o = { ic: f.ic, z: f.z || 'floor' };
     if (fc && fc.cells[f.id] != null) { o.cell = fc.cells[f.id]; if (L[f.id] && L[f.id].f) o.flip = 1; }
+    const h = hk[f.id]; if (h) { o[h.k] = h.i; if (h.k === 'd' && L[f.id] && L[f.id].f) o.flip = 1; }
     return o; });
 }
+function arrangePick() { const id = draft.pick; return id && (floorCells('me').cells[id] != null || hookMap()[id]) ? id : null; }
+function hookRow(title, k, order, hk, pick, L) {
+  return `<div class="muted" style="margin:8px 0 2px;font-size:13px">${title}</div><div class="arow">${order.map(i => { const ids = Object.keys(hk).filter(id => hk[id].k === k && hk[id].i === i);
+    return `<button type="button" class="${ids.includes(pick) ? 'on' : ''}" onclick="arrangeHook('${k}',${i})" aria-label="${title}第 ${order.indexOf(i) + 1} 個位置">${ids.map(id => k === 'd' && L[id] && L[id].f ? `<span style="display:inline-block;transform:scaleX(-1)">${furnOf(id).ic}</span>` : furnOf(id).ic).join('')}</button>`; }).join('')}</div>`;
+}
 function arrangeHtml() {
-  const { cells } = floorCells('me'), at = {}, L = (homeOf() || {}).layout || {};
+  const { cells } = floorCells('me'), at = {}, L = (homeOf() || {}).layout || {}, hk = hookMap();
   Object.keys(cells).forEach(id => { at[cells[id]] = id; });
-  const pick = draft.pick && cells[draft.pick] != null ? draft.pick : null, pf = pick && furnOf(pick);
+  const pick = arrangePick(), pf = pick && furnOf(pick), pz = pf && (pf.z || 'floor'), canFlip = pick && (cells[pick] != null || (hk[pick] && hk[pick].k === 'd'));
   const grid = Array.from({ length: ROOM_GRID * ROOM_GRID }, (_, c) => { const id = at[c], f = id && furnOf(id);
     return `<button type="button" class="${id && id === pick ? 'on' : ''}" onclick="arrangeTap(${c})" aria-label="第 ${c + 1} 格">${f ? `<span style="display:inline-block${L[id] && L[id].f ? ';transform:scaleX(-1)' : ''}">${f.ic}</span>` : ''}</button>`; }).join('');
-  return `<div class="arrange"><div class="muted" style="margin-bottom:6px">${pf ? `選了 ${pf.ic} ${esc(pf.name)}：點一個格子搬過去（有東西就交換）。` : '先點一件家具，再點想放的格子。上面是後面的牆，左邊是窗戶那面牆。'}</div>
+  return `<div class="arrange"><div class="muted" style="margin-bottom:6px">${draft.arrTip ? `<b style="color:var(--plum)">${esc(draft.arrTip)}</b>` : pf ? `選了 ${pf.ic} ${esc(pf.name)}：${pz === 'wall' ? '點牆上的一個位置，就會搬過去（那裡有東西就互換）。' : pz === 'out' ? '點窗台或門口的一個位置，就會搬過去（那裡有東西就互換）。' : '點一個格子搬過去（有東西就交換）。'}` : '先點一件家具，再點想放的位置。上面是後面的牆，左邊是窗戶那面牆。'}</div>
     <div class="agrid">${grid}</div>
-    <div class="row" style="margin-top:8px">${pf ? `<button class="ghost" onclick="arrangeFlip()">↔️ 轉個方向</button><button class="ghost" onclick="draft.pick=null;toggleFurniture('me','${pick}')">收起來</button>` : ''}
+    <div style="max-width:300px;margin:0 auto">${hookRow('🖼️ 後面的牆（從左到右）', 'w', [6, 0, 4, 1], hk, pick, L)}${hookRow('🖼️ 左邊的牆（從裡面到外面）', 'w', [2, 5, 3, 7], hk, pick, L)}
+      ${hookRow('🪟 窗台', 's', [1, 0, 2], hk, pick, L).replace('class="arow"', 'class="arow a3"')}${hookRow('🚪 門口', 'd', [0, 1, 2], hk, pick, L).replace('class="arow"', 'class="arow a3"')}</div>
+    <div class="row" style="margin-top:8px">${pf ? `${canFlip ? '<button class="ghost" onclick="arrangeFlip()">↔️ 轉個方向</button>' : ''}<button class="ghost" onclick="draft.pick=null;toggleFurniture('me','${pick}')">收起來</button>` : ''}
       <span class="grow"></span><button onclick="draft.arrange=false;draft.pick=null;render()">擺好了</button></div>
-    <div class="muted" style="margin-top:6px">牆上、窗台和門口的東西會自動排好。</div></div>`;
+    <div class="muted" style="margin-top:6px">牆上、窗台和門口的東西，點一件，再點想掛或想放的位置；牆上放不下的，會先放在地上。</div></div>`;
 }
 function saveLayout(layout) {
   const h = Object.assign({}, homeOf() || {}, { layout });
   S.save.home = h; queueSave('home', 'saveHome', h); render();
 }
 function fullLayout() {   // 把目前看到的位置全部寫下來，之後新擺的家具不會把舊的擠走
-  const { cells } = floorCells('me'), L = (homeOf() || {}).layout || {}, out = {};
+  const { cells } = floorCells('me'), L = (homeOf() || {}).layout || {}, out = {}, hk = hookMap();
   Object.keys(cells).forEach(id => { out[id] = L[id] && L[id].f ? { c: cells[id], f: 1 } : { c: cells[id] }; });
+  Object.keys(hk).forEach(id => { const h = hk[id]; out[id] = h.k === 'd' && L[id] && L[id].f ? { d: h.i, f: 1 } : { [h.k]: h.i }; });
   return out;
 }
+function arrTip(m) { draft.arrTip = m; render(); }   // 放錯種類的提示寫在擺家具框最上面，不蓋住格子（美術 10/29）
+function arrangeHook(k, i) {
+  draft.arrTip = null;
+  const hk = hookMap(), here = Object.keys(hk).filter(id => hk[id].k === k && hk[id].i === i), pick = arrangePick();
+  if (!pick) { draft.pick = here[0] || null; return render(); }
+  const z = furnOf(pick).z || 'floor';
+  if (z === 'floor') return arrTip('這件放在地上，點地板的格子');
+  if (z === 'wall' && k !== 'w') return arrTip('這件要掛在牆上，點「後面的牆」或「左邊的牆」那排');
+  if (z === 'out' && k === 'w') return arrTip('這件放在窗台或門口，點「窗台」或「門口」那排');
+  if (here.includes(pick)) { draft.pick = null; return render(); }
+  const L = fullLayout(), from = hk[pick];
+  L[pick] = { [k]: i };
+  if (here.length === 1) L[here[0]] = { [from.k]: from.i };   // 只有一件就交換；窗台 0 號疊了好幾件就只搬過去
+  draft.pick = null; saveLayout(L);
+}
 function arrangeTap(c) {
-  const { cells } = floorCells('me'), here = Object.keys(cells).find(id => cells[id] === c), pick = draft.pick && cells[draft.pick] != null ? draft.pick : null;
+  draft.arrTip = null;
+  const { cells } = floorCells('me'), here = Object.keys(cells).find(id => cells[id] === c), any = arrangePick(), pick = any && cells[any] != null ? any : null;
+  if (any && !pick) return arrTip(furnOf(any).z === 'wall' ? '這件要掛在牆上，點「後面的牆」或「左邊的牆」那排' : '這件放在窗台或門口，點「窗台」或「門口」那排');
   if (!pick) { draft.pick = here || null; return render(); }
   if (here === pick) { draft.pick = null; return render(); }
   const L = fullLayout(), from = L[pick].c;
@@ -1803,8 +1850,8 @@ function arrangeTap(c) {
   draft.pick = null; saveLayout(L);
 }
 function arrangeFlip() {
-  const L = fullLayout(), id = draft.pick; if (!id || !L[id]) return;
-  L[id] = L[id].f ? { c: L[id].c } : { c: L[id].c, f: 1 }; saveLayout(L);
+  const L = fullLayout(), id = draft.pick, q = id && L[id]; if (!q || (q.c == null && q.d == null)) return;
+  const k = q.c != null ? 'c' : 'd'; L[id] = q.f ? { [k]: q[k] } : { [k]: q[k], f: 1 }; saveLayout(L);
 }
 function wallFor(who) { return who === 'me' ? (homeOf() || {}).wall || WALL_COLORS[0] : roomOf(who).wall || RES_WALL[who]; }
 // 今天來作客的島民：好感度（跨科連結）越高越常來
@@ -3149,7 +3196,7 @@ function photoBody(q, fam) {
       ${mc ? `<div class="opts">${q.o.map((o, i) => `<button class="opt ${i === q.a ? 'right' : ''}" disabled>(${ABCDE.charAt(i)}) ${esc(o)}</button>`).join('')}</div>` : `<div>正確答案：<b>${esc(q.ans)}</b></div>`}
       ${q.her ? `<div class="muted" style="margin-top:4px">你那時候寫的答案：${esc(q.her)}</div>` : ''}
       ${q.ex ? `<div class="speech" style="margin-top:8px">${srcTag('ai')} ${esc(q.ex)}</div>` : ''}
-      <div class="muted" style="font-size:12px;margin-top:4px">📷 ${short(q.date)} 拍照收進來的錯題・題目是 AI 從照片讀出來的</div>
+      <div class="muted" style="font-size:12px;margin-top:4px">📷 ${short(q.date)} 拍照收進來的錯題${q.mock ? '・' + srcLabel(q.mock) : PQ_FROM[q.from] ? '・' + PQ_FROM[q.from] : ''}・題目是 AI 從照片讀出來的</div>
       ${fam ? '' : `<div class="row" style="margin-top:8px">${q.photo ? `<button class="ghost" onclick="showWrongPhoto('${q.photo}')">🖼️ 看照片</button>` : ''}<button class="ghost" onclick="removeWrongQ('${q.id}')">🗑️ 收錯了，拿掉</button></div>
         <div id="pqPhoto"></div>`}`;
 }
@@ -3197,7 +3244,14 @@ async function practiceXq(i) {
 }
 function pqLane() { try { const l = localStorage.getItem('islandPqLane'); return QLANES.includes(l) ? l : '國'; } catch (e) { return '國'; } }   // 記住上次拍哪一科（只是這支手機的方便）
 function setPqLane(l) { draft.ws.lane = l; try { localStorage.setItem('islandPqLane', l); } catch (e) {} render(); }
-function openWrongScan() { draft = { ws: { lane: draft.ws && draft.ws.lane || pqLane(), items: null } }; tab = 'wrongScan'; render(); window.scrollTo(0, 0); }
+function openWrongScan(mock) { draft = { ws: { lane: draft.ws && draft.ws.lane || pqLane(), items: null, src: mock || '' } }; tab = 'wrongScan'; render(); window.scrollTo(0, 0); }
+// 拍照錯題標來源：模考的 pq.mock 只存大考的日期，考卷名稱從大考紀錄查；3688、會考考古題存在 pq.from
+const PQ_FROM = { past: '📜 會考考古題', '3688': '📘 3688' };
+function srcLabel(v) { return /^\d{4}-\d{2}-\d{2}$/.test(v) ? '📝 ' + mockLabel(v) : PQ_FROM[v] || ''; }
+function assessYmd(a) { const d = assessDate(a.date); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function mockName(date) { return S.assessments.filter(a => assessYmd(a) === date).map(a => String(a.source || '').trim()).filter(Boolean).join('、'); }
+function mockLabel(date) { const n = mockName(date); return short(date) + ' 模考' + (n ? '（' + esc(n) + '）' : ''); }
+function recentMocks() { const from = addD(S.today, -60); return [...new Set(S.assessments.map(assessYmd))].filter(d => d >= from && d <= S.today).sort().reverse(); }
 async function scanWrongPhoto(input) {
   const file = input.files && input.files[0]; if (!file) return;
   input.value = '';
@@ -3231,6 +3285,7 @@ function viewWrongScan() {
         <label>這是哪一科？</label>
         <div class="row" style="gap:6px">${big.map(l => `<button class="${w.lane === l ? '' : 'ghost'}" style="padding:8px 18px" onclick="setPqLane('${l}')">${subIc(l)} ${esc(SUBJECT_NAME[l] || l)}</button>`).join('')}
           <select style="width:auto" onchange="if (this.value) setPqLane(this.value)"><option value="">其他科…</option>${rest.map(l => `<option value="${l}"${w.lane === l ? ' selected' : ''}>${esc(laneLabel(l))}</option>`).join('')}</select></div>
+        <label>這題是從哪裡來的？（選填）</label><select onchange="draft.ws.src=this.value"><option value="">不標來源</option>${Object.keys(PQ_FROM).concat(recentMocks()).map(v => `<option value="${v}"${w.src === v ? ' selected' : ''}>${srcLabel(v)}</option>`).join('')}</select>
         <div class="muted" style="margin-top:10px">💡 一次拍一頁就好，光線亮一點、字要拍清楚；有紅筆訂正的話，AI 會照訂正的答案。</div>
         <label class="btn" style="display:block;text-align:center;margin-top:12px">📷 拍${esc(laneLabel(w.lane))}的錯題<input type="file" accept="image/*" hidden onchange="scanWrongPhoto(this)"></label></div>${back}`;
   }
@@ -3250,7 +3305,7 @@ function viewWrongScan() {
         : `<input maxlength="12" value="${esc(x.type)}" oninput="draft.ws.items[${i}].type=this.value">`}`}
       <label>為什麼會錯？（選填）</label><div class="row" style="gap:6px">${REASONS.map(r => `<button class="${x.why === r[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" onclick="draft.ws.items[${i}].why=draft.ws.items[${i}].why==='${r[0]}'?null:'${r[0]}';render()">${r[1]}</button>`).join('')}</div>
       ${x.ex ? `<details class="muted" style="margin-top:8px"><summary>💡 解說</summary>${esc(x.ex)}</details>` : ''}</div>`).join('');
-  return `<div class="card"><h2>📷 ${esc(laneLabel(w.lane))}：讀到 ${w.items.length} 題</h2>
+  return `<div class="card"><h2>📷 ${esc(laneLabel(w.lane))}：讀到 ${w.items.length} 題</h2>${w.src && srcLabel(w.src) ? `<div class="muted">${srcLabel(w.src)}${/\w$/.test(srcLabel(w.src)) ? ' ' : ''}的題</div>` : ''}
       <div class="muted">${w.items.length ? '勾選要收進海灘的題；AI 讀錯的地方，點「讀錯了？點開修改」。收進一題 +' + 5 + ' 經驗值（每天的前 10 題有經驗值，超過的還是會收進海灘）。' : '照片上沒讀到題目，換個角度、拍亮一點再試一次。'}</div></div>
     ${cards}
     <div class="row">${w.items.length ? `<button class="grow" id="pqGo" onclick="collectWrongQ()" ${n ? '' : 'disabled'}>收進海灘（${n} 題）🍶</button>` : ''}<button class="ghost" onclick="draft.ws.items=null;render()">重拍</button><button class="ghost" onclick="go('light')">返回</button></div>`;
@@ -3261,7 +3316,7 @@ async function collectWrongQ() {
   if (list.some(x => !String(x.q).trim() || (x.o.length ? x.a == null : !String(x.ans).trim()))) return toast('有一題的題目或正確答案還沒填');
   document.getElementById('pqGo').disabled = true;
   const before = D.xp;
-  try { await flush(); S = await call('collectWrong', w.lane, w.photo, list); D = derive(S); }
+  try { await flush(); S = await call('collectWrong', w.lane, w.photo, list, PQ_FROM[w.src] ? '' : w.src || '', PQ_FROM[w.src] ? w.src : ''); D = derive(S); }
   catch (e) { document.getElementById('pqGo').disabled = false; return toast('收進海灘失敗：' + (e.message || e)); }
   toast('🍶 ' + list.length + ' 個瓶子漂到海灘了，明天開始漂回來' + (D.xp > before ? '・+' + (D.xp - before) + ' 經驗值' : ''));
   draft = {}; go('light');
@@ -4382,8 +4437,11 @@ function advSumText(mode) {
   const sc = v => { const x = String(v == null ? '' : v).trim(); return /^(A\+\+|A\+|A|B\+\+|B\+|B|C|\d{1,3}(\.\d+)?|[0-6] ?級分)$/.test(x) ? x : ''; };   // 只認等級、分數、級分，其他字不放
   const ymdOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const ex = S.assessments.filter(a => inM(ymdOf(assessDate(a.date))));
+  const pq = Object.keys(S.save).filter(k => /^pq:/.test(k) && S.save[k] && inM(S.save[k].date)).map(k => S.save[k]);
+  out.push('', '【拍照收進來的題】' + (pq.length ? pq.length + ' 題：' + [['模考', q => q.mock], ['會考考古題', q => !q.mock && q.from === 'past'], ['3688', q => !q.mock && q.from === '3688'], ['不標來源', q => !q.mock && !PQ_FROM[q.from]]].map(([n, f]) => n + ' ' + pq.filter(f).length).join('、') : '沒有'));
   out.push('', '【模考】' + (ex.length ? '' : '沒有紀錄'));
-  ex.forEach(a => { const d = assessDate(a.date); out.push((d.getMonth() + 1) + '/' + d.getDate() + '：' + SUBJECTS.filter(k => sc(a[k])).map(k => k + ' ' + sc(a[k])).join('、') + (sc(a['文']) ? '、作文 ' + sc(a['文']).replace(/ ?級分/, ' 級分') : '')); });
+  ex.forEach(a => { const d = assessDate(a.date); out.push((d.getMonth() + 1) + '/' + d.getDate() + '：' + SUBJECTS.filter(k => sc(a[k])).map(k => k + ' ' + sc(a[k]) + (/^\d{1,2}$/.test(a[k + '錯'] || '') ? '（沒答對 ' + a[k + '錯'] + '）' : '')).join('、') + (sc(a['文']) ? '、作文 ' + sc(a['文']).replace(/ ?級分/, ' 級分') : '') + (() => { const ids = Object.keys(S.save).filter(k => /^pq:/.test(k) && S.save[k] && S.save[k].mock === ymdOf(d)), lit = ids.filter(k => S.save['rv:' + k] && S.save['rv:' + k].lantern).length;
+    return ids.length ? '；收進海灘 ' + ids.length + ' 題（變成燈籠 ' + lit + ' 題）' : ''; })()); });
   return out.join('\n');
 }
 async function openAdvSum(mode) { await loadUnits(); draft = { adv: advSumText(mode), advSum: mode }; render(); window.scrollTo(0, 0); }
@@ -4792,22 +4850,25 @@ function viewLinkForm() {
 function viewExam() {
   const sel = s => `<select data-sub="${s}"><option value="">沒考</option>${LEVELS.map(l => `<option>${l}</option>`).join('')}</select>`;
   const rows = S.assessments.slice().sort((a, b) => assessDate(b.date) - assessDate(a.date)).map(a =>
-    `<tr><td>${esc(a.date)}</td>${SUBJECTS.map(s => `<td>${esc(a[s])}</td>`).join('')}<td>${esc(String(a['文']).replace('級分', ''))}</td><td>${esc(a.source)}</td></tr>`).join('');
+    `<tr><td>${esc(a.date)}</td>${SUBJECTS.map(s => `<td>${esc(a[s])}${/^\d{1,2}$/.test(a[s + '錯'] || '') ? '<br><small class="muted">沒答對 ' + a[s + '錯'] + '</small>' : ''}</td>`).join('')}<td>${esc(String(a['文']).replace('級分', ''))}</td><td>${esc(a.source)}</td></tr>`).join('');
   const ask = draft.bossWrong ? `<div class="card"><h3>📷 收這場的錯題</h3>
     <div class="muted">「${esc(draft.bossWrong)}」記好了。要把這場答錯的題拍照收進燈塔海灘嗎？挑幾題就好，不用全部拍。收進去的題會變成漂流瓶，之後漂回來出類題。</div>
-    <div class="row" style="margin-top:10px"><button class="grow" onclick="go('wrongScan')">📷 收這場的錯題</button><button class="ghost grow" onclick="go('home')">先不用</button></div></div>` : '';
+    <div class="row" style="margin-top:10px"><button class="grow" onclick="openWrongScan(draft.bossDate)">📷 收這場的錯題</button><button class="ghost grow" onclick="go('home')">先不用</button></div></div>` : '';
   return `${ask}<div class="card"><h2>⚔️ Boss 戰紀錄</h2>
     <div class="muted">模擬考或寫完一整份考古題後填這裡。只有試煉結果會更新島民等級，每場 +50 經驗值。</div>
     <label>日期</label><input type="date" id="exDate" value="${S.today}">
     <label>考卷來源</label><input id="exSrc" placeholder="例如：115北模#1、113考古題">
     <div class="row" style="margin-top:4px">${SUBJECTS.map(s => `<div class="grow"><label>${SUBJ_IC[s]} ${resident(s).ipic} ${SUBJECT_NAME[s]}</label>${sel(s)}</div>`).join('')}</div>
+    <div class="row" style="margin-top:4px">${['國', '英'].map(s => `<div class="grow"><label>${SUBJECT_NAME[s]}沒答對幾題（選填）</label><input type="number" inputmode="numeric" min="0" max="60" step="1" data-wrong="${s}" placeholder="例如 2"></div>`).join('')}</div>
     <label>作文級分</label><select id="exW"><option value="">沒考</option>${[6, 5, 4, 3, 2, 1].map(n => `<option>${n}</option>`).join('')}</select>
     <div style="margin-top:12px"><button id="exGo" onclick="submitExam()">記錄這場 Boss 戰</button></div></div>
     <div class="card"><h3>歷次試煉</h3><div style="overflow-x:auto"><table><tr><th>日期</th>${SUBJECTS.map(s => `<th>${SUBJ_IC[s]}${s}</th>`).join('')}<th>文</th><th>來源</th></tr>${rows}</table></div></div>`;
 }
 async function submitExam() {
   const levels = {}; document.querySelectorAll('[data-sub]').forEach(x => levels[x.dataset.sub] = x.value);
-  const rec = { date: document.getElementById('exDate').value, source: document.getElementById('exSrc').value.trim(), levels, writing: document.getElementById('exW').value };
+  const wrong = {}; document.querySelectorAll('[data-wrong]').forEach(x => { const v = x.value.trim(); if (v) wrong[x.dataset.wrong] = v; });
+  if (Object.values(wrong).some(v => !/^\d{1,2}$/.test(v) || Number(v) > 60)) return toast('題數要填 0～60 的整數，或空著');
+  const rec = { date: document.getElementById('exDate').value, source: document.getElementById('exSrc').value.trim(), levels, writing: document.getElementById('exW').value, wrong };
   if (!Object.values(levels).some(Boolean) && !rec.writing) return toast('至少選一科的等級');
   if (!rec.source) return toast('寫一下考卷來源');
   document.getElementById('exGo').disabled = true;
@@ -4815,7 +4876,7 @@ async function submitExam() {
     S = await call('addAssessment', rec); D = derive(S);
     // 錯題循環③：有一科不是 A++ 才問要不要收錯題（小卡上已經說記好了，不另外跳提示）；「先不用」不留紀錄、不再問
     const lv = Object.values(levels).filter(Boolean);
-    if (lv.some(x => x !== 'A++')) { go('exam'); draft.bossWrong = rec.source; render(); } else { toast('Boss 戰結果已記錄，島民等級更新！'); go('home'); }
+    if (lv.some(x => x !== 'A++')) { go('exam'); draft.bossWrong = rec.source; draft.bossDate = rec.date; render(); } else { toast('Boss 戰結果已記錄，島民等級更新！'); go('home'); }
   } catch (e) { toast('寫入失敗：' + (e.message || e)); document.getElementById('exGo').disabled = false; }
 }
 
@@ -5911,7 +5972,7 @@ function viewGuide() {
   ${sec('🏠', '我的家', p('島中央的碼頭是你的家。按右上角的房子圖示（或在 3D 小島點中間的房子）就能回家。第一次回家先幫它取名字、選屋頂和牆壁的顏色，之後隨時可以改。') +
     p('島嶼升級時，房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓小屋（Lv.7）→ 海邊洋館（Lv.10）。房子越大，房間能擺的家具越多。') +
     p('房間可以用 <b>3D</b> 看：一根手指拖曳轉動、兩指拉近；手機比較舊的話按「🖼️ 平面」。') +
-    p('家具店分成一般家具、🍵 和の家具、🍚 台灣味、🐚 海邊風，可以慢慢蒐集不同風格。按房間下面的「🧩 自己擺家具」，先點一件家具、再點想放的格子就搬過去了（有東西就交換），也可以轉個方向；牆上、窗台和門口的東西會自動排好。') +
+    p('家具店分成一般家具、🍵 和の家具、🍚 台灣味、🐚 海邊風，可以慢慢蒐集不同風格。按房間下面的「🧩 自己擺家具」，先點一件家具、再點想放的格子就搬過去了（有東西就交換），也可以轉個方向；牆上、窗台和門口的東西也可以自己擺：點一件，再點想掛或想放的位置。') +
     p('家具在「家具店」用島幣買，買了就是你的，可以隨時收起來或擺出來。每天會有一位島民來作客，跟你越要好（跨科連結越多）的島民越常來。島民寫給你的信和嚮導的新聞，都在首頁的 📮 郵便受け。') +
     p('家是休息的地方，不放讀書的東西（會考倒數鐘搬到燈塔了，買過的已經退還島幣）。家門口的暖簾可以在「🎨 改外觀」換花色，家的名字會寫在木門牌上。') +
     p('可以邀一位同住的夥伴（寵物或室友都可以，自己取名、選樣子或上傳圖、寫個性）。第一次進門他會跟你說明家裡有什麼，之後你回家他會說「おかえり」。') +
@@ -5985,7 +6046,7 @@ function viewGuide() {
     p(`答錯也有 +${XQ_WRONG} 經驗值，而且會看到正確答案和全國答對率。每一題的答案都會記下來，之後會變成「錯題島」的材料。`) +
     p('挑戰任務賺的島幣是直接給的，不會再從經驗值換一次。每天有上限，是為了讓島幣保值，不會越來越不值錢。'))}
   ${BETA3D ? sec('🗺️', '3D 小島和成長回放', p('首頁預設是 3D 小島：一根手指拖曳可以轉動，兩根手指可以縮放。點一塊街區，下面會出現島民、每條小巷的房子和最近四週的成績。') +
-    p('按「▶️ 從第一週播放」，可以看到島從 5 月開始一週一週長出來；也可以拖動進度條跳到任何一週。跨科連結會變成島民之間的粉紅色拱橋，好感度越高橋越粗。') +
+    p('按「▶️ 從第一週播放」，可以看到島從 5 月開始一週一週長出來；也可以拖動進度條跳到任何一週。跨科連結會變成島民之間的粉紅色拱橋，好感度越高橋越粗。播放時會畫出全部的橋；平常點一位島民，才會出現和這位島民有關的橋，點空白處就收起來。')   /* ARCS_PICK_v1 */ +
     p('小島會跟著<b>台北現在的時間和天氣</b>變化：清晨和傍晚天空是橘色的，晚上會有星星、房子會亮燈；台北下雨，島上也會下雨，打雷時還會閃電。右上角的小字會顯示台北現在的時間和氣溫。') +
     p('小島周圍有海浪，岸邊有一圈浪花一波一波湧上沙灘；下雨和打雷時浪會變大。海面一天漲退兩次潮（照月亮的位置推算，大約 12 小時 25 分一輪，不是精確的潮汐表），退潮時沙灘會露出比較寬。白天太陽會投下影子。手機變慢或發燙的話，到「更多」把「3D 高畫質」關掉，就不會有影子、海浪也會簡單一點。') +
     p('手機比較舊、覺得卡的話，按「📋 清單」就會回到原本的畫面。')) : ''}
