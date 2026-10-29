@@ -38,9 +38,20 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   const esc = s => String(s == null ? '' : s).replace(/妳/g, '你').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // TOAST_v1 排隊：正在顯示時，下一則至少等 1.2 秒才換上來（和 App 一樣）
   function toast(msg) {
-    const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block';
-    clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 2600);
+    msg = String(msg); const q = toast.q || (toast.q = []);
+    if (msg === toast.cur && !q.length) { clearTimeout(toast.h); toast.h = setTimeout(toastNext, Math.min(5000, Math.max(2600, 2000 + 100 * msg.length))); return; }
+    if (q[q.length - 1] !== msg) q.push(msg);
+    if (q.length > 3) q.splice(0, q.length - 3);
+    if (!toast.cur) return toastNext();
+    clearTimeout(toast.h); toast.h = setTimeout(toastNext, Math.max(0, 1200 - (Date.now() - toast.at)));
+  }
+  function toastNext() {
+    const t = document.getElementById('toast'), msg = (toast.q || []).shift(); clearTimeout(toast.h);
+    if (msg == null) { t.style.display = 'none'; toast.cur = null; return; }
+    t.textContent = msg; t.style.display = 'block'; toast.cur = msg; toast.at = Date.now();
+    toast.h = setTimeout(toastNext, toast.q.length ? 1500 : Math.min(5000, Math.max(2600, 2000 + 100 * msg.length)));   // 字多的停久一點，最多 5 秒
   }
   function town(p) {
     let n = Math.floor(p / 2), out = '';

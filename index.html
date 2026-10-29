@@ -126,8 +126,9 @@
   .emojis button { background: #fff; border: 1.5px solid var(--plum-light); font-size: 22px; padding: 4px 6px; }
   .emojis button.on { border-color: var(--plum); background: var(--plum-light); }
 
-  .toast { position: fixed; left: 50%; top: 20px; transform: translateX(-50%); background: var(--ink); color: #fff;
-           padding: 10px 18px; border-radius: 12px; z-index: 9; display: none; max-width: 90%; }
+  /* TOAST_v1 提示泡泡：在底部導覽上方（沒有導覽就貼 safe-area 底部），位置由 toastPlace() 算；點得穿，不擋按鈕 */
+  .toast { position: fixed; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: #fff;
+           padding: 10px 18px; border-radius: 12px; z-index: 9; display: none; max-width: 90%; pointer-events: none; }
   .loading { text-align: center; padding: 60px 0; color: var(--muted); }
   .big { font-size: 40px; text-align: center; }
 
@@ -280,7 +281,7 @@
 <body>
 <main id="app"><div class="loading">🏝️ 小島載入中…</div></main>
 <nav id="nav" style="display:none"></nav>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="config.js"></script>
 <script>
@@ -327,11 +328,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.48.1';
+const APP_VERSION = '2.48.1.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '10/30（五）下午 4:30', items: ['⛰️ 預計 10/30（五）下午 4:30：列島上空會浮起一座主島，山頂的玉山聚會所也會開門，從飛船碼頭可以飛回你的島和智慧島。其他建物會慢慢開門。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.48.1.1', date: '2026-10-30', minor: true, items: ['💬 提示訊息改到畫面下方，不會再蓋住標題和按鈕；連續好幾則時會一則接一則出現'] },
   { v: '2.48.1', date: '2026-10-31', items: ['🌉 島民之間的粉紅色拱橋平常先收起來了：點一位島民，才會出現和這位島民有關的橋，點空白處就收起來；成長回放照舊看得到全部的橋', '🖼️ 我的家：牆上、窗台和門口的東西也可以自己擺了。按「🧩 自己擺家具」，點一件，再點想掛或想放的位置；門口的東西也可以轉個方向', '⚔️ Boss 戰紀錄可以多填國文、英文沒答對幾題（選填）。離 A++ 還差多少一看就知道，學習摘要的模考也會寫出來。', '📝 拍錯題時可以選「這題是從哪裡來的」：哪一場模考、會考考古題或 3688，瓶子上會寫來源；記完 Boss 戰按「收這場的錯題」會自動選好那一場。學習摘要也會照來源分開算。'] },
   { v: '2.48', date: '2026-10-29', minor: true, items: ['🔧 在小島、智慧島和我的家之間切換時，3D 比較省記憶體，手機比較不會越用越慢'] },
   { v: '2.47.5', date: '2026-10-28', items: ['📤 計畫頁多了「整理學習摘要給學習顧問（AI）看」：把這週或這個月的計畫、考古題、瓶子、錯因、補強的單元和模考分數整理成一段文字，只有數字和名稱，不含你寫的字。看過再決定要不要複製給爸爸。'] },
@@ -533,11 +535,51 @@ async function fillImgs(st) {
   }
   return st;
 }
+// TOAST_v1 提示泡泡排隊：正在顯示時，下一則至少等 1.2 秒才換上來；同一句不重複排；最多排 3 則
 function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = String(msg).replace(/妳/g, '你'); t.style.display = 'block';
-  clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 2600);
+  msg = String(msg).replace(/妳/g, '你'); const q = toast.q || (toast.q = []);
+  if (msg === toast.cur && !q.length) { clearTimeout(toast.h); toast.h = setTimeout(toastNext, Math.min(5000, Math.max(2600, 2000 + 100 * msg.length))); return; }
+  if (q[q.length - 1] !== msg) q.push(msg);
+  if (q.length > 3) q.splice(0, q.length - 3);
+  if (!toast.cur) return toastNext();
+  clearTimeout(toast.h); toast.h = setTimeout(toastNext, Math.max(0, 1200 - (Date.now() - toast.at)));
 }
+function toastNext() {
+  const t = document.getElementById('toast'), msg = (toast.q || []).shift(); clearTimeout(toast.h);
+  if (msg == null) { t.style.display = 'none'; toast.cur = null; return; }
+  t.textContent = msg; t.style.display = 'block'; toast.cur = msg; toast.at = Date.now(); toastPlace();
+  toast.h = setTimeout(toastNext, toast.q.length ? 1500 : Math.min(5000, Math.max(2600, 2000 + 100 * msg.length)));   // 字多的停久一點，最多 5 秒
+}
+// 位置：鍵盤開著就在鍵盤上方（也不蓋正在打字的輸入框），不然在底部導覽上方。蓋到可以按的東西就往上找空位（最多到畫面一半）；
+// 都沒有空位（整頁都是按鈕）就換到畫面最上面找；還是沒有就停在蓋得最少的地方（泡泡點得穿，不會擋到按）
+function toastPlace() {
+  const t = document.getElementById('toast'); if (!t || t.style.display === 'none') return;
+  const H = window.innerHeight, vv = window.visualViewport, nav = document.getElementById('nav');
+  const kb = vv ? Math.max(0, H - vv.height - vv.offsetTop) : 0, fe = document.activeElement;
+  let b = kb > 80 ? kb : nav && nav.style.display !== 'none' && nav.offsetHeight ? nav.offsetHeight : 0;
+  if (kb > 80 && fe && /^(INPUT|TEXTAREA|SELECT)$/.test(fe.tagName)) b = Math.max(b, H - fe.getBoundingClientRect().top);
+  t.style.top = ''; t.style.bottom = b ? b + 12 + 'px' : '';
+  const tr = t.getBoundingClientRect(), h = tr.height, rs = toastHits({ left: tr.left, right: tr.right, top: -1e4, bottom: 1e4 });
+  const cover = y => rs.reduce((a, r) => a + Math.max(0, Math.min(r.bottom, y + h + 8) - Math.max(r.top, y - 8)), 0);   // 和可以按的東西至少隔 8px
+  let best = tr.top, min = cover(tr.top); if (!min) return;
+  const lim = kb > 80 ? H - kb - h : H;   // 鍵盤開著時不跑到鍵盤後面
+  for (let y = tr.top - 8; y >= H * 0.5 - h && min; y -= 8) { const c = cover(y); if (c < min) { min = c; best = y; } }
+  for (let y = Math.max(12, (vv && vv.offsetTop) || 0); y <= H * 0.5 && min; y += 8) { const c = cover(y); if (c < min && y + h <= lim) { min = c; best = y; } }
+  t.style.bottom = 'auto'; t.style.top = best + 'px';
+}
+// 可以按的東西：按鈕、連結、輸入框、小的可點元素（大張的可點卡片不算，泡泡點得穿）
+function toastHits(tr) {
+  const out = [], area = window.innerWidth * window.innerHeight;
+  document.querySelectorAll('button, a[href], input, select, textarea, summary, label.btn, label:has(input[type=file]), [onclick]').forEach(e => {
+    if (e.closest('nav') || e.id === 'toast') return;
+    const r = e.getBoundingClientRect(); if (!r.width || !r.height || (e.matches('[onclick]:not(button):not(a)') && r.width * r.height > area * 0.15)) return;
+    const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || cs.display === 'none') return;
+    if (r.left < tr.right && r.right > tr.left && r.top < tr.bottom && r.bottom > tr.top) out.push(r);
+  });
+  return out;
+}
+if (window.visualViewport) { visualViewport.addEventListener('resize', () => toastPlace()); visualViewport.addEventListener('scroll', () => toastPlace()); }
+window.addEventListener('scroll', () => { if (toast.cur && !toastPlace.f) toastPlace.f = requestAnimationFrame(() => { toastPlace.f = 0; toastPlace(); }); }, { passive: true });
 async function load(fn, ...args) {
   try {
     if (ownOn() && !window.FamIsle) await loadScript('family.js');
