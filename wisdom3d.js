@@ -59,8 +59,14 @@
 
   // ---------- 島：沙灘、草地、小丘、步道 ----------
   // 小屋位置：門朝向中間的廣場；碼頭在正前方（+z）
-  const HUTS = { kongming: [-2.7, -3.4], xiaomiao: [2.9, -3.5], alu: [-4.3, 1.2], einstein: [4.2, 1.0] };
+  const HUTS = { kongming: [-2.7, -3.4], xiaomiao: [2.9, -3.5], alu: [-4.3, 1.2], einstein: [4.2, 1.0], yirong: [-4.0, 5.0], mi: [3.15, 3.05], guo: [4.0, 5.35] };
   const PLAZA = [0, 0.9], FACE = [0, 9];   // 門朝碼頭
+  // 後來的三間（v2.48.2）：蓋在前排沙灘邊，比原本的小一點（離鏡頭近，看起來一樣大）；避開樹、碼頭步道和 v2.50 碼頭邊的渡船屋、黑板、郵筒。
+  // 步道從碼頭步道分岔、繞過樹（PATH_VIA 是門口之前要經過的點）。不加點光源，靜態網格全部合併（見 bakeNewHuts）
+  // 名牌位置微調：郭哥的名牌放低、往前，暗房的名牌抬高，預設鏡頭下才看得到暗房的紅窗和門（美術顧問 10/29）
+  const LABEL_AT = { mi: [-0.2, 0.55, -0.3], guo: [-0.15, -0.6, 0.7] };
+  const SMALL = { yirong: 0.82, mi: 0.8, guo: 0.82 }, PATH_VIA = { yirong: [[0, 3.6], [-3.0, 4.05]], guo: [[0, 4.9]] };
+  const doorOf = k => { const h = HUTS[k], ry = Math.atan2(FACE[0] - h[0], FACE[1] - h[1]), d = 1.25 * (SMALL[k] || 1); return [h[0] + Math.sin(ry) * d, h[1] + Math.cos(ry) * d]; };
   function buildIsland(root) {
     const sand = std(0xe8cf98), grass = std(0x8cc56c), grass2 = std(0x9fd27e), rock = std(0x9a958c);
     const base = mesh(new THREE.CylinderGeometry(7.4, 8, 0.9, 40), sand, 0, -0.5, 0, root);
@@ -78,7 +84,7 @@
     const path = (a, b, gap) => { const dx = b[0] - a[0], dz = b[1] - a[1], n = Math.max(2, Math.round(Math.hypot(dx, dz) / (gap || 0.62)));
       for (let i = 1; i < n; i++) { const p = mesh(new THREE.CylinderGeometry(0.2 + (i % 2) * 0.04, 0.22, 0.06, 7), stone, a[0] + dx * i / n, 0.08, a[1] + dz * i / n, root); p.rotation.y = i; p.receiveShadow = true; p.castShadow = false; } };
     path([0, 6.4], PLAZA);
-    Object.values(HUTS).forEach(h => { const ry = Math.atan2(FACE[0] - h[0], FACE[1] - h[1]); path(PLAZA, [h[0] + Math.sin(ry) * 1.25, h[1] + Math.cos(ry) * 1.25]); });
+    Object.keys(HUTS).filter(k => !SMALL[k]).map(k => HUTS[k]).forEach(h => { const ry = Math.atan2(FACE[0] - h[0], FACE[1] - h[1]); path(PLAZA, [h[0] + Math.sin(ry) * 1.25, h[1] + Math.cos(ry) * 1.25]); });
     // 廣場：石燈籠、指路木牌
     const lan = new THREE.Group(); lan.position.set(PLAZA[0] - 0.9, 0, PLAZA[1] - 0.2); root.add(lan);
     const ls = std(0xbdb6aa);
@@ -190,15 +196,116 @@
     mesh(box(0.05, 0.9, 0.05), std(0x6b4a2b), -0.32, 0.45, 0, bd); mesh(box(0.05, 0.9, 0.05), std(0x6b4a2b), 0.32, 0.45, 0, bd);
     const chalk = textPlane('E=mc²', 0.7, 0.42, '#2f4a3a', '#f4f1e6', 22); chalk.position.set(0, 0.7, 0.03); bd.add(chalk);
   }
-  const BUILD = { kongming: hutKongming, xiaomiao: hutXiaomiao, alu: hutAlu, einstein: hutEinstein };
+  // ---------- 三間新小屋：先用小零件蓋好，再由 bakeNewHuts 合併成幾個網格（draw call 只多幾個） ----------
+  // P() 的零件只記顏色，合併時寫進頂點顏色；會發光的窗戶用 W() 和 glass 裡的材質（照原本的規則晚上變亮）
+  let bakeMat = null, newWin = null, newSafe = null;
+  const P = (geo, c, x, y, z, parent) => { const m = new THREE.Mesh(geo, bakeMat || (bakeMat = std(0xffffff, { vertexColors: true }))); m.userData.c = c; m.position.set(x || 0, y || 0, z || 0); parent.add(m); return m; };
+  const W = (geo, mat, x, y, z, parent) => { const m = new THREE.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); parent.add(m); return m; };
+  const winNew = () => newWin || (newWin = winMat());
+  function hutYirong(g) {   // 老教室：長長的紅磚平房、灰黑瓦的人字屋頂、前面一排白柱子的走廊、木窗框、門上的班級牌（三年甲班）、門口的小黑板、走廊盡頭一口鐘
+    const brick = 0xa9573f, wood = 0x7a5236, tile = 0x6b7075, white = 0xefe8da;
+    P(box(2.7, 0.12, 1.75), 0xb9b3a8, 0, 0.06, 0, g);
+    P(box(2.4, 0.95, 0.95), brick, 0, 0.6, -0.3, g);
+    [-1, 1].forEach(sd => { P(box(2.7, 0.07, 0.8), tile, 0, 1.3, -0.3 + sd * 0.31, g).rotation.x = sd * 0.62; });   // 人字屋頂
+    [-1.2, 1.2].forEach(x => { const gb = P(new THREE.ConeGeometry(0.52, 0.34, 3), brick, x, 1.24, -0.3, g); gb.rotation.set(0, 0, 0); gb.scale.set(0.12, 1, 1.05); });   // 山牆
+    P(box(2.55, 0.08, 0.62), white, 0, 1.06, 0.45, g);   // 走廊的屋簷
+    [-1.15, -0.4, 0.4, 1.15].forEach(x => P(box(0.11, 0.95, 0.11), white, x, 0.58, 0.68, g));   // 白柱子
+    P(box(0.4, 0.75, 0.04), 0x5b3a1e, 0.78, 0.5, 0.19, g);   // 門
+    const w = winNew(); [-0.85, -0.2].forEach(x => { W(box(0.42, 0.38, 0.02), w, x, 0.68, 0.19, g);
+      P(box(0.48, 0.05, 0.05), wood, x, 0.89, 0.2, g); P(box(0.48, 0.05, 0.05), wood, x, 0.47, 0.2, g); P(box(0.04, 0.42, 0.05), wood, x, 0.68, 0.21, g); });
+    const plate = textPlane('三年甲班', 0.46, 0.13, '#fbf8f0', '#2b2420', 14); plate.position.set(0.78, 0.94, 0.74); g.add(plate);   // 走廊屋簷下掛著班級牌
+    const bd = new THREE.Group(); bd.position.set(0.62, 0, 1.05); bd.rotation.y = -0.3; g.add(bd);   // 門口的小黑板
+    [-0.27, 0.27].forEach(x => { P(box(0.05, 0.8, 0.05), wood, x, 0.4, 0, bd).rotation.x = -0.1; });
+    P(box(0.62, 0.44, 0.04), 0x2f4a3a, 0, 0.56, 0.03, bd);
+    P(box(0.34, 0.025, 0.01), white, -0.05, 0.64, 0.055, bd); P(box(0.24, 0.025, 0.01), white, -0.1, 0.54, 0.055, bd);
+    const bell = new THREE.Group(); bell.position.set(-1.5, 0, 0.62); g.add(bell);   // 走廊盡頭的鐘
+    P(box(0.07, 1.25, 0.07), wood, 0, 0.62, 0, bell); P(box(0.36, 0.06, 0.06), wood, 0.15, 1.22, 0, bell);
+    P(new THREE.CylinderGeometry(0.07, 0.13, 0.2, 8), 0xc9a24a, 0.27, 1.06, 0, bell);
+  }
+  function hutMi(g) {   // 暗房小屋：白牆平頂、小窗透著紅色安全燈、門口一張大木桌（攤開的詩集、一杯茶），旁邊晾著照片
+    const wood = 0x7a5236;
+    P(box(1.9, 0.12, 1.6), 0xb9b3a8, 0, 0.06, 0.05, g);
+    P(box(1.6, 1.15, 1.25), 0xf4f2ee, 0, 0.7, -0.1, g);
+    P(box(1.82, 0.1, 1.48), 0x6d6a66, 0, 1.32, -0.1, g).rotation.x = -0.06;
+    P(box(0.48, 0.85, 0.04), 0x2f2a28, -0.4, 0.55, 0.53, g);
+    if (!newSafe) { newSafe = std(0x7a1410, { emissive: 0xa8140c, emissiveIntensity: 0.6 }); glass.push(newSafe); }   // 紅色安全燈的窗（夜裡更亮）
+    W(box(0.34, 0.3, 0.02), newSafe, 0.42, 0.86, 0.53, g);
+    P(box(0.42, 0.05, 0.05), wood, 0.42, 0.69, 0.55, g);
+    const tb = new THREE.Group(); tb.position.set(0.62, 0, 1.1); g.add(tb);   // 大木桌（在門口右邊，不擋步道）
+    P(box(1.05, 0.07, 0.62), 0x8a5a32, 0, 0.5, 0, tb);
+    [[-0.45, -0.24], [0.45, -0.24], [-0.45, 0.24], [0.45, 0.24]].forEach(([x, z]) => P(box(0.06, 0.48, 0.06), wood, x, 0.24, z, tb));
+    [-0.13, 0.13].forEach((x, i) => { P(box(0.25, 0.02, 0.32), 0xfbf6e9, x, 0.55, 0, tb).rotation.z = i ? -0.08 : 0.08; });   // 攤開的詩集
+    P(new THREE.CylinderGeometry(0.05, 0.04, 0.08, 6), 0x9fc3a0, 0.36, 0.58, 0.08, tb);   // 一杯茶
+    P(box(0.86, 0.015, 0.015), 0x3a3330, 0.33, 1.2, 0.56, g);   // 正面窗戶上方晾著三張照片
+    [[0.08, 0x5b5650], [0.33, 0xc9b48f], [0.58, 0x5b5650]].forEach(([x, c]) => P(box(0.15, 0.15, 0.012), c, x, 1.11, 0.565, g));   // 黑白和泛黃的相片，白牆上才看得到
+  }
+  function hutGuo(g) {   // 海邊物理治療所：木屋、藍綠色屋頂、門口曬毛巾、牆邊靠著一支滾筒
+    const wood = 0x7a5236, teal = 0x4f8584;
+    P(box(2.1, 0.14, 1.7), 0x9c7a52, 0, 0.07, 0.1, g);
+    P(box(1.8, 1.0, 1.3), 0xc8995f, 0, 0.64, -0.05, g);
+    [-0.25, 0.05, 0.35].forEach(y => P(box(1.82, 0.03, 1.32), 0xa97f4d, 0, 0.5 + y, -0.05, g));   // 木板接縫
+    const roof = P(new THREE.ConeGeometry(1.65, 0.7, 4), teal, 0, 1.48, -0.05, g); roof.rotation.y = Math.PI / 4; roof.scale.set(1.15, 1, 0.85);
+    P(box(0.5, 0.78, 0.04), 0x5a3f2a, -0.35, 0.53, 0.61, g);
+    W(box(0.46, 0.36, 0.02), winNew(), 0.45, 0.72, 0.61, g);
+    const rk = new THREE.Group(); rk.position.set(0.25, 0, 1.15); g.add(rk);   // 曬毛巾的竿子
+    [-0.55, 0.55].forEach(x => P(box(0.05, 0.85, 0.05), wood, x, 0.42, 0, rk));
+    P(new THREE.CylinderGeometry(0.02, 0.02, 1.15, 6), wood, 0, 0.83, 0, rk).rotation.z = Math.PI / 2;
+    [[-0.32, 0xf6f1e6], [0, 0xf2c94c], [0.32, 0x7fc4c6]].forEach(([x, c]) => P(box(0.26, 0.42, 0.02), c, x, 0.62, 0, rk));
+    P(new THREE.CylinderGeometry(0.1, 0.1, 0.62, 8), teal, -0.98, 0.33, 0.45, g).rotation.z = 0.25;   // 牆邊的滾筒
+  }
+  /** 拿掉朝正下方的面（鏡頭最低只到水平線上方，永遠看不到），三角形少一成多 */
+  function noBottom(geo) {
+    const p = geo.attributes.position.array, n = geo.attributes.normal.array, keep = [];
+    for (let t = 0; t < p.length / 9; t++) if (!(n[t * 9 + 1] < -0.99 && n[t * 9 + 4] < -0.99 && n[t * 9 + 7] < -0.99)) keep.push(t);
+    if (keep.length * 9 === p.length) return geo;
+    const out = new THREE.BufferGeometry(), P2 = new Float32Array(keep.length * 9), N2 = new Float32Array(keep.length * 9);
+    keep.forEach((t, i) => { P2.set(p.subarray(t * 9, t * 9 + 9), i * 9); N2.set(n.subarray(t * 9, t * 9 + 9), i * 9); });
+    out.setAttribute('position', new THREE.BufferAttribute(P2, 3)); out.setAttribute('normal', new THREE.BufferAttribute(N2, 3)); geo.dispose(); return out;
+  }
+  /** 合併三間新小屋和它們的步道：身體一個網格（頂點顏色）、每種發光窗一個、踏石一個；小屋群組裡只留看不見的點擊範圍和有字的班級牌 */
+  function bakeNewHuts(root) {
+    const parts = {}, add = (key, mat, geo, color) => { const b = parts[key] || (parts[key] = { mat, geos: [] }); b.geos.push({ geo, color }); };
+    // 每間小屋的身體各一個網格、放在小屋的位置：由近到遠排序時先畫，後面的草地被擋住就不用算（合成一個放在原點，幀率會多掉幾 %）
+    root.updateMatrixWorld(true);
+    Object.keys(SMALL).forEach(k => {
+      const g = hutGroups[k], keep = [], inv = new THREE.Matrix4().copy(g.matrixWorld).invert();
+      g.traverse(m => { if (!m.isMesh) return;
+        if (m.material.map) { keep.push([m, new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld)]); return; }   // 有字的牌子留著
+        const geo = noBottom((m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(m.matrixWorld)); m.geometry.dispose();
+        if (m.material === bakeMat) add('body:' + k, bakeMat, geo, m.userData.c); else add(m.material.uuid, m.material, geo); });
+      while (g.children.length) g.remove(g.children[0]);
+      keep.forEach(([m, mx]) => { mx.decompose(m.position, m.quaternion, m.scale); g.add(m); });
+      const hit = new THREE.Mesh(box(2.6, 2.0, 2.2), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(0, 1.0, 0.1); g.add(hit);   // 點得到小屋，但不畫
+      const way = [...(PATH_VIA[k] || [PLAZA]), doorOf(k)];   // 踏石步道
+      for (let w = 1; w < way.length; w++) { const a = way[w - 1], b = way[w], dx = b[0] - a[0], dz = b[1] - a[1], n = Math.max(2, Math.round(Math.hypot(dx, dz) / 0.62));
+        for (let i = 1; i < n; i++) { const geo = new THREE.CylinderGeometry(0.2 + (i % 2) * 0.04, 0.22, 0.06, 7).toNonIndexed();
+          geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(a[0] + dx * i / n, 0.08, a[1] + dz * i / n), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), i), new THREE.Vector3(1, 1, 1)));
+          add('stone', null, noBottom(geo), 0xd8d2c4); } }
+    });
+    Object.keys(parts).forEach(key => {
+      const b = parts[key], N = b.geos.reduce((t, x) => t + x.geo.attributes.position.count, 0), pos = new Float32Array(N * 3), nor = new Float32Array(N * 3), col = b.geos[0].color != null ? new Float32Array(N * 3) : null;
+      let o = 0; const c = new THREE.Color();
+      b.geos.forEach(x => { const n = x.geo.attributes.position.count; pos.set(x.geo.attributes.position.array, o * 3); nor.set(x.geo.attributes.normal.array, o * 3);
+        if (col) { c.setHex(x.color); lin(c); for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], (o + i) * 3); }
+        o += n; x.geo.dispose(); });
+      const ctr = new THREE.Vector3(); for (let i = 0; i < N; i++) { ctr.x += pos[i * 3]; ctr.z += pos[i * 3 + 2]; } ctr.multiplyScalar(1 / N);
+      for (let i = 0; i < N; i++) { pos[i * 3] -= ctr.x; pos[i * 3 + 2] -= ctr.z; }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); if (col) geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const m = new THREE.Mesh(geo, key === 'stone' ? std(0xffffff, { vertexColors: true }) : b.mat); m.position.copy(ctr); root.add(m);
+      m.receiveShadow = HQ; m.castShadow = HQ && key.startsWith('body');   // 踏石、窗戶不投影（和原本一樣）
+    });
+  }
+  const BUILD = { kongming: hutKongming, xiaomiao: hutXiaomiao, alu: hutAlu, einstein: hutEinstein, yirong: hutYirong, mi: hutMi, guo: hutGuo };
   const hutGroups = {};
   function buildHuts(root) {
     Object.keys(HUTS).forEach(k => {
       const [x, z] = HUTS[k], g = new THREE.Group(); g.position.set(x, 0, z);
       g.rotation.y = Math.atan2(FACE[0] - x, FACE[1] - z);
       g.userData.hut = k; BUILD[k](g); root.add(g); hutGroups[k] = g;
+      if (SMALL[k]) { g.scale.setScalar(SMALL[k]); return; }   // 新的三間只有窗戶自發光，不加點光源（點光源一多，整座島的光照都會變）
       const pl = new THREE.PointLight(0xffc27a, 0, 4.2, 1.6); pl.position.set(0, 1.0, 1.3); g.add(pl); lanterns.push(pl);
     });
+    bakeNewHuts(root);
   }
 
   // ---------- 碼頭、渡船、遠方的本島 ----------
@@ -283,7 +390,7 @@
     labelLayer = new THREE.Group(); scene.add(labelLayer); teachers = []; rings = [];
     (opts.huts || []).forEach(h => {
       const g = hutGroups[h.key]; if (!g) return;
-      const lb = labelSprite(h.place + '・' + h.name, h.st, h.color, h.can); lb.position.set(g.position.x, g.position.z < 0 ? 3.35 : 2.3, g.position.z); lb.userData.hut = h.key; labelLayer.add(lb);   // 後排的標籤高一點，才不會被前排擋住
+      const lb = labelSprite(h.place + '・' + h.name, h.st, h.color, h.can); lb.position.set(g.position.x, g.position.z < 0 ? 3.35 : 2.3, g.position.z); if (LABEL_AT[h.key]) lb.position.add(new THREE.Vector3(...LABEL_AT[h.key])); lb.userData.hut = h.key; labelLayer.add(lb);   // 後排的標籤高一點，才不會被前排擋住
       // 老師站在門口（小苗站左邊，右邊是露天溫泉）
       const ry = g.rotation.y, side = h.key === 'xiaomiao' ? -0.55 : 0.35;
       const tx = g.position.x + Math.sin(ry) * 1.55 + Math.cos(ry) * side, tz = g.position.z + Math.cos(ry) * 1.55 - Math.sin(ry) * side;
