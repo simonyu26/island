@@ -334,12 +334,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.49.3';
+const APP_VERSION = '2.49.4';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
-  { v: '2.49.3', date: '2026-10-30', fam: [0], items: ['🖼️ 航海日誌多了「月末繪卷」：一個月的每一週接成一卷，點一格就翻到那一週；每週達成率和一路走來的紀錄，從「更多」搬進航海日誌了。'] },
+  { v: '2.49.4', date: '2026-10-30', items: ['📊 每個月第一次按完「確認這週」，會問你這個月對讀書的感覺（1～5，也可以先不填）。小島也會記下每天在讀書、延伸、其他畫面各待了幾分鐘，只放在「整理學習摘要」的「這個月」，不加分，也不會出現在別的地方。摘要要不要複製給爸爸，一樣由你決定。', '🧩 燈室的「正在補強」會寫出海灘上最多的一兩類題；按「練一題」會先從最多的那一類、你還沒做過的考古題抽。'] },
+  { v: '2.49.3', date: '2026-10-30', items: ['🖼️ 航海日誌多了「月末繪卷」：一個月的每一週接成一卷，點一格就翻到那一週；每週達成率和一路走來的紀錄，從「更多」搬進航海日誌了。'] },
   { v: '2.49.2', date: '2026-10-30', fam: [0], items: ['📚 玉山聚會所多了「山海筆記」：用台灣的颱風、天氣、地震、特有種和潮汐，說說課本裡的觀念，一共 5 個單元、31 張卡。點聚會所，在節氣卡下面按「打開」就看得到；每天會依季節和月亮排一張推薦在最前面。只是讀讀看，不加分、也不記錄看了什麼。', '🛶 同一類題最近有點卡的時候，燈塔會先停一下那幾個瓶子，給你兩條路：先看懂觀念，或先看一題完整解法，再練一兩題；不同的兩天各答對一題，就回到原來的航線。'] },
   { v: '2.49.1', date: '2026-10-30', fam: [0, 1], items: ['⛰️ 核心主島開了：遠方天上浮著的那座島就是主島，點它就能搭飛船過去（清單模式在「去島上走走」點 ⛰️ 主島）。飛船碼頭的 Solomon 船長會先跟你打招呼；玉山聚會所的阿台婆婆那裡有家人的公告和今天的節氣。去主島沒有獎勵，想逛就逛。', '🌉 再點一次同一位島民，拱橋就會收起來。', '🏝️ 智慧島多了一個岬角，老師的小屋重新排過；課程裡的老照片可以點開放大，灰色的小字也變清楚了。', '🧩 拍照收進來的國文、英文題，瓶子上會寫這題考的是哪一種閱讀能力或哪一個文法點，燈室「正在補強」和印錯題卷也會照這個整理。'] },
   { v: '2.49', date: '2026-10-31', items: ['📖 書店多了「親子共讀」計時：和家人一起讀書時按一下，每 25 分鐘一枚書籤 🔖 +10 綠點，跟運動一樣，不記書名。', '🔊 單字卡「看字」的每個字旁邊多了 🔊，按一下可以聽發音，再按一次會慢慢念；答完一題也可以聽整句例句。用的是手機內建的語音，手機沒有英文語音時不會出現這個按鈕。', '🔤 燈塔多了「拍單字出題」：拍課本或單字表上印刷的英文單字（也可以打字），存成單字卡，AI 照會考題型一次出 5 題給你練。答一題 +2 經驗值（一天最多 10），和挑戰任務分開算；沒答對的題會變成漂流瓶。', '📖 燈塔 2F 的航海日誌開放了：一週一頁，看這週照計畫讀了多少、各科做了幾次、你的一句話和燈塔的話、瓶子和燈籠、紙船和跨科連結；按「上一週」往前翻。這裡只是紀錄，不加分也不扣分。', '🍶 瓶子上的日期，改成寫哪一天收進來的。', '👀 瓶子上的「給爸爸看」改名叫「給家人看」，跟原本一樣，勾了家人都看得到你寫的原因和那句話。現在打勾就會存；想收回，再點一下把勾拿掉。', '🖨️ 燈塔海灘多了「印這週要複習的錯題」：把這週要漂回來的瓶子排成 A4，可以印出來或存成 PDF 在紙上寫，解答在最後一頁。'] },
@@ -3268,6 +3269,12 @@ function unitFine(lane, unit) {
   const top = Object.keys(m).sort((a, b) => m[b] - m[a])[0];
   return top && m[top] >= 2 ? { name: top, n: m[top] } : null;
 }
+// 燈室細到次觀念：海灘上最多的 1～2 個次觀念（每個至少 2 題），帶 sid 給「練一題」用
+function unitFines(lane, unit) {
+  const m = {};
+  bottles().filter(b => !b.lantern && laneOf(b.rec, b.lane) === lane && unitOf(b.rec, b.id) === unit).forEach(b => { const x = sidFine(b.rec, b.id); if (x) (m[x.id] = m[x.id] || { sid: x.id, name: x.short || x.name, n: 0 }).n++; });
+  return Object.values(m).filter(x => x.n >= 2).sort((a, b) => b.n - a.n || a.sid.localeCompare(b.sid)).slice(0, 2);
+}
 function lampBar(pct, color, ref) {
   return `<div style="position:relative;height:10px;background:var(--sand);border-radius:5px;margin:3px 0">
     <div style="width:${Math.min(100, pct)}%;height:100%;background:${color};border-radius:5px"></div>
@@ -3373,8 +3380,8 @@ function viewLamp() {
   const unitCard = `<div class="card"><h3>🧭 正在補強</h3>
     <div class="muted" style="font-size:12px;margin-bottom:6px">${fam ? '她' : '你'}做過的題裡，答對比較少的單元，最多列 3 個。一個單元做滿 ${UNIT_MIN} 題才會列進來。</div>
     ${!um ? `<div class="muted">${unitsData === false ? '單元資料要在網頁 App 版才看得到。' : '單元資料載入中…'}</div>`
-      : um.weak.length ? um.weak.map(t => `<div class="item"><div class="name grow"><b>${uName(t)}</b><div class="muted">做過 ${t.n} 題・🍶 還有瓶子在海灘${t.lanterns ? '・🏮 已經放走 ' + t.lanterns + ' 盞' : ''}</div>${(f => f ? `<div class="muted" style="font-size:12px">🧩 海灘上最多的是「${esc(f.name)}」（${f.n} 題）</div>` : '')(unitFine(t.lane, t.unit))}</div>${fam || !UNIT_TOOLS ? '' : `<button class="ghost" style="padding:6px 12px" ${xqBusy || todayChallenges().length >= XQ_DAILY ? 'disabled' : ''} onclick='practiceUnit(${JSON.stringify(t.lane)},${JSON.stringify(t.unit)})'>練一題</button>`}</div>`).join('')
-        + (fam || !UNIT_TOOLS ? '' : `<div class="muted" style="font-size:12px;margin-top:6px">按「練一題」，會從這個單元你還沒做過的考古題抽一題，算在每天 ${XQ_DAILY} 題挑戰裡。${todayChallenges().length >= XQ_DAILY ? '今天的 ' + XQ_DAILY + ' 題挑戰做完了，明天就能再按。' : ''}</div>`)
+      : um.weak.length ? um.weak.map(t => `<div class="item"><div class="name grow"><b>${uName(t)}</b><div class="muted">做過 ${t.n} 題・🍶 還有瓶子在海灘${t.lanterns ? '・🏮 已經放走 ' + t.lanterns + ' 盞' : ''}</div>${(f => f.length ? `<div class="muted" style="font-size:12px">🧩 海灘上最多的是${f.map(x => `<span style="white-space:nowrap">「${esc(x.name)}」（${x.n} 題）</span>`).join('、')}</div>` : '')(unitFines(t.lane, t.unit))}</div>${fam || !UNIT_TOOLS ? '' : `<button class="ghost" style="padding:6px 12px" ${xqBusy || todayChallenges().length >= XQ_DAILY ? 'disabled' : ''} onclick='practiceUnit(${JSON.stringify(t.lane)},${JSON.stringify(t.unit)})'>練一題</button>`}</div>`).join('')
+        + (fam || !UNIT_TOOLS ? '' : `<div class="muted" style="font-size:12px;margin-top:6px">按「練一題」，會從這個單元你還沒做過的考古題抽一題（有 🧩 的單元，先從海灘上最多的那一類抽），算在每天 ${XQ_DAILY} 題挑戰裡。${todayChallenges().length >= XQ_DAILY ? '今天的 ' + XQ_DAILY + ' 題挑戰做完了，明天就能再按。' : ''}</div>`)
       : `<div class="muted">還沒有要補強的單元。每個單元做滿 ${UNIT_MIN} 題，這裡才會出現。</div>`}
     ${sea >= GUESS_CAP ? `<div class="muted" style="font-size:13px;margin-top:6px">海灘上的瓶子有點多了，有點猜的題這陣子先不收進來，一次撿幾個就好。</div>` : ''}</div>
     <details class="card" ${lightDet('done')}><summary><b>🏮 已補強</b><span class="muted">・${um && um.done.length ? um.done.length + ' 個單元' : '還沒有'}</span></summary>
@@ -4194,11 +4201,12 @@ function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題�
   return `<div class="card" id="xqCard">${html}</div>`;
 }
 // v2.36：從某個單元還沒做過的考古題挑一題（tier 空白就不限難度）
-async function pickUnitBank(lane, unit, tier) {
+async function pickUnitBank(lane, unit, tier, sid) {   // sid：只挑這個次觀念的（exam/concepts.json 的考古題對照）
   const b = await loadBank(); await loadUnits(); if (!b || !b.items || !unitsData) return null;
   const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
   const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);
-  const list = b.items.filter(x => x.lane === lane && unitsData.tags[x.id] === unit && (!tier || TIER_KEY[x.tier] === tier) && !used.has(x.id) && noGroup(x));
+  if (sid && !(conceptsData && conceptsData.bank)) return null;
+  const list = b.items.filter(x => x.lane === lane && unitsData.tags[x.id] === unit && (!tier || TIER_KEY[x.tier] === tier) && (!sid || conceptsData.bank[x.id] === sid) && !used.has(x.id) && noGroup(x));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
 async function practiceUnit(lane, unit) {
@@ -4207,7 +4215,7 @@ async function practiceUnit(lane, unit) {
   xqBusy = true; render();
   try {
     await flush();
-    const item = await pickUnitBank(lane, unit);
+    const f = unitFines(lane, unit)[0], item = (f && await pickUnitBank(lane, unit, '', f.sid)) || await pickUnitBank(lane, unit);   // 先挑海灘上最多的那個次觀念
     if (!item) toast('這個單元的考古題你都做過了，可以改撿瓶子或拍紙本錯題。');
     else { S = await call('challengeBank', item); D = derive(S); tab = 'home'; boardOpen = 'xq'; }
   } catch (e) { toast('出題失敗：' + (e.message || e)); }
@@ -4657,6 +4665,8 @@ function pendingList(rows, wk, day, removable) {
 function resolvePending(wk, day, x, r) {
   const plan = planOf(wk), list = day === 7 ? plan.tray : plan.days[day], i = list.indexOf(x);
   if (i < 0) return;
+  const old = S.save['plan:' + wk], dk = (day === 7 ? 't' : day) + '|';
+  if (old && old.src && old.src[dk + x]) { old.src = Object.assign({}, old.src, { [dk + r]: old.src[dk + x] }); delete old.src[dk + x]; }   // 學習指標
   list[i] = r; setPlan(wk, plan);
   toast('改成「' + D.itemsByRow[r].subject + '・' + D.itemsByRow[r].name + '」');
   tab === 'home' ? softRender() : render();
@@ -4744,10 +4754,21 @@ function setLog(date, r, s) {
   queueSave('log:' + date, 'logDay', date, rows);
   softRender();
 }
-function setPlan(wk, plan) {
-  S.save['plan:' + wk] = { days: plan.days, tray: plan.tray };
+function setPlan(wk, plan, how, fresh) {
+  const p = Object.assign({ days: plan.days, tray: plan.tray }, planSrc(wk, plan, how, fresh));   // 學習指標：計畫來源只存不顯示
+  S.save['plan:' + wk] = p;
   D = derive(S);
-  queueSave('plan:' + wk, 'savePlan', wk, { days: plan.days, tray: plan.tray });
+  queueSave('plan:' + wk, 'savePlan', wk, p);
+}
+/* --- 學習指標：計畫一格從哪裡來。key＝'<天 0～6 或 t>|<列號或待定>'；self 自己加（拍手寫計畫也算）、pick 點了 App 的建議、keep 照上週排、fam 家人排（後兩種還沒有入口）。
+   ed＝照上週排或建議帶進來、後來被她拿掉或移走的格子（只記 key） --- */
+const PLAN_SRC = ['self', 'pick', 'keep', 'fam'];
+function planKeys(plan) { return plan.days.flatMap((d, i) => d.map(r => i + '|' + r)).concat(plan.tray.map(r => 't|' + r)); }
+function planSrc(wk, plan, how, fresh) {
+  const old = S.save['plan:' + wk] || {}, src0 = fresh ? {} : (old.src || {}), ed = fresh ? [] : (old.ed || []).slice(), src = {};
+  planKeys(plan).forEach(k => src[k] = PLAN_SRC.includes(src0[k]) ? src0[k] : (how || 'self'));
+  Object.keys(src0).forEach(k => { if (!(k in src) && (src0[k] === 'keep' || src0[k] === 'pick') && !ed.includes(k)) ed.push(k); });
+  return { src, ed: ed.slice(-200) };
 }
 // 完成／部分按鈕（首頁「今天」和計畫頁共用）
 function seg(date, r) {
@@ -5211,6 +5232,8 @@ function advSumText(mode) {
   out.push('', '【正在補強】' + (um.weak.length ? um.weak.map(t => un(t) + '（做過 ' + t.n + ' 題）').join('、') : '沒有'));
   if (conceptsData && stkActive().length) out.push('換條航線中的觀念：' + stkActive().map(sid => { const l = sidLane(sid), x = sidInfo(l, sid); return sub(l) + '・' + (x ? x.name : sid); }).join('、'));
   out.push('【已補強】' + (um.done.length ? um.done.map(t => un(t) + '（燈籠 ' + t.lanterns + (t.steady ? '，⭐ 最近 ' + RECENT_N + ' 題對 ' + t.recentOk + ' 題' : '') + '）').join('、') : '還沒有'));
+  // 學習指標：只在「這個月」放
+  if (mode === 'm0') out.push('', ...habitLines(first, last, all));
   // 6. 模考：只放日期和分數，不放考試名稱
   const sc = v => { const x = String(v == null ? '' : v).trim(); return /^(A\+\+|A\+|A|B\+\+|B\+|B|C|\d{1,3}(\.\d+)?|[0-6] ?級分)$/.test(x) ? x : ''; };   // 只認等級、分數、級分，其他字不放
   const ymdOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -5221,6 +5244,20 @@ function advSumText(mode) {
   ex.forEach(a => { const d = assessDate(a.date); out.push((d.getMonth() + 1) + '/' + d.getDate() + '：' + SUBJECTS.filter(k => sc(a[k])).map(k => k + ' ' + sc(a[k]) + (/^\d{1,2}$/.test(a[k + '錯'] || '') ? '（沒答對 ' + a[k + '錯'] + '）' : '')).join('、') + (sc(a['文']) ? '、作文 ' + sc(a['文']).replace(/ ?級分/, ' 級分') : '') + (() => { const ids = Object.keys(S.save).filter(k => /^pq:/.test(k) && S.save[k] && S.save[k].mock === ymdOf(d)), lit = ids.filter(k => S.save['rv:' + k] && S.save['rv:' + k].lantern).length;
     return ids.length ? '；收進海灘 ' + ids.length + ' 題（變成燈籠 ' + lit + ' 題）' : ''; })()); });
   return out.join('\n');
+}
+function habitLines(first, last, all) {
+  const inM = d => !!d && d >= first && d <= last, tm = S.save.tm || {}, sum = [0, 0, 0];
+  const ds = Object.keys(tm).filter(inM); ds.forEach(d => (tm[d] || []).forEach((x, i) => { if (i < 3) sum[i] += Number(x) || 0; }));
+  const n = Math.max(1, Math.round((new Date((last < S.today ? last : S.today) + 'T00:00:00') - new Date(first + 'T00:00:00')) / 864e5) + 1);
+  const feel = (S.save.feel || {})[first.slice(0, 7)];
+  const src = { self: 0, pick: 0, keep: 0, fam: 0 }; let ed = 0;
+  Object.keys(S.save).filter(k => /^plan:/.test(k) && inM(k.slice(5))).forEach(k => { const p = S.save[k] || {}; Object.values(p.src || {}).forEach(v => { if (v in src) src[v]++; }); ed += (p.ed || []).length; });
+  const fresh = all.filter(b => inM(String(b.wrongAt || '').slice(0, 10))), why = fresh.filter(b => b.rv && b.rv.why).length;
+  return ['【學習習慣】分鐘多少沒有好壞，只是看看時間花在哪裡。停留分鐘只算畫面在前景、有在操作的時間；兩支手機同一天都用時會少算',
+    '停留分鐘（這個月合計／每天平均，' + n + ' 天）：讀書 ' + sum[0] + '／' + Math.round(sum[0] / n) + '、延伸 ' + sum[1] + '／' + Math.round(sum[1] / n) + '、其他 ' + sum[2] + '／' + Math.round(sum[2] / n),
+    '對讀書的感覺（1～5）：' + (feel ? feel : '沒有填'),
+    '計畫項目來源：自己加 ' + src.self + '、照上週排 ' + src.keep + '、點建議 ' + src.pick + '、家人排 ' + src.fam + '；照上週排的項目後來拿掉或移走 ' + ed,
+    '自己標了錯因的瓶子：' + why + '／' + fresh.length + (fresh.length ? '（' + Math.round(why / fresh.length * 100) + '%）' : '')];
 }
 async function openAdvSum(mode) { await loadUnits(); draft = { adv: advSumText(mode), advSum: mode }; render(); window.scrollTo(0, 0); }
 function openAdv() { draft = { adv: advText(planWeek) }; render(); window.scrollTo(0, 0); }
@@ -5241,7 +5278,79 @@ async function copyAdv() {
 }
 function copyLastWeek() {
   const prev = planOf(addD(planWeek, -7));
-  setPlan(planWeek, prev); toast('照上週的計畫排好了，再依這週的行程調整'); render();
+  setPlan(planWeek, prev, 'keep', true); toast('照上週的計畫排好了，再依這週的行程調整'); render();
+}
+
+/* ===== 學習指標（v2.49.4）：每天在讀書、延伸、其他三區停留幾分鐘，存在 tm = { 日期: [讀書, 延伸, 其他] }。
+   只存不顯示：不給經驗值、島幣，不送 AI，只在「整理學習摘要」的「這個月」匯出；家人碼拿不到。
+   兩支手機各記各的，後端取較大值合併，所以同一天兩支都用時會少算（寧可少算，不會重複算）。 ===== */
+const TM_IDLE = 150000, TM_EVERY = 300000, TM_STEP = 15000;
+// 通用：zoneOf() 回傳 0～2（不算就回 -1）；get(日期) 讀已存的三區分鐘；save({ 日期: [三區] }) 寫回。
+// 分鐘數變了、離上次存超過 5 分鐘才存；切到背景或離開時補存一次。讀一小時書最多存 13 次
+function zoneTimer(zoneOf, get, save) {
+  let act = Date.now(), t0 = Date.now(), last = Date.now();
+  const base = {}, sec = {}, sent = {};
+  const day = t => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);   // 台北日期，跨午夜分到兩天
+  const val = d => base[d].map((b, i) => b + Math.floor(sec[d][i] / 60));
+  const changed = () => Object.keys(sec).filter(d => String(val(d)) !== String(sent[d] || base[d]));
+  const push = () => {
+    const ds = changed().slice(-10); if (!ds.length) return;
+    const days = {}; ds.forEach(d => { days[d] = val(d); sent[d] = days[d]; });
+    last = Date.now(); save(days);
+  };
+  const tick = () => {
+    const now = Date.now(), dt = Math.min(now - t0, 2 * TM_STEP); t0 = now;
+    if (document.visibilityState !== 'visible' || now - act > TM_IDLE) return;
+    const z = zoneOf(); if (!(z >= 0 && z <= 2)) return;
+    const d = day(now);
+    if (!sec[d]) { sec[d] = [0, 0, 0]; base[d] = (get(d) || [0, 0, 0]).map(x => Number(x) || 0); }
+    sec[d][z] += dt / 1000;
+    if (now - last >= TM_EVERY) push();
+  };
+  ['pointerdown', 'keydown', 'scroll', 'touchstart', 'wheel'].forEach(e => document.addEventListener(e, () => { if (Date.now() - act > TM_IDLE) t0 = Date.now(); act = Date.now(); }, { passive: true, capture: true }));
+  const leave = () => { tick(); push(); };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); else { t0 = Date.now(); act = Date.now(); } });
+  window.addEventListener('pagehide', leave);
+  setInterval(tick, TM_STEP);
+  return { tick, push, val: d => sec[d] ? val(d) : null };
+}
+// 她的三區對照（學習策略顧問 10/30 定）。智慧島照老師分：會考學科類算讀書，其餘算延伸
+const TM_STUDY_TABS = ['plan', 'confirm', 'scan', 'pick', 'light', 'lamp', 'log', 'bottle', 'wrongScan', 'exam', 'words', 'printWrong', 'focus', 'lightword', 'paper', 'story'];
+const TM_EXT_TABS = ['bookstore', 'book', 'hall'];
+const TM_WISDOM_STUDY = ['einstein', 'yirong', 'mi', 'alu'];   // 自然、社會（歷史）、國文、社會（公民：看新聞）
+const TM_BOARD_STUDY = ['plan', 'xq', 'light'];   // 首頁今日板展開讀書計畫、挑戰任務、漂流瓶
+function tmZone() {
+  if (!S || !S.save || !D || !D.cfg || isFamily() || ownMode()) return -1;   // 家人島的版本還沒做
+  if (tab === 'home') return TM_BOARD_STUDY.includes(boardOpen) ? 0 : 2;
+  if (tab === 'wlesson' || tab === 'whut') { const t = tab === 'wlesson' ? String((draft.wl || {}).book || '').replace(/2$/, '') : wisdomHut; return TM_WISDOM_STUDY.includes(t) ? 0 : 1; }
+  return TM_STUDY_TABS.includes(tab) ? 0 : TM_EXT_TABS.includes(tab) ? 1 : 2;
+}
+// 不走 queueSave：送完不重畫畫面（不會打斷正在排的計畫），排在同一條存檔佇列後面，失敗就等下次一起送
+let tmPend = {};
+function tmSave(days) {
+  S.save.tm = Object.assign({}, S.save.tm || {}, days); Object.assign(tmPend, days);
+  const p = tmPend; tmPend = {};
+  syncChain = syncChain.then(() => call('saveTm', p)).catch(() => { tmPend = Object.assign(p, tmPend); });
+}
+const tmTimer = zoneTimer(tmZone, d => S && S.save && (S.save.tm || {})[d], tmSave);
+
+/* --- 每月自評：每個月第一次按完「確認這週」，在確認完的畫面問一次。0＝先不填（也算問過） --- */
+const FEEL_TXT = ['', '很不|想碰', '有點|不想', '普通', '還可以', '想讀'];   // | 是折行的地方：窄螢幕兩字兩字折
+function feelCard() {
+  const m = S.today.slice(0, 7);
+  if (isFamily() || ownMode() || (S.save.feel || {})[m] != null) return '';
+  return `<!--feel--><div class="card" id="feelCard"><h3 id="feelQ" style="margin:0 0 4px">這個月，你對讀書的感覺比較接近哪一個？</h3>
+    <div class="muted">每個月問一次，沒有對錯，也不會和上個月比。只會放進你自己按的「整理學習摘要」，要不要給爸爸看由你決定。</div>
+    <div class="row" role="group" aria-labelledby="feelQ" style="gap:6px;margin-top:8px;align-items:stretch">${FEEL_TXT.slice(1).map((t, i) => `<button class="ghost grow" style="min-height:48px;padding:6px 4px;font-size:14px" onclick="setFeel(${i + 1})">${i + 1}<br><span style="font-size:12px;line-height:1.3">${t.split('|').map(x => `<span style="white-space:nowrap">${x}</span>`).join('')}</span></button>`).join('')}</div>
+    <div style="text-align:center;margin-top:8px"><button style="min-height:48px;width:auto;padding:0 20px;background:#fff;border:1px solid #d8d4ce;color:#5f5a55;font-size:14px" onclick="setFeel(0)">先不填</button></div></div><!--/feel-->`;
+}
+function setFeel(n) {
+  const m = S.today.slice(0, 7);
+  S.save.feel = Object.assign({}, S.save.feel || {}, { [m]: n });
+  queueSave('feel', 'saveFeel', m, n);
+  if (draft.after) draft.after = draft.after.replace(/<!--feel-->[\s\S]*<!--\/feel-->/, '');
+  const el = document.getElementById('feelCard'); if (el) el.remove();
+  if (n) toast('記下了，謝謝你');
 }
 
 /* --- 挑項目：排進某一天，或記錄計畫外做了什麼 --- */
@@ -5453,7 +5562,7 @@ function applyScan(merge) {
   const r = draft.scan, wk = draft.week, cur = planOf(wk);
   const uniq = a => [...new Set(a)];
   const plan = merge ? { days: cur.days.map((d, i) => uniq(d.concat(r.days[i]))), tray: uniq(cur.tray.concat(r.tray)) } : { days: r.days.map(uniq), tray: uniq(r.tray) };
-  setPlan(wk, plan);
+  setPlan(wk, plan, 'self', !merge);
   // 照片上打勾（或劃掉）的項目，今天以前的日子直接記成完成
   let logged = 0;
   DAYS.forEach((_, i) => {
@@ -5592,7 +5701,7 @@ function bindConfirm() {
       draft = { after: `<div class="card"><div class="big">🎉</div><h2 style="text-align:center">這週確認完成！+${D.xp - before} 經驗值</h2>${rateLine}
         <div style="text-align:center">這週一共做了 ${units} 次。${g.ipic} ${esc(g.name)}：「${units > 0 ? '這些都是真的蓋起來的房子喔。' : '這週休息也沒關係，島還在。'}」</div>
         <div class="muted" style="text-align:center;margin-top:8px">接著排下週的計畫吧：拍手寫計畫，或點日子自己加。</div>
-        ${card('lightWord', `<button class="ghost" style="width:100%;margin-top:10px" onclick="openLightWord('${wk}')">🗼 去看燈塔的話</button>`)}</div>` };
+        ${card('lightWord', `<button class="ghost" style="width:100%;margin-top:10px" onclick="openLightWord('${wk}')">🗼 去看燈塔的話</button>`)}</div>` + feelCard() };
       lightWordLater(wk);
       planWeek = addD(wk, 7); planDay = 0; tab = 'plan'; render(); window.scrollTo(0, 0);
     } catch (e) { toast('寫入失敗：' + (e.message || e)); $('doConfirm').disabled = false; $('doConfirm').textContent = '確認這週 ✨'; }
