@@ -15,7 +15,7 @@
 <style>
   :root {
     --plum: #741b47; --plum-mid: #c27ba0; --plum-light: #ead1dc;
-    --sea: #cfe8f3; --sand: #fdf6ec; --grass: #dff0d8; --ink: #3a2a33; --muted: #8a7480;
+    --sea: #cfe8f3; --sand: #fdf6ec; --grass: #dff0d8; --ink: #3a2a33; --muted: #6e5f68; /* MUTED_v1 原本 #8a7480，對比不到 4.5:1（美術 10/30） */
     --card: #ffffff; --gold: #e3a21a;
   }
   * { box-sizing: border-box; }
@@ -191,7 +191,7 @@
   .furn button.on { border-color: var(--plum); background: var(--plum-light); } .furn button.has { background: var(--sand); }
   .agrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #d9b88f; padding: 6px; border-radius: 10px; border-top: 6px solid var(--plum-light); border-left: 6px solid var(--plum-light); max-width: 300px; margin: 0 auto; }
   .agrid button { aspect-ratio: 1; padding: 0; background: #f3e3c9; border: 1.5px dashed #c7a578; color: var(--ink); font-size: 24px; min-width: 0; }
-  .wphoto{margin:4px 0 8px}.wphoto img{display:block;width:100%;max-height:260px;object-fit:contain;background:#f4efe6;border-radius:10px}.wphoto figcaption{font-size:13px;color:#6b5a4a;margin-top:4px;line-height:1.5}.wphoto figcaption span{display:block;font-size:11px;color:#9a8a7a}
+  .wphoto{margin:4px 0 8px}.wphoto img{display:block;width:100%;max-height:260px;object-fit:contain;background:#f4efe6;border-radius:12px;cursor:zoom-in}.wzoom{position:fixed;inset:0;z-index:1000;background:rgba(20,16,12,.92);overflow:auto;cursor:zoom-out;display:flex}.wzoom img{margin:auto;max-width:none;display:block}.wzoom button{position:fixed;top:12px;right:12px;width:44px;height:44px;padding:0;border:0;border-radius:22px;background:rgba(0,0,0,.55);color:#fff;font-size:22px;line-height:44px;cursor:pointer}.wphoto figcaption{font-size:13px;color:#6b5a4a;margin-top:4px;line-height:1.5}.wphoto figcaption span{display:block;font-size:11px;color:#9a8a7a}
 .agrid button.on { background: var(--plum-light); border: 2px solid var(--plum); }
   .arow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .arow.a3 { grid-template-columns: repeat(3, 1fr); }
@@ -1263,12 +1263,22 @@ function wisdomSay(teacher) {
 }
 
 // ---------- 智慧島：渡船靠岸，島上四間導師小屋 ----------
+// 老照片放大：原尺寸蓋滿畫面，可以捲動；點一下或按 Esc 關掉
+function zoomPhoto(img) {
+  const d = document.createElement('div'), big = document.createElement('img'), x = document.createElement('button'); d.className = 'wzoom'; x.textContent = '✕'; x.setAttribute('aria-label', '關閉'); d.append(big, x);   // ✕ 和點畫面都會關（點擊往上傳到 d）
+  big.onload = () => { d.scrollLeft = (d.scrollWidth - d.clientWidth) / 2; d.scrollTop = (d.scrollHeight - d.clientHeight) / 2; };   // 從照片正中間開始看
+  big.alt = img.alt; big.src = img.src;
+  const close = () => { d.remove(); document.removeEventListener('keydown', key); }, key = e => { if (e.key === 'Escape') close(); };
+  d.onclick = close; document.addEventListener('keydown', key); document.body.appendChild(d);
+}
 function wisdomScene() {
   const ph = env.phase, night = ph === 'night', wet = env.weather === 'rain' || env.weather === 'storm', lit = night ? 1 : ph === 'dusk' ? 0.7 : 0.25;
   const sky = night ? ['#141c36', '#2a3560'] : ph === 'dusk' ? ['#e9875a', '#f5c48f'] : ph === 'dawn' ? ['#f1b48f', '#fbe0c2'] : wet ? ['#8b97a5', '#b9c2cc'] : ['#8fcbea', '#e3f3fa'];
   const sea = night ? '#22325a' : wet ? '#6f8797' : '#5fa8cf', win = `fill="#ffd27a" opacity="${lit}"`;
   const hut = (key, x, y, body) => `<g class="whut" onclick="openWisdomHut('${key}')" transform="translate(${x} ${y})">${body}
       <rect x="-30" y="34" width="60" height="15" rx="7" fill="#fffaf0" opacity=".92"/><text x="0" y="45" text-anchor="middle" font-size="9" font-weight="700" fill="${WISDOM_T[key].color}">${WISDOM_T[key].name}</text></g>`;
+  const hutBack = (key, x, y, top, body) => `<g class="whut" onclick="openWisdomHut('${key}')" transform="translate(${x} ${y})">${body}
+      <rect x="-30" y="${top - 18}" width="60" height="15" rx="7" fill="#fffaf0" opacity=".92"/><text x="0" y="${top - 7}" text-anchor="middle" font-size="9" font-weight="700" fill="${WISDOM_T[key].color}">${WISDOM_T[key].name}</text></g>`;   // top：屋頂最高點，名牌底緣在它上面 3
   return `<div class="wscene"><svg viewBox="0 0 400 270" preserveAspectRatio="xMidYMid slice" aria-label="智慧島">
     <defs><linearGradient id="wSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient>
       <radialGradient id="wMist"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
@@ -1277,11 +1287,32 @@ function wisdomScene() {
     <path d="M0 96 Q 60 70 120 88 T 230 80 T 400 92 V120 H0Z" fill="${night ? '#33406a' : '#b9cfd9'}" opacity=".7"/>
     <rect y="104" width="400" height="166" fill="${sea}"/>
     ${Array.from({ length: 10 }, (_, i) => `<path d="M${(i * 83) % 380} ${118 + (i * 37) % 140} q6 -3 12 0" stroke="#fff" stroke-width="1" fill="none" opacity=".45"/>`).join('')}
+    <ellipse cx="200" cy="96" rx="220" ry="14" fill="url(#wMist)"/>
+    <!-- 島後面的岬角（擴島）：沙灘外緣和主島連成一條線，草地也連成一片（下面再用同色補滿主島後緣） -->
+    <path d="M48 96 Q 48 74 200 74 Q 352 74 352 96 Q 366 120 374 160 L 26 160 Q 34 120 48 96 Z" fill="#e6c98e"/>
+    <path d="M60 93 Q 60 77 200 77 Q 340 77 340 93 Q 352 118 360 150 L 40 150 Q 48 118 60 93 Z" fill="${night ? '#4f7a4a' : '#8cc56c'}"/>
     <!-- 島 -->
     <ellipse cx="200" cy="168" rx="178" ry="58" fill="#e6c98e"/><ellipse cx="200" cy="160" rx="166" ry="50" fill="${night ? '#4f7a4a' : '#8cc56c'}"/>
+    <path d="M60 93 Q 60 77 200 77 Q 340 77 340 93 Q 352 118 360 150 L 40 150 Q 48 118 60 93 Z" fill="${night ? '#4f7a4a' : '#8cc56c'}"/>
+    ${hutBack('yirong', 96, 76, -4.3, `<g transform="scale(.72)"><!-- 宜蓉：紅磚老教室、人字屋頂、白柱子走廊、鐘（後排的三間縮成 0.72：離得遠；名牌照原本大小，放在屋頂上方） -->
+      <rect x="-24" y="8" width="48" height="22" fill="#a9573f"/><path d="M-28 9 L0 -6 L28 9Z" fill="#6b7075"/>
+      <rect x="-26" y="12" width="52" height="3" fill="#efe8da"/>${[-22, -8, 8, 22].map(x => `<rect x="${x - 1.5}" y="14" width="3" height="16" fill="#efe8da"/>`).join('')}
+      <rect x="-17" y="17" width="8" height="7" ${win}/><rect x="-3" y="17" width="8" height="7" ${win}/><rect x="11" y="17" width="7" height="13" fill="#5b3a1e"/>
+      <path d="M-31 30 V4 H-26" stroke="#7a5236" stroke-width="1.5" fill="none"/><circle cx="-26" cy="7" r="2.5" fill="#c9a24a"/></g>`)}
+    ${hutBack('mi', 200, 70, 2.2, `<g transform="scale(.72)"><!-- 瞇：白牆暗房、紅色安全燈的窗、晾著的照片、門口的大木桌 -->
+      <rect x="-18" y="6" width="36" height="24" fill="#f4f2ee"/><rect x="-21" y="3" width="42" height="4" fill="#6d6a66"/>
+      <rect x="-12" y="14" width="9" height="16" fill="#2f2a28"/><rect x="5" y="13" width="8" height="7" fill="#c8241a"/>
+      <path d="M0 10 H16" stroke="#3a3330" stroke-width=".6"/>${[3, 8, 13].map(x => `<rect x="${x - 1.5}" y="10" width="3" height="3" fill="#fbf8f0"/>`).join('')}
+      <rect x="14" y="22" width="16" height="2" fill="#8a5a32"/><path d="M16 24 V30 M28 24 V30" stroke="#7a5236" stroke-width="1"/></g>`)}
+    ${hutBack('guo', 318, 76, -5.8, `<g transform="scale(.72)"><!-- 郭哥：海邊木屋、藍綠色屋頂、曬毛巾、滾筒 -->
+      <rect x="-20" y="8" width="40" height="22" fill="#c8995f"/>${[14, 20].map(y => `<path d="M-20 ${y} H20" stroke="#a97f4d" stroke-width=".8"/>`).join('')}
+      <path d="M-26 9 L0 -8 L26 9Z" fill="#4f8584"/><rect x="-12" y="15" width="8" height="15" fill="#5a3f2a"/><rect x="5" y="14" width="9" height="7" ${win}/>
+      <path d="M-30 30 V16 M-14 30 V16 M-30 17 H-14" stroke="#7a5236" stroke-width="1.2"/>${[['#f6f1e6', -28], ['#f2c94c', -23], ['#7fc4c6', -18]].map(([c, x]) => `<rect x="${x}" y="17" width="4" height="7" fill="${c}"/>`).join('')}
+      <rect x="20" y="20" width="4" height="10" rx="2" fill="#3e8a8c"/></g>`)}
+
     <path d="M60 150 Q 120 98 200 104 Q 280 98 340 150" fill="${night ? '#5f8a55' : '#9fd27e'}"/>
     <!-- 松樹與石燈籠 -->
-    ${[[96, 112], [312, 110], [200, 98]].map(([x, y]) => `<path d="M${x} ${y - 22} l-11 14 h6 l-9 11 h28 l-9 -11 h6 z" fill="${night ? '#2f5a3a' : '#3f7a45'}"/><rect x="${x - 1.5}" y="${y + 3}" width="3" height="6" fill="#6b4a2b"/>`).join('')}
+    ${[[58, 140], [346, 138], [158, 106]].map(([x, y]) => `<path d="M${x} ${y - 22} l-11 14 h6 l-9 11 h28 l-9 -11 h6 z" fill="${night ? '#2f5a3a' : '#3f7a45'}"/><rect x="${x - 1.5}" y="${y + 3}" width="3" height="6" fill="#6b4a2b"/>`).join('')}
     <g transform="translate(200 150)"><rect x="-3" y="-2" width="6" height="12" fill="#a9a39a"/><rect x="-7" y="-10" width="14" height="8" fill="#bdb6aa"/><rect x="-4" y="-8" width="8" height="4" ${win}/><path d="M-9 -10 L0 -16 L9 -10Z" fill="#8f897f"/></g>
     ${hut('kongming', 112, 114, `<!-- 孔明：茅草屋頂的草廬、竹林 -->
       ${[-30, -25, 27].map(x => `<path d="M${x} 30 V-8" stroke="#6f9a4a" stroke-width="2.5"/><path d="M${x} 0 l7 -5 M${x} 12 l-7 -5" stroke="#7fb062" stroke-width="2"/>`).join('')}
@@ -1304,21 +1335,6 @@ function wisdomScene() {
       <rect x="-6" y="18" width="12" height="12" fill="#2e3a59"/><rect x="-16" y="16" width="7" height="6" ${win}/><rect x="9" y="16" width="7" height="6" ${win}/>
       <text x="0" y="28" text-anchor="middle" font-size="5" font-weight="700" fill="#fff">NASA</text>
       <path d="M27 30 V12" stroke="#8a8a8a" stroke-width="1.5"/><path d="M19 8 Q 27 18 35 8" fill="#cfd6de" stroke="#8a8a8a" stroke-width="1"/>`)}
-    ${hut('yirong', 142, 188, `<g transform="scale(.8)"><!-- 宜蓉：紅磚老教室、人字屋頂、白柱子走廊、鐘（新的三間縮成 0.8，名牌照原本大小） -->
-      <rect x="-24" y="8" width="48" height="22" fill="#a9573f"/><path d="M-28 9 L0 -6 L28 9Z" fill="#6b7075"/>
-      <rect x="-26" y="12" width="52" height="3" fill="#efe8da"/>${[-22, -8, 8, 22].map(x => `<rect x="${x - 1.5}" y="14" width="3" height="16" fill="#efe8da"/>`).join('')}
-      <rect x="-17" y="17" width="8" height="7" ${win}/><rect x="-3" y="17" width="8" height="7" ${win}/><rect x="11" y="17" width="7" height="13" fill="#5b3a1e"/>
-      <path d="M-31 30 V4 H-26" stroke="#7a5236" stroke-width="1.5" fill="none"/><circle cx="-26" cy="7" r="2.5" fill="#c9a24a"/></g>`)}
-    ${hut('mi', 236, 134, `<g transform="scale(.8)"><!-- 瞇：白牆暗房、紅色安全燈的窗、晾著的照片、門口的大木桌 -->
-      <rect x="-18" y="6" width="36" height="24" fill="#f4f2ee"/><rect x="-21" y="3" width="42" height="4" fill="#6d6a66"/>
-      <rect x="-12" y="14" width="9" height="16" fill="#2f2a28"/><rect x="5" y="13" width="8" height="7" fill="#c8241a"/>
-      <path d="M0 10 H16" stroke="#3a3330" stroke-width=".6"/>${[3, 8, 13].map(x => `<rect x="${x - 1.5}" y="10" width="3" height="3" fill="#fbf8f0"/>`).join('')}
-      <rect x="14" y="22" width="16" height="2" fill="#8a5a32"/><path d="M16 24 V30 M28 24 V30" stroke="#7a5236" stroke-width="1"/></g>`)}
-    ${hut('guo', 258, 190, `<g transform="scale(.8)"><!-- 郭哥：海邊木屋、藍綠色屋頂、曬毛巾、滾筒 -->
-      <rect x="-20" y="8" width="40" height="22" fill="#c8995f"/>${[14, 20].map(y => `<path d="M-20 ${y} H20" stroke="#a97f4d" stroke-width=".8"/>`).join('')}
-      <path d="M-26 9 L0 -8 L26 9Z" fill="#4f8584"/><rect x="-12" y="15" width="8" height="15" fill="#5a3f2a"/><rect x="5" y="14" width="9" height="7" ${win}/>
-      <path d="M-30 30 V16 M-14 30 V16 M-30 17 H-14" stroke="#7a5236" stroke-width="1.2"/>${[['#f6f1e6', -28], ['#f2c94c', -23], ['#7fc4c6', -18]].map(([c, x]) => `<rect x="${x}" y="17" width="4" height="7" fill="${c}"/>`).join('')}
-      <rect x="20" y="20" width="4" height="10" rx="2" fill="#3e8a8c"/></g>`)}
     <!-- 碼頭和渡船 -->
     <path d="M176 206 L170 252 M224 206 L230 252" stroke="#7a5236" stroke-width="3"/>
     <path d="M178 204 H222 L226 246 H174Z" fill="#b08356"/>${[0, 1, 2, 3, 4].map(i => `<path d="M${176 - i * 0.5} ${212 + i * 8} H${224 + i * 0.5}" stroke="#8f6640" stroke-width="1"/>`).join('')}
@@ -1327,7 +1343,6 @@ function wisdomScene() {
     <g transform="translate(338 242)"><path d="M-30 0 H30 L22 12 H-22Z" fill="#fdfaf2"/><path d="M-27 4 H27" stroke="#c0392b" stroke-width="2"/>
       <rect x="-12" y="-10" width="22" height="10" fill="#f1e6d2"/><rect x="-9" y="-7" width="5" height="4" ${win}/><rect x="1" y="-7" width="5" height="4" ${win}/><rect x="-14" y="-12" width="26" height="3" fill="#2f6fae"/>
       <animateTransform attributeName="transform" type="translate" values="338 242;338 244;338 242" dur="3s" repeatCount="indefinite"/></g>
-    <ellipse cx="200" cy="120" rx="220" ry="26" fill="url(#wMist)"/>
   </svg></div>`;
 }
 // 智慧島 3D（v2.25）：和「我的家」一樣，3D 開不了就換回插畫；也可以自己切換
@@ -1435,7 +1450,7 @@ function viewWisdomLesson() {
     const reveal = !shown && !s.opts.length && s.after.length ? `<button class="ghost" style="width:100%;margin-top:8px" onclick="draft.wl.shown[${i}]=true;render()">看${t.name}怎麼說</button>` : '';
     const after = (shown || s.steps) ? s.after.map(p).join('') : '';
     const widget = i === 2 && L.widget ? wisdomWidget(L.widget) : '';
-    const photo = i === 0 && L.photo ? `<figure class="wphoto"><img src="${esc(L.photo.src)}" alt="${esc(L.photo.cap)}" loading="lazy"><figcaption>${esc(L.photo.cap)}${L.photo.credit ? '<span>' + esc(L.photo.credit) + '</span>' : ''}</figcaption></figure>` : '';
+    const photo = i === 0 && L.photo ? `<figure class="wphoto"><img src="${esc(L.photo.src)}" alt="${esc(L.photo.cap)}" loading="lazy" onclick="zoomPhoto(this)"><figcaption>${esc(L.photo.cap)}${L.photo.credit ? '<span>' + esc(L.photo.credit) + '</span>' : ''}</figcaption></figure>` : '';
     const next = i === w.step && i < last ? `<button style="width:100%;margin-top:10px;background:${t.color}" ${needShow && !shown && !s.steps ? 'disabled' : ''} onclick="draft.wl.step++;render();setTimeout(()=>{const e=document.getElementById('wsec${i + 1}');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},30)">繼續 →</button>` : '';
     return `<div class="card" id="wsec${i}"><h3 style="margin-top:0;color:${t.color}">${esc(s.h)}</h3>${photo}${s.q.map(p).join('')}${widget}${opts}${reveal}${after}${i === last ? wisdomNoteHtml(L, t, rec) : next}</div>`;
   };

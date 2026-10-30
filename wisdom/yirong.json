@@ -614,7 +614,13 @@
     }
    ],
    "closing": "「今天就到這裡。方的塞不進圓的，那就做一個轉接器。」",
-   "source": "Apollo 13（1970 年 4 月）氧氣槽爆炸、二氧化碳吸收罐轉接器，見 NASA 任務報告 Report of Apollo 13 Review Board（1970）與 NASA 官網任務介紹。"
+   "source": "Apollo 13（1970 年 4 月）氧氣槽爆炸、二氧化碳吸收罐轉接器，見 NASA 任務報告 Report of Apollo 13 Review Board（1970）與 NASA 官網任務介紹。",
+   "photo": {
+    "src": "wisdom/img/yirong-10.webp",
+    "cap": "阿波羅 13 號太空人用手邊材料拼出的二氧化碳濾罐轉接器，1970，NASA",
+    "credit": "NASA／公共領域",
+    "ref": "NASA AS13-62-8929（images.nasa.gov），公共領域"
+   }
   },
   {
    "n": 11,
