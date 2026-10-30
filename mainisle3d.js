@@ -61,6 +61,53 @@
     const mesh = new THREE.Mesh(g, m); mesh.position.y = y; return mesh;
   }
 
+  // 浮空群島（FLOAT_v1）：幾個小網格合成一個（雲海、岩底、瀑布各 1 個 draw call），頂點顏色依高度上亮下暗
+  function merged(parts) {
+    const P = [], N = [], C = [], c = new THREE.Color();
+    parts.forEach(p => {
+      p.geo.applyMatrix4(p.m); const g = p.geo.index ? p.geo.toNonIndexed() : p.geo;
+      g.computeBoundingBox(); const y0 = g.boundingBox.min.y, y1 = g.boundingBox.max.y, a = g.attributes.position.array, n = g.attributes.normal.array;
+      for (let i = 0; i < a.length; i += 3) { P.push(a[i], a[i + 1], a[i + 2]); N.push(n[i], n[i + 1], n[i + 2]); c.copy(p.bot).lerp(p.top, y1 > y0 ? (a[i + 1] - y0) / (y1 - y0) : 1); C.push(c.r, c.g, c.b); }
+      if (g !== p.geo) g.dispose(); p.geo.dispose();
+    });
+    const out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); out.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+    return out;
+  }
+  const at = (x, y, z, sx, sy, sz, ry) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry || 0), new THREE.Vector3(sx, sy, sz));
+  const linC = h => new THREE.Color(h).convertSRGBToLinear();
+  // 雲海：下層一大片暗底＋12 片扁平的雲（每片 16 個三角形），三種大小、兩層高度、相鄰重疊三成以上（美術 10/29）；雲不動
+  // 顏色自己算在頂點上（不受光、不套色調映射、平滑）：上亮下暗只差一點；越往外越接近天色，外緣就是天色，看不到雲海的邊（不透明，工程顧問 10/29）
+  // 雲色：總覽的雲只吃三成天色、其餘是紙米白；晚上比天空亮一階；雨天灰（美術 10/29）
+  const FLOAT = { pebble: 0, puffs: 1, seaN: 9 };   // 三角形超過時照這個順序減：浮石、雲海片數、小島的浮雲留 1 朵（工程顧問 10/29）
+  const PAPER = 0xfffdf8, CLOUD_NIGHT = 0x56659c, CLOUD_WET = 0xa7b0b8;
+  let cloudSea = null, cloudBase = null, puffs = null, puffBase = null, lastCloud = null, lastSky = null, lodTrees = [], lodFar = false, mistOn = false;
+  function buildCloudSea() {
+    const r = rng(97), parts = [], one = new THREE.Color(1, 1, 1), dim = new THREE.Color(0.9, 0.9, 0.9);
+    parts.push({ geo: new THREE.CircleGeometry(95, 12).rotateX(-Math.PI / 2), m: at(0, -8.6, 0, 1, 1, 1), top: dim, bot: dim });   // 縫隙底下的暗底
+    const ring = [[0, 0, 22, -6.8]].concat(
+      [0, 1, 2, 3, 4, 5].map(i => { const a = i / 6 * Math.PI * 2 + 0.3; return [Math.cos(a) * 24, Math.sin(a) * 30, 19 + r() * 4, -7.4]; }),
+      [0, 1, 2, 3, 4].map(i => { const a = i / 5 * Math.PI * 2 + 0.9; return [Math.cos(a) * 50, Math.sin(a) * 54, 30 + r() * 5, -8.1]; })).slice(0, FLOAT.seaN);   // 雲海放低，島的岩底整個露出來、浮在雲上
+    ring.forEach(([x, z, R, y]) => parts.push({ geo: new THREE.SphereGeometry(1, 8, 2), m: at(x, y, z, R * (1.15 + r() * 0.2), 1.6 + R * 0.04, R, r() * 3), top: one, bot: dim }));
+    const geo = merged(parts); cloudBase = shadeOf(geo, true);   // 離中心 45 以內是雲色，75 以外就是天色（地平線柔和）
+    cloudSea = new THREE.Mesh(geo, M.cloudSea = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, fog: false }));   // 遠近已經算在頂點色裡，不再疊場景的霧
+    scene.add(cloudSea);
+  }
+  function shadeOf(geo, far) {   // 每個頂點：明暗（0.9～1）、換成天色的比例
+    const a = geo.attributes.position.array, n = geo.attributes.normal.array, c = geo.attributes.color.array, cnt = a.length / 3, b = new Float32Array(cnt * 2);
+    for (let i = 0; i < cnt; i++) b[i * 2] = c[i * 3] * (0.94 + 0.06 * Math.max(0, n[i * 3 + 1])), b[i * 2 + 1] = far ? Math.max(0, Math.min(1, (Math.hypot(a[i * 3], a[i * 3 + 2]) - 45) / 30)) : 0;
+    return b;
+  }
+  function paint(mesh, base, cloud, sky) {
+    const col = mesh.geometry.attributes.color, c = col.array, t = new THREE.Color();
+    for (let i = 0; i < base.length / 2; i++) { t.copy(cloud).multiplyScalar(base[i * 2]).lerp(sky, base[i * 2 + 1]); c[i * 3] = t.r; c[i * 3 + 1] = t.g; c[i * 3 + 2] = t.b; }
+    col.needsUpdate = true;
+  }
+  function paintClouds(cloud, sky) {   // 天色一變就重算頂點色（雲海約 300 個頂點、島邊的浮雲約 300 個）
+    lastCloud = cloud; lastSky = sky;
+    if (cloudSea) paint(cloudSea, cloudBase, cloud, sky);
+    if (puffs) paint(puffs, puffBase, cloud, sky);
+  }
   // 拿掉一層物件並釋放 GPU 資源：名牌的貼圖和材質、各島自己的 geometry；共用的材質（mat() 快取、星星）和 Sprite 的 geometry 不丟
   function clearLayer(L) {
     while (L.children.length) {
@@ -91,6 +138,8 @@
   }
 
   // ---------- 五棟建物（每棟一個 group，userData.place 是點了要開的地方） ----------
+  let glowK = 0.8;
+  const lampMat = () => M.lamp || (M.lamp = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xf2bf55).multiplyScalar(glowK), toneMapped: false }));   // BUILD_v1：三棟共用的夜光
   function windows(g, n, w, y, z, h) { for (let i = 0; i < n; i++) g.add(box(0.16, h || 0.22, 0.04, glassMat, (i - (n - 1) / 2) * w, y, z)); }
   function exchange() {   // 交易所：白色石造、正面四根柱子、三角山牆（爸爸 草圖：三排窗）
     const g = new THREE.Group(), stone = mat('stone', 0xeee6d6), dark = mat('roofGrey', 0x7d7f86);
@@ -100,25 +149,27 @@
     windows(g, 3, 0.45, 0.62, 0.61); windows(g, 3, 0.45, 0.25, 0.61);
     return g;
   }
-  function church() {   // 教會：紅磚、尖塔（像淡水的禮拜堂）
-    const g = new THREE.Group(), brick = mat('brick', 0xb5543c), roof = mat('roofDark', 0x4a3b36);
-    g.add(box(1.0, 0.8, 1.5, brick));
-    const r = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.6, 4, 1), roof); r.rotation.y = Math.PI / 4; r.scale.set(0.85, 1, 1.25); r.position.y = 1.1; g.add(r);
-    g.add(box(0.5, 1.5, 0.5, brick, 0, 0, 0.6));
-    const sp = new THREE.Mesh(new THREE.ConeGeometry(0.36, 0.7, 4, 1), roof); sp.rotation.y = Math.PI / 4; sp.position.set(0, 1.85, 0.6); g.add(sp);
-    g.add(box(0.05, 0.36, 0.05, mat('gold', 0xf2c14e), 0, 2.2, 0.6)); g.add(box(0.22, 0.05, 0.05, mat('gold', 0xf2c14e), 0, 2.4, 0.6));
-    windows(g, 1, 0, 0.9, 0.86, 0.3);
+  function church() {   // 教會（公東教堂風，遠版 ≤84）：清水混凝土方塊、頂樓斜屋頂小堂、白十字、彩色格窗帶、戶外斜梯
+    const g = new THREE.Group(), conc = mat('concrete', 0xc9c6bf), white = mat('crossWhite', 0xf6f6f2);
+    g.add(box(1.3, 1.45, 1.0, conc));
+    const chap = box(0.75, 0.42, 0.65, conc, 0.15, 1.45, -0.1); g.add(chap);
+    const roof = box(0.85, 0.08, 0.78, mat('roofDark', 0x4a3b36), 0.15, 1.9, -0.1); roof.rotation.z = 0.22; g.add(roof);
+    g.add(box(0.06, 0.42, 0.06, white, 0.35, 1.98, -0.1)); g.add(box(0.24, 0.06, 0.06, white, 0.35, 2.28, -0.1));   // 十字架（和廟的剪黏一樣大）
+    g.add(box(0.9, 0.5, 0.05, lampMat(), -0.05, 0.55, 0.51));   // 正面的彩色格窗帶（近版才分成 3×4 格）
+    const st = box(0.22, 0.06, 1.2, conc, -0.76, 0.65, 0); st.rotation.x = -0.9; g.add(st);   // 戶外斜梯
     return g;
   }
-  function temple() {   // 媽祖廟：紅柱、橘瓦、燕尾翹脊、兩盞燈籠
+  function temple() {   // 媽祖廟（鹿港天后宮風，遠版 ≤156）：紅牆三開間、屋頂中高兩低、燕尾更翹、兩盞燈籠
     const g = new THREE.Group(), red = mat('templeRed', 0xc8372d), tile = mat('tile', 0xe0782f), gold = mat('gold', 0xf2c14e);
-    g.add(box(1.7, 0.2, 1.2, mat('step', 0xd9cbb4)));
-    g.add(box(1.4, 0.75, 0.9, red, 0, 0.2, 0));
-    const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 2.0, 3, 1), tile); roof.rotation.z = Math.PI / 2; roof.scale.set(1, 1, 0.85); roof.position.y = 1.25; g.add(roof);
-    g.add(box(1.9, 0.08, 0.08, gold, 0, 1.52, 0));
-    [-1, 1].forEach(s => { const tail = box(0.1, 0.35, 0.08, gold, s * 1.0, 1.5, 0); tail.rotation.z = -s * 0.5; g.add(tail);   // 燕尾
-      const lan = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), glassMat); lan.position.set(s * 0.45, 0.85, 0.55); g.add(lan); });
-    g.add(box(0.5, 0.5, 0.05, mat('door', 0x7a2a1f), 0, 0.2, 0.46));
+    g.add(box(1.8, 0.2, 1.2, mat('step', 0xd9cbb4)));
+    g.add(box(1.5, 0.72, 0.9, red, 0, 0.2, 0));
+    const ridge = (w, h, y, x) => { const r = new THREE.Mesh(new THREE.CylinderGeometry(h, h, w, 3, 1), tile); r.rotation.z = Math.PI / 2; r.scale.set(1, 1, 0.85); r.position.set(x, y, 0); g.add(r); };
+    ridge(0.9, 0.55, 1.35, 0); ridge(0.62, 0.42, 1.12, -0.72); ridge(0.62, 0.42, 1.12, 0.72);   // 三川脊：中間高、兩側低
+    const ridgeC = mat('tileDeep', 0xc0601f);   // 屋脊和燕尾用瓦橘深一階，金色只留門楣和簷下橫帶（美術 10/30）
+    g.add(box(1.5, 0.06, 0.05, gold, 0, 0.86, 0.47));   // 簷下金色橫帶
+    [-1, 1].forEach(s => { const tail = box(0.08, 0.25, 0.07, ridgeC, s * 0.5, 1.6, 0); tail.rotation.z = -s * 0.85; g.add(tail);   // 燕尾：短四成、角度照舊（美術 10/30：不要像牛角）
+      const lan = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 3), lampMat()); lan.position.set(s * 0.45, 0.82, 0.55); g.add(lan); });
+    g.add(box(0.5, 0.48, 0.05, mat('door', 0x7a2a1f), 0, 0.2, 0.46));
     return g;
   }
   function port() {   // 飛船碼頭（主島浮在空中，10/27）：伸出島邊的木棧橋、碼頭小屋、一艘小飛船
@@ -129,6 +180,7 @@
     const pier = box(0.45, 0.1, 2.6, wood, -1.0, -0.25, 1.0); pier.rotation.y = 0.6; g.add(pier);
     boat = new THREE.Group();
     boat.add(box(0.42, 0.2, 0.7, mat('hull', 0xffffff)));   // 吊艙
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.08), glassMat); win.position.set(0, 0.1 + 0.02, 0.355 + 0.01); win.castShadow = false; boat.add(win);   // 小窗 [0.2, 0.08, 0.02, 0.02, 0.355]：和智慧島 AIRSHIP.win 同一組（相對吊艙中心，吊艙中心 y = 0.1）；做成一片平面貼在盒子正面的位置（+2 三角形，工程顧問 10/30），從後面看本來就被吊艙擋住；用窗戶的 glassMat，跟著天色亮
     const bal = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 4), mat('balloon', 0xe0782f)); bal.scale.set(0.9, 0.75, 1.6); bal.position.y = 0.75; boat.add(bal);   // 氣囊
     boat.add(box(0.03, 0.4, 0.03, mat('wood', 0x9a6b43), -0.15, 0.25, 0)); boat.add(box(0.03, 0.4, 0.03, mat('wood', 0x9a6b43), 0.15, 0.25, 0));
     boat.position.set(-1.9, -0.25, 2.0); boat.rotation.y = 0.6; g.add(boat);
@@ -144,6 +196,62 @@
     return g;
   }
   const BUILD = { exchange, church, temple, port, hall };
+  // 近版（BUILD_v1）：每棟一個細節網格＋一個發光網格；第一次需要時才建（工程顧問 10/29）
+  const PAL = { templeRed: 0xc8372d, pillar: 0x9e2a22, plinth: 0xd9cbb4, gold: 0xf2c14e, door: 0x7a2a1f, jade: 0x2f8a6a, ai: 0x2f5f8a, concrete: 0xc9c6bf, line: 0xb9b5ad, dark: 0x3d3a36,
+    wash: 0xd8cfbf, washLine: 0xc4baa8, frame: 0x2f5d62, medal: 0xb8ad98,
+    shu: 0xc8452d, yamabuki: 0xd9a03a, matcha: 0x4f7a3e, glassAi: 0x2f5f8a, lamp: 0xffd98a, lampWarm: 0xf2bf55 };   // 新顏色（美術 10/29；色票表 C.*）
+  const NEAR_IN = 16, NEAR_OUT = 19;
+  const near = {};   // k → { body, glow, on }
+  const bx = (w, h, d, c, x, y, z, rz, ry, glow) => ({ geo: new THREE.BoxGeometry(w, h, d), m: new THREE.Matrix4().compose(new THREE.Vector3(x || 0, (y || 0) + h / 2, z || 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry || 0, rz || 0)), new THREE.Vector3(1, 1, 1)), top: linC(c), bot: linC(c), glow });
+  const disc = (r, n, half, c, x, y, z, glow) => ({ geo: new THREE.CircleGeometry(r, n, 0, half ? Math.PI : Math.PI * 2), m: new THREE.Matrix4().makeTranslation(x, y, z), top: linC(c), bot: linC(c), glow });
+  const quad = (w, h, c, x, y, z) => ({ geo: new THREE.PlaneGeometry(w, h), m: new THREE.Matrix4().makeTranslation(x, y, z), top: linC(c), bot: linC(c), glow: 1 });
+  const NEAR = {
+    temple: () => [   // 三川殿正面 4 根紅柱和石柱礎、兩側小門、屋脊剪黏、門楣
+      ...[-0.68, -0.35, 0.35, 0.68].map(x => bx(0.09, 0.64, 0.09, PAL.pillar, x, 0.28, 0.52)), bx(1.5, 0.08, 0.14, PAL.plinth, 0, 0.2, 0.52),   // 深一階的紅柱＋石柱礎（石階色）
+      bx(0.26, 0.38, 0.04, PAL.door, -0.53, 0.2, 0.465), bx(0.26, 0.38, 0.04, PAL.door, 0.53, 0.2, 0.465),
+      bx(0.15, 0.15, 0.06, PAL.jade, -0.11, 1.6, 0, Math.PI / 4), bx(0.15, 0.15, 0.06, PAL.ai, 0.11, 1.6, 0, Math.PI / 4),
+      bx(0.5, 0.06, 0.03, PAL.gold, 0, 0.6, 0.49)],   // 門楣（金）
+    church: () => {   // 正面 3×4 彩色玻璃格窗（固定的不規則排列）、入口深色門、戶外斜梯的踏階、側面兩道細長窗、樓層線
+      const C = [PAL.shu, PAL.yamabuki, PAL.matcha, PAL.glassAi], O = [0, 2, 1, 3, 3, 0, 2, 1, 1, 3, 0, 2], out = [];
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) out.push(quad(0.17, 0.12, C[O[r * 4 + c]], -0.05 + (c - 1.5) * 0.21, 0.66 + r * 0.15, 0.54));
+      out.push(bx(0.3, 0.44, 0.04, PAL.dark, 0.42, 0, 0.51));
+      [0, 1, 2].forEach(i => out.push(bx(0.24, 0.05, 0.2, PAL.concrete, -0.78, 0.18 + i * 0.25, 0.32 - i * 0.24)));
+      out.push(bx(0.04, 0.5, 0.12, PAL.lamp, 0.66, 0.45, 0.22, 0, 0, 1), bx(0.04, 0.5, 0.12, PAL.lamp, 0.66, 0.45, -0.22, 0, 0, 1));
+      out.push(bx(1.34, 0.05, 1.04, PAL.line, 0, 1.18, 0));
+      return out;
+    }
+  };
+  function bakeFar(g) {   // 遠版：同一個不受光以外的物件都合成一個頂點色網格；夜光（lampMat）的合成另一個
+    const body = [], lit = [];
+    g.children.slice().forEach(c => { if (!c.isMesh) return; c.updateMatrix(); const lamp = c.material === M.lamp, col = lamp ? new THREE.Color(1, 1, 1) : c.material.color.clone();
+      (lamp ? lit : body).push({ geo: c.geometry, m: c.matrix.clone(), top: col, bot: col }); g.remove(c); });
+    if (body.length) g.add(new THREE.Mesh(merged(body), M.nearBody || (M.nearBody = std(0xffffff, { vertexColors: true }))));
+    if (lit.length) { const lm = lampMat().clone(); lm.vertexColors = true; g.add(new THREE.Mesh(merged(lit), M.lampV || (M.lampV = Object.assign(lm, {})))); }
+    return g;
+  }
+  function nearBuild(k) {
+    const g = root.children.find(o => o.userData.place === k); if (!g) return null;
+    const parts = NEAR[k](), body = parts.filter(p => !p.glow), lit = parts.filter(p => p.glow), n = { on: false };
+    n.body = new THREE.Mesh(merged(body), M.nearBody || (M.nearBody = std(0xffffff, { vertexColors: true })));
+    g.add(n.body);
+    if (lit.length) { if (!M.glowV) { M.glowV = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }); M.glowV.color.setScalar(glowK); } n.glow = new THREE.Mesh(merged(lit), M.glowV); g.add(n.glow); }
+    [n.body, n.glow].forEach(o => { if (o) { o.visible = false; o.userData.near = 1; } });
+    return (near[k] = n);
+  }
+  function nearAll(drop) {   // 離開主島畫面時釋放（工程顧問 10/29）
+    Object.keys(near).forEach(k => { const n = near[k]; [n.body, n.glow].forEach(o => { if (o) { o.parent && o.parent.remove(o); o.geometry.dispose(); } }); delete near[k]; });
+  }
+  function nearStep() {   // 每一幀只算 3 個距離
+    const P = ctx.places || {}, w = new THREE.Vector3();
+    ['temple', 'church'].forEach(k => {
+      const open = P[k] && !P[k].closed; let n = near[k];
+      if (!open) { if (n && n.on) { n.on = false; n.body.visible = false; if (n.glow) n.glow.visible = false; } return; }   // 準備中一律遠版
+      w.set(PLACE[k].x, LIFT + (PLACE[k].top || 0), PLACE[k].z);
+      const d = camera.position.distanceTo(w), want = n && n.on ? d <= NEAR_OUT : d <= NEAR_IN;
+      if (want && !n) n = nearBuild(k);
+      if (n && n.on !== want) { n.on = want; n.body.visible = want; if (n.glow) n.glow.visible = want; }
+    });
+  }
 
   // ---------- 靜態：海、主島、山脈、樹 ----------
   function buildStatic() {
@@ -154,7 +262,8 @@
     glassMat = std(0xfff3c4, { emissive: 0xffc35a, emissiveIntensity: 0.15 });
     root = new THREE.Group(); root.position.y = LIFT; scene.add(root);
     const wg = new THREE.CircleGeometry(90, 24); wg.rotateX(-Math.PI / 2);
-    water = new THREE.Mesh(wg, std(0x6fb4d8, { roughness: 0.4 })); water.position.y = -0.55; scene.add(water);   // 底下保留整片海（爸爸 10/27）
+    water = new THREE.Mesh(wg, std(0x6fb4d8, { roughness: 0.4 })); water.position.y = -0.55;   // 浮空群島：海面不畫（物件留著，setEnvironment 照舊改顏色）
+    buildCloudSea();   // 底下保留整片海（爸爸 10/27）
     // 天氣的霧和雨（台北的天氣）：霧是幾團貼著島的淡白霧氣，雨是一個 Points（都不算三角形預算以外的大物件）
     mist = new THREE.Group(); const mm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25, depthWrite: false }), mr = rng(41);
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + mr() * 0.5, d = 6 + mr() * 8, c = new THREE.Mesh(new THREE.SphereGeometry(2.6 + mr() * 1.2, 6, 2), mm); c.scale.set(1.8, 0.35, 1.2); c.position.set(Math.cos(a) * d, LIFT - 0.6 + mr() * 1.2, Math.sin(a) * d); mist.add(c); }
@@ -169,19 +278,20 @@
     // 用原始外形每隔一點取一點（15 點），每層約 56 個三角形
     const HIDE = new THREE.MeshBasicMaterial({ visible: false });
     const P15 = TW.filter((q, i) => i % 2 === 0).map(q => xz(q[0], q[1]));
-    [[0.97, 0.8, -1.55, 0xa08a74], [0.84, 0.75, -2.3, 0x8f7a66], [0.68, 0.7, -3.0, 0x7d6a58]].forEach(([k, d, y, c], i) => {
+    [[0.97, 0.8, -1.55, 0xa08a6e], [0.84, 0.75, -2.3, 0x958169], [0.68, 0.7, -3.0, 0x857260]].forEach(([k, d, y, c], i) => {
       const t = slab(P15, k, d, y, [HIDE, mat('tier' + i, c)]); t.position.z = -0.25 * i; root.add(t);   // 上下兩面被上一層蓋住、鏡頭也看不到底面，只畫側面
     });
-    const rootMat = mat('rockRoot', 0x6a5a4b);
+    const rootMat = mat('rockRoot', 0x857260);
     [[121.0, 24.2, 2.6, 0.9], [120.75, 23.4, 3.4, 1.1], [120.95, 22.8, 2.4, 0.8], [121.25, 23.9, 2.0, 0.7], [120.55, 23.9, 1.8, 0.6]].forEach(([lon, lat, h, r]) => {
       const p = xz(lon, lat), m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5, 1), rootMat); m.rotation.x = Math.PI; m.position.set(p.x * 0.6, -3.0 - h / 2, p.z * 0.6 - 0.6); root.add(m);
     });
     // 島腳的雲（4 朵）
     const cloud = mat('footCloud', 0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.55, flatShading: false });
-    [[121.8, 24.4, 1.5], [120.3, 23.6, 1.7], [121.2, 22.9, 1.4], [120.9, 24.9, 1.3]].forEach(([lon, lat, r]) => {
+    if (0) [[121.8, 24.4, 1.5], [120.3, 23.6, 1.7], [121.2, 22.9, 1.4], [120.9, 24.9, 1.3]].forEach(([lon, lat, r]) => {   // 浮空群島：托雲改由雲海取代
       const p = xz(lon, lat), c = new THREE.Mesh(new THREE.SphereGeometry(r, 5, 3), cloud); c.scale.y = 0.45; c.position.set(p.x * 1.08, -1.6, p.z * 1.05); root.add(c);
     });
-    root.add(slab(pts, 1.0, 0.5, -0.5, mat('grass', 0x8cc56f)));
+    root.add(slab(pts, 1.0, 0.5, -0.5, [HIDE, mat('grass', 0x8cc56f)]));   // 浮空群島：草地只畫側面＋上面一片（底面永遠看不到，省約 118 個三角形）
+    { const sh = new THREE.Shape(); pts.forEach((p, i) => { if (i) sh.lineTo(p.x, -p.z); else sh.moveTo(p.x, -p.z); }); const tg = new THREE.ShapeGeometry(sh, 1); tg.rotateX(-Math.PI / 2); root.add(new THREE.Mesh(tg, M.grass)); }
     // 中央山脈：沿脊線排幾座低多邊形山，玉山最高、山頂一點白
     const rock = mat('mountain', 0x6f9a5b), snow = mat('snow', 0xf6f6f2);
     RIDGE.forEach(([lon, lat, h], i) => {
@@ -198,10 +308,12 @@
       const lon = 120.2 + r() * 1.6, lat = 22.1 + r() * 3.1, p = xz(lon, lat);
       if (!inside(pts, p.x, p.z) || nearAny(p, 2.2) || Math.abs(lon - ridgeLon(lat)) < 0.28) continue;
       const t = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.9, 5, 1), tree); t.position.set(p.x, 0.55, p.z); root.add(t); TREES.push(p);
+      t.userData.inland = Math.min(...pts.map(q => Math.hypot(q.x - p.x, q.z - p.z))) * (Math.abs(lon - ridgeLon(lat)) > 0.45 ? 1 : 0);   // 離海岸多遠；靠山脊的算 0
       n++;
     }
+    lodTrees = root.children.filter(o => o.userData.inland > 0).sort((a, b) => b.userData.inland - a.userData.inland).slice(0, 14);   // 遠看藏起來的 14 棵（騰出島邊浮雲的預算）
     Object.keys(BUILD).forEach(k => {
-      const g = BUILD[k](), p = PLACE[k];
+      const g = NEAR[k] ? bakeFar(BUILD[k]()) : BUILD[k](), p = PLACE[k];   // 三棟的遠版合成一個網格（夜光的另一個），draw call 每棟 2 個
       g.position.set(p.x, p.top || 0, p.z); g.userData.place = k;
       if (k === 'port') g.rotation.y = 0.5;
       if (k === 'exchange') g.rotation.y = Math.PI;   // 交易所在北端海邊，正面朝外海，主島轉到北邊時整面看得到（爸爸 10/30）
@@ -228,28 +340,38 @@
     sigIsles = sig;
     clearLayer(isleLayer);
     const sand = mat('sand', 0xf1dfb0), grass = mat('grass', 0x8cc56f), off = mat('offIsle', 0xd8d2c0);
-    const cloudMat = mat('isleCloud', 0xffffff), rockMat = mat('isleRock', 0x7a6f66);
+    const rocks = [], falls = [], puffParts = [], one = new THREE.Color(1, 1, 1), dim = new THREE.Color(0.9, 0.9, 0.9);
     (ctx.isles || []).forEach(s => {
       const a = (s.a || 0) * Math.PI, x = Math.cos(a) * RX, z = Math.sin(a) * RZ;
-      const up = s.bg === 'sky' || s.bg === 'space' ? 1.3 : 0;   // 2b-2：各人選的背景，天空、宇宙的島浮起來
+      const up = 1.3;   // 浮空群島：每座島一樣高（美術 10/29：高低會被讀成排名）
       const g = new THREE.Group(); g.position.set(x, up, z); g.userData.isle = s.key;
-      const big = s.mine ? 1.0 : 0.8;
-      const b = new THREE.Mesh(new THREE.CylinderGeometry(2.4 * big, 2.7 * big, 0.5, 9), sand); b.position.y = -0.4; g.add(b);
-      const t = new THREE.Mesh(new THREE.CylinderGeometry(2.0 * big, 2.2 * big, 0.3, 9), s.open === false ? off : grass); t.position.y = -0.1; g.add(t);
+      const big = (s.mine ? 1.0 : 0.8) * 1.2;   // 浮空群島：總覽裡小島放大 1.2 倍，岩底和浮雲才看得清楚（美術 10/29；鏡頭不拉近，四角的島都要看得到）
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(2.4 * big, 2.7 * big, 0.5, 7), sand); b.position.y = -0.4; g.add(b);
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(2.0 * big, 2.2 * big, 0.3, 7), s.open === false ? off : grass); t.position.y = -0.1; g.add(t);
       if (s.open !== false) {
         g.add(box(0.7, 0.5, 0.6, mat('isleHouse', 0xfdf6ec), 0, 0.05, 0));
         const r = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.4, 4, 1), mat(s.slot === 'wisdom' ? 'roofWis' : 'roofRed', s.slot === 'wisdom' ? 0x2e3a59 : 0xc0504d)); r.rotation.y = Math.PI / 4; r.position.y = 0.75; g.add(r);
       }
-      if (s.bg === 'sky') {   // 底下一朵雲（1 個網格）
-        const c = new THREE.Mesh(new THREE.SphereGeometry(2.4 * big, 6, 3), cloudMat); c.scale.set(1.45, 0.38, 1.3); c.position.y = -0.75; g.add(c);
-      } else if (s.bg === 'space') {   // 底下一塊岩塊（1 個網格）＋一圈小星星（1 個 Points，40 顆）
-        const k = new THREE.Mesh(new THREE.ConeGeometry(3.1 * big, 2.4, 6, 1), rockMat); k.rotation.x = Math.PI; k.position.y = -1.75; g.add(k);
-        g.add(starRing(2.9 * big));
-      }
+      // 浮空群島：岩底（倒圓錐 6 面、不封口，12 個三角形）和海島的小瀑布（朝預設鏡頭那側）都先收起來，最後各合成一個網格
+      // 島下方照家人島 3D 的浮島造型（爸爸 10/29）：深的倒圓錐岩塊（8 面）＋深色尖端＋一顆小浮石，上亮下暗；一座 34 個三角形
+      // 島下方和 island3d.js 的浮島同一套造型（爸爸 10/29；美術：總覽和進到島上要長得一樣）：倒圓錐 7 面 3 段（地層感）＋深色尖端（7 面、同一個轉角，上緣剛好貼在倒錐面上，接縫密合），
+      // 顏色上端 #a08a6e、下端 #857260；一座 56 個三角形。位置都用同一套規則（不隨機），對所有人一樣
+      const rb = 2.75 * big, ry = up - 0.65, L = (dx, dz, k) => [x + dx * rb * k, z + dz * rb * k];
+      rocks.push({ geo: new THREE.ConeGeometry(rb, rb * 1.3, 7, 3, true).rotateX(Math.PI), m: at(x, ry - rb * 0.65, z, 1, 1, 1, 0.2), top: linC(0xa08a6e), bot: linC(0x8f7b66) });
+      rocks.push({ geo: new THREE.ConeGeometry(rb * 0.36, rb * 0.818, 7, 1, true).rotateX(Math.PI), m: at(x, ry - rb * 1.241, z, 1, 1, 1, 0.2), top: linC(0x857260), bot: linC(0x857260) });
+      if (FLOAT.pebble) { const [px, pz] = L(0.75, -0.65, 1.05); rocks.push({ geo: new THREE.OctahedronGeometry(0.3 * big, 0), m: at(px, ry - 1.7, pz, 1, 0.8, 1), top: linC(0xa08a6e), bot: linC(0x857260) }); }   // 浮石：右後下方，不在島和鏡頭之間
+      // 島緣的浮雲是主角（爸爸 10/29）：buildFloat 那種扁二十面體，左前一朵、右後一朵（FLOAT.puffs 決定幾朵），半截藏在岩塊後，不蓋名牌和房子
+      [[-0.78, 0.62, 1.0], [0.8, -0.6, 0.85]].slice(0, FLOAT.puffs).forEach(([dx, dz, k]) => { const [px, pz] = L(dx, dz, 0.92); puffParts.push({ geo: new THREE.IcosahedronGeometry(rb * 0.42 * k, 0), m: at(px, ry - 0.5, pz, 1.6, 0.5, 1.2), top: one, bot: dim }); });
+      if (s.bg === 'sea') falls.push({ geo: (() => { const g = new THREE.PlaneGeometry(0.55, 2.1), q = g.attributes.position; for (let v = 0; v < q.count; v++) if (q.getY(v) > 0) q.setX(v, q.getX(v) * 1.35); return g; })(), m: at(x + 0.6 * big, up - 1.75, z + 2.62 * big, 1, 1, 1), top: linC(0xbfe6f5), bot: linC(0xf3f1ec) });   // 由上往下漸變成雲色，像散進雲裡（美術 10/29）
+      if (s.bg === 'space') g.add(starRing(2.9 * big));   // 宇宙的島：一圈小星星照舊
       isleLayer.add(g);
       const sp = labelSprite(s.name, s.sub || null, { scale: s.mine ? 1.6 : 1.4, color: s.open === false ? '#6a6a6a' : '#2f4a7a' });
       sp.position.set(x, 1.8 + up, z); sp.userData.isle = s.key; isleLayer.add(sp);
     });
+    [[120.25, 22.75, 1.0], [121.85, 24.95, 0.8]].forEach(([lon, lat, k]) => { const p = xz(lon, lat); puffParts.push({ geo: new THREE.IcosahedronGeometry(2.3 * k, 0), m: at(p.x * 1.02, LIFT - 1.3, p.z * 1.02, 1.6, 0.5, 1.2), top: one, bot: dim }); });   // 主島邊也兩朵（美術 10/29）
+    if (puffParts.length) { const pg = merged(puffParts); puffBase = shadeOf(pg, false); puffs = new THREE.Mesh(pg, M.cloudSea); isleLayer.add(puffs); if (lastCloud) paint(puffs, puffBase, lastCloud, lastSky); } else puffs = null;
+    if (rocks.length) isleLayer.add(new THREE.Mesh(merged(rocks), mat('isleRockV', 0xffffff, { vertexColors: true, emissive: 0x6a5646 })));   // 背光面也看得出土色（美術：暗是對的，但不要黑）
+    if (falls.length) isleLayer.add(new THREE.Mesh(merged(falls), M.fall || (M.fall = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }))));
   }
 
   // 宇宙的島：一圈小星星（固定種子，每次一樣；Points 不算三角形）
@@ -275,17 +397,21 @@
   function setEnvironment(e) {
     const env = Object.assign({ phase: 'day', weather: 'clear' }, e || {}), ph = env.phase, wet = env.weather === 'rain' || env.weather === 'storm', night = ph === 'night';
     const fog = env.weather === 'fog', cloudy = env.weather === 'cloudy';
-    const sky = new THREE.Color(SKY[ph]); if (wet) sky.lerp(new THREE.Color(0xaab6c0), 0.5); else if (fog) sky.lerp(new THREE.Color(0xdfe5ea), 0.6); else if (cloudy) sky.lerp(new THREE.Color(0xc4ced6), 0.35);
+    const sky = new THREE.Color(SKY[ph]); if (ph === 'dusk') { sky.getHSL(hsl); sky.setHSL(hsl.h, hsl.s * 0.8, hsl.l); }   // 浮空群島：黃昏的天空飽和度降兩成（美術 10/29） if (wet) sky.lerp(new THREE.Color(0xaab6c0), 0.5); else if (fog) sky.lerp(new THREE.Color(0xdfe5ea), 0.6); else if (cloudy) sky.lerp(new THREE.Color(0xc4ced6), 0.35);
     scene.background = sky; lin(scene.fog.color.copy(sky));
     hemi.intensity = (night ? 0.3 : 0.5) * (wet ? 0.75 : 1);
     sun.intensity = (night ? 0.05 : ph === 'day' ? 1.0 : 0.75) * (wet ? 0.5 : 1);
     lin(sun.color.setHex(ph === 'dawn' ? 0xffc89a : ph === 'dusk' ? 0xff9f6a : 0xfff4e0));
     lin(water.material.color.setHex(night ? 0x24456a : wet ? 0x5d8aa6 : fog ? 0x9fbccc : 0x6fb4d8));
     scene.fog.near = fog ? 34 : wet ? 40 : 55; scene.fog.far = fog ? 88 : wet ? 100 : 110;   // 起霧時遠處的島看不太清楚
-    if (mist) mist.visible = fog || wet || cloudy;
+    mistOn = fog || wet || cloudy;   // 霧依相機距離漸淡（loop 裡算）
+    { const sk = sky.clone().convertSRGBToLinear();   // 和背景完全同色，雲海外緣才會變成柔和的地平線（美術 10/29）
+      paintClouds(wet ? linC(CLOUD_WET) : night ? linC(CLOUD_NIGHT) : linC(PAPER).lerp(sk, 0.3).multiplyScalar(fog || cloudy ? 0.94 : 1), sk); }
+    scene.fog.near = fog ? 45 : wet ? 55 : 70; scene.fog.far = fog ? 110 : wet ? 125 : 140;   // 總覽：島都在 90 以內，不要被霧洗白（美術 10/29）
     if (rain) rain.visible = wet && !CALM;
     flash = env.weather === 'storm' && !CALM ? 1 : 0;
     glassMat.emissiveIntensity = night || ph === 'dusk' || wet ? 1.0 : 0.15;
+    glowK = night || ph === 'dusk' || wet ? 1.0 : 0.8; if (M.glowV) M.glowV.color.setScalar(glowK); if (M.lamp) M.lamp.color.setHex(0xf2bf55).multiplyScalar(glowK); if (M.lampV) M.lampV.color.setHex(0xf2bf55).multiplyScalar(glowK);   // 三棟同一個夜光強度（燈籠、彩色玻璃、交易所窗）
     if (container) container.style.background = '#' + sky.getHexString();
     if (renderer) renderer.toneMappingExposure = night ? 0.8 : 0.62;
   }
@@ -308,8 +434,8 @@
     if (!container) return;
     const w = container.clientWidth, h = container.clientHeight;
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
-    const d = Math.min(80, 46 * Math.pow(Math.max(1, h / w), 0.85));   // 直式手機拉遠一點，列島才放得下
-    camera.position.copy(new THREE.Vector3(0, 8, 34).normalize().multiplyScalar(d));   // 低一點的視角，看得到主島浮在空中（爸爸 10/27）
+    const d = Math.min(80, 52 * Math.pow(Math.max(1, h / w), 0.8));   // 斜角看下來，南邊的島比較靠近鏡頭，拉遠一點才放得下   // 直式手機拉遠一點，列島才放得下
+    camera.position.copy(new THREE.Vector3(0, Math.tan(35 * Math.PI / 180), 1).normalize().multiplyScalar(d));   // 35° 斜角鳥瞰，看得到每座島的岩底浮在雲海上（浮空群島，美術 10/29）
   }
   // 鏡頭轉到某座島那一側，島在前景（工程顧問 10/27）；減少動態效果時直接跳過去
   let turn = null;
@@ -331,15 +457,23 @@
     if (k >= 1) turn = null;
   }
   function loop() {
-    if (!renderer.domElement.isConnected) { running = false; return; }
+    if (!renderer.domElement.isConnected) { running = false; nearAll(); return; }
     if (document.hidden) { setTimeout(() => requestAnimationFrame(loop), 1000); return; }
     const t = CALM ? 0 : performance.now() / 1000;
     if (rain && rain.visible) { const ra = rain.geometry.attributes.position.array; for (let i = 1; i < ra.length; i += 3) { ra[i] -= 0.25; if (ra[i] < -0.5) ra[i] += 16; } rain.geometry.attributes.position.needsUpdate = true; }
     if (flash) { const f = Math.sin(t * 0.7) > 0.995; hemi.intensity = f ? 1.6 : 0.37; }   // 雷雨：偶爾閃一下
     if (boat) { boat.position.y = -0.25 + Math.sin(t * 1.3) * 0.06; boat.rotation.z = Math.sin(t * 0.9) * 0.03; }
-    turnStep(); controls.update(); renderer.render(scene, camera);
+    turnStep(); controls.update(); farNear(); nearStep(); renderer.render(scene, camera);
     if (guard) guard.frame();
     requestAnimationFrame(loop);
+  }
+  // 遠近：主島的 14 棵內陸樹 28 以內才畫、31 以外才藏（中間不換，不會來回閃）；霧 20 以內最濃、28 以外不畫；降到最低畫質就不畫霧
+  function farNear() {
+    const d = camera.position.distanceTo(controls.target);
+    const far = lodFar ? d > 28 : d > 31;
+    if (far !== lodFar) { lodFar = far; lodTrees.forEach(t => { t.visible = !far; }); }
+    const k = mistOn && !(window.FpsGuard && FpsGuard.level() >= 2) ? Math.max(0, Math.min(1, (28 - d) / 8)) : 0;
+    if (mist) { mist.visible = k > 0; if (k > 0) mist.children[0].material.opacity = 0.25 * k; }
   }
   function mount(el, context) {
     container = el; ctx = context || {};
@@ -351,7 +485,7 @@
       if (window.FpsGuard) guard = FpsGuard.create({ renderer });
       camera = new THREE.PerspectiveCamera(40, 1, 0.1, 260);
       controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true; controls.enablePan = false; controls.minDistance = 16; controls.maxDistance = 90; controls.maxPolarAngle = 1.38; controls.target.set(0, 1.2, 0);   // 主島浮起來，視線中心跟著抬一點
+      controls.enableDamping = true; controls.enablePan = false; controls.minDistance = 16; controls.maxDistance = 90; controls.minPolarAngle = Math.PI / 2 - 50 * Math.PI / 180; controls.maxPolarAngle = Math.PI / 2 - 25 * Math.PI / 180; controls.target.set(0, 1.2, 0);   // 主島浮起來，視線中心跟著抬一點
       controls.autoRotate = !CALM; controls.autoRotateSpeed = 0.3;
       renderer.domElement.addEventListener('pointerdown', onDown);
       renderer.domElement.addEventListener('pointerup', onUp);
