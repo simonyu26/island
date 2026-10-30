@@ -150,8 +150,62 @@
     const n = dn(+m[1], +m[2], +m[3]);
     return B.fest.some(f => { const q = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f[0]); return q && Math.abs(n - dn(+q[1], +q[2], +q[3])) <= f[1]; }) ? B.festCard || 0 : 0;
   }
+  // ---------- STORIES2_v1：你來選、節期日期、台灣地圖（爸爸 10/30）。狀態都只放記憶體，翻頁、收起就清空 ----------
+  let quiz = null, mapSel = -1;   // quiz：{ key: 'b:c', picked: [選過的] }；mapSel：地圖上選到第幾個點
+  function quizHtml(b, c, q) {
+    const st = quiz && quiz.key === b + ':' + c ? quiz : { picked: [] }, done = st.picked.indexOf(q.a) >= 0;
+    const opt = (o, i) => { const tried = st.picked.indexOf(i) >= 0, right = done && i === q.a;
+      return `<button class="ghost" style="display:block;width:100%;min-height:44px;text-align:left;margin-top:6px;opacity:1;${right ? 'border:2px solid #5b3a6b;font-weight:700;' : done || tried ? 'background:#f7f1e5;color:#5f5a55;border:1px solid #d8d0c4;' : ''}"${done || tried ? ' disabled' : ''} onclick="mainQuiz('${b}',${c},${i})">${'ABC'.charAt(i)}. ${esc(o)}</button>`; };
+    const fb = done ? `<div style="margin-top:8px"><b>對了！</b>${esc(q.x)}</div>` : st.picked.length ? '<div class="muted" style="margin-top:8px">再想想看</div>' : '';   // 點錯不用紅色、不用 ✗、不扣東西（文案 74）
+    return `<div id="miQuiz" style="margin-top:10px;padding:8px 10px;border-radius:12px;background:#fff"><b>你來選</b><div style="margin-top:4px">${esc(q.q)}</div>${q.o.map(opt).join('')}${fb}</div>`;
+  }
+  window.mainQuiz = function (b, c, i) {   // 只換掉這一題的區塊，不呼叫 render()（工程顧問 10/30）
+    const B = BOOK[b], k = B && B.data && B.data.units[0].cards[c], q = k && k.q; if (!q) return;
+    if (!quiz || quiz.key !== b + ':' + c) quiz = { key: b + ':' + c, picked: [] };
+    if (quiz.picked.indexOf(i) < 0) quiz.picked.push(i);
+    const el = document.getElementById('miQuiz'); if (el) el.outerHTML = quizHtml(b, c, q);
+  };
+  function calHtml(cal, day) {   // 節期日期（不倒數）：日期表是 'YYYY-MM-DD' 字串，直接和 S.today 比大小
+    const m = /^\d{4}-\d{2}-\d{2}/.exec(day || ''); if (!m || !Array.isArray(cal)) return '';
+    const fmt = d => { const q = d.split('-'); return `${+q[0]} 年 ${+q[1]} 月 ${+q[2]} 日`; };
+    const rows = cal.map(f => { if (f.txt) return f.n + '：' + f.txt; const nx = (f.d || []).filter(d => d >= m[0]).sort()[0]; return nx ? f.n + '：' + (nx === m[0] ? '就是今天' : fmt(nx)) + (f.sub ? '（' + f.sub + '）' : '') : ''; }).filter(Boolean);
+    return rows.length ? `<div class="muted" style="margin-top:4px;font-size:13px">${rows.map(esc).join('<br>')}</div>` : '';
+  }
+  // 地圖的投影（和 廟與教會_開發中/gen_map.py 同一組常數）：x = 136 + (lon − 121)·cos(23.6°)·80，y = 150 − (lat − 23.6)·80；北部放大框裡的點畫在框裡
+  const MAPIN = { lon: 121.34, lat: 25.24, w: 0.24, h: 0.28, k: 3.4, x: 6, y: 8 };
+  function mapXY(lon, lat) {
+    const C = Math.cos(23.6 * Math.PI / 180), I = MAPIN;
+    if (lon >= I.lon && lon <= I.lon + I.w && lat <= I.lat && lat >= I.lat - I.h) return { x: I.x + (lon - I.lon) * C * 80 * I.k, y: I.y + (I.lat - lat) * 80 * I.k, inset: true };
+    return { x: 136 + (lon - 121) * C * 80, y: 150 - (lat - 23.6) * 80 };
+  }
+  const dotCss = on => `position:absolute;box-sizing:content-box;border-radius:50%;background:#5b3a6b;pointer-events:none;${on ? 'width:14px;height:14px;margin:-9px 0 0 -9px;border:2px solid #d9a03a' : 'width:10px;height:10px;margin:-7px 0 0 -7px;border:2px solid #fff'}`;   // 兩張地圖同一種點（美術 10/30）
+  function mapInfoHtml(b) {
+    const P = BOOK[b].data.map, x = P[mapSel];
+    if (!x) return '<div style="font-size:13px;color:#5f5a55">點地圖上的點看看</div>';
+    return `<div style="font-size:16px;font-weight:700">${esc(x.n)}</div><div style="font-size:13px;color:#5f5a55">${esc(x.at)}</div><div style="font-size:14px;margin-top:4px">${esc(x.s)}</div>
+      <a class="tlink" href="javascript:void 0" onclick="mainBook('${b}',0,${x.c})">看第 ${x.c + 1} 張 →</a>`;
+  }
+  window.mainMap = function (b) { mainBook(b, 0, 0); const B = BOOK[b]; if (B && B.nb) { B.nb.map = 1; paintInfo(); } };
+  window.mainMapPick = function (b, i) {   // 只改點的樣子和地圖下面那一塊，不重畫
+    mapSel = i; document.querySelectorAll('#miMap [data-pi]').forEach(d => { d.style.cssText = dotCss(+d.dataset.pi === i) + `;left:${d.dataset.x}px;top:${d.dataset.y}px`; });
+    const el = document.getElementById('miMapInfo'); if (el) el.innerHTML = mapInfoHtml(b);
+  };
+  window.mainMapTap = function (ev, b) {   // 點的範圍不靠各自的圓，選離手指最近、30px 內的那一個（美術 10/30）
+    const box = document.getElementById('miMap').getBoundingClientRect(), x = ev.clientX - box.left, y = ev.clientY - box.top;
+    let best = -1, bd = 30;
+    BOOK[b].data.map.forEach((p, i) => { const q = mapXY(p.lon, p.lat), d = Math.hypot(q.x - x, q.y - y); if (d <= bd) { bd = d; best = i; } });
+    if (best >= 0) mainMapPick(b, best);
+  };
+  function mapHtml(b) {
+    const P = BOOK[b].data.map;
+    const dots = P.map((p, i) => { const q = mapXY(p.lon, p.lat), x = q.x.toFixed(1), y = q.y.toFixed(1); return `<div data-pi="${i}" data-x="${x}" data-y="${y}" style="${dotCss(i === mapSel)};left:${x}px;top:${y}px"></div>`; }).join('');
+    return `<div id="miMap" style="position:relative;width:232px;height:302px;max-height:60vh;margin:8px auto 0" onclick="mainMapTap(event,'${b}')"><img src="notes/taiwan-map.svg" width="232" height="302" alt="台灣地圖" style="display:block">${dots}</div>
+      <div style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">${P.map((p, i) => `<button onclick="mainMapPick('${b}',${i})">${esc(p.n)}</button>`).join('')}</div>
+      <div id="miMapInfo" style="margin-top:8px">${mapInfoHtml(b)}</div>`;
+  }
   window.mainBook = function (b, u, c) {
     const B = BOOK[b]; if (!B) return;
+    quiz = null; mapSel = -1;   // 翻頁、收起：你來選和地圖的選擇都清掉
     B.nb = u == null ? null : { u, c: c || 0 };
     if (B.nb && !B.data && !B.busy) {
       B.busy = true;
@@ -175,14 +229,17 @@
         <div class="muted" style="margin-top:6px">今天的推薦</div><button style="margin-top:4px" onclick="mainNotes(${p.u},${p.c})">${pu.ic} ${esc(pu.title)}・${esc(pu.cards[p.c].t)}</button>
         <div class="muted" style="margin-top:10px">全部單元</div>${U.map((x, u) => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainNotes(${u},0)">${x.ic} ${esc(x.title)}（${x.cards.length}）</button>`).join('')}`);
     }
+    const mapBtn = one && Array.isArray(B.data.map) && B.data.map.length ? `<button class="ghost" onclick="mainMap('${b}')">台灣地圖</button>` : '';
+    const cal = one ? calHtml(B.data.cal, S && S.today) : '';
+    if (one && nb.map && mapBtn) return box(`<div class="row"><b class="grow">台灣地圖</b><button class="ghost" onclick="mainBook('${b}',0,0)">看卡片</button><button class="ghost" onclick="mainBook('${b}')">收起</button></div>${mapHtml(b)}`);
     const x = U[one ? 0 : nb.u], c = Math.max(0, Math.min(nb.c, x.cards.length - 1)), k = x.cards[c], last = c === x.cards.length - 1;
     const go = (cc, label, off) => `<button class="ghost" onclick="${one ? `mainBook('${b}',0,${cc})` : `mainNotes(${nb.u},${cc})`}"${off ? ' disabled' : ''}>${label}</button>`;
     const img = k.img && /^[a-z0-9-]+\.svg$/.test(k.img) ? `<img src="notes/${k.img}" alt="${esc(k.alt || k.t)}" style="width:100%;max-width:420px;display:block;margin:8px auto 0;border-radius:10px">` : '';   // 示意圖是單獨的 svg 檔，用 img 載（工程顧問 10/30）
-    return box(`<div class="row"><b class="grow">${one ? '' : x.ic + ' '}${esc(x.title)}・${c + 1}／${x.cards.length}</b>${one ? `<button class="ghost" onclick="mainBook('${b}')">收起</button>` : '<button class="ghost" onclick="mainNotes(-1)">單元列表</button>'}</div>
+    return box(`<div class="row"><b class="grow">${one ? '' : x.ic + ' '}${esc(x.title)}・${c + 1}／${x.cards.length}</b>${one ? `${mapBtn}<button class="ghost" onclick="mainBook('${b}')">收起</button>` : '<button class="ghost" onclick="mainNotes(-1)">單元列表</button>'}</div>${cal}
       <div style="margin-top:6px"><b>${esc(k.t)}</b></div>${img}
       <div style="margin-top:6px">${esc(k.b)}</div>
       <div class="muted" style="margin-top:6px;font-size:12px">課本裡叫什麼：${esc(k.k)}</div>
-      <div class="muted" style="font-size:11px">出處：${esc(k.src)}</div>
+      <div class="muted" style="font-size:11px">出處：${esc(k.src)}</div>${k.q && Array.isArray(k.q.o) ? quizHtml(b, c, k.q) : ''}
       ${last ? `<div class="speech" style="margin-top:10px">${esc(x.ask)}</div>` : ''}
       <div class="row" style="margin-top:8px">${go(c - 1, '◀ 上一張', !c)}<span class="grow"></span>${go(c + 1, '下一張 ▶', last)}</div>`);
   }
