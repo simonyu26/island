@@ -1673,7 +1673,7 @@
     }
     if (!hit) { unselect(); return; }   // 點空白處：收起拱橋和選取
     let o = hit.object; while (!o.userData.subject) o = o.parent;
-    if (o.userData.subject === selected) unselect();   // 再點同一位島民：收起拱橋（Simon 10/30）
+    if (o.userData.subject === selected) unselect();   // 再點同一位島民：收起拱橋（爸爸 10/30）
     else select(o.userData.subject);
   }
   let selected = null;
