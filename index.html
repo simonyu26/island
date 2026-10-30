@@ -254,6 +254,11 @@
   .bksec::after { content: ''; flex: 1; border-top: 1px solid #e0d2b6; }
   .bkp { margin: 0; line-height: 1.85; font-size: 14.5px; }
   .bkvalue { background: #fff4d6; border-left: 4px solid #d9b86a; border-radius: 4px; padding: 10px 12px; }
+  .askcard { border-left: 4px solid var(--gold); }   /* 和分享重整包共用：哪一包先上線就由它定義 */
+  .stkroute { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--plum-light); border-radius: 12px; min-height: 56px; padding: 8px 12px; margin: 6px 0; cursor: pointer; }
+  .stkroute b { font-size: 16px; } .stkroute .muted { font-size: 12px; } .stkroute > span { color: var(--muted); font-size: 20px; }
+  .stkdots { display: inline-flex; gap: 6px; vertical-align: middle; } .stkdots i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #4f7a3e; box-sizing: border-box; } .stkdots i.on { background: #4f7a3e; }
+  .tlink { color: var(--plum); text-decoration: none; }
   .bknote { background: #fffdf7; border: 1px solid #e3d3b2; border-radius: 4px; padding: 14px 16px 10px; transform: rotate(-1.2deg); box-shadow: 0 2px 6px rgba(0,0,0,.12); background-image: repeating-linear-gradient(transparent 0 27px, #ecdcc0 27px 28px); background-position: 0 10px; line-height: 28px; font-size: 15px; position: relative; color: #3a2a33; }
   .bknote .tape { position: absolute; top: -9px; left: 40%; width: 56px; height: 16px; background: rgba(233,196,106,.7); transform: rotate(3deg); }
   .bknote .who { text-align: right; color: #8c2f2b; font-size: 13px; }
@@ -329,11 +334,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.49.1';
+const APP_VERSION = '2.49.2';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.49.2', date: '2026-10-30', fam: [0], items: ['📚 玉山聚會所多了「山海筆記」：用台灣的颱風、天氣、地震、特有種和潮汐，說說課本裡的觀念，一共 5 個單元、31 張卡。點聚會所，在節氣卡下面按「打開」就看得到；每天會依季節和月亮排一張推薦在最前面。只是讀讀看，不加分、也不記錄看了什麼。', '🛶 同一類題最近有點卡的時候，燈塔會先停一下那幾個瓶子，給你兩條路：先看懂觀念，或先看一題完整解法，再練一兩題；不同的兩天各答對一題，就回到原來的航線。'] },
   { v: '2.49.1', date: '2026-10-30', fam: [0, 1], items: ['⛰️ 核心主島開了：遠方天上浮著的那座島就是主島，點它就能搭飛船過去（清單模式在「去島上走走」點 ⛰️ 主島）。飛船碼頭的 Solomon 船長會先跟你打招呼；玉山聚會所的阿台婆婆那裡有家人的公告和今天的節氣。去主島沒有獎勵，想逛就逛。', '🌉 再點一次同一位島民，拱橋就會收起來。', '🏝️ 智慧島多了一個岬角，老師的小屋重新排過；課程裡的老照片可以點開放大，灰色的小字也變清楚了。', '🧩 拍照收進來的國文、英文題，瓶子上會寫這題考的是哪一種閱讀能力或哪一個文法點，燈室「正在補強」和印錯題卷也會照這個整理。'] },
   { v: '2.49', date: '2026-10-31', items: ['📖 書店多了「親子共讀」計時：和家人一起讀書時按一下，每 25 分鐘一枚書籤 🔖 +10 綠點，跟運動一樣，不記書名。', '🔊 單字卡「看字」的每個字旁邊多了 🔊，按一下可以聽發音，再按一次會慢慢念；答完一題也可以聽整句例句。用的是手機內建的語音，手機沒有英文語音時不會出現這個按鈕。', '🔤 燈塔多了「拍單字出題」：拍課本或單字表上印刷的英文單字（也可以打字），存成單字卡，AI 照會考題型一次出 5 題給你練。答一題 +2 經驗值（一天最多 10），和挑戰任務分開算；沒答對的題會變成漂流瓶。', '📖 燈塔 2F 的航海日誌開放了：一週一頁，看這週照計畫讀了多少、各科做了幾次、你的一句話和燈塔的話、瓶子和燈籠、紙船和跨科連結；按「上一週」往前翻。這裡只是紀錄，不加分也不扣分。', '🍶 瓶子上的日期，改成寫哪一天收進來的。', '👀 瓶子上的「給爸爸看」改名叫「給家人看」，跟原本一樣，勾了家人都看得到你寫的原因和那句話。現在打勾就會存；想收回，再點一下把勾拿掉。', '🖨️ 燈塔海灘多了「印這週要複習的錯題」：把這週要漂回來的瓶子排成 A4，可以印出來或存成 PDF 在紙上寫，解答在最後一頁。'] },
   { v: '2.48.2', date: '2026-10-30', items: ['⛴️ 智慧島來了三位新老師：老教室的宜蓉（11/1 開門）、暗房小屋的瞇（11/2）、海邊物理治療所的郭哥（11/3）。每位老師一週一講，想上哪一位、上幾位都可以。', '🖼️ 宜蓉的課會先看一張老照片，點開那一講就看得到', '🔐 「誰看得到什麼」多了一列：拍錯題的照片存在爸爸管理的雲端硬碟，家人和訪客在 App 裡看不到'] },
@@ -2858,7 +2864,8 @@ function reviewDue(rv, wrongAt) {
 function photoWrongs() { return Object.keys(S.save).filter(k => k.startsWith('pq:') && S.save[k]).sort().map(k => Object.assign({ id: k }, S.save[k])); }
 // 今天漂回來的瓶子：一般瓶子先、燈籠老朋友後；同一類裡全國答對率高、她卻答錯的先漂回來
 function dueBottles(list) {
-  const due = (list || bottles()).filter(b => b.due && b.due <= S.today)
+  const stuck = stkSkip();   // 換條航線
+  const due = (list || bottles()).filter(b => b.due && b.due <= S.today && !(stuck.size && stuck.has(sidOf(b.rec, b.id))))
     .sort((a, b) => (!!a.lantern - !!b.lantern) || (!!a.guess - !!b.guess) || ((b.rec.pass || 0) - (a.rec.pass || 0)) || (a.wrongAt || '').localeCompare(b.wrongAt || ''));   // v2.31：每天的名額先給一般瓶子，老朋友排後面
   // v2.47 今天還能撿的數學瓶以外，多的數學瓶排到最後：別科補得滿就輪不到，補不滿再由它們補上
   let m = Math.max(0, MATH_DAILY - reviewsToday().filter(q => q.lane === '數').length);
@@ -2867,6 +2874,148 @@ function dueBottles(list) {
   return keep.concat(wait);
 }
 function reviewsToday() { return todayChallenges().filter(q => q.review); }
+/* --- 換條航線：同一個次觀念最近 14 天有 3 個以上的瓶子，錯因是觀念不熟或看不懂題目，就先停一下那幾個瓶子，換一條路走。
+   stuckList 是通用的，吃一份瓶子清單 [{ id, sid, lane, wrongAt, why, lantern }]，家人的瓶子也能用；只記錄，經驗值、島幣、⭐、燈籠都不變。
+   存檔 stk:<次觀念> = { at, ok: [{ d, r }], done, note, ex }，後端在 Lighthouse.gs。note 只給她看：不送 AI、不進學習摘要和印錯題卷 --- */
+const STK_FROM = '2026-10-30', STK_DAYS = 14, STK_MIN = 3, STK_SHOW = 2, STK_WHY = ['concept', 'reading'], STK_EX_DAILY = 3;
+// since(sid)：解除過的次觀念，只算解除隔天以後收進來的瓶子；上線以前收的瓶子都不算（不回溯）
+function stuckList(list, today, since) {
+  const from = addD(today, -(STK_DAYS - 1)), by = {};
+  (list || []).forEach(b => {
+    const d = String(b.wrongAt || '').slice(0, 10);
+    if (!b.sid || b.sid === '表外' || b.sid === '待確認' || b.lantern || STK_WHY.indexOf(b.why) < 0 || d < from || d > today || d < STK_FROM || (since && d < since(b.sid))) return;
+    const x = by[b.sid] || (by[b.sid] = { sid: b.sid, lane: b.lane, ids: [], last: '' });
+    if (x.ids.indexOf(b.id) < 0) x.ids.push(b.id);
+    if (d > x.last) x.last = d;
+  });
+  return Object.values(by).filter(x => x.ids.length >= STK_MIN).sort((a, b) => b.last.localeCompare(a.last) || a.sid.localeCompare(b.sid)).slice(0, STK_SHOW);
+}
+function stkOf(sid) { return S.save['stk:' + sid] || null; }
+function stkActive() { return Object.keys(S.save).filter(k => k.startsWith('stk:') && S.save[k] && !S.save[k].done).map(k => k.slice(4)); }
+function stkSkip() { return new Set(conceptsData ? stkActive() : []); }
+function sidLane(sid) { return Object.keys((conceptsData && conceptsData.lanes) || {}).find(l => conceptsData.lanes[l].some(x => x.id === sid)) || ''; }
+// 她的燈塔：還沒解除的標記先，再來是剛觸發的；今天解除的顯示一次「回到原來的航線了」
+function myStuck(all) {
+  if (!conceptsData || isFamily()) return [];
+  const list = (all || bottles()).map(b => ({ id: b.id, sid: sidOf(b.rec, b.id), lane: laneOf(b.rec, b.lane), wrongAt: b.wrongAt, why: b.rv.why, lantern: b.lantern, b }));
+  const since = sid => { const x = stkOf(sid); return x && x.done ? addD(x.done, 1) : ''; };
+  const out = stkActive().sort((a, b) => (stkOf(b).at || '').localeCompare(stkOf(a).at || '')).map(sid => ({ sid, lane: sidLane(sid) }));
+  stuckList(list, S.today, since).forEach(x => { if (!out.some(y => y.sid === x.sid)) out.push({ sid: x.sid, lane: x.lane, fresh: true }); });
+  Object.keys(S.save).filter(k => k.startsWith('stk:') && S.save[k] && S.save[k].done === S.today).forEach(k => { if (!out.some(y => y.sid === k.slice(4))) out.push({ sid: k.slice(4), lane: sidLane(k.slice(4)), back: true }); });
+  out.forEach(x => { x.bs = list.filter(b => b.sid === x.sid && !b.lantern).sort((a, b) => (b.wrongAt || '').localeCompare(a.wrongAt || '')).map(b => b.b); });
+  return out.slice(0, STK_SHOW);
+}
+// 不同的兩天、連續答對（從最後一次往回數，答錯就重算）
+function stkDays(x) { const ok = (x && x.ok) || []; let i = ok.length; while (i > 0 && ok[i - 1].r) i--; return new Set(ok.slice(i).map(t => t.d)).size; }
+function stkType(lane, sid) { const t = (conceptsData && conceptsData.type) || {}; const k = Object.keys(t).find(k => k.startsWith(lane + '|') && (t[k] === sid || (t[k] && t[k].in && t[k].in.includes(sid)))); return k ? k.slice(lane.length + 1) : ''; }
+function stkCardOf(x) { const b = x.bs[0], u = b && unitOf(b.rec, b.id); return u ? cardOf({ card: x.lane + '|' + u }) : null; }
+function stkExLeft() { return STK_EX_DAILY - Object.keys(S.save).filter(k => k.startsWith('stk:') && S.save[k] && S.save[k].exTry && S.save[k].exTry.d === S.today).reduce((a, k) => a + (S.save[k].exTry.n || 0), 0); }
+let stkGo = null, stkBusy = '', stkAskOpen = '';
+const stkMarked = {}, stkMsg = {};
+function stkMark(list) {
+  list.filter(x => x.fresh && !stkMarked[x.sid]).forEach(x => {
+    stkMarked[x.sid] = 1;
+    flush().then(() => call('markStuck', x.sid)).then(st => { S = st; D = derive(S); softRender(); }).catch(() => {});
+  });
+}
+function stkDots(n) { return `<span class="stkdots" aria-label="已點亮 ${n}／2"><i class="${n >= 1 ? 'on' : ''}"></i><i class="${n >= 2 ? 'on' : ''}"></i></span>`; }
+function stkCard(all) {
+  const list = myStuck(all); if (!list.length) return '';
+  stkMark(list);
+  return list.map(x => {
+    const info = sidInfo(x.lane, x.sid) || { name: x.sid }, name = esc(info.short || info.name), st = stkOf(x.sid) || {};
+    if (x.back) return `<div class="card askcard stkcard"><h3>🛶 換條航線</h3><div>${stkDots(2)} 「${name}」回到原來的航線了，那幾個瓶子會照原本的日子漂回來。</div></div>`;
+    const n = stkDays(st), card = stkCardOf(x), go = stkGo && stkGo.sid === x.sid ? stkGo : null;
+    const head = `<div class="card askcard stkcard" id="stk_${esc(x.sid)}"><h3>🛶 換條航線</h3>`;
+    const foot = `<div style="margin-top:10px">${stkDots(n)} <b>再 ${2 - n} 天</b></div><div class="muted">只要在不同的兩天各答對一題，就回到原來的航線。</div></div>`;
+    if (go) {
+      const back = `<a href="#" class="tlink" onclick="stkGo=null;softRender();return false">回到兩條路線</a>`;
+      let body;
+      if (go.step === 'card' && card) body = `<div class="speech" style="margin:8px 0"><b>📘 觀念小卡・${esc(laneLabel(card.lane))}・${esc(card.unit)}</b>
+          <ul style="margin:6px 0 4px 18px;padding:0">${card.points.map(p => `<li style="margin:2px 0">${esc(p)}</li>`).join('')}</ul>${card.trap ? `<div>⚠️ 常見的陷阱：${esc(card.trap)}</div>` : ''}</div>
+        <div class="row"><button onclick="stkStep('ex')">看完了，看一題完整解法</button>${back}</div>`;
+      else if (go.step === 'ex') {
+        const e = st.ex;
+        body = e ? `<div class="speech" style="margin:8px 0"><b>📝 例題</b><div style="margin:6px 0;white-space:pre-wrap">${esc(e.q)}</div>
+            <ol style="margin:6px 0 4px 18px;padding:0">${e.steps.map(p => `<li style="margin:2px 0">${esc(p)}</li>`).join('')}</ol>
+            ${e.ans ? `<div>答案：${esc(e.ans)}</div>` : ''}${e.tip ? `<div style="margin-top:4px">💡 下次遇到這類題，先想：${esc(e.tip)}</div>` : ''}
+            <div class="muted" style="font-size:12px;margin-top:6px">🤖 這題是 AI 寫的，解法也可能會錯；看不懂就問老師或翻課本。</div></div>`
+          : stkBusy === x.sid ? '<div class="muted" style="margin:8px 0">✍️ 守燈人正在寫一題完整解法…（大約 10～20 秒）</div>'
+          : `<div class="muted" style="margin:8px 0">${esc(stkMsg[x.sid] || '')}</div>`;
+        body += `<div class="row"><button onclick="stkStep('do')" ${stkBusy ? 'disabled' : ''}>下一步：練一題</button>${back}</div>`;
+      } else {
+        const open = todayChallenges().some(q => !q.done), full = todayChallenges().length >= XQ_DAILY;
+        body = `<div style="margin:8px 0">換你試試看：出一題「${name}」的新題，算在每天 ${XQ_DAILY} 題挑戰裡，練 1～2 題就好。</div>
+          ${open || full ? `<div style="margin-bottom:6px;color:var(--plum)">⏳ ${open ? '今天還有一題挑戰沒回答，答完就能練。' : '今天的 ' + XQ_DAILY + ' 題挑戰都做完了，明天再來練。'}</div>` : ''}
+          <div class="row"><button onclick="stkPractice('${esc(x.sid)}')" ${stkBusy || open || full ? 'disabled' : ''}>練一題</button>${back}</div>
+          ${stkBusy === x.sid ? '<div class="muted" style="margin-top:6px">✍️ 守燈人正在出題…（大約 10～20 秒）</div>' : ''}`;
+      }
+      return head + body + foot;
+    }
+    const route = (r, t, d) => `<div class="stkroute" role="button" tabindex="0" onclick="stkStart('${esc(x.sid)}',${r})"><div class="grow"><b>${t}</b><div class="muted">${d}</div></div><span>›</span></div>`;
+    return head + `<div>最近「${name}」這一類有點卡，先停一下這幾個瓶子，換一條路走走看：</div>
+      ${card ? route(1, '路線一・先看懂觀念', '觀念小卡 → 一題完整解法 → 練 1～2 題') : ''}
+      ${route(2, (card ? '路線二・' : '') + '先看一題完整解法', '一題完整解法 → 練 1～2 題')}
+      <div style="margin:4px 0 10px">${stkAskOpen === x.sid ? `<div class="speech">把這 ${x.bs.filter(b => !b.rv.share).length} 個瓶子分享給家人？打開以後，家人都看得到你在瓶子上寫的原因和那一句話；「我覺得卡在哪裡」不會給家人看。之後隨時可以在瓶子上收回。
+          <div class="row" style="margin-top:8px"><button onclick="stkAsk('${esc(x.sid)}',true)">好</button><button class="ghost" onclick="stkAskOpen='';softRender()">先不要</button></div></div>`
+        : `<a href="#" class="tlink" onclick="stkAsk('${esc(x.sid)}');return false">也可以問家人（或拿給老師看）</a>`}</div>
+      <label>🔒 我覺得卡在哪裡（只有你看得到）</label><input maxlength="60" value="${esc(String(st.note || '').replace(/^'/, ''))}" placeholder="可以不寫" onchange="stkNote('${esc(x.sid)}',this.value)">` + foot;
+  }).join('');
+}
+function stkStart(sid, r) { stkGo = { sid, step: r === 1 ? 'card' : 'ex' }; if (stkGo.step === 'ex') stkLoadEx(sid); softRender(); }
+function stkStep(step) { if (!stkGo) return; stkGo.step = step; if (step === 'ex') stkLoadEx(stkGo.sid); softRender(); const el = document.getElementById('stk_' + stkGo.sid); if (el) el.scrollIntoView({ block: 'start' }); }
+async function stkLoadEx(sid) {
+  const x = myStuck().find(y => y.sid === sid), st = stkOf(sid) || {};
+  if (!x || st.ex || stkBusy) return;
+  if (stkExLeft() <= 0) { stkMsg[sid] = '明天再幫你寫一題。可以先按「下一步：練一題」。'; return; }
+  const b = x.bs[0]; if (!b) return;
+  stkBusy = sid; stkMsg[sid] = ''; softRender();
+  try {
+    await flush();
+    const src = b.rec.bank ? { img: await examImage(b.rec.img), ctx: await examImage(b.rec.ctx) } : {};
+    S = await call('stuckExample', sid, b.id, src); D = derive(S);
+  } catch (e) { stkMsg[sid] = /明天/.test(e.message || '') ? '明天再幫你寫一題。可以先按「下一步：練一題」。' : '例題現在寫不出來，可以先按「下一步：練一題」，晚一點再回來看。'; }
+  stkBusy = ''; softRender();
+}
+// 練一題：先找這個次觀念、她沒做過的會考考古題（不用 AI）；沒有才請 AI 對準這個次觀念出一題
+async function pickSidBank(lane, sid) {
+  const b = await loadBank(); if (!b || !b.items || !conceptsData) return null;
+  const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
+  const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);
+  const list = b.items.filter(x => x.lane === lane && conceptsData.bank[x.id] === sid && !used.has(x.id) && noGroup(x));
+  return list.length ? list[Math.floor(Math.random() * list.length)] : null;
+}
+async function stkPractice(sid) {
+  const x = myStuck().find(y => y.sid === sid); if (!x || stkBusy) return;
+  if (todayChallenges().some(q => !q.done)) return toast('還有一題沒回答，先把它答完');
+  if (todayChallenges().length >= XQ_DAILY) return toast('今天的 ' + XQ_DAILY + ' 題挑戰都做完了，明天再來');
+  stkBusy = sid; softRender();
+  let bank = false;
+  try {
+    await flush(); await loadUnits();
+    const item = await pickSidBank(x.lane, sid); bank = !!item;
+    S = item ? await call('challengeBank', item) : await call('practiceQuest', x.lane, stkType(x.lane, sid), sid); D = derive(S);
+  } catch (e) { bank = false; toast('出題失敗：' + (e.message || e)); }
+  stkBusy = ''; stkGo = null;
+  if (bank) { tab = 'home'; boardOpen = 'xq'; } else tab = 'light';
+  render();
+  const el = document.getElementById('xqCard'); if (el) el.scrollIntoView({ block: 'start' });
+}
+async function stkNote(sid, v) {
+  try { await flush(); S = await call('saveStuckNote', sid, v); D = derive(S); toast('記下來了，只有你看得到'); }
+  catch (e) { toast('沒有存到：' + (e.message || e)); }
+}
+// 也可以問家人（或拿給老師看）：先問一次，她按「好」才把這幾個瓶子的「給家人看」打開，不自動（11/26 新授權上線後改成選人）
+async function stkAsk(sid, yes) {
+  const x = myStuck().find(y => y.sid === sid); if (!x) return;
+  const ids = x.bs.filter(b => !b.rv.share).map(b => b.id);
+  if (!ids.length) { stkAskOpen = ''; softRender(); return toast('這幾個瓶子已經給家人看了，可以直接拿給家人或老師看。'); }
+  if (!yes) { stkAskOpen = sid; softRender(); return; }
+  stkAskOpen = '';
+  try { await flush(); for (const id of ids) S = await call('shareBottle', id, true); D = derive(S); toast('打開了，可以拿給家人或老師看。'); }
+  catch (e) { toast('沒有打開：' + (e.message || e)); }
+  softRender();
+}
 function lightStats() {
   const all = bottles(), left = all.filter(b => !b.lantern);
   return { all, sea: left.length, friends: all.filter(b => b.lantern && b.due <= S.today).length, due: Math.min(dueBottles(all).length, Math.max(0, REVIEW_DAILY - reviewsToday().length)), lanterns: all.length - left.length };
@@ -2886,7 +3035,7 @@ function lightWordCtx(wk) {
     subjects: Object.keys(bySub).map(k => ({ name: k, n: bySub[k] })), note: set.note || '',
     wrong: all.filter(b => inWk(b.wrongAt)).length, lanterns: all.filter(b => inWk(b.lantern)).length,
     reviewed: all.reduce((n, b) => n + ((b.rv && b.rv.tries) || []).filter(t => inWk(t.at)).length, 0),
-    sea: all.filter(b => !b.lantern).length, links: links.slice(0, 5), fixed: weekFixed(all, inWk),
+    links: links.slice(0, 5), fixed: weekFixed(all, inWk),
     friendsOk: all.reduce((n, b) => n + ((b.rv && b.rv.tries) || []).filter(t => t.friend && t.ok && inWk(t.at)).length, 0) };
 }
 // 錯題循環③：這週變成燈籠的瓶子，照科目和單元分組，最多 3 組（只送名稱和數字，不送她寫的字）
@@ -2976,6 +3125,7 @@ function viewLight() {
         : fam ? '' : `<button class="ghost" style="width:100%" onclick="openKeeper('lighthouse')">🧓 燈塔還沒有守燈人，請一位來守燈吧</button>`)}
       <div class="hud" style="margin-top:10px"><div><b>${st.due}</b><span class="muted">🌊 今天漂回來</span></div><div><b>${st.lanterns}</b><span class="muted">🏮 放走的燈籠</span></div></div></div>
     ${(open && (open.review || open.practice)) || (!open && lastXq && (lastXq.review || lastXq.practice) && lastXq.at === S.today) ? xqCard(true) : ''}
+    ${fam ? '' : stkCard(st.all)}
     <div class="card"><h3>🌊 今天漂回來的瓶子</h3>
       <details class="muted" style="margin-bottom:6px;font-size:13px" ${lightDet('rules')}><summary>瓶子怎麼漂回來？</summary>撿起瓶子會出一題 AI 類題：考同一個觀念，但數字和情境都換過。答錯隔 1 天再漂回來；答對後隔 3 天、再答對隔 7 天，連續三次答對就變成紙燈籠放到海上。燈籠 3 週後會當「老朋友」漂回來一次，之後每個月一次，看看你還記不記得；答錯也不會變回瓶子。撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個。</details>
       ${!fam && due.length && !lightBusy && (open || full) ? `<div style="margin-bottom:6px;color:var(--plum)">⏳ ${open ? '今天還有一題挑戰沒回答（在這一頁上方），答完就能撿瓶子。' : '今天的 ' + XQ_DAILY + ' 題挑戰都做完了，明天再來撿。'}</div>` : ''}
@@ -4989,6 +5139,7 @@ function advSumText(mode) {
   // 5. 補強的單元（整理這天的狀態）
   const um = unitMap(), un = t => sub(t.lane) + '・' + t.unit;
   out.push('', '【正在補強】' + (um.weak.length ? um.weak.map(t => un(t) + '（做過 ' + t.n + ' 題）').join('、') : '沒有'));
+  if (conceptsData && stkActive().length) out.push('換條航線中的觀念：' + stkActive().map(sid => { const l = sidLane(sid), x = sidInfo(l, sid); return sub(l) + '・' + (x ? x.name : sid); }).join('、'));
   out.push('【已補強】' + (um.done.length ? um.done.map(t => un(t) + '（燈籠 ' + t.lanterns + (t.steady ? '，⭐ 最近 ' + RECENT_N + ' 題對 ' + t.recentOk + ' 題' : '') + '）').join('、') : '還沒有'));
   // 6. 模考：只放日期和分數，不放考試名稱
   const sc = v => { const x = String(v == null ? '' : v).trim(); return /^(A\+\+|A\+|A|B\+\+|B\+|B|C|\d{1,3}(\.\d+)?|[0-6] ?級分)$/.test(x) ? x : ''; };   // 只認等級、分數、級分，其他字不放
