@@ -204,6 +204,7 @@
       const g = BUILD[k](), p = PLACE[k];
       g.position.set(p.x, p.top || 0, p.z); g.userData.place = k;
       if (k === 'port') g.rotation.y = 0.5;
+      if (k === 'exchange') g.rotation.y = Math.PI;   // 交易所在北端海邊，正面朝外海，主島轉到北邊時整面看得到（爸爸 10/30）
       root.add(g);
     });
     isleLayer = new THREE.Group(); scene.add(isleLayer);
