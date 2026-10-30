@@ -1671,14 +1671,16 @@
       if (o.userData.plant && ctx.onPlant) { ctx.onPlant(o.userData.plant); return; }
       if (o.userData.garden && ctx.onGarden) { ctx.onGarden(); return; }
     }
-    if (!hit) {   // 點空白處：收起拱橋和選取
-      if (selected) { selected = null; Object.keys(plates).forEach(k => plates[k].material.emissive = lin(new THREE.Color(0x000000))); linkVis(); }
-      return;
-    }
+    if (!hit) { unselect(); return; }   // 點空白處：收起拱橋和選取
     let o = hit.object; while (!o.userData.subject) o = o.parent;
-    select(o.userData.subject);
+    if (o.userData.subject === selected) unselect();   // 再點同一位島民：收起拱橋（爸爸 10/30）
+    else select(o.userData.subject);
   }
   let selected = null;
+  function unselect() {
+    if (!selected) return;
+    selected = null; Object.keys(plates).forEach(k => plates[k].material.emissive = lin(new THREE.Color(0x000000))); linkVis();
+  }
   function select(s) {
     selected = s;
     Object.keys(plates).forEach(k => plates[k].material.emissive = lin(new THREE.Color(k === s ? 0x9a6f22 : 0x000000)));   // 選到的街：暖黃（美術 10/29）
