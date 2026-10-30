@@ -17,9 +17,9 @@
   const xz = (lon, lat) => ({ x: (lon - LON0) * COS * K, z: -(lat - LAT0) * K });   // 北邊在 -z（鏡頭從南方看過去）
   // 五棟建物：爸爸 草圖的位置
   const PLACE = {
-    exchange: Object.assign(xz(121.55, 25.03), { ic: '🏛️' }),   // 北端（台北）
-    church: Object.assign(xz(121.02, 22.72), { ic: '⛪' }),     // 台東（爸爸 10/27 從新竹一帶搬過來，和預留空位對調）
-    temple: Object.assign(xz(120.45, 24.05), { ic: '🏮' }),     // 西岸中部（鹿港）
+    exchange: Object.assign(xz(121.55, 25.03), { ic: '🧮' }),   // 北端（台北）
+    church: Object.assign(xz(121.02, 22.72), { ic: '' }),     // 台東（爸爸 10/27 從新竹一帶搬過來，和預留空位對調）
+    temple: Object.assign(xz(120.45, 24.05), { ic: '' }),   // 媽祖廟、教會的名牌不放圖示，兩邊對等（美術 10/30）     // 西岸中部（鹿港）
     port: Object.assign(xz(120.22, 23.00), { ic: '🎈' }),       // 西南（安平）：飛船碼頭（10/27 主島浮空）
     hall: Object.assign(xz(120.96, 23.47), { ic: '🏔️', top: 2.6 })   // 玉山山頂（爸爸 10/27：聚會所在山上，不是山旁邊）
   };
@@ -220,7 +220,7 @@
     const P = ctx.places || {};
     Object.keys(PLACE).forEach(k => {
       const p = P[k]; if (!p) return;
-      const sp = labelSprite(PLACE[k].ic + ' ' + p.name, p.sub || null, { scale: 1.5, color: p.closed ? '#6a6a6a' : '#741b47' });
+      const sp = labelSprite((PLACE[k].ic ? PLACE[k].ic + ' ' : '') + p.name, p.sub || null, { scale: 1.5, color: p.closed ? '#6a6a6a' : '#741b47' });
       sp.position.set(PLACE[k].x, (k === 'church' ? 3.0 : 2.6) + (PLACE[k].top || 0), PLACE[k].z); sp.userData.place = k; labelLayer.add(sp);
     });
     const sig = JSON.stringify(ctx.isles || []);
