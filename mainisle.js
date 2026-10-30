@@ -33,7 +33,12 @@
       firstGrand: '喵呱來啦！阿嬤以前在銀行做了很久，現在在交易所當資深行員。這裡以後是練習理財、學記帳的地方，還沒開張，開門的日子還在排，排好了再來找阿嬤。',   // 姐姐
       hello: ['算盤先幫你擦亮了。', '今天的數獨解完了，換你來考考我。', '開張的日子定了就告訴你，不急。', '帳記清楚，事情就順。'] }
   };
-  const OPEN = { port: true, hall: true, notes: true };   // notes：聚會所裡的山海筆記
+  const OPEN = { port: true, hall: true, notes: true };
+  KEEPER.temple.open = { first: '哎唷，你來了！廟終於整理好了，姨媽泡了一壺茶。這間廟的故事、節慶和老街的由來，都寫在下面，慢慢看，看累了喝茶。',
+    hello: ['廟埕剛掃好，坐一下。', '今天想聽哪一段？姨媽講給你聽。', '下次唱一段歌仔戲給你聽好不好？'] };
+  KEEPER.church.open = { first: '你好你好！教會整修好了，歡迎進來坐坐。教會的歷史、節期和這棟建築的故事，都寫在下面，慢慢看。',
+    hello: ['進來坐，外面風大。', '今天想聽哪一段？我講話快，聽不清楚就叫我慢一點。', '最近練的那首日文歌，下次唱給你聽！'] };
+  KEEPER.temple.face = '👵'; KEEPER.church.face = '🧑'; KEEPER.temple.ic = KEEPER.church.ic = '';   // 兩位的頭像都用人，對等（美術 10/30）；地方的圖示 ic 照舊   // notes：聚會所裡的山海筆記
   // 玉山山頂的節氣小卡（爸爸 10/28）：阿台婆婆說今天的節氣，配一則跟會考自然、社會有關的小知識；只在點聚會所時顯示，不推、不給獎勵
   const SUMMIT_FACT = {
     立春: '節氣是照太陽在天上走的位置訂的，每走 15 度換一個，所以國曆日期每年都差不多。',
@@ -121,7 +126,11 @@
   // ---------- 山海筆記（工程待辦 149，爸爸 10/30 動工）：聚會所節氣卡下面，點「打開」才下載 notes/shanhai.json ----------
   // 不記錄、不加島幣、不推送，她和家人看同一份；今天的推薦只是排在最前面，不跳出來
   const notesOn = () => !!(OPEN.notes && OPEN.hall);   // 自己的開關（爸爸 10/30：山海筆記先開，不等廟和教會）
-  let notes = null, notesBusy = false, nb = null;   // nb：null 收起、{ u: -1 } 單元列表、{ u, c } 第 u 單元第 c 張（只放記憶體，不存）
+  // 三本書（山海筆記、廟埕的故事、教會的故事）共用：data 點了才下載；nb：null 收起、{ u: -1 } 單元列表、{ u, c } 第 u 單元第 c 張（只放記憶體，不存）
+  const BOOK = { shanhai: { file: 'notes/shanhai.json', name: '📚 山海筆記', lead: '用台灣的山、海和天氣，說說課本裡的觀念。', id: 'miNotes' },
+    temple: { file: 'notes/temple.json', name: '廟埕的故事', lead: '這裡的歷史、文化和節期，對到課本裡的觀念。', id: 'miStory' },   // 廟和教會兩邊的字級、版面、按鈕完全一樣，標題不放 emoji（美術 10/30）
+    church: { file: 'notes/church.json', name: '教會的故事', lead: '這裡的歷史、文化和節期，對到課本裡的觀念。', id: 'miStory' } };
+  const bookOn = b => b === 'shanhai' ? notesOn() : !!OPEN[b];
   function moonAge(day) {   // 月齡（天）：從 2000-01-06 18:14 UTC 的新月往後推，取台北中午
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(day || ''); if (!m) return null;
     const t = Date.UTC(+m[1], +m[2] - 1, +m[3], 4) - Date.UTC(2000, 0, 6, 18, 14), syn = 29.530589;
@@ -136,40 +145,48 @@
     const all = []; units.forEach((x, u) => x.cards.forEach((_, c) => all.push({ u, c })));
     return all[n % all.length];
   }
-  window.mainNotes = function (u, c) {
-    nb = u == null ? null : { u, c: c || 0 };
-    if (nb && !notes) {
-      if (!notesBusy) {
-        notesBusy = true;
-        fetch('notes/shanhai.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { notes = j && Array.isArray(j.units) ? j : null; if (!notes) throw 0; })
-          .catch(() => { nb = null; toast('山海筆記讀不到，等一下再試'); }).then(() => { notesBusy = false; paintInfo(); });
-      }
+  function festPick(day, B) {   // 節期前後先推那一張（媽祖生日、聖誕節、復活節）；日期表在 JSON 裡，農曆和復活節不在 App 裡算
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(day || ''), dn = (y, mo, d) => Math.floor(Date.UTC(y, mo - 1, d) / 86400000); if (!m || !Array.isArray(B.fest)) return 0;
+    const n = dn(+m[1], +m[2], +m[3]);
+    return B.fest.some(f => { const q = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f[0]); return q && Math.abs(n - dn(+q[1], +q[2], +q[3])) <= f[1]; }) ? B.festCard || 0 : 0;
+  }
+  window.mainBook = function (b, u, c) {
+    const B = BOOK[b]; if (!B) return;
+    B.nb = u == null ? null : { u, c: c || 0 };
+    if (B.nb && !B.data && !B.busy) {
+      B.busy = true;
+      fetch(B.file).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { B.data = j && Array.isArray(j.units) ? j : null; if (!B.data) throw 0; })
+        .catch(() => { B.nb = null; toast((b === 'shanhai' ? '山海筆記' : B.name) + '讀不到，等一下再試'); }).then(() => { B.busy = false; paintInfo(); });
     }
     paintInfo();
   };
-  function notesHtml() {
-    if (!notesOn()) return '';
-    const box = s => `<div id="miNotes" style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#f3f7fb">${s}</div>`;
-    if (!nb) return box(`<div class="row"><b class="grow">📚 山海筆記</b><button class="ghost" onclick="mainNotes(-1)">打開</button></div>
-      <div class="muted" style="margin-top:2px">用台灣的山、海和天氣，說說課本裡的觀念。</div>`);
-    if (!notes) return box('<b>📚 山海筆記</b><div class="muted" style="margin-top:4px">讀筆記中…</div>');
-    const U = notes.units;
-    if (nb.u < 0 || !U[nb.u]) {
+  window.mainNotes = (u, c) => mainBook('shanhai', u, c);
+  function bookHtml(b) {
+    const B = BOOK[b]; if (!bookOn(b)) return '';
+    const box = s => `<div id="${B.id}" style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#f3f7fb">${s}</div>`, one = b !== 'shanhai', nb = B.nb;
+    if (!nb) return box(`<div class="row"><b class="grow">${B.name}</b><button class="ghost" onclick="${one ? `mainBook('${b}',0,-1)` : 'mainNotes(-1)'}">打開</button></div>
+      <div class="muted" style="margin-top:2px">${B.lead}</div>`);
+    if (!B.data) return box(`<b>${B.name}</b><div class="muted" style="margin-top:4px">讀${one ? '故事' : '筆記'}中…</div>`);
+    const U = B.data.units;
+    if (one && nb.c < 0) nb.c = festPick(S && S.today, B.data);   // 廟、教會只有一個單元：打開就是卡片，節期前後從那一張開始
+    if (!one && (nb.u < 0 || !U[nb.u])) {
       const p = notesPick(S && S.today, U), pu = U[p.u];
       return box(`<div class="row"><b class="grow">📚 山海筆記</b><button class="ghost" onclick="mainNotes()">收起</button></div>
         <div class="muted" style="margin-top:6px">今天的推薦</div><button style="margin-top:4px" onclick="mainNotes(${p.u},${p.c})">${pu.ic} ${esc(pu.title)}・${esc(pu.cards[p.c].t)}</button>
         <div class="muted" style="margin-top:10px">全部單元</div>${U.map((x, u) => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainNotes(${u},0)">${x.ic} ${esc(x.title)}（${x.cards.length}）</button>`).join('')}`);
     }
-    const x = U[nb.u], c = Math.max(0, Math.min(nb.c, x.cards.length - 1)), k = x.cards[c], last = c === x.cards.length - 1;
+    const x = U[one ? 0 : nb.u], c = Math.max(0, Math.min(nb.c, x.cards.length - 1)), k = x.cards[c], last = c === x.cards.length - 1;
+    const go = (cc, label, off) => `<button class="ghost" onclick="${one ? `mainBook('${b}',0,${cc})` : `mainNotes(${nb.u},${cc})`}"${off ? ' disabled' : ''}>${label}</button>`;
     const img = k.img && /^[a-z0-9-]+\.svg$/.test(k.img) ? `<img src="notes/${k.img}" alt="${esc(k.alt || k.t)}" style="width:100%;max-width:420px;display:block;margin:8px auto 0;border-radius:10px">` : '';   // 示意圖是單獨的 svg 檔，用 img 載（工程顧問 10/30）
-    return box(`<div class="row"><b class="grow">${x.ic} ${esc(x.title)}・${c + 1}／${x.cards.length}</b><button class="ghost" onclick="mainNotes(-1)">單元列表</button></div>
+    return box(`<div class="row"><b class="grow">${one ? '' : x.ic + ' '}${esc(x.title)}・${c + 1}／${x.cards.length}</b>${one ? `<button class="ghost" onclick="mainBook('${b}')">收起</button>` : '<button class="ghost" onclick="mainNotes(-1)">單元列表</button>'}</div>
       <div style="margin-top:6px"><b>${esc(k.t)}</b></div>${img}
       <div style="margin-top:6px">${esc(k.b)}</div>
       <div class="muted" style="margin-top:6px;font-size:12px">課本裡叫什麼：${esc(k.k)}</div>
       <div class="muted" style="font-size:11px">出處：${esc(k.src)}</div>
       ${last ? `<div class="speech" style="margin-top:10px">${esc(x.ask)}</div>` : ''}
-      <div class="row" style="margin-top:8px"><button class="ghost" onclick="mainNotes(${nb.u},${c - 1})"${c ? '' : ' disabled'}>◀ 上一張</button><span class="grow"></span><button class="ghost" onclick="mainNotes(${nb.u},${c + 1})"${last ? ' disabled' : ''}>下一張 ▶</button></div>`);
+      <div class="row" style="margin-top:8px">${go(c - 1, '◀ 上一張', !c)}<span class="grow"></span>${go(c + 1, '下一張 ▶', last)}</div>`);
   }
+  const notesHtml = () => bookHtml('shanhai');
   // 列島的方位（爸爸 2026-10-26）：角度÷π，0 東、0.5 南、1 西、-0.5 北；她東、爸爸西、媽媽南、姐姐東北（爸爸 10/27 從北邊改過來）、姑姑西南，智慧島東南，新加入的家人依序用預留的五個位置
   const ISLE_DIR = { 爸爸: 1, 媽媽: 0.5, 姐姐: -0.25, 姑姑: 0.75 }, SPARE = [-0.5, -0.75, 0.38, -0.38, 0.88];
   let isles = null, herBg = null, loading = false, info = null, board = null, boardBusy = false;
@@ -195,7 +212,7 @@
   }
   function places() {
     const o = {};
-    Object.keys(KEEPER).forEach(k => { const kp = KEEPER[k]; o[k] = OPEN[k] ? { name: kp.place, sub: kp.ic + ' ' + kp.name } : { name: kp.place, sub: '準備中', closed: 1 }; });
+    Object.keys(KEEPER).forEach(k => { const kp = KEEPER[k]; o[k] = OPEN[k] ? { name: kp.place, sub: (kp.ic ? kp.ic + ' ' : '') + kp.name } : { name: kp.place, sub: '準備中', closed: 1 }; });
     return o;
   }
   function sail(fn) {   // 搭飛船：轉場一兩秒（工程顧問建議）
@@ -255,10 +272,10 @@
   }
 
   function keeperCard(k, first) {
-    const kp = KEEPER[k]; if (first === undefined) first = !met(k);
+    const kp = OPEN[k] && KEEPER[k].open ? Object.assign({}, KEEPER[k], KEEPER[k].open) : KEEPER[k]; if (first === undefined) first = !met(k);   // 開門以後換開門的台詞
     const grand = kp.firstGrand && isFamily() && S.who && S.who.name === '姐姐';
     const line = first || !kp.hello ? (kp.firstHer && !canPost() ? kp.firstHer : grand ? kp.firstGrand : kp.first) : kp.hello[daySeed() % kp.hello.length];
-    return `<div class="resident"><span class="avatar">${kp.ic}</span><div><b>${esc(kp.name)}</b><div class="muted">${esc(kp.role)}・${esc(kp.intro)}</div></div></div>
+    return `<div class="resident"><span class="avatar">${kp.face || kp.ic}</span><div><b>${esc(kp.name)}</b><div class="muted">${esc(kp.role)}・${esc(kp.intro)}</div></div></div>
       <div class="speech" style="margin-top:8px">${esc(line)}</div>`;
   }
   function ferryRows() {
@@ -269,7 +286,7 @@
     if (!info) return '<div class="muted">👆 點飛船碼頭搭飛船；點其他建物看看它們什麼時候開門。用手指拖曳可以轉動，兩指可以縮放。</div>';
     if (info.kind === 'place') {
       const k = info.key;
-      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + notesHtml() + boardHtml() : OPEN[k] ? '' : '<div class="muted" style="margin-top:6px">準備中</div>');
+      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
     }
     const x = isleList().find(i => i.key === info.key); if (!x) return '';
     if (x.mine) return `<b>🏝️ ${esc(x.name)}</b><div class="muted">這是你的島。</div>${x.open !== false ? `<button style="margin-top:8px" onclick="mainSail('${x.key}')">🎈 ${isFamily() ? '去我的島' : '回到我的島'}</button>` : ''}`;
@@ -291,7 +308,7 @@
     const body = use3D() ? `<div id="mi3d" style="height:min(66vh,560px);border-radius:24px;overflow:hidden;background:${env.phase === 'night' ? '#1b2440' : '#cfe8f3'};position:relative">
         <div class="loading" style="padding-top:120px">☁️ 主島從雲裡浮出來…</div></div>
         <div style="margin-top:8px">${isleList().filter(x => x.open !== false).map(x => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainFocus('${x.key}')">🏝️ ${esc(x.name)}</button>`).join('')}</div>`
-      : `<div class="card"><h3>🏛️ 主島上的地方</h3>${Object.keys(KEEPER).map(k => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainInfo('place','${k}')">${KEEPER[k].ic} ${KEEPER[k].place}${OPEN[k] ? '' : '（準備中）'}</button>`).join('')}
+      : `<div class="card"><h3>🏛️ 主島上的地方</h3>${Object.keys(KEEPER).map(k => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainInfo('place','${k}')">${KEEPER[k].ic ? KEEPER[k].ic + ' ' : ''}${KEEPER[k].place}${OPEN[k] ? '' : '（準備中）'}</button>`).join('')}
         <h3 style="margin-top:12px">🏝️ 列島</h3>${isleList().map(x => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainInfo('isle','${x.key}')">${esc(x.name)}${x.sub ? '（' + esc(x.sub) + '）' : ''}</button>`).join('')}</div>`;
     return `<div class="card"><div class="row"><h2 class="grow" style="margin:0">⛰️ 核心主島</h2><button class="ghost" onclick="mainSail('${myIsle()}')">🎈 ${backLabel()}</button></div>
       <div class="muted">浮在列島中間的天上，從這裡的飛船碼頭可以飛去每座島。</div></div>
