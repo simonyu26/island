@@ -59,13 +59,14 @@
 
   // ---------- 島：沙灘、草地、小丘、步道 ----------
   // 小屋位置：門朝向中間的廣場；碼頭在正前方（+z）
-  const HUTS = { kongming: [-2.7, -3.4], xiaomiao: [2.9, -3.5], alu: [-4.3, 1.2], einstein: [4.2, 1.0], yirong: [-4.0, 5.0], mi: [3.15, 3.05], guo: [4.0, 5.35] };
+  const HUTS = { kongming: [-2.7, -3.4], xiaomiao: [2.9, -3.5], alu: [-4.3, 1.2], einstein: [4.2, 1.0], yirong: [-4.3, -10.0], mi: [0, -11.2], guo: [4.3, -10.0] };
   const PLAZA = [0, 0.9], FACE = [0, 9];   // 門朝碼頭
-  // 後來的三間（v2.48.2）：蓋在前排沙灘邊，比原本的小一點（離鏡頭近，看起來一樣大）；避開樹、碼頭步道和 v2.50 碼頭邊的渡船屋、黑板、郵筒。
-  // 步道從碼頭步道分岔、繞過樹（PATH_VIA 是門口之前要經過的點）。不加點光源，靜態網格全部合併（見 bakeNewHuts）
-  // 名牌位置微調：郭哥的名牌放低、往前，暗房的名牌抬高，預設鏡頭下才看得到暗房的紅窗和門（美術顧問 10/29）
-  const LABEL_AT = { mi: [-0.2, 0.55, -0.3], guo: [-0.15, -0.6, 0.7] };
-  const SMALL = { yirong: 0.82, mi: 0.8, guo: 0.82 }, PATH_VIA = { yirong: [[0, 3.6], [-3.0, 4.05]], guo: [[0, 4.9]] };
+  // 後來的三間（v2.48.2）住在主島正後方的岬角（11/5 擴島），和原本四間一樣 1.0 倍；中間的暗房往後退，名牌才不會黏在一起（美術顧問 10/29）。
+  // 步道從廣場經過草廬和湯屋中間、小丘右邊，一路接到岬角再分到三間（PATH_VIA 是門口之前要經過的點，第一個是起點）。
+  // 不加點光源，靜態網格全部合併（見 bakeNewHuts）。SMALL 是「後來的三間」的名單和大小
+  const CAPE = { x: 0, z: -10.6, rx: 5.9, rz: 3.0 };   // 岬角草地的橢圓（沙灘再大 0.6）；和主島後半圈取外輪廓（凸包）連成一片，沒有腰
+  const LABEL_AT = { mi: [0, 1.25, 0], guo: [0.6, 0, 0] }, FAR = { yirong: 1, mi: 1, guo: 1 };   // FAR：名牌不跟著距離變小（和鏡頭焦點附近的名牌一樣大）
+  const SMALL = { yirong: 1, mi: 1, guo: 1 }, TRUNK = [1.05, -8.2], PATH_VIA = { yirong: [PLAZA, [1.0, -1.6], [1.25, -4.7], TRUNK], mi: [TRUNK], guo: [TRUNK] };
   const doorOf = k => { const h = HUTS[k], ry = Math.atan2(FACE[0] - h[0], FACE[1] - h[1]), d = 1.25 * (SMALL[k] || 1); return [h[0] + Math.sin(ry) * d, h[1] + Math.cos(ry) * d]; };
   function buildIsland(root) {
     const sand = std(0xe8cf98), grass = std(0x8cc56c), grass2 = std(0x9fd27e), rock = std(0x9a958c);
@@ -73,12 +74,13 @@
     base.userData.ground = true;
     const top = mesh(new THREE.CylinderGeometry(6.5, 6.9, 0.35, 40), grass, 0, -0.1, 0, root);
     top.userData.grass = true;
+    buildCape(root, sand, grass, rock);
     // 後方的小丘
-    const hill = mesh(new THREE.SphereGeometry(3.2, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), grass2, 0, -0.05, -5.3, root); hill.scale.set(1.0, 0.45, 0.55); hill.userData.grass = true;
+    const hill = mesh(new THREE.SphereGeometry(3.2, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), grass2, -1.9, -0.05, -5.6, root); hill.scale.set(0.68, 0.45, 0.55);   // 11/5 擴島：往左、變窄，步道從右邊上岬角 hill.userData.grass = true;
     // 海邊的石頭
     const r = rng(7);
     for (let i = 0; i < 14; i++) { const a = r() * Math.PI * 2; if (Math.abs(Math.sin(a) - 1) < 0.25) continue;
-      const s = 0.25 + r() * 0.35, m = mesh(new THREE.DodecahedronGeometry(s, 0), rock, Math.cos(a) * (7.3 + r() * 0.5), -0.25, Math.sin(a) * (7.3 + r() * 0.5), root); m.rotation.set(r() * 3, r() * 3, 0); }
+      const s = 0.25 + r() * 0.35, m = mesh(new THREE.DodecahedronGeometry(s, 0), rock, Math.cos(a) * (7.3 + r() * 0.5), -0.25, Math.sin(a) * (7.3 + r() * 0.5), root); m.rotation.set(r() * 3, r() * 3, 0); if (inCape(m.position.x, m.position.z)) { root.remove(m); m.geometry.dispose(); } }   // 岬角蓋住的石頭拿掉
     // 踏石步道：碼頭 → 廣場 → 四間小屋
     const stone = std(0xd8d2c4);
     const path = (a, b, gap) => { const dx = b[0] - a[0], dz = b[1] - a[1], n = Math.max(2, Math.round(Math.hypot(dx, dz) / (gap || 0.62)));
@@ -97,6 +99,40 @@
     mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 6), wood, 0, 0.65, 0, sign);
     [['草廬', -0.5, 1.15, 0.5], ['湯屋', 0.5, 1.0, -0.5], ['柑仔店', -0.5, 0.82, -0.3], ['NASA', 0.5, 0.66, 0.35]].forEach(([s, x, y, ry]) => {
       const p = textPlane(s, 0.62, 0.17, '#f4e7cc', '#5b3a1e', 15); p.position.set(x * 0.55, y, 0.07); p.rotation.y = ry; sign.add(p); });
+  }
+  const inCape = (x, z) => { const P = capeOutline(6.9, 0); let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > z) !== (P[j][1] > z) && x < (P[j][0] - P[i][0]) * (z - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };   // 在岬角的草地裡
+  function capeOutline(r0, pad, full) {   // 主島後半圈（full：整圈）半徑 r0，和岬角橢圓的凸包，逆時針；點是 [x, z]
+    const pts = [];
+    if (full) for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; pts.push([Math.cos(a) * r0, Math.sin(a) * r0]); }
+    else for (let i = 0; i <= 24; i++) { const a = Math.PI + i / 24 * Math.PI; pts.push([Math.cos(a) * r0, Math.sin(a) * r0]); }
+    for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; pts.push([CAPE.x + Math.cos(a) * (CAPE.rx + pad), CAPE.z + Math.sin(a) * (CAPE.rz + pad)]); }
+    pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+    const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], hi = [];
+    pts.forEach(p => { while (lo.length > 1 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); });
+    pts.slice().reverse().forEach(p => { while (hi.length > 1 && cross(hi[hi.length - 2], hi[hi.length - 1], p) <= 0) hi.pop(); hi.push(p); });
+    return lo.slice(0, -1).concat(hi.slice(0, -1));
+  }
+  function buildCape(root, sand, grass, rock) {
+    // 沙、草各一塊：外輪廓往下擠出，頂面比主島低 2 公分（重疊的地方不會閃）。形狀的 y 是 -z，轉平以後剛好朝後
+    [[sand, 7.4, 0.6, 0.9, -0.07], [grass, 6.5, 0, 0.35, 0.055]].forEach(([m, r0, pad, h, top]) => {
+      const sh = new THREE.Shape(capeOutline(r0, pad).map(([x, z]) => new THREE.Vector2(x, -z)));
+      const geo = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false, curveSegments: 1 }); geo.rotateX(-Math.PI / 2);
+      const k = mesh(geo, m, 0, top - h, 0, root); k.castShadow = false; k.userData[m === sand ? 'ground' : 'grass'] = true; });
+    // 接合處兩側的沙洲，和沿岸幾顆石頭（同一個石頭材質、同一種幾何）
+    [[-7.15, -7.4, -0.25], [7.15, -7.6, 0.25]].forEach(([x, z, ry]) => { const b = mesh(new THREE.CylinderGeometry(1, 1.15, 0.2, 16), sand, x, WY + 0.02, z, root); b.scale.set(0.6, 1, 1.5); b.rotation.y = ry; b.castShadow = false; });
+    const r = rng(11);
+    [[-7.1, -6.3, 0.42], [-6.9, -9.1, 0.3], [7.15, -6.6, 0.45], [6.85, -9.7, 0.28], [-6.5, -11.7, 0.36]].forEach(([x, z, sz]) => {
+      const m = mesh(new THREE.DodecahedronGeometry(sz, 0), rock, x, -0.25, z, root); m.rotation.set(r() * 3, r() * 3, 0); m.castShadow = false; });
+  }
+  function foamGeo() {   // 從島中心往外打 96 條線，交到內、外兩條輪廓，連成一圈；平面在 xy 上（和 RingGeometry 一樣，外面再轉平）
+    const hit = (P, a) => { const dx = Math.cos(a), dz = Math.sin(a); let best = 0;
+      for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [x1, z1] = P[j], [x2, z2] = P[i], ex = x2 - x1, ez = z2 - z1, den = dx * ez - dz * ex; if (Math.abs(den) < 1e-9) continue;
+        const t = (x1 * ez - z1 * ex) / den, u = (x1 * dz - z1 * dx) / den; if (t > 0 && u >= 0 && u <= 1) best = Math.max(best, t); }
+      return best; };
+    const IN = capeOutline(7.9, 1.1, true), OUT = capeOutline(8.6, 1.8, true), N = 96, pos = [], idx = [];
+    for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2, ri = hit(IN, a), ro = hit(OUT, a); pos.push(Math.cos(a) * ri, -Math.sin(a) * ri, 0, Math.cos(a) * ro, -Math.sin(a) * ro, 0);
+      const k = i * 2, n = ((i + 1) % N) * 2; idx.push(k, n, k + 1, n, n + 1, k + 1); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
   }
   // ---------- 樹：松樹、竹子、楓樹 ----------
   function pine(x, z, s, root) {
@@ -302,7 +338,8 @@
       const [x, z] = HUTS[k], g = new THREE.Group(); g.position.set(x, 0, z);
       g.rotation.y = Math.atan2(FACE[0] - x, FACE[1] - z);
       g.userData.hut = k; BUILD[k](g); root.add(g); hutGroups[k] = g;
-      if (SMALL[k]) { g.scale.setScalar(SMALL[k]); return; }   // 新的三間只有窗戶自發光，不加點光源（點光源一多，整座島的光照都會變）
+      if (SMALL[k]) { P(box(0.07, 0.62, 0.07), 0x5b3a1e, -0.95, 0.31, 1.3, g); P(box(0.24, 0.05, 0.24), 0x5b3a1e, -0.95, 0.66, 1.3, g); W(box(0.18, 0.2, 0.18), winNew(), -0.95, 0.79, 1.3, g); P(box(0.24, 0.05, 0.24), 0x5b3a1e, -0.95, 0.92, 1.3, g);   // 門口左邊的小燈籠（右邊站老師）
+      g.scale.setScalar(SMALL[k]); return; }   // 新的三間只有窗戶自發光，不加點光源（點光源一多，整座島的光照都會變）
       const pl = new THREE.PointLight(0xffc27a, 0, 4.2, 1.6); pl.position.set(0, 1.0, 1.3); g.add(pl); lanterns.push(pl);
     });
     bakeNewHuts(root);
@@ -346,7 +383,7 @@
     const geo = new THREE.PlaneGeometry(120, 120, 48, 48); geo.rotateX(-Math.PI / 2);
     seaBase = Float32Array.from(geo.attributes.position.array);
     sea = new THREE.Mesh(geo, std(0x5fa8cf, { roughness: 0.35, transparent: true, opacity: 0.95 })); sea.position.y = WY; sea.receiveShadow = HQ; scene.add(sea);
-    foam = new THREE.Mesh(new THREE.RingGeometry(7.9, 8.6, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, toneMapped: false }));
+    foam = new THREE.Mesh(foamGeo(), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, toneMapped: false }));
     foam.rotation.x = -Math.PI / 2; foam.position.y = WY + 0.04; scene.add(foam);
     const sg = new THREE.BufferGeometry(), sp = [], r = rng(11);
     for (let i = 0; i < 260; i++) { const a = r() * Math.PI * 2, e = 0.12 + r() * 1.3, R = 80; sp.push(Math.cos(a) * Math.cos(e) * R, Math.sin(e) * R, Math.sin(a) * Math.cos(e) * R); }
@@ -387,10 +424,10 @@
   // ---------- 標籤、老師、可以上課的光圈（狀態一變就重畫） ----------
   function buildLabels() {
     if (labelLayer) scene.remove(labelLayer);
-    labelLayer = new THREE.Group(); scene.add(labelLayer); teachers = []; rings = [];
+    labelLayer = new THREE.Group(); scene.add(labelLayer); teachers = []; rings = []; farLabels = [];
     (opts.huts || []).forEach(h => {
       const g = hutGroups[h.key]; if (!g) return;
-      const lb = labelSprite(h.place + '・' + h.name, h.st, h.color, h.can); lb.position.set(g.position.x, g.position.z < 0 ? 3.35 : 2.3, g.position.z); if (LABEL_AT[h.key]) lb.position.add(new THREE.Vector3(...LABEL_AT[h.key])); lb.userData.hut = h.key; labelLayer.add(lb);   // 後排的標籤高一點，才不會被前排擋住
+      const lb = labelSprite(h.place + '・' + h.name, h.st, h.color, h.can); lb.position.set(g.position.x, g.position.z < 0 ? 3.35 : 2.3, g.position.z); if (LABEL_AT[h.key]) lb.position.add(new THREE.Vector3(...LABEL_AT[h.key])); lb.userData.hut = h.key; lb.userData.label = 1; labelLayer.add(lb); if (FAR[h.key]) { lb.userData.base = lb.scale.clone(); farLabels.push(lb); }   // 後排的標籤高一點，才不會被前排擋住
       // 老師站在門口（小苗站左邊，右邊是露天溫泉）
       const ry = g.rotation.y, side = h.key === 'xiaomiao' ? -0.55 : 0.35;
       const tx = g.position.x + Math.sin(ry) * 1.55 + Math.cos(ry) * side, tz = g.position.z + Math.cos(ry) * 1.55 - Math.sin(ry) * side;
@@ -430,6 +467,19 @@
   }
   // v2.30 省電：系統開「減少動態效果」時，海浪、雲、船這些裝飾動畫停住（還是可以轉動、點選）；App 切到背景時不畫
   const CALM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // 岬角的名牌：照「離鏡頭的距離 ÷ 鏡頭到焦點的距離」放大，螢幕上和焦點附近的名牌一樣大（最多 2.5 倍、不縮小）；
+  // 和其他名牌在螢幕上疊到（含 8px 間距）時淡到 0.4，點擊判定照舊
+  let farLabels = []; const _v = new THREE.Vector3(), _boxes = [];
+  function screenBox(lb) { _v.copy(lb.position).project(camera); const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
+    const d = camera.position.distanceTo(lb.position), f = h / (2 * Math.tan(camera.fov * Math.PI / 360)) / d;
+    const x = (_v.x + 1) / 2 * w, y = (1 - _v.y) / 2 * h, hw = lb.scale.x * f / 2, hh = lb.scale.y * f / 2; return [x - hw - 4, y - hh - 4, x + hw + 4, y + hh + 4, _v.z]; }
+  function fitFarLabels() {
+    const ref = camera.position.distanceTo(controls.target);
+    farLabels.forEach(lb => { const k = Math.min(2.5, Math.max(1, camera.position.distanceTo(lb.position) / ref)); lb.scale.copy(lb.userData.base).multiplyScalar(k); });
+    _boxes.length = 0; labelLayer.children.forEach(o => { if (o.userData.label) _boxes.push([o, screenBox(o)]); });
+    farLabels.forEach(lb => { const a = _boxes.find(x => x[0] === lb)[1], hit = _boxes.some(([o, b]) => o !== lb && b[4] < a[4] && a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]);
+      lb.material.opacity = hit ? 0.4 : 1; });
+  }
   function loop() {
     if (!renderer.domElement.isConnected) { running = false; return; }
     if (document.hidden) { setTimeout(() => requestAnimationFrame(loop), 1000); return; }
@@ -443,6 +493,7 @@
     steam.forEach(s => { const u = (t * 0.25 + s.userData.ph) % 1; s.position.set(s.userData.x + Math.sin(u * 6 + s.userData.ph * 9) * 0.1, 0.3 + u * 1.3, s.userData.z); s.scale.setScalar(0.35 + u * 0.6); s.material.opacity = Math.sin(u * Math.PI) * 0.55; });
     mist.forEach(m => { const u = m.userData; u.a += u.v * dt; m.position.set(Math.cos(u.a) * u.r, u.y, Math.sin(u.a) * u.r); });
     teachers.forEach(s => { s.position.y = s.userData.y + (s.userData.can ? Math.abs(Math.sin(t * 2.4 + s.userData.ph)) * 0.22 : Math.sin(t * 1.2 + s.userData.ph) * 0.03); });
+    if (farLabels.length) fitFarLabels();
     rings.forEach(r => { const k = 1 + (Math.sin(t * 2.4) + 1) * 0.12; r.scale.set(k, k, 1); r.material.opacity = 0.55 + Math.sin(t * 2.4) * 0.3; });
     if (rain.visible) { const ra = rain.geometry.attributes.position.array; for (let i = 1; i < ra.length; i += 3) { ra[i] -= dt * 14; if (ra[i] < WY) ra[i] += 16; } rain.geometry.attributes.position.needsUpdate = true; }
     controls.update(); renderer.render(scene, camera);
@@ -467,7 +518,7 @@
       controls.autoRotate = true; controls.autoRotateSpeed = 0.35;
       hemi = new THREE.HemisphereLight(0xffffff, 0xc9a98a, 0.85); scene.add(hemi);
       sun = new THREE.DirectionalLight(0xfff2dd, 1.2); sun.position.set(-8, 14, 9);
-      if (HQ) { sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 }); sun.shadow.bias = -0.0008; }
+      if (HQ) { sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -11.8, right: 8.2, top: 10, bottom: -10, near: 1, far: 40 }); sun.shadow.bias = -0.0008; }
       scene.add(sun);
       const root = new THREE.Group(); scene.add(root);
       buildSky(); buildIsland(root); buildTrees(root); buildHuts(root); buildPier(root);
