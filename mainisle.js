@@ -38,6 +38,10 @@
     hello: ['廟埕剛掃好，坐一下。', '今天想聽哪一段？姨媽講給你聽。', '下次唱一段歌仔戲給你聽好不好？'] };
   KEEPER.church.open = { first: '你好你好！教會整修好了，歡迎進來坐坐。教會的歷史、節期和這棟建築的故事，都寫在下面，慢慢看。',
     hello: ['進來坐，外面風大。', '今天想聽哪一段？我講話快，聽不清楚就叫我慢一點。', '最近練的那首日文歌，下次唱給你聽！'] };
+  KEEPER.exchange.open = { first: '你好，阿嬤的交易所開張了。以前在銀行看了很多帳，現在把幾個重要的道理寫成帳本，放在下面，慢慢看。',
+    firstHer: '喵呱來啦！阿嬤的交易所開張了。以前在銀行看了很多帳，現在把幾個重要的道理寫成帳本，放在下面，慢慢看。',
+    firstGrand: '喵呱來啦！阿嬤的交易所開張了。以前在銀行看了很多帳，現在把幾個重要的道理寫成帳本，放在下面，慢慢看。',
+    hello: ['算盤先幫你擦亮了。', '今天的數獨解完了，換你來考考我。', '帳記清楚，事情就順。', '今天想看哪一頁？阿嬤講給你聽。'] };
   KEEPER.temple.face = '👵'; KEEPER.church.face = '🧑'; KEEPER.temple.ic = KEEPER.church.ic = '';   // 兩位的頭像都用人，對等（美術 10/30）；地方的圖示 ic 照舊   // notes：聚會所裡的山海筆記
   // 玉山山頂的節氣小卡（爸爸 10/28）：阿台婆婆說今天的節氣，配一則跟會考自然、社會有關的小知識；只在點聚會所時顯示，不推、不給獎勵
   const SUMMIT_FACT = {
@@ -129,7 +133,8 @@
   // 三本書（山海筆記、廟埕的故事、教會的故事）共用：data 點了才下載；nb：null 收起、{ u: -1 } 單元列表、{ u, c } 第 u 單元第 c 張（只放記憶體，不存）
   const BOOK = { shanhai: { file: 'notes/shanhai.json', name: '📚 山海筆記', lead: '用台灣的山、海和天氣，說說課本裡的觀念。', id: 'miNotes' },
     temple: { file: 'notes/temple.json', name: '廟埕的故事', lead: '這裡的歷史、文化和節期，對到課本裡的觀念。', id: 'miStory' },   // 廟和教會兩邊的字級、版面、按鈕完全一樣，標題不放 emoji（美術 10/30）
-    church: { file: 'notes/church.json', name: '教會的故事', lead: '這裡的歷史、文化和節期，對到課本裡的觀念。', id: 'miStory' } };
+    church: { file: 'notes/church.json', name: '教會的故事', lead: '這裡的歷史、文化和節期，對到課本裡的觀念。', id: 'miStory' },
+    exchange: { file: 'notes/exchange.json', name: '🧮 阿嬤的帳本', lead: '阿嬤在銀行看過的帳，說說課本裡的理財觀念。', id: 'miStory' } };
   const bookOn = b => b === 'shanhai' ? notesOn() : !!OPEN[b];
   function moonAge(day) {   // 月齡（天）：從 2000-01-06 18:14 UTC 的新月往後推，取台北中午
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(day || ''); if (!m) return null;
@@ -203,8 +208,29 @@
       <div style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">${P.map((p, i) => `<button onclick="mainMapPick('${b}',${i})">${esc(p.n)}</button>`).join('')}</div>
       <div id="miMapInfo" style="margin-top:8px">${mapInfoHtml(b)}</div>`;
   }
+  // EXCHANGE_v2
+  const CALC0 = { p: '10000', r: '2', y: '3' }; let calc = Object.assign({}, CALC0);   // 預設打開就是 600 和 612，和卡片對得起來
+  const money = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  function calcText() {
+    const num = (v, lo, hi) => { const x = parseFloat(String(v).replace(/,/g, '')); return isFinite(x) ? Math.min(hi, Math.max(lo, x)) : lo; };
+    const p = num(calc.p, 0, 10000000), r = num(calc.r, 0, 20) / 100, y = Math.round(num(calc.y, 1, 50));
+    const si = Math.round(p * r * y), ci = Math.round(p * (Math.pow(1 + r, y) - 1));
+    return `${y} 年的利息\n單利：${money(si)} 元\n複利：${money(ci)} 元\n複利多 ${money(ci - si)} 元`;
+  }
+  window.mainCalc = function (el) {
+    if (el && el.dataset.k in calc) calc[el.dataset.k] = el.value;
+    const o = document.getElementById('miCalcOut'); if (o) o.textContent = calcText();
+  };
+  function calcHtml() {
+    const box = (k, label, unit) => `<label style="display:flex;align-items:center;gap:6px;margin-top:6px"><span style="min-width:4.5em">${label}</span><input data-k="${k}" type="text" inputmode="decimal" value="${esc(calc[k])}" oninput="mainCalc(this)" style="flex:1;min-width:0;height:44px;box-sizing:border-box;font-size:16px;padding:0 10px;border-radius:10px;border:1px solid #c9d6e2"><span>${unit}</span></label>`;
+    return `<div id="miCalc" style="margin-top:10px;padding:8px 10px;border-radius:12px;background:#fff">
+      <b>🧮 小算盤</b><div class="muted" style="font-size:12px">只在這裡算，不會存起來。</div>
+      ${box('p', '本金', '元')}${box('r', '年利率', '%')}${box('y', '年數', '年')}
+      <div id="miCalcOut" style="margin-top:8px;white-space:pre-line">${esc(calcText())}</div></div>`;
+  }
   window.mainBook = function (b, u, c) {
     const B = BOOK[b]; if (!B) return;
+    if (b === 'exchange') calc = Object.assign({}, CALC0);   // 翻頁、收起：小算盤回到預設
     quiz = null; mapSel = -1;   // 翻頁、收起：你來選和地圖的選擇都清掉
     B.nb = u == null ? null : { u, c: c || 0 };
     if (B.nb && !B.data && !B.busy) {
@@ -239,7 +265,7 @@
       <div style="margin-top:6px"><b>${esc(k.t)}</b></div>${img}
       <div style="margin-top:6px">${esc(k.b)}</div>
       <div class="muted" style="margin-top:6px;font-size:12px">課本裡叫什麼：${esc(k.k)}</div>
-      <div class="muted" style="font-size:11px">出處：${esc(k.src)}</div>${k.q && Array.isArray(k.q.o) ? quizHtml(b, c, k.q) : ''}
+      <div class="muted" style="font-size:11px">出處：${esc(k.src)}</div>${b === 'exchange' && k.calc ? calcHtml() : ''}${k.q && Array.isArray(k.q.o) ? quizHtml(b, c, k.q) : ''}
       ${last ? `<div class="speech" style="margin-top:10px">${esc(x.ask)}</div>` : ''}
       <div class="row" style="margin-top:8px">${go(c - 1, '◀ 上一張', !c)}<span class="grow"></span>${go(c + 1, '下一張 ▶', last)}</div>`);
   }

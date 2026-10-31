@@ -334,11 +334,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.49.7';
+const APP_VERSION = '2.49.8';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.49.8', date: '2026-10-31', items: ['🏝️ 航海日誌的週頁和月末繪卷多了「看那一週的島」：點一下回到首頁，看看那一週街上的房子和讀書地標；只是回頭看，現在的島不會變。按「← 回到航海日誌」就回來。'] },
   { v: '2.49.7', date: '2026-10-31', fam: true, items: ['🖼️ 我的家牆上的東西排整齊了，不會再壓到窗框，也不會被畫面邊緣切到；已經掛好的東西都在原位。'] },
   { v: '2.49.6', date: '2026-10-31', fam: true, items: ['⛰️ 主島和旁邊的小島都浮到雲海上了：從斜上方看得到每座島底下的岩石和小瀑布。媽祖廟和教會換了新的外觀；晚上碼頭的飛船小窗會亮。'] },
   { v: '2.49.4', date: '2026-10-30', items: ['📊 每個月第一次按完「確認這週」，會問你這個月對讀書的感覺（1～5，也可以先不填）。小島也會記下每天在讀書、延伸、其他畫面各待了幾分鐘，只放在「整理學習摘要」的「這個月」，不加分，也不會出現在別的地方。摘要要不要複製給爸爸，一樣由你決定。', '🧩 燈室的「正在補強」會寫出海灘上最多的一兩類題；按「練一題」會先從最多的那一類、你還沒做過的考古題抽。'] },
@@ -1037,7 +1038,8 @@ function render() {
   if (ownMode()) FamIsle.after(tab);
   focusTick(); moveTick();
 }
-function go(t) { if (t === 'plan') { planWeek = null; planDay = null; } tab = t; draft = {}; render(); window.scrollTo(0, 0); }
+function go(t) { if (t !== 'home' && replay.from) { if (replay.timer) { clearInterval(replay.timer); replay.timer = null; } replay.idx = null; replay.from = null; }
+  if (t === 'plan') { planWeek = null; planDay = null; } tab = t; draft = {}; render(); window.scrollTo(0, 0); }
 
 // 兌換：只記「換過多少經驗值」，經驗值總數不變
 async function exchangeXpNow() {
@@ -3312,9 +3314,20 @@ function viewLog() {
   const link = `<div class="card"><h3>🔗 跨科連結</h3>${mine.length || auto.length ? mine.map(l => `<div style="margin-top:4px">✏️ ${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}${!fam && l.note ? '：' + esc(l.note) : ''}</div>`).join('') + auto.map(x => `<div class="muted" style="margin-top:4px">🤖 ${x.lanes.map(esc).join(' × ')}${!fam && x.why ? '：' + esc(x.why) : ''}</div>`).join('') : '<div class="muted">這週沒有發現跨科連結。</div>'}</div>`;
   return `${lightFloors('log')}<div class="card"><h2>📖 航海日誌</h2><div class="muted">一週一頁：照計畫讀了多少、瓶子、紙船和跨科連結。這裡只是紀錄，不加分也不扣分。</div>${nav}${logModes('week')}</div>
     ${plan}${words}${bottle}${boat}${link}
+    ${logIslandBtn(wk)}
     <div class="row"><button class="ghost grow" onclick="go('light')">去海灘 🌊</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 /* --- 航海日誌第二段：月末繪卷。一個月的每一週接成一卷（一週算哪個月看 weekMonth），點一格回到那一週；下面是這個月的合計和一路走來的紀錄（從「更多」頁搬來） --- */
+function logIslandOk(src) { return !!(src || { can: use3D() }).can; }
+function logIsland(wk, src) {
+  src = src || { weeks: S.weeks, past: pastWeeks(), can: use3D() };
+  const i = src.weeks.findIndex(w => w.start === wk); if (i < 0 || !src.can) return;
+  if (replay.timer) { clearInterval(replay.timer); replay.timer = null; }
+  const from = draft.logMode === 'month' ? { month: weekMonth(wk) } : { week: wk };
+  replay.idx = i >= src.past - 1 ? null : i; replay.from = from; replay.scroll = true; go('home');
+}
+function logBack() { const f = replay.from || {}; go('log'); draft = f.month ? { logMode: 'month', logMonth: f.month } : { logWeek: f.week }; render(); }
+function logIslandBtn(wk) { return logIslandOk() ? `<button class="ghost" style="width:100%;margin-bottom:8px" onclick="logIsland('${wk}')">🏝️ 看那一週的島</button>` : '<div class="muted" style="text-align:center;margin-bottom:8px">打開 3D 小島才看得到那一週的島</div>'; }
 function logModes(cur) {
   const b = (k, t, js) => `<button data-s="2" class="${cur === k ? 'on' : ''}" style="flex:1" ${cur === k ? '' : `onclick="${js}"`}>${t}</button>`;
   return `<div class="seg" style="margin-top:8px">${b('week', '📄 一週一頁', "logGo('')")}${b('month', '🖼️ 月末繪卷', "logMonthGo('')")}</div>`;
@@ -3343,11 +3356,12 @@ function viewLogMonth() {
     return `<button class="ghost" onclick="logGo('${r.wk}')" style="flex:0 0 120px;min-height:132px;display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:8px;background:transparent;border:0;border-right:1px dashed var(--line,#e6d6de);border-radius:0;text-align:left;position:relative">
       <small class="muted">${short(r.wk)} 週</small>
       <div style="font-size:15px;line-height:1.5;min-height:46px">${icons('🏮', r.c.lanterns)}${icons(r.boats.some(b => b.kind === 'parent') ? '🚢' : '⛵', r.boats.length)}${r.links ? '🔗' : ''}${!r.c.lanterns && !r.boats.length && !r.links ? '<span class="muted" style="font-size:12px">🍃 安靜的一週</span>' : ''}</div>
-      ${pc == null ? '<small class="muted" style="margin-top:auto">沒有排計畫</small>' : `<div class="bar" style="margin-top:auto"><i style="width:${pc}%"></i></div><small>${pc}%</small>`}
+      <div style="margin-top:auto;display:flex;align-items:flex-end;gap:4px"><div style="flex:1;min-width:0">${pc == null ? '<small class="muted">沒有排計畫</small>' : `<div class="bar"><i style="width:${pc}%"></i></div><small>${pc}%</small>`}</div>
+        ${logIslandOk() ? `<span role="button" aria-label="看那一週的島" onclick="event.stopPropagation();logIsland('${r.wk}')" style="flex:0 0 auto;padding:6px;margin:-6px"><span style="display:flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:50%;background:#fbf7ee;border:1px solid #c9a273;font-size:18px">🏝️</span></span>` : ''}</div>
       ${r.set ? '<span class="hanko" style="position:absolute;top:6px;right:6px;width:24px;height:24px;font-size:12px">済</span>' : ''}</button>`; };
   const knob = 'width:16px;height:8px;margin-left:-3px;border-radius:5px;background:#a8834f', roller = `<div style="flex:0 0 10px;align-self:stretch;display:flex;flex-direction:column;justify-content:space-between;border-radius:5px;background:linear-gradient(90deg,#a8834f,#c9a273,#a8834f);margin:-4px 0"><i style="${knob}"></i><i style="${knob}"></i></div>`;
   const emaki = `<div class="card"><h3>🖼️ ${+mo.slice(5)} 月的繪卷</h3>${rows.length ? `<div style="display:flex;align-items:stretch;overflow-x:auto;background:#fdf6ec;border-radius:10px;padding:6px 0;margin-top:6px">${roller}${rows.map(panel).join('')}${roller}</div>
-      <div class="muted" style="font-size:12px;margin-top:6px">點一格就翻到那一週。🏮 變成燈籠的瓶子・⛵ 紙船・🚢 親子船・🔗 跨科連結・済＝確認過的週</div>` : '<div class="muted">這個月還沒有紀錄。</div>'}</div>`;
+      <div class="muted" style="font-size:12px;margin-top:6px">點一格就翻到那一週。🏮 變成燈籠的瓶子・⛵ 紙船・🚢 親子船・🔗 跨科連結・済＝確認過的週${logIslandOk() ? '・🏝️＝看那一週的島' : ''}</div>` : '<div class="muted">這個月還沒有紀錄。</div>'}</div>`;
   const got = rows.reduce((n, r) => n + r.c.got, 0), total = rows.reduce((n, r) => n + r.c.total, 0), pc = total ? Math.round(got / total * 100) : 0, sub = {};
   rows.forEach(r => r.c.subjects.forEach(x => { sub[x.name] = (sub[x.name] || 0) + x.n; }));
   const sum = k => rows.reduce((n, r) => n + r.c[k], 0), boats = rows.reduce((n, r) => n + r.boats.length, 0), links = rows.reduce((n, r) => n + r.links, 0);
@@ -4548,7 +4562,7 @@ async function questReroll() {
 }
 
 /* --- 3D 小島（原型） --- */
-let replay = { idx: null, timer: null };
+let replay = { idx: null, timer: null, from: null, scroll: false };   // from：從航海日誌來的（{ week } 或 { month }）；scroll：3D 掛好後捲過去
 function use3D() { return BETA3D && local.get('islandView') !== 'list'; }
 function pastWeeks() { return S.weeks.filter(w => w.start <= S.today).length; }
 function timelineHtml() {
@@ -4556,12 +4570,14 @@ function timelineHtml() {
   return `<div class="row"><b class="grow">⏳ 成長回放</b><span class="muted" id="tlLabel">${w ? `第 ${i + 1} 週・${short(w.start)}–${short(w.end)}` : ''}${replay.idx == null ? '（現在）' : ''}</span></div>
     <input type="range" id="tlRange" min="0" max="${n - 1}" value="${i}" style="margin-top:8px;accent-color:var(--plum)" oninput="tlSet(+this.value)">
     <div class="row" style="margin-top:8px"><button id="tlPlay" onclick="tlPlay()">${replay.timer ? '⏸ 暫停' : '▶️ 從第一週播放'}</button>
-      <button class="ghost" onclick="tlSet(${n - 1})">回到現在</button></div>`;
+      <button class="ghost" onclick="tlSet(${n - 1})">回到現在</button></div>
+    ${replay.from ? `<div class="muted" style="font-size:12px;margin-top:8px">街上的房子和讀書地標是那一週的樣子；家和其他建物是現在的樣子。</div>
+      <div style="margin-top:6px"><a href="#" class="tlink" onclick="event.preventDefault();logBack()">← 回到航海日誌</a></div>` : ''}`;
 }
 function tlRefresh() { const el = document.getElementById('i3dTime'); if (el) el.innerHTML = timelineHtml(); }
 function tlSet(i, animate) {
   const n = pastWeeks();
-  replay.idx = i >= n - 1 ? null : i;
+  replay.idx = i >= n - 1 ? null : i; if (replay.idx == null) replay.from = null;
   if (window.Island3D) Island3D.setWeek(replay.idx, animate);
   const w = S.weeks[i], lab = document.getElementById('tlLabel');
   if (lab && w) lab.textContent = `第 ${i + 1} 週・${short(w.start)}–${short(w.end)}${replay.idx == null ? '（現在）' : ''}`;
@@ -4612,6 +4628,7 @@ async function mount3D() {
     });
     if (replay.idx != null) Island3D.setWeek(replay.idx, false);
     updateEnv();
+    if (replay.scroll) { replay.scroll = false; requestAnimationFrame(() => { const t = document.getElementById('i3d'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }
   } catch (e) {
     local.set('islandView', 'list'); toast('這支手機開不了 3D，先用清單模式'); render();
   }
@@ -6890,7 +6907,7 @@ function viewGuide() {
     p('📷 <b>拍錯題</b>：紙本考卷、講義上答錯的題，在首頁「今日のおつとめ」的「📷 拍錯題」或燈塔上方的「拍照」，先選科目再拍（會記得你上次選的科目）。AI 會讀出題目、你寫的答案和正確答案，分好題型（國文像字音字形、修辭、文意理解；英文像時態、片語、閱讀），你確認、勾好要收的題，它們就變成漂流瓶，明天開始漂回來出類題。每題先只列題目開頭和答案，AI 讀錯了再點開修改；沒讀出來時，可以用同一張照片再試一次；照片上看不到答案時，AI 會自己解，請你對一下。收進一題 +5 經驗值，每天的前 10 題有經驗值；超過 10 題還是會收進海灘，只是不加經驗值。照片想拍幾張都可以。') +
     p('🔤 <b>拍單字出題</b>：' + WORD_HOW) +
     p('🧭 <b>錯題類型</b>：燈塔會整理你最常錯哪一類題。按「練一題」，會照你收集的這一類錯題出一題新題，算在每天 ' + XQ_DAILY + ' 題挑戰裡，答對一樣有經驗值和島幣，答錯也會變成漂流瓶。') +
-    p('燈塔最上面有一列樓層：1F 是海灘（撿瓶子）、2F 是航海日誌（一週一頁，按「上一週」可以往前翻；切到「月末繪卷」看一整個月，每週達成率和一路走來的紀錄也在這裡）、3F 是燈室，旁邊是紙船停靠的小碼頭，按一下就過去。還在海上漂的瓶子、放走的燈籠和燈籠送的家具平常收起來，點標題才打開。') +
+    p('燈塔最上面有一列樓層：1F 是海灘（撿瓶子）、2F 是航海日誌（一週一頁，按「上一週」可以往前翻；切到「月末繪卷」看一整個月，每週達成率和一路走來的紀錄也在這裡；按「看那一週的島」可以看那一週的小島）、3F 是燈室，旁邊是紙船停靠的小碼頭，按一下就過去。還在海上漂的瓶子、放走的燈籠和燈籠送的家具平常收起來，點標題才打開。') +
     p('👀 <b>再看一眼</b>：變成燈籠的題會當老朋友漂回來；那時沒答到的，會列在燈室的「再看一眼」，最多 5 題。燈籠不會變回瓶子，一週後會再漂回來，答到了就不再列。') +
     p('📷 <b>收這場的錯題</b>：記完 Boss 戰，只要有一科不是 A++，會問你要不要把這場的錯題拍照收進燈塔海灘；按「先不用」就回小島。') +
     p('🔭 <b>燈室</b>（燈塔頂樓）：四張卡。①「大家會、你還沒會」：全國 60% 以上考生答對、你答錯、還沒變成燈籠的考古題，先列 3 題（可以按「看全部」），點了打開瓶子。②「跟一開始的自己比」：每一科做過的考古題，一開始和最近各一批的答對率，灰線是同一批題的全國平均，一科做滿 10 題才會顯示。③「時間花在哪裡」：最近 4 週有用計時器的分鐘、計畫完成點數、做過的考古題數。④「最常錯的原因」：漂流瓶和紙船填的錯因合計，滿 10 題才算比例。②③④和「已補強」平常收起來，點標題才打開。燈室不加分也不扣分。家人碼也看得到這四張卡，但瓶子上寫的原因和那一句話，照舊要你按「給家人看」才看得到。') +
