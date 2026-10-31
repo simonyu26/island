@@ -255,15 +255,17 @@
         <div class="muted" style="margin-top:6px">今天的推薦</div><button style="margin-top:4px" onclick="mainNotes(${p.u},${p.c})">${pu.ic} ${esc(pu.title)}・${esc(pu.cards[p.c].t)}</button>
         <div class="muted" style="margin-top:10px">全部單元</div>${U.map((x, u) => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainNotes(${u},0)">${x.ic} ${esc(x.title)}（${x.cards.length}）</button>`).join('')}`);
     }
-    const mapBtn = one && Array.isArray(B.data.map) && B.data.map.length ? `<button class="ghost" onclick="mainMap('${b}')">台灣地圖</button>` : '';
+    const tb = `style="flex:none${innerWidth <= 360 ? ';padding:10px 12px' : ''}"`;   // PARA_v1 標題列的按鈕
+    const mapBtn = one && Array.isArray(B.data.map) && B.data.map.length ? `<button class="ghost" ${tb} onclick="mainMap('${b}')">台灣地圖</button>` : '';
     const cal = one ? calHtml(B.data.cal, S && S.today) : '';
     if (one && nb.map && mapBtn) return box(`<div class="row"><b class="grow">台灣地圖</b><button class="ghost" onclick="mainBook('${b}',0,0)">看卡片</button><button class="ghost" onclick="mainBook('${b}')">收起</button></div>${mapHtml(b)}`);
     const x = U[one ? 0 : nb.u], c = Math.max(0, Math.min(nb.c, x.cards.length - 1)), k = x.cards[c], last = c === x.cards.length - 1;
     const go = (cc, label, off) => `<button class="ghost" onclick="${one ? `mainBook('${b}',0,${cc})` : `mainNotes(${nb.u},${cc})`}"${off ? ' disabled' : ''}>${label}</button>`;
     const img = k.img && /^[a-z0-9-]+\.svg$/.test(k.img) ? `<img src="notes/${k.img}" alt="${esc(k.alt || k.t)}" style="width:100%;max-width:420px;display:block;margin:8px auto 0;border-radius:10px">` : '';   // 示意圖是單獨的 svg 檔，用 img 載（工程顧問 10/30）
-    return box(`<div class="row"><b class="grow">${one ? '' : x.ic + ' '}${esc(x.title)}・${c + 1}／${x.cards.length}</b>${one ? `${mapBtn}<button class="ghost" onclick="mainBook('${b}')">收起</button>` : '<button class="ghost" onclick="mainNotes(-1)">單元列表</button>'}</div>${cal}
+    const tt = one ? `<div class="row" style="flex-wrap:nowrap"><b class="grow" style="flex:1 1 auto;min-width:0"><span style="white-space:nowrap;display:inline-block">${esc(x.title)}</span><span style="white-space:nowrap;display:inline-block">・${c + 1}／${x.cards.length}</span></b>${mapBtn}<button class="ghost" ${tb} onclick="mainBook('${b}')">收起</button></div>` : `<div class="row"><b class="grow">${x.ic} ${esc(x.title)}・${c + 1}／${x.cards.length}</b><button class="ghost" onclick="mainNotes(-1)">單元列表</button></div>`;   // PARA_v1：山海筆記已經開門，標題列逐字不變
+    return box(`${tt}${cal}
       <div style="margin-top:6px"><b>${esc(k.t)}</b></div>${img}
-      <div style="margin-top:6px">${esc(k.b)}</div>
+      ${/* PARA_v1：核心句一段，空一行再接例子 */ String(k.b).split('\n').map((t, i) => `<div style="margin-top:${i ? 12 : 6}px">${esc(t)}</div>`).join('')}
       <div class="muted" style="margin-top:6px;font-size:12px">課本裡叫什麼：${esc(k.k)}</div>
       <div class="muted" style="font-size:11px">出處：${esc(k.src)}</div>${b === 'exchange' && k.calc ? calcHtml() : ''}${k.q && Array.isArray(k.q.o) ? quizHtml(b, c, k.q) : ''}
       ${last ? `<div class="speech" style="margin-top:10px">${esc(x.ask)}</div>` : ''}
