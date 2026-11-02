@@ -213,18 +213,23 @@
     return (m ? `<div class="row" style="margin-top:10px;flex-wrap:nowrap"><span style="font-size:28px">${esc(m.emoji || '🐱')}</span><div class="speech grow"><b>${esc(m.name)}</b>：いらっしゃい～歡迎來我們家坐坐！</div></div>` : '')
       + (pages.length ? `<div style="margin-top:10px"><b>📆 日めくり</b>${pages.slice().reverse().map(p => `<div class="muted" style="margin-top:4px">${esc(p.date.slice(5).replace('-', '/'))}・${esc(p.text)} ${esc(p.emoji || '')}</div>`).join('')}</div>` : '');
   }
+  // v2.50 分房間（ROOMS_v1）：'me' 客廳、'me:wa' 和室、'me:bed' 二樓臥室
+  const ROOM_NAMES = { me: '🛋️ 客廳', 'me:wa': '🍵 和室', 'me:bed': '🛏️ 二樓臥室' };
   async function openRoom(who) {
-    const room = (snap.rooms || {})[who] || { wall: '#f6efe6', items: [] };
+    const room = (snap.rooms || {})[who] || { wall: '#f6efe6', items: [] }, mine = who === 'me' || who.indexOf('me:') === 0;
     if (who === 'me') stamp('home');
-    const title = who === 'me' ? (snap.home && snap.home.name) || '島主的家' : resident(who).name + '的家';
+    const title = mine ? (snap.home && snap.home.name) || '島主的家' : resident(who).name + '的家';
+    const tabs = mine ? Object.keys(ROOM_NAMES).filter(k => k === 'me' || (snap.rooms || {})[k]) : [];
     const sheet = document.createElement('div'); sheet.className = 'sheet';
     sheet.innerHTML = `<div class="card"><div class="row"><h3 class="grow" style="margin:0">🏠 ${esc(title)}</h3><button class="ghost" id="closeRoom">關上門</button></div>
+      ${tabs.length > 1 ? `<div class="row" style="gap:6px;margin-top:8px">${tabs.map(k => `<button class="${k === who ? '' : 'ghost'}" data-room="${k}" style="padding:6px 12px">${ROOM_NAMES[k]}</button>`).join('')}</div>` : ''}
       <div id="r3d" style="margin-top:10px"><div class="loading" style="padding-top:120px">🛋️ 開門中…</div></div>
       <div class="muted" style="margin-top:6px">👆 拖曳可以轉動房間，兩指可以拉近。</div>
       ${who === 'me' ? homeExtras() : ''}</div>`;
     document.body.appendChild(sheet);
     const close = () => sheet.remove();
     sheet.querySelector('#closeRoom').onclick = close;
+    sheet.querySelectorAll('[data-room]').forEach(b => { b.onclick = () => { if (b.dataset.room !== who) { close(); openRoom(b.dataset.room); } }; });
     sheet.onclick = e => { if (e.target === sheet) close(); };
     const el = sheet.querySelector('#r3d');
     try {
@@ -233,7 +238,7 @@
       if (!window.FpsGuard) await loadScript('fpsguard.js').catch(() => {});   // 載不到就照原本的畫質
       if (!window.Room3D) await loadScript('room3d.js');
       el.innerHTML = '';
-      Room3D.mount(el, { wall: room.wall, accent: room.accent || '#741b47', night: phaseOf(taipeiHour()) === 'night', items: room.items || [], visitor: null });
+      Room3D.mount(el, Object.assign({ wall: room.wall, accent: room.accent || '#741b47', night: phaseOf(taipeiHour()) === 'night', items: room.items || [], visitor: null }, room.style === 'wa' || room.style === 'bed' ? { style: room.style } : {}));
     } catch (e) {
       const zone = z => (room.items || []).filter(f => (f.z || 'floor') === z).map(f => esc(f.ic)).join(' ');
       el.outerHTML = `<div class="room" style="background:linear-gradient(${esc(room.wall)} 50%, #d9b88f 50%);margin-top:10px">

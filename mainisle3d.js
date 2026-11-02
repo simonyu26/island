@@ -28,7 +28,7 @@
   const TREES = [];
   const LIFT = 3.5;   // 主島完全浮在空中、脫離海面（爸爸 10/27）：整座島和名牌抬高這麼多；底下照舊是整片海
   const PEAK = xz(120.96, 23.47);   // 玉山
-  const RIDGE = [[121.55, 24.85, 1.6], [121.40, 24.55, 2.0], [121.28, 24.25, 2.4], [121.15, 23.95, 2.6], [120.82, 23.20, 2.6], [120.80, 22.90, 2.2], [120.78, 22.55, 1.6], [120.80, 22.25, 1.1]];
+  const RIDGE = [[121.64, 24.66, 1.6], [121.40, 24.55, 2.0], [121.28, 24.25, 2.4], [121.15, 23.95, 2.6], [120.82, 23.20, 2.6], [120.80, 22.90, 2.2], [120.78, 22.55, 1.6], [120.80, 22.25, 1.1]];
   // 列島：以主島為中心，各島方位固定（爸爸 2026-10-26：她東、爸爸西、媽媽南、姐姐北、姑姑西南；s.a 是角度÷π，0 東、0.5 南、1 西、-0.5 北）
   const RX = 13.5, RZ = 19;   // 列島排成橢圓（主島南北長），直式手機也放得下
 
@@ -141,12 +141,14 @@
   let glowK = 0.8;
   const lampMat = () => M.lamp || (M.lamp = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xf2bf55).multiplyScalar(glowK), toneMapped: false }));   // BUILD_v1：三棟共用的夜光
   function windows(g, n, w, y, z, h) { for (let i = 0; i < n; i++) g.add(box(0.16, h || 0.22, 0.04, glassMat, (i - (n - 1) / 2) * w, y, z)); }
-  function exchange() {   // 交易所：白色石造、正面四根柱子、三角山牆（爸爸 草圖：三排窗）
-    const g = new THREE.Group(), stone = mat('stone', 0xeee6d6), dark = mat('roofGrey', 0x7d7f86);
-    g.add(box(1.8, 1.2, 1.2, stone));
-    for (let i = 0; i < 4; i++) g.add(box(0.14, 0.9, 0.14, mat('col', 0xffffff), -0.6 + i * 0.4, 0.1, 0.66));
-    const ped = new THREE.Mesh(new THREE.ConeGeometry(1.15, 0.45, 4, 1), dark); ped.rotation.y = Math.PI / 4; ped.scale.set(1.1, 1, 0.75); ped.position.y = 1.42; g.add(ped);
-    windows(g, 3, 0.45, 0.62, 0.61); windows(g, 3, 0.45, 0.25, 0.61);
+  function exchange() {   // EXCHANGE3D_v1 交易所（大稻埕洋樓風，遠版 ≤144）：兩層街屋、山頭弧形、一樓亭仔腳柱列、二樓三扇窗
+    const g = new THREE.Group(), wash = mat('washStone', 0xd8cfbf), col = mat('stone', 0xeee6d6);
+    g.add(box(1.9, 1.25, 1.1, wash, 0, 0, -0.1));
+    g.add(box(2.0, 0.1, 0.25, col, 0, 0.55, 0.52));   // 一樓騎樓上緣
+    for (let i = 0; i < 4; i++) g.add(box(0.14, 0.55, 0.14, col, -0.75 + i * 0.5, 0, 0.58));   // 亭仔腳的柱子
+    g.add(box(2.0, 0.22, 0.12, wash, 0, 1.25, 0.4));   // 女兒牆
+    const arc = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.12, 6, 1, false, -Math.PI / 2, Math.PI), wash); arc.rotation.x = -Math.PI / 2; arc.position.set(0, 1.44, 0.4); g.add(arc);   // 山頭的弧形
+    for (let i = 0; i < 3; i++) g.add(box(0.16, 0.32, 0.04, lampMat(), (i - 1) * 0.55, 0.7, 0.46));   // 二樓三扇窗（夜光和廟燈籠、教會彩窗同一個強度；深綠窗框和半圓拱留給近版）
     return g;
   }
   function church() {   // 教會（公東教堂風，遠版 ≤84）：清水混凝土方塊、頂樓斜屋頂小堂、白十字、彩色格窗帶、戶外斜梯
@@ -219,7 +221,14 @@
       out.push(bx(0.04, 0.5, 0.12, PAL.lamp, 0.66, 0.45, 0.22, 0, 0, 1), bx(0.04, 0.5, 0.12, PAL.lamp, 0.66, 0.45, -0.22, 0, 0, 1));
       out.push(bx(1.34, 0.05, 1.04, PAL.line, 0, 1.18, 0));
       return out;
-    }
+    },
+    exchange: () => [   // 二樓拱窗（深綠窗框＋半圓拱）、山頭圓徽、兩側柱頭、騎樓招牌帶（不寫字）、洗石子分格線
+      ...[-0.55, 0, 0.55].map(x => bx(0.32, 0.4, 0.03, PAL.frame, x, 0.66, 0.445)),
+      ...[-0.55, 0, 0.55].map(x => disc(0.16, 4, 1, PAL.frame, x, 1.06, 0.462)),
+      disc(0.12, 8, 0, PAL.medal, 0, 1.56, 0.47),
+      bx(0.1, 0.18, 0.1, PAL.wash, -0.95, 1.47, 0.4), bx(0.1, 0.18, 0.1, PAL.wash, 0.95, 1.47, 0.4),
+      bx(1.2, 0.08, 0.02, PAL.frame, 0, 0.56, 0.655),
+      bx(1.9, 0.025, 0.02, PAL.washLine, 0, 0.6, 0.455), bx(1.9, 0.025, 0.02, PAL.washLine, 0, 1.12, 0.455)]
   };
   function bakeFar(g) {   // 遠版：同一個不受光以外的物件都合成一個頂點色網格；夜光（lampMat）的合成另一個
     const body = [], lit = [];
@@ -243,7 +252,7 @@
   }
   function nearStep() {   // 每一幀只算 3 個距離
     const P = ctx.places || {}, w = new THREE.Vector3();
-    ['temple', 'church'].forEach(k => {
+    ['temple', 'church', 'exchange'].forEach(k => {
       const open = P[k] && !P[k].closed; let n = near[k];
       if (!open) { if (n && n.on) { n.on = false; n.body.visible = false; if (n.glow) n.glow.visible = false; } return; }   // 準備中一律遠版
       w.set(PLACE[k].x, LIFT + (PLACE[k].top || 0), PLACE[k].z);

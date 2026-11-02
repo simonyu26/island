@@ -9,7 +9,7 @@
 (function () {
   window.lightWordLater = async function () {};   // 家人島沒有燈塔：確認這週以後不請守燈人寫話（不然會跳「你的島還沒有這個功能」）
   const SLOT = ['國', '英', '數', '自', '社'];
-  const KEEP_BOARD = ['plan', 'walk'], KEEP_PLACE = ['home', 'walk', 'main', 'garden'];
+  const KEEP_BOARD = ['plan', 'walk'], KEEP_PLACE = ['home', 'walk', 'main', 'garden', 'wisdom'];   // wisdom：2c-1
   const DIR_IC = ['🔤', '📚', '💼', '🥗', '🏃', '🎨', '🎹', '🧺', '🌱', '🧘', '🍳', '💰', '🗣️', '✍️', '🧠', '⭐'];
   const SUGGEST = [
     { name: '外語', ic: '🔤', items: ['單字 15 分鐘', '聽一集 podcast'] },
@@ -27,11 +27,12 @@
 
   /** 每次畫面前呼叫：把五條街換成這座島的方向，收起會考專用的看板與地方 */
   // 家人島走得到的分頁（白名單，工程顧問 10/26）：不在這裡的分頁一律回到島上；主線新加的分頁預設不會出現在家人島，要開放再加進來，後端 OWN_API 也要有對應的函式
-  const OWN_TABS = ['home', 'house', 'walk', 'moveStop', 'focus', 'plan', 'pick', 'confirm', 'shop', 'coins', 'more', 'guide', 'setup', 'keeper', 'kizuna', 'mainisle', 'garden', 'isle', 'isleNew'];   // garden、isle、isleNew：2b-1
+  const OWN_TABS = ['home', 'mail', 'house', 'walk', 'moveStop', 'focus', 'plan', 'pick', 'confirm', 'shop', 'coins', 'more', 'guide', 'setup', 'keeper', 'kizuna', 'mainisle', 'garden', 'isle', 'isleNew', 'wisdom', 'whut', 'wlesson', 'famvisit'];   // famvisit：互訪   // wisdom、whut、wlesson：2c-1   // garden、isle、isleNew：2b-1
   // 家人島畫得出來的卡片（白名單）：Index.html 用 card('key', html) 包起來的卡片，key 不在這裡就不畫；要開放新卡片時把 key 加進來，後端 OWN_API 也要有對應的函式
   //   不在這裡、家人島看不到的：diaryShare（日めくり的分享按鈕，等拜訪家人島那一版）、link（跨科連結）、lightWord（燈塔的話）、adv（學習顧問）、keeperImg（管理員上傳圖片）、hallLink（v2.44 我的家去音樂廳的按鈕，家人島沒有音樂廳）
-  const OWN_CARDS = ['kairan', 'timeline', 'homeMate', 'moveArt', 'habit', 'move', 'islet', 'xpEx', 'water', 'diary'];   // water、diary：2b-1
+  const OWN_CARDS = ['diaryShare', 'kairan', 'timeline', 'homeMate', 'moveArt', 'habit', 'move', 'islet', 'xpEx', 'water', 'diary'];   // water、diary：2b-1
   function apply() {
+    b1Open();   // B1
     if (!OWN_TABS.includes(tab)) { tab = 'home'; draft = {}; }
     const all = (isle() && isle().dirs) || [], live = liveDirs();
     // 項目的科目換成方向的名字（計畫、確認頁的小標題用），GROUP 也加上方向名字 → 位置，經驗值和房子照位置算
@@ -52,8 +53,15 @@
   // ---------- 收起來的東西 ----------
   window.kairanCard = () => '';
   // 衛星小島（isletCard）2b-1 起開放：商店照她的畫
-  window.wisdomOn = () => false;
+  // ---------- 智慧島（2c-1 最小版）：FAM_WISDOM 開了才有；成人版課文由 Index.html 的 wisdomAdult() 載入 ----------
+  window.wisdomOn = () => !!(S && S.wisdomOk);
+  WISDOM_RULE = '每天可以上一講，同一位老師每週一講。上過的課可以回小屋回看。';   // 一天一講、一週一講照她的 wisdomTodayDone、wisdomWeekDone（爸爸 10/28）
+  WISDOM_SHELF = '';   // 家人島沒有書店，上過的書不擺書架
+  PLACES.wisdom.lead = '去智慧島的渡船由你請一位主人來開：取名字、選樣子、寫個性。';
+  PLACES.wisdom.about = ['從這裡開船去智慧島，四位老師的課照順序上，每天可以上一講，同一位老師每週一講', '每一講最後寫一句交給老師，老師會回你一句', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你島上的家'];
+  const AI_OK = '你在智慧島寫給老師的那一句，會交給 AI，讓老師回你一句。這個 AI 用的是 Google Gemini 的付費版，你寫的字不會被拿去訓練 AI。你寫的和老師的回話，在 App 裡只有你自己看得到，其他家人都看不到；資料存在 App 管理員的 Google 試算表裡，管理員答應過不會去讀。';   // 文案審查 25
   window.ensureDaily = async () => {};
+  window.feelCard = () => ''; window.setFeel = () => {};   // FAM_TMFEEL_v1：每月自評家人版還沒做（v2.49.4）
   window.seedDefaults = async () => {};
   window.maybeGreet = () => {};
 
@@ -63,6 +71,7 @@
     return `<div class="card" id="hudCard">
       <div class="row"><h2 class="grow">${esc(D.cfg.islandName || '我的島')}</h2><span class="muted">島嶼 Lv.${D.level}</span>
         <button class="ghost" style="padding:4px 10px" onclick="openHouse('me')" aria-label="我的家">${houseTier().ic}</button>
+        <button class="ghost mailbtn" onclick="go('mail')" aria-label="郵便受け">📮${famNewsN() ? `<span class="dot">${famNewsN()}</span>` : ''}</button>
         <button class="ghost" style="padding:4px 10px" onclick="go('guide')" aria-label="玩法說明">❓</button></div>
       <div class="hud">
         <div><b>${D.xp}</b><span class="muted">經驗值</span></div>
@@ -81,6 +90,7 @@
     try {
       if (!window.THREE) await loadScript('three.min.js');
       if (!THREE.OrbitControls) await loadScript('OrbitControls.js');
+      if (!window.FpsGuard) await loadScript('fpsguard.js').catch(() => {});   // FAM_FPSGUARD_v1：和她的島一樣，跑不順自動降畫質；載不到就照原本的畫質
       if (!window.Island3D) await loadScript('island3d.js');
       if (!document.getElementById('i3d')) return;
       el.innerHTML = '';
@@ -92,7 +102,8 @@
         home: homeOf() && { tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') },
         onHome: () => openHouse('me'),
         layout: { lanes: false, light: false, off: SLOT.filter(s => live.indexOf(s) < 0), bg: D.cfg && D.cfg.bg },   // 島的背景：海上／宇宙／天空
-        light: null, ferry: { open: true, label: '⛴️ 港口', sub: '去別的島', far: false }, onFerry: openPort, yatai: { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null }, onYatai: () => openYatai(), book: null, marks: [],   // 港口（10/27）；屋台（10/28，開島就有）
+        light: null, ferry: { open: true, label: '⛴️ 港口', sub: '去別的島', far: false }, onFerry: openPort, yatai: { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null }, onYatai: () => openYatai(), book: null, marks: b1On() ? landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })) : [],
+        ...(b1On() ? { onMark: famMark, hall: (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()), onHall: () => openHall() } : {}),   // B1   // 港口（10/27）；屋台（10/28，開島就有）
         garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),   // 2b-1：種樹、衛星小島
         islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
         grade: () => null, mainIsle: mainOpen() ? { a: -0.5 } : null, onMainIsle: () => go('mainisle'), onSelect: showInfo3D
@@ -115,7 +126,7 @@
         <div><b>${esc(r.name)}</b><div class="muted">${esc(d.ic)} ${esc(d.name)}${r.personality ? '・' + esc(r.personality) : ''}</div></div></div>
       <div class="muted" style="margin-top:8px">${d.items.filter(it => !it.off).map(it => esc(it.name)).join('、')}</div>
       <div class="row" style="justify-content:space-around;margin-top:8px">${recent}</div>
-      <div class="muted" style="text-align:center;font-size:12px">最近四週完成的次數</div>`;
+      <div class="muted" style="text-align:center;font-size:12px">最近四週完成的次數</div>${b1On() ? famMarkList(s) : ''}`;
   };
 
   // ---------- 更多 ----------
@@ -131,25 +142,60 @@
     <div class="card"><h3>📊 紀錄</h3><div>有紀錄的週數：${D.recordedWeeks}　最長連續：${D.best} 週</div>
       <div class="muted" style="margin-top:6px">每累積 6 週紀錄會得到 1 張休息卡，某週沒記錄時會自動使用，連續週數不會中斷。</div></div>
     <div class="card"><div class="row"><button class="ghost" onclick="go('guide')">❓ 玩法說明</button>
-      <button class="ghost" onclick="famOwnSwitch(false)">⛴️ 去看她的島</button></div>
+      <button class="ghost" onclick="famOwnSwitch(false)">⛴️ ${esc(herGo())}</button></div>
       <div class="muted" style="margin-top:8px">版本 v${APP_VERSION}・家人島第一版</div></div>
     ${privacy()}
+    ${visitCard()}
     ${BETA3D ? `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🖥️ 3D 高畫質</b><div class="muted">開著會有影子、比較細的海浪；手機變慢或發燙就關掉。</div></div>
       <button class="ghost" onclick="toggleHQ()">${hqOn() ? '✅ 開著' : '⬜ 關著'}</button></div></div>` : ''}`;
   };
-  const WHO = '你的計畫、每天的紀錄、運動和商店，只有你自己在 App 裡看得到；她和其他家人目前都看不到你的島。'
-    + '紀錄存在 App 管理員的 Google 試算表裡的隱藏分頁，管理試算表的人看得到原始資料。這一版不會把任何內容送給 AI。'
+  const WHO_VISIT = '如果你打開「讓家人來我的島看看」，家人可以來看你的島，港口選單上也會顯示你填的島名和稱呼；關掉以後，港口選單上就不會出現你的島。';   // 互訪
+  const WHO = '你的計畫、每天的紀錄、運動和商店，只有你自己在 App 裡看得到；其他家人目前都看不到你的島。'
+    + '紀錄存在 App 管理員的 Google 試算表裡的隱藏分頁，管理試算表的人看得到原始資料。除了你在智慧島同意後寫給老師的那一句，不會把任何內容送給 AI。'
     + '日めくり和喝水紀錄也一樣：在 App 裡只有你自己看得到。資料存在 App 管理員的 Google 試算表裡，所以管理員技術上打得開，但管理員答應過不會去讀。有疑問，隨時可以直接問管理員。'
-    + '在聚會所貼的公告，家人和她走進聚會所都看得到；用乘船券來玩的朋友看不到，也不會推到任何人的首頁。'   // 2b-2（爸爸 10/27；文案審查 19）
-    + '在主島的列島地圖上，其他家人和她看得到你的稱呼、有沒有開島和你選的島背景（海上、宇宙、天空），看不到島名和島上的任何東西。';
+    + '在聚會所貼的公告，家人走進聚會所都看得到；用乘船券來玩的朋友看不到，也不會推到任何人的首頁。'   // 2b-2（爸爸 10/27；文案審查 19）
+    + '在主島的列島地圖上，其他家人看得到你的稱呼、有沒有開島和你選的島背景（海上、宇宙、天空），看不到島名和島上的任何東西。';
   function privacy() {
-    return `<div class="card"><h3>🔐 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO}</div>
+    return `<div class="card"><h3>🔐 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO}${S.visitOk ? WHO_VISIT : ''}</div>
       <button class="ghost" style="width:100%;margin-top:10px" onclick="logoutPhone()">🚪 登出這支手機</button></div>`;
   }
 
+  // ---------- 版本更新（FAM_NEWS_v1）：和她的島同一份 CHANGELOG，只留標了家人可看（fam）的項目 ----------
+  const famPick = (o, list) => o && o.fam === true ? list : Array.isArray(o && o.fam) ? list.filter((_, i) => o.fam.includes(i)) : [];
+  const famNext = () => (NEXT_UP && NEXT_UP.items) ? famPick(NEXT_UP, NEXT_UP.items) : [];
+  // 和她的 newsItems() 同一套「沒看過的版本」規則，只是每一版只留家人可看的項目
+  function famNews() {
+    const seen = local.get('islandSeenVersion'); if (seen === APP_VERSION) return [];
+    const seenAt = CHANGELOG.findIndex(c => c.v === seen);
+    const list = (seenAt >= 0 ? CHANGELOG.slice(0, seenAt) : CHANGELOG.slice(0, CHANGELOG.findIndex(c => !c.minor) + 1))
+      .map(c => Object.assign({}, c, { items: famPick(c, c.items) })).filter(c => c.items.length);
+    return list.some(c => !c.minor) ? list : [];
+  }
+  const famNewsN = () => famNews().length ? 1 : 0;
+  const famSeen = "local.set('islandSeenVersion', APP_VERSION); local.set('islandSeenNextUp', nextUpKey());";
+  const nextList = (next, head, style) => next.length ? `<div class="muted" style="${style}">${head}<ul style="margin:4px 0 0;padding-left:20px">${next.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : '';
+  window.viewMail = function () {
+    const g = guide(), news = famNews();
+    const card = news.length ? `<div class="card" style="border:2px solid var(--plum)"><h3>✨ 小島更新了（v${APP_VERSION}）</h3>
+      <ul style="margin:6px 0 10px;padding-left:20px">${news.filter(c => !c.minor).flatMap(c => c.items).map(i => `<li>${esc(newsText(i))}</li>`).join('')}</ul>
+      ${minorFold(news.filter(c => c.minor))}
+      ${nextList(famNext(), `<b>下次更新（${esc(NEXT_UP.when)}）預計會有：</b>`, 'margin:-4px 0 10px')}
+      <div class="row"><button onclick="${famSeen} go('guide')">看玩法說明</button>
+      <button class="ghost" onclick="${famSeen} render()">知道了</button></div></div>` : '';
+    return `<div class="card"><div class="row"><span class="avatar">${g.pic}</span>
+      <div class="speech grow"><b>${esc(g.name)}</b>：${news.length ? '小島更新了！我把這次多了什麼都寫在下面。' : '郵便受け現在空空的。小島更新的時候，右上角的 📮 會亮紅點喔。'}</div></div></div>
+    ${card}
+    <div class="row"><button class="grow" onclick="go('home')">回到島上</button></div>`;
+  };
+  function famVersionCard() {
+    const cur = CHANGELOG.find(c => c.v === APP_VERSION) || CHANGELOG[0];
+    return `<div class="card" style="border:2px solid var(--plum-light)"><div class="row"><b class="grow">🏷️ 目前版本 v${APP_VERSION}</b><span class="muted">${esc(cur ? cur.date : '')}</span></div>
+      ${nextList(famNext(), `下次更新：${esc(NEXT_UP && NEXT_UP.when || '')}，預計會有：`, 'margin-top:4px;font-size:13px')}
+      <button class="ghost" style="margin-top:8px;padding:4px 10px;font-size:13px" onclick="local.del('islandSeenVersion');go('mail')">看這次更新了什麼 ›</button></div>`;
+  }
   window.viewGuide = function () {
     const g = guide();
-    return `<div class="card"><div class="big">${g.pic}</div><h2 style="text-align:center">${esc(D.cfg.islandName)} 的玩法</h2>
+    return `${famVersionCard()}<div class="card"><div class="big">${g.pic}</div><h2 style="text-align:center">${esc(D.cfg.islandName)} 的玩法</h2>
       <div class="speech">${esc(g.name)}：這座島跟著你訂的方向長大。慢慢來，一週一週累積就好。</div></div>
     <div class="card"><h3>📅 每週</h3><p style="line-height:1.7">到「計畫」把這週要做的項目排進每一天。每天做完在首頁的「📋 今日のおつとめ」按完成或做了一部分。週末按「確認這週」，看這週達成了多少。</p></div>
     <div class="card"><h3>⭐ 經驗值與房子</h3><p style="line-height:1.7">完成一次 +10 經驗值，做了一部分 +5；確認一週 +20，達成率越高加越多。經驗值讓島升級、房子變大；換島幣不會扣經驗值，房子也不會變小。</p></div>
@@ -178,10 +224,10 @@
     const icSel = (i, cur) => `<select data-d="${i}.ic" style="width:72px">${DIR_IC.concat(DIR_IC.indexOf(cur) < 0 ? [cur] : []).map(e => `<option ${e === cur ? 'selected' : ''}>${esc(e)}</option>`).join('')}</select>`;
     const left = freeSlot(f) >= 0 && f.dirs.length < MAX_DIRS;
     return `<div class="card"><div class="big">🏝️</div><h2 style="text-align:center">${f.first ? '開一座自己的島' : '修改我的島'}</h2>
-      <div class="muted" style="text-align:center">玩法和她的島一樣：排計畫、每天記錄、每週確認，島會跟著長大。學習和累積的方向由你自己訂。</div></div>
-    ${f.first ? `<div class="card"><h3>1. 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO}</div>
+      <div class="muted" style="text-align:center">玩法和${esc(herIsle())}一樣：排計畫、每天記錄、每週確認，島會跟著長大。學習和累積的方向由你自己訂。</div></div>
+    ${f.first ? `<div class="card"><h3>1. 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO}${S.visitOk ? WHO_VISIT : ''}</div>
       <label class="row" style="margin-top:8px"><input type="checkbox" id="famConsent" ${f.consent ? 'checked' : ''} style="width:auto"> 我看過了，同意</label></div>` : ''}
-    <div class="card"><h3>${f.first ? '2. ' : ''}你希望怎麼被稱呼</h3><div class="muted">島主夥伴和島民會這樣叫你，只有你自己的島上看得到。</div>
+    <div class="card"><h3>${f.first ? '2. ' : ''}你希望怎麼被稱呼</h3><div class="muted">${S.visitOk ? '島主夥伴和島民會這樣叫你。打開「讓家人來我的島看看」以後，家人在港口選單上也看得到。' : '島主夥伴和島民會這樣叫你，只有你自己的島上看得到。'}</div>
       <input data-c="callMe" value="${esc(c.callMe || '')}" maxlength="12" placeholder="例如：${esc(S.who.name)}"></div>
     <div class="card"><h3>${f.first ? '3. ' : ''}島的名字</h3><input data-c="islandName" value="${esc(c.islandName)}" maxlength="20" placeholder="例如：慢慢島">
       <label>島在哪裡</label><select data-c="bg">${[['sea', '🌊 海上'], ['space', '🪐 宇宙裡'], ['sky', '☁️ 漂浮在空中']].map(([k, v]) => `<option value="${k}" ${(c.bg || 'sea') === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
@@ -256,11 +302,16 @@
     };
   };
 
+  // 「她的島」對家人說成她的島名（HER_LABEL_v1，爸爸 10/29）；拿不到島名就照稱呼說關係
+  const HER_REL = { 爸爸: '女兒', 媽媽: '女兒', 姐姐: '妹妹', 姑姑: '姪女' };
+  const herRel = () => (HER_REL[S && S.who && S.who.name] || '她') + '的島';
+  window.herIsle = () => S && S.herName ? S.herName : herRel();
+  window.herGo = () => S && S.herName ? '去' + S.herName + (S.herCall ? '（' + S.herCall + '）' : '') : '去' + herRel();
   // ---------- 畫面畫好以後：上方橫幅、收掉會考專用的按鈕、島主夥伴第一次打招呼 ----------
   function after(t) {
     const app = document.getElementById('app');
     app.insertAdjacentHTML('afterbegin', `<div class="card" style="background:#2f6b4f;color:#fff"><div class="row"><b class="grow">🏝️ ${esc(S.who.name)}的島</b>
-      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="famOwnSwitch(false)">⛴️ 去看她的島</button></div></div>`);
+      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="famOwnSwitch(false)">⛴️ ${esc(herGo())}</button></div></div>`);
     const rm = el => el && el.remove();
     // 家人島沒有的卡片（日めくり的分享按鈕、跨科連結、燈塔的話、學習顧問、管理員上傳圖片）由 Index.html 的 card() 照 OWN_CARDS 不畫；這裡只剩管理員介紹裡講到它們的那幾行
     app.querySelectorAll('li').forEach(li => { if (/分享給家人|每天會寫一句話/.test(li.textContent)) rm(li); });   // 日めくり還不能分享；小島管理員每天的一句話要 AI（2c-2）
@@ -273,6 +324,23 @@
       const m = app.querySelector('.card h2 + .muted'); if (m && /挑戰任務/.test(m.textContent)) m.innerHTML = `你有 <b>${D.coins}</b> 枚島幣。經驗值可以換島幣，島幣換你自己訂的獎勵，商品在「更多 → 修改我的島」新增。`;
     }
     if (t === 'home') app.querySelectorAll('.district .grade').forEach(g => { const box = g.closest('.district'); rm(g); if (box && box.lastElementChild && /Boss|試煉/.test(box.lastElementChild.textContent)) rm(box.lastElementChild); });
+    // 2c-1：還沒同意交給 AI，寫一句的地方上面先放說明和同意按鈕；不同意也可以交，老師用內建句子回
+    if (t === 'wlesson' && !S.save.aiOk) {
+      const go = document.getElementById('wGo');
+      if (go) go.insertAdjacentHTML('beforebegin', `<div class="card" id="famAiOk" style="margin:8px 0;background:#f6f1e6"><div class="muted" style="line-height:1.7">${AI_OK}</div>
+        <button class="ghost" style="width:100%;margin-top:8px" onclick="famAgreeAi()">我看過了，同意</button>
+        <div class="muted" style="font-size:12px;margin-top:6px">先不同意也可以寫，老師會用事先寫好的一句話回你。</div></div>`);
+    }
+    if (b1On()) { const w = document.createTreeWalker(app, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) if (n.nodeValue.indexOf('讀書計時') >= 0) n.nodeValue = n.nodeValue.split('讀書計時').join('專心計時'); }   // B1（文案審查 10/28）：家人島的計時叫專心計時，首頁、音樂廳同一包一起改
+    if (t === 'home') visitRefresh();
+    app.querySelectorAll('[onclick^="shareDiaryPage"],[onchange^="shareDiaryPage"]').forEach(b => {   // 互訪：分享按鈕的字和說明；FAM_VISIT 沒開就不給分享（沒有人看得到）
+      const box = b.tagName === 'INPUT' ? b.closest('label') : (b.tagName === 'BUTTON' ? b : null);   // FAM_SEECHK_v1：分享重整起是勾選框（她那邊的字是乘船券），家人島換成互訪的字
+      if (!box) return rm(b);   // 認不出來的寫法（沒有 label 的勾選框、不是按鈕的東西）就拿掉，不留她那邊的字
+      if (!S.visitOk) return rm(box);
+      if (box !== b) { [...box.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); box.insertAdjacentText('beforeend', ' 分享給來看的家人'); }
+      else b.textContent = /已分享/.test(b.textContent) ? '👀 已分享（按一下收回）' : '分享給來看的家人';
+      if (!box.parentNode.querySelector('.famShareNote')) box.insertAdjacentHTML('afterend', `<div class="muted famShareNote" style="font-size:12px;width:100%;text-align:right">${SHARE_NOTE}</div>`);
+    });
     if (t === 'home' && D.cfg && local.get('famMet:' + S.who.name) !== '1') {
       const g = guide(), hudEl = document.getElementById('hudCard');
       if (hudEl) hudEl.insertAdjacentHTML('afterend', `<div class="card" id="famHello"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="avatar">${g.pic}</span>
@@ -284,15 +352,18 @@
   // ---------- 港口選單（10/27）：每個目的地 { ic, name, on, go }；on() 為 true 才列出來 ----------
   const PORT = [
     { ic: '🏝️', name: '去看她的島', on: () => true, go: () => famOwnSwitch(false) },
-    { ic: '⛰️', name: '去主島', on: () => mainOpen(), go: () => go('mainisle') }];
+    { ic: '⛰️', name: '去主島', on: () => mainOpen(), go: () => go('mainisle') },
+    { ic: '📜', name: '去智慧島', on: () => wisdomOn(), go: () => go('wisdom') }];   // 2c-1：港口選單加智慧島
   window.famPort = PORT;
   function closePort() { const el = document.getElementById('famPort'); if (el) el.remove(); }
   function openPort() {
     closePort();
-    const list = PORT.filter(p => p.on());
+    // 爸爸 10/28：每座島的港口都列「自己的島、主島、智慧島、其他家人的島」，她是家人之一（她的島排在其他家人的島第一個）；自己的島標「你在這裡」、按不下去
+    const list = [{ ic: '🏝️', name: '我的島（你在這裡）', here: 1 }].concat(PORT.filter(p => p.on() && p.name !== '去看她的島'), PORT.filter(p => p.name === '去看她的島').map(p => Object.assign({}, p, { name: herGo() })),
+      ((S && S.famVisit) || []).filter(n => n !== S.who.name).map(n => ({ ic: '🏝️', name: '去' + famIsleLabel(n), go: () => openFamVisit(n) })));   // 互訪；島名和稱呼都是本人自己填的（爸爸 10/28），她的島是她的島名（她自己填了稱呼才加括號）
     document.body.insertAdjacentHTML('beforeend', `<div id="famPort" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
       <div class="card" style="width:100%;max-width:480px;margin:0 16px 16px"><h3 style="margin-top:0">⛴️ 要去哪裡？</h3>
-      ${list.map((p, i) => `<button class="opt" style="width:100%;margin-top:6px" data-port="${i}">${p.ic} ${esc(p.name)}</button>`).join('')}
+      ${list.map((p, i) => `<button class="opt" style="width:100%;margin-top:6px${p.here ? ';background:#eee;color:#888;border-color:#ddd' : ''}" data-port="${i}"${p.here ? ' disabled' : ''}>${p.ic} ${esc(p.name)}</button>`).join('')}
       <button class="ghost" style="width:100%;margin-top:10px" data-port="-1">留在島上</button></div></div>`);
     document.querySelectorAll('#famPort [data-port]').forEach(b => b.onclick = () => { const p = list[Number(b.dataset.port)]; closePort(); if (p) p.go(); });
   }
@@ -327,6 +398,101 @@
       <div class="card"><h3>📜 食譜</h3>${menu}</div>
       ${done.length ? `<div class="card"><h3>🍱 做好的料理</h3><div class="row" style="gap:6px">${done.map(d => `<span class="pill">${d.ic} ${d.n} ×${M.left[d.id]}</span>`).join('')}</div></div>` : ''}
       <div class="row"><button class="ghost grow" onclick="go('home')">回到我的島 🏝️</button>${kp ? `<button class="ghost" onclick="openKeeper('yatai')">${kpPic(kp)} 店主設定</button>` : ''}</div>`;
+  };
+  window.famAgreeAi = async function () {
+    const note = (document.getElementById('wNote') || {}).value;
+    try { S = await call('agreeAi'); D = derive(S); } catch (e) { return toast('沒有存到：' + (e.message || e)); }
+    if (draft.wl && note != null) draft.wl.note = note;
+    toast('好，之後老師會照你寫的內容回你'); render();
+  };
+  // ---------- 互訪：讓家人來我的島看看（快照照乘船券的做法，只放下面列的東西） ----------
+  const VISIT_YES = ['港口選單上的島名和你填的稱呼', '島名和等級、島的樣子和背景', '方向的名字和圖示、島民和島主夥伴的名字', '你的家的外觀、種的樹、衛星小島', '你按了分享的日めくり（家人都看得到）'];
+  const VISIT_NO = ['計畫、每天的紀錄、達成率', '喝水、智慧島寫給老師的句子', '誰來看過（不記錄）'];
+  function famSnapOf() {
+    const live = liveDirs(), g = guide(), h = homeOf(), res = {}, pts = {}, p = pointsUntil(null);
+    live.forEach(d => { const k = SLOT[d.slot], r = resident(k); res[k] = { name: r.name, emoji: r.emoji, personality: r.personality || '' }; });
+    Object.keys(p).forEach(k => { const g2 = GROUP[k] || k; pts[g2] = (pts[g2] || 0) + p[k]; });
+    return { v: 1, at: S.today, title: D.cfg.islandName || '我的島', level: D.level, season: solarTerm(S.today), bg: D.cfg.bg || 'sea', walk: D.exDays.length,
+      guide: { name: g.name, emoji: g.emoji }, dirs: live.map(d => ({ slot: d.slot, name: d.name, ic: d.ic })), residents: res, pts, bond: D.bond,
+      home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, flowers: shownFurniture().includes('flower') } : null,
+      garden: gardenCtx(), islets: islets().map(x => ({ key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: '' })) };
+  }
+  function visitOn() { return !!(S.save.visit && S.save.visit.on); }
+  function visitCard() {
+    if (!S.visitOk) return '';
+    const on = visitOn();
+    return `<div class="card" id="famVisitCard"><h3>🏝️ 讓家人來我的島看看</h3>
+      <div class="muted" style="line-height:1.7">${on ? '開著：家人可以從港口或主島來看你的島，看到的是 ' + esc(short(S.save.visit.at)) + ' 的樣子（每天第一次打開島時會更新）。' : '打開以後，家人可以從港口或主島來看你的島，只能看，不會改到任何東西。'}</div>
+      <div class="row" style="align-items:flex-start;margin-top:8px"><div class="grow" style="min-width:150px"><b style="color:#2e7d32">✅ 看得到</b>
+        <ul style="margin:4px 0;padding-left:18px">${VISIT_YES.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+        <div class="grow" style="min-width:150px"><b style="color:var(--plum)">🙈 看不到</b><ul style="margin:4px 0;padding-left:18px">${VISIT_NO.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>
+      <button class="${on ? 'ghost' : ''}" style="width:100%;margin-top:8px" onclick="famVisitSet(${on ? 'false' : 'true'})">${on ? '關掉，不讓人來看' : '打開，讓家人來看看'}</button></div>`;
+  }
+  window.famVisitSet = async function (on) {
+    try { S = await call('saveVisit', on, on ? famSnapOf() : null); D = derive(S); } catch (e) { return toast('沒有存到：' + (e.message || e)); }
+    toast(on ? '打開了，家人可以來看你的島' : '關掉了，現在誰都看不到'); render();
+  };
+  let visitFresh = false;
+  function visitRefresh() {   // 每天第一次打開島時，用今天的樣子更新快照（不重畫畫面）
+    if (visitFresh || !S.visitOk || !visitOn() || S.save.visit.at === S.today) return;
+    visitFresh = true;
+    call('saveVisit', true, famSnapOf()).then(st => { S = st; D = derive(S); }).catch(() => {});
+  }
+  // 日めくり分享：家人島的字（爸爸 10/28：分享以後所有家人都看得到，包括她）
+  const SHARE_NOTE = '分享後，所有家人都看得到；已經被看過的收不回';
+  window.shareDiaryPage = function (date) {
+    const d = Object.assign({}, S.save['diary:' + date]); if (!d.text) return;
+    d.shared = !d.shared; S.save['diary:' + date] = d;
+    queueSave('diary:' + date, 'saveDiary', date, d.text, d.shared, d.emoji || '');
+    toast(d.shared ? '這一頁分享出去了，家人都看得到' : '收回了；已經被看過的收不回'); render();
+  };
+  // ---------- B1（爸爸 10/28 選、工程顧問 10/28 排進 11/5）：FAM_B1 開了才有；關著時上面的白名單一個字都不加 ----------
+  const b1On = () => !!(S && S.b1Ok);
+  let b1Ready = false;
+  function b1Open() {
+    if (b1Ready || !b1On()) return; b1Ready = true;
+    KEEP_PLACE.push('hall'); OWN_TABS.push('hall');   // 音樂廳：計時寫家人自己的 move:日期（saveMove），綠點照她的規則從那裡算
+    OWN_CARDS.push('matShelf', 'buyBack');   // 商店的素材櫃與收購
+    ['buyMat', 'sellDish'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    PLACES.hall = Object.assign({}, PLACES.hall, { about: PLACES.hall.about.map(a => a.replace('讀書計時', '專心計時')) });
+    PLACES.yatai.about = PLACES.yatai.about.concat(['素材不夠的話，商店的素材櫃可以用島幣買常見素材；做好的料理也可以賣給商店']);
+  }
+  // 素材櫃、收購：照她的卡片（價錢、每天的上限都一樣），只換掉講讀書的字
+  const matShelf0 = matShelfCard, buyBack0 = buyBackCard;
+  window.matShelfCard = () => matShelf0().replace('稀有素材和智慧島的珍品不賣，要讀書才拿得到。', wisdomOn() ? '稀有素材和智慧島的珍品不賣，要完成項目、上智慧島的課才拿得到。' : '稀有素材不賣，要完成項目才拿得到。');
+  window.buyBackCard = () => buyBack0().replace('也不超過當天讀書拿到的素材數', '也不超過當天拿到的素材數');
+  // 讀完書的地標（內容規則 10/28 顧問通過）：只算智慧島的書，一本 13 講都上完才長；照同一個位置找家人的方向，那裡空著就長在排第一的方向
+  const landmarkOf0 = landmarkOf, landmarkList0 = landmarkList, WISDOM_KEYS = WISDOM_BOOKS.map(b => b.key);
+  window.landmarkOf = function (id) {
+    if (!b1On()) return landmarkOf0(id);
+    const l = LANDMARKS[id], live = liveDirs(); if (!l || WISDOM_KEYS.indexOf(id) < 0) return null;
+    const d = live.find(x => x.slot === SLOT.indexOf(l[0])) || live[0]; if (!d) return null;
+    return { s: SLOT[d.slot], name: l[1], street: d.name + '街', model: id };
+  };
+  window.landmarkList = function () {
+    if (!b1On()) return landmarkList0();
+    return myBooks().map(b => { const ns = Object.keys(b.done), l = landmarkOf(b.key); if (ns.length < 13 || !l) return null;
+      return Object.assign({ id: b.key, key: 'w:' + b.key, at: ns.map(n => String(b.done[n].at || '').slice(0, 10)).sort().pop(), title: b.title }, l); })
+      .filter(Boolean).sort((a, b) => (a.at || '').localeCompare(b.at || ''));
+  };
+  function famMark(id) {   // 家人島沒有書店：點地標回那位老師的小屋（上過的課可以回看）
+    const m = landmarkList().find(x => x.id === id); if (!m) return;
+    if (!wisdomOn()) return toast('「' + m.name + '」：上完《' + m.title + '》13 講長出來的');
+    wisdomHut = id.replace(/2$/, ''); draft = {}; tab = 'whut'; render(); window.scrollTo(0, 0);
+  }
+  window.famMark = famMark;
+  function famMarkList(s) {
+    const lm = landmarkList().filter(m => m.s === s);
+    return lm.length ? `<div class="muted" style="margin-top:10px">上完一本書長出的地標</div>${lm.map(m => `<div class="item" style="cursor:pointer" onclick="famMark('${m.id}')"><span>🏞️</span><div class="name grow">${esc(m.name)}<div class="muted" style="font-size:12px">${esc(m.title)}・${esc(short(m.at))} 上完</div></div><span>›</span></div>`).join('')}` : '';
+  }
+  // 小屋：上過的課下面加地標的那一行（她的版本在書店的書頁）
+  const viewWisdomHut0 = viewWisdomHut;
+  window.viewWisdomHut = function () {
+    const html = viewWisdomHut0(); if (!b1On()) return html;
+    const k = wisdomHut, lines = [k, k + '2'].filter(b => Object.keys(wisdomDone(b)).length).map(b => landLine(b, Object.keys(wisdomDone(b)).length >= 13, '上完 13 講')).join('');
+    if (!lines) return html;
+    const i = html.lastIndexOf('<div class="row">');
+    return html.slice(0, i) + `<div class="card" id="famLand">${lines}</div>` + html.slice(i);
   };
   window.FamIsle = { apply, after, cards: OWN_CARDS };
 })();

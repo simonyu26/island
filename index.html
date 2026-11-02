@@ -334,11 +334,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.49.9';
+const APP_VERSION = '2.50';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
-const NEXT_UP = { when: '', items: [] };
+const NEXT_UP = { when: '11/3（二）', items: ['👀 預計 11/3（二）：家人看得到什麼，改成由你一類一類決定，也可以每個人分開選。如果時間有變，會在島上另外跟你說。'] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50', date: '2026-11-02', fam: [2, 3, 4], items: ['🏠 我的家變大了：島嶼 Lv.4 多一間和室，Lv.7 多一間二樓臥室，和室和臥室各可以擺 8 件家具。一件家具同時只會擺在一間，按一下就能搬到現在打開的房間。', '⛴️ 智慧島的碼頭多了渡船屋、歡迎黑板和紅色郵筒。黑板上的歡迎詞可以自己改；郵筒之後才會開始收信。', '🧭 搭船出發前會先問你要去哪裡，選項的順序大家都一樣：自己的島排第一，再來是主島。', '📮 小島更新的消息，家人的島上也看得到了，有新的會在右上角的 📮 亮紅點。', '🏛️ 主島的三棟建物陸續開門：交易所「🧮 阿嬤的帳本」11/4（三）、媽祖廟 11/6（五）、教會 11/7（六）。到了那天點建物，就能翻 12 張故事卡；每張底下有一題「你來選」，只是想想看，不計分。'] },
   { v: '2.49.8', date: '2026-10-31', items: ['🏝️ 航海日誌的週頁和月末繪卷多了「看那一週的島」：點一下回到首頁，看看那一週街上的房子和讀書地標；只是回頭看，現在的島不會變。按「← 回到航海日誌」就回來。'] },
   { v: '2.49.7', date: '2026-10-31', fam: true, items: ['🖼️ 我的家牆上的東西排整齊了，不會再壓到窗框，也不會被畫面邊緣切到；已經掛好的東西都在原位。'] },
   { v: '2.49.6', date: '2026-10-31', fam: true, items: ['⛰️ 主島和旁邊的小島都浮到雲海上了：從斜上方看得到每座島底下的岩石和小瀑布。媽祖廟和教會換了新的外觀；晚上碼頭的飛船小窗會亮。'] },
@@ -512,10 +513,10 @@ function boot() {
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 /* ===== 家人碼（v2.6）：家人看到的畫面和她一樣，但只能做這幾件事；後端也會再擋一次 ===== */
-const FAMILY_FNS = ['getState', 'getImages', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks', 'answerBack', 'postAdvice', 'getIsles', 'getBoard', 'postBoard', 'delBoard'];   // postAdvice：後端只收爸爸的家人碼（Advisor.gs）
+const FAMILY_FNS = ['getState', 'getImages', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks', 'answerBack', 'postAdvice', 'getIsles', 'getBoard', 'postBoard', 'delBoard', 'famSnap'];   // postAdvice：後端只收爸爸的家人碼（Advisor.gs）
 function isFamily() { return !!(S && S.who && S.who.role === 'family'); }
 /* ===== 家人島（列島，做法 B）：家人按「🏝️ 我的島」，畫面和她一樣，但讀寫的是自己的島；畫面的差別都在 family.js，只有家人島才載入 ===== */
-const OWN_FNS = ['getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard'];
+const OWN_FNS = ['saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard'];
 function ownOn() { return local.get('famOwn') === '1'; }
 function ownMode() { return !!(S && S.who && S.who.role === 'own'); }
 // 卡片白名單：家人島只畫 family.js 的 OWN_CARDS 裡有的 key；主線新加的卡片請用 card('key', html) 包起來，家人島預設看不到
@@ -530,6 +531,29 @@ function viewMainIsle() {
   if (window.MainIsle) return MainIsle.view();
   loadScript('mainisle.js').then(() => { if (tab === 'mainisle') render(); }, () => { toast('主島暫時開不了，先回到島上'); if (tab === 'mainisle') go('home'); });   // 載入失敗（例如沒網路）就退回島上，不卡在空白畫面
   return '<div class="loading">🎈 飛往主島中…</div>';
+}
+/* ===== 家人互訪：參觀畫面在 famvisit.js，點了才下載；只看島主同意的快照，沒有寫入、不記誰來過、不畫紅點 ===== */
+let famVisitWho = '';
+function openFamVisit(name) { famVisitWho = String(name || ''); go('famvisit'); }
+function viewFamVisit() {
+  if (!famVisitWho) { setTimeout(() => go('home')); return ''; }
+  if (window.FamVisit) return FamVisit.view();
+  loadScript('famvisit.js').then(() => { if (tab === 'famvisit') render(); }, () => { toast('暫時去不了，先回到島上'); if (tab === 'famvisit') go('home'); });
+  return '<div class="loading">⛴️ 開船中…</div>';
+}
+// 港口選單上家人島的名字（爸爸 10/28）：本人自己填的「島名（稱呼）」，沒填島名就寫「稱呼的島」，稱呼沒填用稱謂；只有開放參觀的島後端才給
+function famIsleLabel(n) { const i = ((S && S.famVisitInfo) || {})[n] || {}, who = i.callMe || n; return i.islandName ? i.islandName + '（' + who + '）' : who + '的島'; }
+// 她的碼頭（爸爸 10/28 統一順序）：我的島（你在這裡）、主島、智慧島、開放參觀的家人島；只列真的去得了的地方
+function herPort() {
+  const list = (S && S.famVisit) || [];
+  const old = document.getElementById('herPort'); if (old) old.remove();
+  const dest = [{ ic: '🏝️', name: '我的島（你在這裡）', here: 1 }].concat(mainOpen() ? [{ ic: '⛰️', name: '去主島', go: () => go('mainisle') }] : [], wisdomOn() ? [{ ic: '📜', name: '去智慧島', go: () => go('wisdom') }] : [],
+    list.map(n => ({ ic: '🏝️', name: '去' + famIsleLabel(n), go: () => openFamVisit(n) })));
+  document.body.insertAdjacentHTML('beforeend', `<div id="herPort" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
+    <div class="card" style="width:100%;max-width:480px;margin:0 16px 16px"><h3 style="margin-top:0">⛴️ 要去哪裡？</h3>
+    ${dest.map((p, i) => `<button class="opt" style="width:100%;margin-top:6px${p.here ? ';background:#eee;color:#888;border-color:#ddd' : ''}" data-port="${i}"${p.here ? ' disabled' : ''}>${p.ic} ${esc(p.name)}</button>`).join('')}
+    <button class="ghost" style="width:100%;margin-top:10px" data-port="-1">留在島上</button></div></div>`);
+  document.querySelectorAll('#herPort [data-port]').forEach(b => b.onclick = () => { const p = dest[Number(b.dataset.port)]; document.getElementById('herPort').remove(); if (p) p.go(); });
 }
 function famOwnSwitch(on) { flush().catch(() => {}).then(() => { if (on) local.set('famOwn', '1'); else local.del('famOwn'); local.del('islandCache'); location.reload(); }); }
 let familyBase = null;   // 家人模式下最後一次從伺服器拿到的狀態，誤按時用來還原畫面
@@ -1017,10 +1041,10 @@ function render() {
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
   if (ownMode()) tabs.splice(2, 1);   // 家人島沒有大考
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (TAB_HELP[tab]) app.insertAdjacentHTML('afterbegin', helpChip());
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
@@ -1031,6 +1055,7 @@ function render() {
   if (tab === 'house') mountRoom();
   if (tab === 'wisdom') mountWisdom3D();
   if (tab === 'mainisle' && window.MainIsle) MainIsle.after();
+  if (tab === 'famvisit' && window.FamVisit) FamVisit.after();
   if (tab === 'plan') bindPlan();
   if (tab === 'pick') bindPicker();
   if (tab === 'confirm') bindConfirm();
@@ -1196,6 +1221,9 @@ function wisdomOn() {
   if (/[?&]wisdom=0\b/.test(location.search)) local.del('wisdomPreview');
   return local.get('wisdomPreview') === '1';
 }
+// 2c-1：家人自己的島上課才用成人版課文（智慧島工作串的 wisdomAdultMerge）；她一律原版
+function wisdomAdult() { return typeof ownMode === 'function' && ownMode(); }
+let WISDOM_RULE = '每天可以上一講，同一位老師每週一講。', WISDOM_SHELF = '上過的書也會擺在書店的「你的書架」上。';   // 2c-1：家人島由 family.js 換掉
 const WISDOM_T = {
   kongming: { name: '孔明', ic: '🪶', place: '隆中草廬', color: '#8C2F2B',
     intro: '住在山邊茅廬的天才軍師。說話文白夾雜，溫暖但一針見血；會坦白講自己打過的敗仗和算錯的事。總是先請你坐下喝茶，最後一句「今日到此」。',
@@ -1259,9 +1287,35 @@ const WISDOM_ORDER = ['kongming', 'xiaomiao', 'alu', 'einstein', 'yirong', 'mi',
 const wisdomFull = {};   // wisdom/<書>.json 的完整內容（書架的 wisdomJson 只留書名、顏色、章名）
 function wisdomLoad(key) {
   if (wisdomFull[key]) return wisdomFull[key].then ? wisdomFull[key] : Promise.resolve(wisdomFull[key]);
-  const p = fetch('wisdom/' + key + '.json').then(r => r.ok ? r.json() : null).catch(() => null)
-    .then(j => { wisdomFull[key] = j || { lessons: [] }; return wisdomFull[key]; });
+  const get = f => fetch('wisdom/' + f + '.json').then(r => r.ok ? r.json() : null).catch(() => null);
+  const adult = typeof wisdomAdult === 'function' && wisdomAdult();   // 家人上課才載入成人版；她不下載
+  const p = Promise.all([get(key), adult ? get(key + '.adult') : null])
+    .then(([j, a]) => { wisdomFull[key] = (a ? wisdomAdultMerge(j, a) : j) || { lessons: [] }; return wisdomFull[key]; });
   wisdomFull[key] = p; return p;
+}
+/** 成人版課文（家人上課用，v2.42 起）：wisdom/<書>.adult.json 只放要覆蓋的部分
+ *  { key, adult: true, lessons: { 講號: { title?, closing?, sections: { 段落index: { q?, opts?, after? } } } } }
+ *  答案（ans）、pick、widget、講次、段落順序一律沿用原版；成人版缺檔或格式不對就照原版上課 */
+function wisdomAdultMerge(j, a) {
+  if (!j || !Array.isArray(j.lessons) || !a || typeof a.lessons !== 'object') return j;
+  const out = Object.assign({}, j, { lessons: j.lessons.map(L => {
+    const o = a.lessons[String(L.n)];
+    if (!o) return L;
+    const M = Object.assign({}, L, { sections: (L.sections || []).map((s, i) => {
+      const p = o.sections && o.sections[String(i)];
+      if (!p) return s;
+      const m = Object.assign({}, s);
+      if (Array.isArray(p.q)) m.q = p.q;
+      if (Array.isArray(p.after)) m.after = p.after;
+      if (Array.isArray(p.opts) && Array.isArray(s.opts) && p.opts.length === s.opts.length) m.opts = p.opts;   // 選項數不同就不換，答案位置才不會錯
+      return m;
+    }) });
+    if (typeof o.closing === 'string') M.closing = o.closing;
+    if (typeof o.title === 'string') M.title = o.title;
+    return M;
+  }) });
+  if (Array.isArray(j.chapters)) out.chapters = j.chapters.map((c, i) => { const o = a.lessons[String(i + 1)]; return o && typeof o.title === 'string' ? o.title : c; });
+  return out;
 }
 function wisdomBook(key) { const j = wisdomFull[key]; return j && !j.then ? j : null; }
 function wisdomLessons() { return (S.save.wisdom && S.save.wisdom.lessons) || {}; }
@@ -1384,7 +1438,7 @@ function wisdomView3D() {
   if (!use3DWisdom()) return toggle + wisdomScene();
   return toggle + `<div id="w3d" style="height:min(58vh,440px);border-radius:16px;overflow:hidden;background:${env.phase === 'night' ? '#141c36' : '#cfe8f3'}">
       <div class="loading" style="padding-top:150px">⛴️ 靠岸中…</div></div>
-    <div class="muted" style="margin-top:6px;font-size:13px">👆 拖曳可以轉動小島，兩指可以拉近；點小屋或老師就能進去。</div>`;
+    <div class="muted" style="margin-top:6px;font-size:13px">👆 拖曳可以轉動小島，兩指可以拉近；點小屋或老師就能進去，碼頭邊的黑板、渡船屋、郵筒也點得到。</div>${wisdomDockCard()}`;
 }
 async function mountWisdom3D() {
   const el = document.getElementById('w3d'); if (!el) return;
@@ -1397,7 +1451,8 @@ async function mountWisdom3D() {
     el.innerHTML = '';
     Wisdom3D.mount(el, { phase: env.phase, weather: env.weather,
       huts: WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k); return { key: k, name: t.name, place: t.place, ic: t.ic, color: t.color, st: wisdomStatus(k), can: !x.why, closed: x.why === 'closed' }; }),
-      onHut: k => openWisdomHut(k) });
+      onHut: k => openWisdomHut(k), welcome: welcomeText(), keeper: (k => k ? { emoji: k.emoji || '⛴️', name: k.name } : null)(keeperOf('wisdom')),
+      onDock: k => { draft.wDock = draft.wDock === k ? '' : k; render(); } });
   } catch (e) { local.set('wisdomView', '2d'); toast('這支手機開不了 3D，先用插畫'); render(); }
 }
 function viewWisdom() {
@@ -1407,13 +1462,39 @@ function viewWisdom() {
   const today = wisdomTodayDone();
   return `<div class="card"><h2>⛴️ 智慧島</h2>${wisdomView3D()}
       <div class="speech" style="margin-top:8px">${today ? '🌙 今天的課上完了。渡船照樣開，想回看筆記可以進小屋坐坐，明天再來上下一講。' : '⛴️ 小船靠岸了。霧散開，小屋的燈都亮著。今天想去哪一間上課？'}</div>
-      <div class="muted" style="margin-top:6px;font-size:13px">點小屋就能進去。每天可以上一講，同一位老師每週一講。</div>${ferryKeeper(today)}</div>
+      <div class="muted" style="margin-top:6px;font-size:13px">點小屋就能進去。${WISDOM_RULE}</div>${ferryKeeper(today)}</div>
     ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k);
       return `<div class="card whcard" style="border-left:5px solid ${t.color}" onclick="openWisdomHut('${k}')"><div class="row" style="flex-wrap:nowrap">
         <span style="font-size:30px">${t.ic}</span><div class="grow"><b>${esc(t.place)}</b>・${esc(t.name)}<div class="muted" style="font-size:13px">《${esc((wisdomBook(x.book) || {}).title || '')}》${wisdomCount(k)}／13 講</div></div>
         <span class="st ${x.why ? 'info' : 'todo'}">${wisdomStatus(k)}</span></div></div>`; }).join('')}
     ${wisdomStampBook()}
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+}
+/** 碼頭邊（v2.48）：點了黑板、渡船屋、郵筒，3D 下方出現一張小卡；她可以在這裡改歡迎詞，家人只能看 */
+function wisdomDockCard() {
+  const k = draft.wDock, fam = isFamily();
+  if (!k) return '';
+  const close = `<button class="ghost" style="padding:6px 12px;font-size:13px" onclick="draft.wDock='';render()">收起來</button>`;
+  if (k === 'board') {
+    const w = welcomeText();
+    if (fam) return `<div class="speech" style="margin-top:8px">🪧 ${w ? esc(w) : '歡迎來到智慧島'}<div style="margin-top:6px">${close}</div></div>`;
+    return `<div class="speech" style="margin-top:8px">🪧 碼頭的歡迎黑板：訪客上岸第一眼會看到這段話。不用寫名字或聯絡方式喔。
+      <textarea id="wdWelcome" maxlength="120" style="margin-top:6px" placeholder="例如：歡迎來到我的會考小島！這裡每一棟房子都是我讀書蓋出來的，慢慢逛～">${esc(draft.welcome != null ? draft.welcome : w)}</textarea>
+      <div class="row" style="margin-top:6px"><button style="padding:6px 12px;font-size:13px" onclick="saveDockWelcome()">寫上黑板</button>${close}</div></div>`;
+  }
+  if (k === 'house') {
+    const kp = keeperOf('wisdom');
+    if (!kp) return fam ? '' : `<div class="speech" style="margin-top:8px">⛴️ 渡船屋還沒有主人。<div class="row" style="margin-top:6px"><button style="padding:6px 12px;font-size:13px" onclick="openKeeper('wisdom')">請一位船長來開船</button>${close}</div></div>`;
+    const daily = S.save['daily:' + S.today], line = (daily && daily.messages && daily.messages.wisdom) || (wisdomTodayDone() ? '今天的課上完了，回程的船隨時開。' : '上船吧，今天想去哪一間？');
+    return `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>：${esc(line)}<div style="margin-top:6px">${close}</div></div></div>`;
+  }
+  return `<div class="speech" style="margin-top:8px">📮 郵筒還沒開始收信。之後訪客就能從這裡寄明信片給你。<div style="margin-top:6px">${close}</div></div>`;
+}
+async function saveDockWelcome() {
+  const el = document.getElementById('wdWelcome'), t = el ? el.value.trim() : '';
+  if (!t) return toast('寫一句歡迎詞吧');
+  draft.welcome = t;
+  if (await visitCall('saveWelcome', t)) { delete draft.welcome; draft.wDock = ''; toast('歡迎詞寫上黑板了'); render(); }
 }
 function ferryKeeper(today) {
   const k = keeperOf('wisdom'), fam = isFamily(), daily = S.save['daily:' + S.today];
@@ -1428,7 +1509,7 @@ function wisdomStampBook() {
     ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], book = wisdomCount(k) >= 13 ? k + '2' : k, d = wisdomDone(book);
       return `<details class="fold" style="margin-top:8px"><summary><b style="color:${t.color}">${t.ic} ${esc((wisdomBook(book) || {}).title || t.name)}</b><span class="muted">${Object.keys(d).filter(n => d[n]).length}／13</span></summary>
         <div class="wstamps">${Array.from({ length: 13 }, (_, i) => d[i + 1] ? `<button class="wstamp on" style="border-color:${t.color};color:${t.color}" onclick="openWisdomLesson('${book}',${i + 1})">${i + 1}</button>` : `<span class="wstamp">${i + 1}</span>`).join('')}</div></details>`; }).join('')}
-    <div class="muted" style="margin-top:8px;font-size:13px">點書名打開這本的章；點蓋好的章可以回看那一講。上過的書也會擺在書店的「你的書架」上。</div></div>`;
+    <div class="muted" style="margin-top:8px;font-size:13px">點書名打開這本的章；點蓋好的章可以回看那一講。${WISDOM_SHELF}</div></div>`;
 }
 let wisdomHut = 'kongming';
 function openWisdomHut(k) { wisdomHut = k; draft = {}; tab = 'whut'; render(); window.scrollTo(0, 0); }
@@ -1890,16 +1971,34 @@ let houseTab = 'room';   // 我的家的分頁：room 房間、shop 家具店、
 function openHouse(who) { houseWho = who || 'me'; houseTab = 'room'; if (SUBJECTS.includes(houseWho) && !kzLike(houseWho).visit) kzSave(houseWho, { visit: true }); go('house'); }
 function houseTier() { let t = HOUSE_TIERS[0]; HOUSE_TIERS.forEach(x => { if (D.level >= x.lv) t = x; }); return t; }
 function homeOf() { return S.save.home || null; }
+// v2.50 分房間（ROOMS_v1）：客廳 'me' 就是原本的房間；和室 'me:wa'（Lv.4）、二樓臥室 'me:bed'（Lv.7）存在 home.rooms.wa／bed，各 8 格。
+// 一件家具同時只在一間，客廳優先、再來和室（後端 saveHome 同一套去重）
+const ROOMS = [{ k: '', key: 'me', ic: '🛋️', name: '客廳' }, { k: 'wa', key: 'me:wa', ic: '🍵', name: '和室', lv: 4 }, { k: 'bed', key: 'me:bed', ic: '🛏️', name: '二樓臥室', lv: 7 }];
+const ROOM_SLOTS = 8, ROOM_STYLE = { 'me:wa': 'wa', 'me:bed': 'bed' };
+let homeRoom = '';
+function isMe(who) { return who === 'me' || who === 'me:wa' || who === 'me:bed'; }
+function roomOpen(who) { const r = ROOMS.find(x => x.key === who); return !!r && (!r.lv || D.level >= r.lv); }
+function roomsOpen() { return ROOMS.filter(r => roomOpen(r.key)); }
+function curRoom() { const k = homeRoom ? 'me:' + homeRoom : 'me'; return roomOpen(k) ? k : 'me'; }
+function homeRoomOf(who) { const h = homeOf() || {}; return (h.rooms || {})[who.slice(3)] || {}; }
+function takenBefore(who) { const h = homeOf() || {}, living = Array.isArray(h.shown) ? h.shown : shownFor('me'); return who === 'me:bed' ? living.concat(shownFor('me:wa')) : living; }
+function shownAnyRoom() { return ROOMS.reduce((a, r) => a.concat(shownFor(r.key)), []); }
+function roomTabs() {
+  const list = roomsOpen(); if (list.length < 2) return '';
+  return `<div class="row" style="gap:6px;margin-bottom:8px">${list.map(r => `<button class="${curRoom() === r.key ? '' : 'ghost'}" style="padding:6px 12px" onclick="homeRoom='${r.k}';draft.arrange=false;draft.pick=null;draft.arrTip=null;render()">${r.ic} ${r.name}</button>`).join('')}</div>`;
+}
 // 家是休息的地方（爸爸，2026-10-25）：會考倒數鐘不再當家具，搬到燈塔；已經買的退還島幣
 const RETIRED_FURN = ['clock'];
 function catalogFor(who) { const live = FURNITURE.filter(f => !RETIRED_FURN.includes(f.id)); return who === 'me' ? live : RES_FURNITURE[who].concat(live.filter(f => f.z !== 'out')); }
 function furnOf(id) { return FURNITURE.find(f => f.id === id) || EX_REWARDS.concat([EX_MEDAL], LANTERN_REWARDS, WISDOM_GRADS).find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
-function ownedFor(who) { return [...new Set((S.save.purchases || []).filter(p => p.furniture && !RETIRED_FURN.includes(p.furniture) && (p.for || 'me') === who).map(p => p.furniture).concat(who === 'me' ? exUnlocked() : []))]; }
+function ownedFor(who) { if (isMe(who)) who = 'me'; return [...new Set((S.save.purchases || []).filter(p => p.furniture && !RETIRED_FURN.includes(p.furniture) && (p.for || 'me') === who).map(p => p.furniture).concat(who === 'me' ? exUnlocked() : []))]; }
 function ownedFurniture() { return ownedFor('me'); }
-function roomOf(who) { return who === 'me' ? homeOf() || {} : ((S.save.decor || {})[who] || {}); }
-function slotsFor(who) { return who === 'me' ? houseTier().slots : RES_SLOTS; }
+function roomOf(who) { return who === 'me' ? homeOf() || {} : isMe(who) ? homeRoomOf(who) : ((S.save.decor || {})[who] || {}); }
+function slotsFor(who) { return who === 'me' ? houseTier().slots : isMe(who) ? ROOM_SLOTS : RES_SLOTS; }
 function shownFor(who) {
   const own = ownedFor(who), h = roomOf(who);
+  if (who !== 'me' && isMe(who)) { if (!roomOpen(who)) return []; const taken = takenBefore(who);
+    return (Array.isArray(h.shown) ? h.shown : []).filter((id, i, a) => own.includes(id) && !taken.includes(id) && a.indexOf(id) === i).slice(0, ROOM_SLOTS); }
   return (Array.isArray(h.shown) ? h.shown.filter(id => own.includes(id)) : own).slice(0, slotsFor(who));
 }
 function shownFurniture() { return shownFor('me'); }
@@ -1907,7 +2006,7 @@ function shownFurniture() { return shownFor('me'); }
 const ROOM_GRID = 5, ROOM_ORDER = [1, 2, 3, 5, 15, 7, 6, 9, 11, 13, 21, 19, 22, 0, 4, 12, 23, 10, 14, 16, 8, 20, 24, 17, 18];
 const VISITOR_ORDER = [18, 17, 13, 23, 12, 16, 22, 8];
 function floorCells(who) {
-  const L = (who === 'me' && (homeOf() || {}).layout) || {}, cells = {}, used = {};
+  const L = (isMe(who) && roomOf(who).layout) || {}, cells = {}, used = {};
   const floor = shownFor(who).map(furnOf).filter(f => f && (f.z || 'floor') === 'floor');
   floor.forEach(f => { const p = L[f.id], c = p && Number(p.c);
     if (p && Number.isInteger(c) && c >= 0 && c < ROOM_GRID * ROOM_GRID && !used[c]) { cells[f.id] = c; used[c] = 1; } });
@@ -1917,8 +2016,9 @@ function floorCells(who) {
 // v2.48.1 牆上、窗台、門口的位置（HOOKS_v1）：w 牆上 0～7（room3d.js 的 WALL_SPOTS）、s 窗台 0～2（0 是原本的位置）、d 門口 0～2。
 // 沒寫位置的照舊排：牆上依序補空位、窗台都放 0 號；排法和 room3d.js 一樣，所以沒動過畫面就不變
 const HOOK_N = { w: 8, s: 3, d: 3 };
-function hookMap() {
-  const L = (homeOf() || {}).layout || {}, all = shownFor('me').map(furnOf).filter(Boolean), at = {}, usedW = {};
+function hookMap(who) {
+  who = who || curRoom();
+  const L = roomOf(who).layout || {}, all = shownFor(who).map(furnOf).filter(Boolean), at = {}, usedW = {};
   const ok = (q, k) => !!q && Number.isInteger(q[k]) && q[k] >= 0 && q[k] < HOOK_N[k];
   all.forEach(f => { const q = L[f.id]; if (f.z === 'wall' && ok(q, 'w') && usedW[q.w] == null) usedW[q.w] = f.id; });
   let wi = 0;
@@ -1926,46 +2026,47 @@ function hookMap() {
     if (f.z === 'wall') { let w = q && usedW[q.w] === f.id ? q.w : -1;
       if (w < 0) { while (wi < HOOK_N.w && usedW[wi] != null) wi++; if (wi < HOOK_N.w) w = wi++; }
       if (w >= 0) at[f.id] = { k: 'w', i: w }; }   // 牆上滿了的照舊放地上
-    else if (f.z === 'out') at[f.id] = ok(q, 'd') ? { k: 'd', i: q.d } : { k: 's', i: ok(q, 's') ? q.s : 0 };
+    else if (f.z === 'out') at[f.id] = ok(q, 'd') && who === 'me' ? { k: 'd', i: q.d } : { k: 's', i: ok(q, 's') ? q.s : 0 };   // 和室、臥室沒有門口，只有窗台
   });
   return at;
 }
 function roomItems(who) {
-  const fc = who === 'me' ? floorCells('me') : null, hk = who === 'me' ? hookMap() : {}, L = (who === 'me' && (homeOf() || {}).layout) || {};
+  const fc = isMe(who) ? floorCells(who) : null, hk = isMe(who) ? hookMap(who) : {}, L = (isMe(who) && roomOf(who).layout) || {};
   return shownFor(who).map(furnOf).filter(Boolean).map(f => { const o = { ic: f.ic, z: f.z || 'floor' };
     if (fc && fc.cells[f.id] != null) { o.cell = fc.cells[f.id]; if (L[f.id] && L[f.id].f) o.flip = 1; }
     const h = hk[f.id]; if (h) { o[h.k] = h.i; if (h.k === 'd' && L[f.id] && L[f.id].f) o.flip = 1; }
     return o; });
 }
-function arrangePick() { const id = draft.pick; return id && (floorCells('me').cells[id] != null || hookMap()[id]) ? id : null; }
+function arrangePick() { const id = draft.pick; return id && (floorCells(curRoom()).cells[id] != null || hookMap()[id]) ? id : null; }
 function hookRow(title, k, order, hk, pick, L) {
   return `<div class="muted" style="margin:8px 0 2px;font-size:13px">${title}</div><div class="arow">${order.map(i => { const ids = Object.keys(hk).filter(id => hk[id].k === k && hk[id].i === i);
     return `<button type="button" class="${ids.includes(pick) ? 'on' : ''}" onclick="arrangeHook('${k}',${i})" aria-label="${title}第 ${order.indexOf(i) + 1} 個位置">${ids.map(id => k === 'd' && L[id] && L[id].f ? `<span style="display:inline-block;transform:scaleX(-1)">${furnOf(id).ic}</span>` : furnOf(id).ic).join('')}</button>`; }).join('')}</div>`;
 }
 function arrangeHtml() {
-  const { cells } = floorCells('me'), at = {}, L = (homeOf() || {}).layout || {}, hk = hookMap();
+  const { cells } = floorCells(curRoom()), at = {}, L = roomOf(curRoom()).layout || {}, hk = hookMap();
   Object.keys(cells).forEach(id => { at[cells[id]] = id; });
   const pick = arrangePick(), pf = pick && furnOf(pick), pz = pf && (pf.z || 'floor'), canFlip = pick && (cells[pick] != null || (hk[pick] && hk[pick].k === 'd'));
   const grid = Array.from({ length: ROOM_GRID * ROOM_GRID }, (_, c) => { const id = at[c], f = id && furnOf(id);
     return `<button type="button" class="${id && id === pick ? 'on' : ''}" onclick="arrangeTap(${c})" aria-label="第 ${c + 1} 格">${f ? `<span style="display:inline-block${L[id] && L[id].f ? ';transform:scaleX(-1)' : ''}">${f.ic}</span>` : ''}</button>`; }).join('');
-  return `<div class="arrange"><div class="muted" style="margin-bottom:6px">${draft.arrTip ? `<b style="color:var(--plum)">${esc(draft.arrTip)}</b>` : pf ? `選了 ${pf.ic} ${esc(pf.name)}：${pz === 'wall' ? '點牆上的一個位置，就會搬過去（那裡有東西就互換）。' : pz === 'out' ? '點窗台或門口的一個位置，就會搬過去（那裡有東西就互換）。' : '點一個格子搬過去（有東西就交換）。'}` : '先點一件家具，再點想放的位置。上面是後面的牆，左邊是窗戶那面牆。'}</div>
+  return `<div class="arrange"><div class="muted" style="margin-bottom:6px">${draft.arrTip ? `<b style="color:var(--plum)">${esc(draft.arrTip)}</b>` : pf ? `選了 ${pf.ic} ${esc(pf.name)}：${pz === 'wall' ? '點牆上的一個位置，就會搬過去（那裡有東西就互換）。' : pz === 'out' ? (curRoom() === 'me' ? '點窗台或門口的一個位置，就會搬過去（那裡有東西就互換）。' : '點窗台的一個位置，就會搬過去（那裡有東西就互換）。') : '點一個格子搬過去（有東西就交換）。'}` : '先點一件家具，再點想放的位置。上面是後面的牆，左邊是窗戶那面牆。'}</div>
     <div class="agrid">${grid}</div>
     <div style="max-width:300px;margin:0 auto">${hookRow('🖼️ 後面的牆（從左到右）', 'w', [6, 0, 4, 1], hk, pick, L)}${hookRow('🖼️ 左邊的牆（從裡面到外面）', 'w', [2, 5, 3, 7], hk, pick, L)}
-      ${hookRow('🪟 窗台', 's', [1, 0, 2], hk, pick, L).replace('class="arow"', 'class="arow a3"')}${hookRow('🚪 門口', 'd', [0, 1, 2], hk, pick, L).replace('class="arow"', 'class="arow a3"')}</div>
+      ${hookRow('🪟 窗台', 's', [1, 0, 2], hk, pick, L).replace('class="arow"', 'class="arow a3"')}${curRoom() === 'me' ? hookRow('🚪 門口', 'd', [0, 1, 2], hk, pick, L).replace('class="arow"', 'class="arow a3"') : ''}</div>
     <div class="row" style="margin-top:8px">${pf ? `${canFlip ? '<button class="ghost" onclick="arrangeFlip()">↔️ 轉個方向</button>' : ''}<button class="ghost" onclick="draft.pick=null;toggleFurniture('me','${pick}')">收起來</button>` : ''}
       <span class="grow"></span><button onclick="draft.arrange=false;draft.pick=null;render()">擺好了</button></div>
-    <div class="muted" style="margin-top:6px">牆上、窗台和門口的東西，點一件，再點想掛或想放的位置；牆上放不下的，會先放在地上。</div></div>`;
+    <div class="muted" style="margin-top:6px">${curRoom() === 'me' ? '牆上、窗台和門口的東西' : '牆上和窗台的東西'}，點一件，再點想掛或想放的位置；牆上放不下的，會先放在地上。</div></div>`;
 }
 function saveLayout(layout) {
-  const h = Object.assign({}, homeOf() || {}, { layout });
+  const r = curRoom(), h = Object.assign({}, homeOf() || {}, r === 'me' ? { layout } : { rooms: Object.assign({}, (homeOf() || {}).rooms, { [r.slice(3)]: Object.assign({}, homeRoomOf(r), { layout }) }) });
   S.save.home = h; queueSave('home', 'saveHome', h); render();
 }
 function fullLayout() {   // 把目前看到的位置全部寫下來，之後新擺的家具不會把舊的擠走
-  const { cells } = floorCells('me'), L = (homeOf() || {}).layout || {}, out = {}, hk = hookMap();
+  const { cells } = floorCells(curRoom()), L = roomOf(curRoom()).layout || {}, out = {}, hk = hookMap();
   Object.keys(cells).forEach(id => { out[id] = L[id] && L[id].f ? { c: cells[id], f: 1 } : { c: cells[id] }; });
   Object.keys(hk).forEach(id => { const h = hk[id]; out[id] = h.k === 'd' && L[id] && L[id].f ? { d: h.i, f: 1 } : { [h.k]: h.i }; });
   return out;
 }
+function outTip() { return curRoom() === 'me' ? '這件放在窗台或門口，點「窗台」或「門口」那排' : '這件放在窗台，點「窗台」那排。'; }
 function arrTip(m) { draft.arrTip = m; render(); }   // 放錯種類的提示寫在擺家具框最上面，不蓋住格子（美術 10/29）
 function arrangeHook(k, i) {
   draft.arrTip = null;
@@ -1974,7 +2075,7 @@ function arrangeHook(k, i) {
   const z = furnOf(pick).z || 'floor';
   if (z === 'floor') return arrTip('這件放在地上，點地板的格子');
   if (z === 'wall' && k !== 'w') return arrTip('這件要掛在牆上，點「後面的牆」或「左邊的牆」那排');
-  if (z === 'out' && k === 'w') return arrTip('這件放在窗台或門口，點「窗台」或「門口」那排');
+  if (z === 'out' && k === 'w') return arrTip(outTip());
   if (here.includes(pick)) { draft.pick = null; return render(); }
   const L = fullLayout(), from = hk[pick];
   L[pick] = { [k]: i };
@@ -1983,8 +2084,8 @@ function arrangeHook(k, i) {
 }
 function arrangeTap(c) {
   draft.arrTip = null;
-  const { cells } = floorCells('me'), here = Object.keys(cells).find(id => cells[id] === c), any = arrangePick(), pick = any && cells[any] != null ? any : null;
-  if (any && !pick) return arrTip(furnOf(any).z === 'wall' ? '這件要掛在牆上，點「後面的牆」或「左邊的牆」那排' : '這件放在窗台或門口，點「窗台」或「門口」那排');
+  const { cells } = floorCells(curRoom()), here = Object.keys(cells).find(id => cells[id] === c), any = arrangePick(), pick = any && cells[any] != null ? any : null;
+  if (any && !pick) return arrTip(furnOf(any).z === 'wall' ? '這件要掛在牆上，點「後面的牆」或「左邊的牆」那排' : outTip());
   if (!pick) { draft.pick = here || null; return render(); }
   if (here === pick) { draft.pick = null; return render(); }
   const L = fullLayout(), from = L[pick].c;
@@ -1996,7 +2097,7 @@ function arrangeFlip() {
   const L = fullLayout(), id = draft.pick, q = id && L[id]; if (!q || (q.c == null && q.d == null)) return;
   const k = q.c != null ? 'c' : 'd'; L[id] = q.f ? { [k]: q[k] } : { [k]: q[k], f: 1 }; saveLayout(L);
 }
-function wallFor(who) { return who === 'me' ? (homeOf() || {}).wall || WALL_COLORS[0] : roomOf(who).wall || RES_WALL[who]; }
+function wallFor(who) { return who === 'me:wa' ? '#e8dcc0' : isMe(who) ? (homeOf() || {}).wall || WALL_COLORS[0] : roomOf(who).wall || RES_WALL[who]; }   // 和室是土牆色
 // 今天來作客的島民：好感度（跨科連結）越高越常來
 function visitor() {
   const w = SUBJECTS.map(s => 1 + D.kizuna.her[s].score / 20 + Object.keys(D.kizuna.pair).filter(k => k.includes(s)).reduce((a, k) => a + D.kizuna.pair[k].score / 40, 0));
@@ -2011,16 +2112,17 @@ function use3DRoom() { return BETA3D && local.get('islandRoomView') !== '2d'; }
 function roomHtml(who, guest) {
   const fs = shownFor(who).map(furnOf).filter(Boolean), wall = wallFor(who);
   const g = guest ? resident(guest) : null;
-  roomOpts = { wall, accent: who === 'me' ? (homeOf() || {}).roof || '#741b47' : '#741b47', night: env.phase === 'night',
+  roomOpts = { wall, accent: isMe(who) ? (homeOf() || {}).roof || '#741b47' : '#741b47', night: env.phase === 'night',
     items: roomItems(who), visitor: g && { emoji: g.emoji, img: imgOf(guest) || null } };
-  if (who === 'me' && g) { const u = floorCells('me').used, vc = VISITOR_ORDER.find(x => !u[x]); if (vc != null) roomOpts.visitorCell = vc; }
+  if (isMe(who) && g) { const u = floorCells(who).used, vc = VISITOR_ORDER.find(x => !u[x]); if (vc != null) roomOpts.visitorCell = vc; }
+  if (ROOM_STYLE[who]) roomOpts.style = ROOM_STYLE[who];
   const toggle = BETA3D ? `<div class="row" style="margin-bottom:8px">
       <button class="${use3DRoom() ? '' : 'ghost'}" style="padding:6px 12px" onclick="local.set('islandRoomView','3d');render()">🧊 3D 房間</button>
       <button class="${use3DRoom() ? 'ghost' : ''}" style="padding:6px 12px" onclick="local.set('islandRoomView','2d');render()">🖼️ 平面</button></div>` : '';
   if (use3DRoom()) return toggle + `<div id="r3d" style="height:min(56vh,400px);border-radius:14px;overflow:hidden;background:${env.phase === 'night' ? '#2a2440' : '#f6efe6'}">
       <div class="loading" style="padding-top:120px">🛋️ 開門中…</div></div>
     <div class="muted" style="margin-top:6px">👆 用手指拖曳可以轉動房間，兩指可以拉近。</div>`;
-  const fcs = who === 'me' ? floorCells('me').cells : {};
+  const fcs = isMe(who) ? floorCells(who).cells : {};
   const zone = z => fs.filter(f => (f.z || 'floor') === z).sort((a, b) => z === 'floor' ? (fcs[a.id] || 0) - (fcs[b.id] || 0) : 0);
   const put = list => list.map(f => `<div class="slot"><span>${f.ic}</span><small>${esc(f.name)}</small></div>`).join('');
   return toggle + `<div class="room" style="background:linear-gradient(${esc(wall)} 50%, #d9b88f 50%)">
@@ -2041,7 +2143,7 @@ async function mountRoom() {
   } catch (e) { local.set('islandRoomView', '2d'); toast('這支手機開不了 3D，先用平面圖'); render(); }
 }
 function furnShop(who) {
-  const own = ownedFor(who), shown = shownFor(who);
+  const own = ownedFor(who), shown = who === 'me' ? shownAnyRoom() : shownFor(who);
   return `<div class="card"><div class="row"><h3 class="grow" style="margin:0">${who === 'me' ? '🛒 家具店' : '🎁 送他家具'}</h3><span class="muted">你有 🪙 ${D.coins}</span></div>
     ${who === 'me' ? '' : `<div class="muted" style="margin-top:4px">前三件是${esc(resident(who).name)}最想要的。點已經送的家具可以收起來或擺出來。</div>`}
     ${(() => { const btn = f => { const has = own.includes(f.id), on = shown.includes(f.id);
@@ -2056,7 +2158,7 @@ function furnShop(who) {
 }
 // 自己家的獎勵家具（不用島幣）：運動、燈塔、智慧島；放在我的家的「收藏」分頁
 function furnRewards() {
-  const who = 'me', own = ownedFor(who), shown = shownFor(who);
+  const who = 'me', own = ownedFor(who), shown = shownAnyRoom();
   return `<div class="card">${who === 'me' ? `<h3 style="margin-top:0">🏐 運動獎勵</h3><div class="muted">每週運動 3 天、連續達標就會解鎖，不用島幣。</div>
     <div class="furn">${EX_REWARDS.concat([EX_MEDAL]).map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
@@ -2084,7 +2186,7 @@ function viewHouse() {
   const vline = daily && daily.messages && daily.messages[vs] ? daily.messages[vs] : '我來找你玩了，順便看看你的新家具。';
   return `${norenBar(h)}<div class="card" style="background:${esc(h.wall)};border:3px solid ${esc(h.roof)};border-top-left-radius:0;border-top-right-radius:0">
       <div class="row"><span style="font-size:44px">${tier.ic}</span><div class="grow"><h2 style="margin:0"><span class="namePlate">${esc(h.name || '我的家')}</span></h2>
-        <div class="muted">${tier.name}・島嶼 Lv.${D.level}${next ? `・Lv.${next.lv} 會擴建成${next.name}` : '・已經是最大的房子了'}</div></div>
+        <div class="muted">${tier.name}・島嶼 Lv.${D.level}${next ? `・Lv.${next.lv} 會擴建成${next.name}${next.lv === 4 ? '，多一間和室' : next.lv === 7 ? '，多一間二樓臥室' : ''}` : '・已經是最大的房子了'}</div></div>
         ${isFamily() ? '' : '<button class="ghost" style="padding:6px 10px" onclick="draft.editHome=true;render()">🎨 改外觀</button>'}</div></div>
     <div class="htabs">${[['room', '🛋️ 房間'], ['shop', '🛒 家具店'], ['keep', '🏅 收藏']].map(([k, n]) =>
       `<button class="${houseTab === k ? '' : 'ghost'}" onclick="houseTab='${k}';draft.arrange=false;render()">${n}</button>`).join('')}</div>
@@ -2094,10 +2196,10 @@ function viewHouse() {
     ${card('diary', diaryCard())}
     ${isFamily() ? '' : card('hallLink', `<button class="ghost" style="width:100%;margin-bottom:12px" onclick="openHall()">🎼 藝文計時搬到音樂廳了，去音樂廳 ›</button>`)}
     ${card('water', waterCard())}
-    <div class="card"><h3>🛋️ 房間</h3>${roomHtml('me', vs)}
+    <div class="card"><h3>🛋️ 房間</h3>${roomTabs()}${roomHtml(curRoom(), vs)}
       <div class="speech" style="margin-top:10px"><b>${esc(vr.name)}</b>來作客：${esc(vline)}</div>
       ${isFamily() ? '' : draft.arrange ? arrangeHtml() : `<button class="ghost" style="width:100%;margin-top:10px" onclick="draft.arrange=true;draft.pick=null;render()">🧩 自己擺家具</button>`}
-      <div class="muted" style="margin-top:6px">房間可以擺 ${tier.slots} 件家具，房子越大擺越多。買家具、把家具擺出來或收起來，在「🛒 家具店」和「🏅 收藏」。</div></div>
+      <div class="muted" style="margin-top:6px">${curRoom() === 'me' ? `${roomsOpen().length > 1 ? '客廳' : '房間'}可以擺 ${tier.slots} 件家具，房子越大擺越多。` : `這間可以擺 ${ROOM_SLOTS} 件家具。`}買家具、把家具擺出來或收起來，在「🛒 家具店」和「🏅 收藏」。${roomsOpen().length > 1 ? '擺出來的家具會放進你最後打開的那一間，一件家具一次只會在一間。' : ''}</div></div>
     ${visitRow('me')}`
       : houseTab === 'shop' ? furnShop('me') + `<div class="row" style="margin-bottom:10px"><button class="ghost grow" onclick="houseTab='room';render();window.scrollTo(0,0)">🛋️ 回房間看看擺好的樣子</button></div>`
       : furnRewards() + `<div class="card"><h3>🏅 徽章</h3><div class="badges">${D.badges.map(b =>
@@ -2243,11 +2345,16 @@ async function buyFurniture(who, id) {
   } catch (e) { toast('購買失敗：' + (e.message || e)); }
 }
 function toggleFurniture(who, id) {
+  if (who === 'me') who = ROOMS.map(r => r.key).find(k => shownFor(k).includes(id)) || curRoom();   // 擺在哪一間就從哪一間收；沒擺的放進現在這一間
   const h = Object.assign({}, roomOf(who)), cur = shownFor(who);
   if (!ownedFor(who).includes(id)) return;
   if (cur.includes(id)) h.shown = cur.filter(x => x !== id);
   else { if (cur.length >= slotsFor(who)) return toast('房間滿了，先收起一件' + (who === 'me' ? '，或等房子擴建' : '')); h.shown = cur.concat([id]); }
   if (who === 'me') { S.save.home = h; queueSave('home', 'saveHome', h); }
+  else if (isMe(who)) { const hh = Object.assign({}, homeOf() || {}), k = who.slice(3);
+    hh.rooms = Object.assign({}, hh.rooms, { [k]: h });
+    if (h.shown.includes(id)) { if (Array.isArray(hh.shown)) hh.shown = hh.shown.filter(x => x !== id); if (k === 'bed' && hh.rooms.wa && Array.isArray(hh.rooms.wa.shown)) hh.rooms.wa = Object.assign({}, hh.rooms.wa, { shown: hh.rooms.wa.shown.filter(x => x !== id) }); }   // 搬進來的從別間的清單拿掉
+    S.save.home = hh; queueSave('home', 'saveHome', hh); }
   else { const decor = Object.assign({}, S.save.decor || {}); decor[who] = h; S.save.decor = decor; queueSave('decor', 'saveDecor', decor); }
   render();
 }
@@ -4615,7 +4722,7 @@ async function mount3D() {
       onHome: () => openHouse('me'),
       light: (st => ({ name: lightTitle(), sea: st.sea, due: st.due, lanterns: st.lanterns, friends: st.friends }))(lightStats()), onLight: () => go('light'), onLamp: () => go('lamp'),
       garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),
-      ferry: wisdomOn() ? { open: !wisdomTodayDone() } : null, onFerry: () => go('wisdom'),
+      ferry: wisdomOn() ? { open: !wisdomTodayDone() } : null, onFerry: () => herPort(),
       yatai: !isFamily() || keeperOf('yatai') ? { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null } : null, onYatai: () => openYatai(),
       hall: !isFamily() || keeperOf('hall') ? (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()) : null, onHall: () => openHall(),
       islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
@@ -5872,6 +5979,7 @@ function islandSnapshot(withStats) {
     rooms[who] = { wall: wallFor(who), accent: who === 'me' ? (homeOf() || {}).roof || '#741b47' : '#741b47',
       items: roomItems(who) };
   });
+  ['me:wa', 'me:bed'].forEach(who => { const it = roomItems(who); if (it.length) rooms[who] = { wall: wallFor(who), accent: (homeOf() || {}).roof || '#741b47', style: ROOM_STYLE[who], items: it }; });   // 分房間：有擺東西才帶
   SUBJECTS.forEach(s => { const r = resident(s); residents[s] = { name: r.name, emoji: r.emoji, personality: r.personality, intro: r.intro }; });
   Object.values(SUBS).forEach(list => list.forEach(l => { const m = roommate(l); if (m.name || m.emoji) roommates[l] = { name: m.name, emoji: m.emoji }; }));
   const g = guide(), h = homeOf();
@@ -6873,7 +6981,7 @@ function viewGuide() {
   ${sec('🎨', '打扮你的島', p('在「⚙️ 更多 → 修改島嶼設定」可以改島名、嚮導的說話風格、島民和室友的名字與個性，也可以上傳自己的圖片當頭像。') +
     p('每位島民和室友都可以填「說話方式／口頭禪」（例如句尾愛加「啦」、自稱「本大爺」），寫信、故事、挑戰任務和講解都會照著說。島民還可以寫一段 80 字內的介紹，會出現在島民的家和「更多」頁，來參觀的家人和朋友也看得到。'))}
   ${sec('🏠', '我的家', p('島中央的碼頭是你的家。按右上角的房子圖示（或在 3D 小島點中間的房子）就能回家。第一次回家先幫它取名字、選屋頂和牆壁的顏色，之後隨時可以改。') +
-    p('島嶼升級時，房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓小屋（Lv.7）→ 海邊洋館（Lv.10）。房子越大，房間能擺的家具越多。') +
+    p('島嶼升級時，房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓小屋（Lv.7）→ 海邊洋館（Lv.10）。房子越大，房間能擺的家具越多。小木屋（Lv.4）多一間和室、兩層樓小屋（Lv.7）多一間二樓臥室，各可以擺 8 件；房間上面的按鈕可以換房間，一件家具一次只會在一間。') +
     p('房間可以用 <b>3D</b> 看：一根手指拖曳轉動、兩指拉近；手機比較舊的話按「🖼️ 平面」。') +
     p('家具店分成一般家具、🍵 和の家具、🍚 台灣味、🐚 海邊風，可以慢慢蒐集不同風格。按房間下面的「🧩 自己擺家具」，先點一件家具、再點想放的格子就搬過去了（有東西就交換），也可以轉個方向；牆上、窗台和門口的東西也可以自己擺：點一件，再點想掛或想放的位置。') +
     p('家具在「家具店」用島幣買，買了就是你的，可以隨時收起來或擺出來。每天會有一位島民來作客，跟你越要好（跨科連結越多）的島民越常來。島民寫給你的信和嚮導的新聞，都在首頁的 📮 郵便受け。') +
@@ -7002,7 +7110,7 @@ function viewSetup() {
   return `<div class="card"><div class="big">🏝️</div><h2 style="text-align:center">${D.cfg ? '修改島嶼設定' : '歡迎來到你的島'}</h2>
     <div class="muted" style="text-align:center">這座島會跟著你一路到會考。島上的一切都由你決定。</div>
     ${D.cfg ? '' : `<div class="muted" style="text-align:center;margin-top:6px">你過去 ${D.recordedWeeks} 週的週檢討已經變成島上的房子了 🏠</div>`}</div>
-  <div class="card"><h3>1. 島的名字</h3><input data-f="islandName" value="${esc(c.islandName)}" placeholder="例如：呱呱島">
+  <div class="card"><h3>1. 島的名字</h3><input data-f="islandName" value="${esc(c.islandName)}" placeholder="例如：呱呱島">${D.cfg && S.famCallOk ? `<label>家人怎麼稱呼你（選填）</label><input data-f="famCall" value="${esc(c.famCall || '')}" maxlength="12" placeholder="可以不填"><div class="muted">填了，家人在港口選單上會看到「島名（你填的）」；不填就只顯示島名。只有家人看得到。</div>` : ''}
     <label>島在哪裡</label><select data-f="bg">${[['sea', '🌊 海上'], ['space', '🪐 宇宙裡'], ['sky', '☁️ 漂浮在空中']].map(([k, v]) => `<option value="${k}" ${(c.bg || 'sea') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
   <div class="card"><h3>2. 你的嚮導夥伴</h3><div class="muted">每天在島上跟你說話的角色。</div>
     <label>名字</label><input data-f="guide.name" value="${esc(c.guide.name)}">

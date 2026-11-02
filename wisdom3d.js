@@ -7,6 +7,8 @@
  *            huts: [{ key, name, place, ic, color, st, can }], onHut(key) }
  *   can：今天可以上這位老師的課（小屋前的地上亮一圈、老師會跳）
  *   closed：還沒開門（逐步開島），老師不在、門口掛「準備中」
+ *   welcome：歡迎詞（黑板上寫前兩行，空的寫「歡迎來到智慧島」）；keeper：渡船屋主人 { emoji, name } 或 null
+ *   onDock(key)：點了碼頭邊的東西，key 是 board（黑板）、house（渡船屋或主人）、post（郵筒）
  */
 (function () {
   const HQ = (() => { try { const v = localStorage.getItem('island3dHQ'); if (v) return v === '1'; } catch (e) {} return !(navigator.deviceMemory && navigator.deviceMemory < 4); })();
@@ -55,6 +57,7 @@
   let renderer, guard = null, scene, camera, controls, clock, container, opts = {}, running = false, t = 0, framed = false;
   let hemi, sun, sky, sea, seaBase, foam, stars, moon, sunBall, rain, mist = [], steam = [], glass = [], lanterns = [], spin = [];
   let labelLayer, teachers = [], rings = [], boat, signature = '', envSig = '';
+  let dockLayer, boardTex, dockSig = null, dockGroups = [];
   const WY = -0.35;   // 海面高度
 
   // ---------- 島：沙灘、草地、小丘、步道 ----------
@@ -373,6 +376,62 @@
     far.traverse(o => { o.castShadow = false; });
   }
 
+  // ---------- 碼頭邊（v2.48）：渡船屋、歡迎黑板、紅色郵筒；都在沙灘上，不擋步道（x=0） ----------
+  const DOCK = { house: [-2.1, 6.2], board: [1.3, 5.9], post: [2.7, 6.6] };   // 郵筒離鳥居右柱遠一點（美術顧問 10/29），也避開郭哥治療所的步道
+  const faceDock = ([x, z], tz) => Math.atan2(0 - x, (tz || 9) - z);   // 面向碼頭外海（渡船屋轉得更朝前，從島上看得到暖簾）
+  function buildDock(root) {
+    const wood = std(0x8a5a32), dark = std(0x5b3a1e), wall = std(0xf1e6d2), tile = std(0x5a4a42), red = std(0xc0392b);
+    // 渡船屋：小木屋、斜屋頂、緣側、靛藍暖簾「渡船」、門口一盞燈籠（只有自發光，不加點光源：多一盞點光源整座島的光照都會變，她的畫面就不再逐像素一樣）
+    const h = new THREE.Group(); h.position.set(DOCK.house[0], 0, DOCK.house[1]); h.rotation.y = faceDock(DOCK.house, 18); h.userData.dock = 'house'; root.add(h);
+    mesh(box(1.5, 0.12, 1.1), dark, 0, 0.06, 0, h);
+    mesh(box(1.3, 0.8, 0.9), wall, 0, 0.52, -0.05, h);
+    [-0.65, 0.65].forEach(x => [-0.45, 0.4].forEach(z => mesh(box(0.08, 0.85, 0.08), wood, x, 0.5, z, h)));
+    const roof = mesh(new THREE.ConeGeometry(0.98, 0.5, 4), tile, 0, 1.17, -0.05, h); roof.rotation.y = Math.PI / 4; roof.scale.set(1.08, 1, 0.78);
+    mesh(box(1.4, 0.06, 0.32), wood, 0, 0.16, 0.6, h);   // 緣側
+    const noren = textPlane('渡船', 0.56, 0.36, '#2f4f7a', '#ffffff', 30); noren.position.set(0, 0.7, 0.41); h.add(noren);
+    [-0.45, 0.45].forEach(x => mesh(box(0.22, 0.2, 0.02), winNew(), x, 0.66, 0.41, h).castShadow = false);   // 暖簾兩邊的窗，用新小屋那片發光窗的材質，晚上照規則亮起來
+    mesh(box(0.6, 0.05, 0.05), wood, 0, 0.9, 0.42, h);
+    const lg = std(0xfff1c9, { emissive: 0xffc861, emissiveIntensity: 0.2 }); glass.push(lg);
+    mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 8), lg, 0.55, 0.78, 0.48, h);
+    // 歡迎黑板：木架＋黑板，字是 canvas（換歡迎詞時只重畫貼圖）
+    const b = new THREE.Group(); b.position.set(DOCK.board[0], 0, DOCK.board[1]); b.rotation.y = faceDock(DOCK.board); b.userData.dock = 'board'; root.add(b);
+    [-0.42, 0.42].forEach(x => { const l = mesh(box(0.06, 1.0, 0.06), wood, x, 0.5, 0, b); l.rotation.x = -0.08; });
+    mesh(box(0.98, 0.64, 0.05), wood, 0, 0.66, 0.03, b);
+    const cv = document.createElement('canvas'); cv.width = 384; cv.height = 240; boardTex = canvasTex(cv); boardTex.userData = { cv };
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 0.55), new THREE.MeshBasicMaterial({ map: boardTex, toneMapped: false }));
+    face.position.set(0, 0.66, 0.06); b.add(face);
+    mesh(box(0.9, 0.04, 0.08), wood, 0, 0.36, 0.08, b);   // 粉筆槽
+    // 紅色郵筒：圓柱＋圓頂＋投信口（先擺著，寄信功能跟互訪一起做）
+    const p = new THREE.Group(); p.position.set(DOCK.post[0], 0, DOCK.post[1]); p.rotation.y = faceDock(DOCK.post); p.userData.dock = 'post'; root.add(p);
+    mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.85, 12), red, 0, 0.43, 0, p);
+    mesh(new THREE.SphereGeometry(0.22, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, 0.85, 0, p);
+    mesh(box(0.2, 0.04, 0.03), dark, 0, 0.66, 0.22, p);
+    mesh(box(0.3, 0.06, 0.3), std(0x8f8a82), 0, 0.03, 0, p);
+    dockLayer = new THREE.Group(); root.add(dockLayer); dockGroups = [h, b, p, dockLayer];
+  }
+  /** 黑板寫兩行、每行最多 12 個字，太長用「…」；字用 fillText 畫，不解析 HTML */
+  function drawBoard(text) {
+    const cv = boardTex.userData.cv, g = cv.getContext('2d');
+    g.fillStyle = '#2f4a3a'; g.fillRect(0, 0, cv.width, cv.height);
+    g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 3; g.strokeRect(10, 10, cv.width - 20, cv.height - 20);
+    const chars = Array.from(String(text || '').replace(/\s+/g, ' ').trim() || '歡迎來到智慧島'), N = 12;
+    const lines = [chars.slice(0, N).join(''), chars.slice(N, N * 2).join('')].filter(Boolean);
+    if (chars.length > N * 2) lines[1] = chars.slice(N, N * 2 - 1).join('') + '…';
+    g.fillStyle = '#f4f1e6'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 28px ${FONT}`;
+    lines.forEach((l, i) => g.fillText(l, cv.width / 2, cv.height / 2 + (i - (lines.length - 1) / 2) * 44));
+    boardTex.needsUpdate = true;
+  }
+  /** 主人站在渡船屋門口（和老師同一種圓形頭像）；歡迎詞、主人換了才重畫 */
+  function buildDockLabels() {
+    const sig = JSON.stringify([opts.welcome || '', opts.keeper ? [opts.keeper.emoji, opts.keeper.name] : null]);
+    if (sig === dockSig) return; dockSig = sig;
+    drawBoard(opts.welcome);
+    while (dockLayer.children.length) dockLayer.remove(dockLayer.children[0]);
+    if (!opts.keeper) return;
+    const ry = faceDock(DOCK.house, 18), x = DOCK.house[0] + Math.sin(ry) * 0.9 - Math.cos(ry) * 0.95, z = DOCK.house[1] + Math.cos(ry) * 0.9 + Math.sin(ry) * 0.95;
+    const sp = avatarSprite(opts.keeper.emoji || '⛴️', '#2f4f7a', 0.8); sp.position.set(x, 0.62, z); sp.userData.dock = 'house'; dockLayer.add(sp);
+  }
+
   // ---------- 天空、海、霧、雨 ----------
   function buildSky() {
     sky = new THREE.Mesh(new THREE.SphereGeometry(90, 24, 12), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, toneMapped: false,
@@ -455,8 +514,10 @@
     const r = renderer.domElement.getBoundingClientRect();
     ptr.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ptr, camera); ray.camera = camera;
-    const hits = ray.intersectObjects([labelLayer, ...Object.values(hutGroups)], true);
-    for (const h of hits) { let o = h.object; while (o && !o.userData.hut) o = o.parent; if (o) { if (opts.onHut) opts.onHut(o.userData.hut); return; } }
+    const hits = ray.intersectObjects([labelLayer, ...Object.values(hutGroups), ...dockGroups], true);
+    for (const h of hits) { let o = h.object; while (o && !o.userData.hut && !o.userData.dock) o = o.parent;
+      if (o && o.userData.hut) { if (opts.onHut) opts.onHut(o.userData.hut); return; }
+      if (o && o.userData.dock) { if (opts.onDock) opts.onDock(o.userData.dock); return; } }
   }
 
   function resize() {
@@ -521,7 +582,7 @@
       if (HQ) { sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -11.8, right: 8.2, top: 10, bottom: -10, near: 1, far: 40 }); sun.shadow.bias = -0.0008; }
       scene.add(sun);
       const root = new THREE.Group(); scene.add(root);
-      buildSky(); buildIsland(root); buildTrees(root); buildHuts(root); buildPier(root);
+      buildSky(); buildIsland(root); buildTrees(root); buildHuts(root); buildPier(root); buildDock(root);
       renderer.domElement.addEventListener('pointerdown', onDown);
       renderer.domElement.addEventListener('pointerup', onUp);
       window.addEventListener('resize', resize);
@@ -532,6 +593,7 @@
     resize(); setEnvironment();
     const sig = JSON.stringify(opts.huts || []);
     if (sig !== signature) { signature = sig; buildLabels(); }
+    buildDockLabels();
     if (!running) { running = true; clock.getDelta(); loop(); }
   }
   window.Wisdom3D = { mount };

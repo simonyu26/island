@@ -14,7 +14,7 @@
       hello: ['飛船都準備好了，要去哪裡？', '導航程式昨天又改了一版，今天飛得更穩，哈哈！', 'Ready when you are！慢慢來，飛船不會跑掉。'] },
     hall: { name: '阿台婆婆', ic: '🏔️', role: '玉山聚會所的管理員', place: '玉山聚會所',
       intro: '以前是中學的輔導老師，退休後上山顧聚會所。做事俐落、愛笑、喜歡運動，口頭禪是「沒事」。',   // 爸爸 10/28 人物設定：她和姐姐的外婆，叫她們「喵呱」
-      first: '來坐喔！我是阿台婆婆，以前在中學當輔導老師。這裡是大家貼公告、說說近況的地方，想跟大家說什麼就寫在這裡，家人和她來都看得到。寫錯了刪掉重寫就好，沒事。',
+      first: '來坐喔！我是阿台婆婆，以前在中學當輔導老師。這裡是大家貼公告、說說近況的地方，想跟大家說什麼就寫在這裡，大家來都看得到。寫錯了刪掉重寫就好，沒事。',
       firstHer: '喵呱來啦！婆婆在這裡顧聚會所。家人想說的話會貼在這裡，有空就上來看看，慢慢看，沒事。',   // 她只能看，不能貼（爸爸 10/27）
       firstGrand: '喵呱來啦！婆婆在這裡顧聚會所。這裡是大家貼公告、說說近況的地方，想說什麼就寫在這裡，寫錯了刪掉重寫就好，沒事。',   // 姐姐
       hello: ['進來坐，山上風大，沒事。', '公告我照日期排好了，來看看。', '以前最喜歡聽下課鐘，現在天天都是下課，哈哈。', '今天早上又爬了一趟山，腳還很有力，哈哈。', '累了喔？坐一下，喝杯茶再走。'] },
@@ -34,6 +34,9 @@
       hello: ['算盤先幫你擦亮了。', '今天的數獨解完了，換你來考考我。', '開張的日子定了就告訴你，不急。', '帳記清楚，事情就順。'] }
   };
   const OPEN = { port: true, hall: true, notes: true };
+  // OPENAT_v1：三本書照日期開門（爸爸 10/31），和智慧島一樣用 S.today 比；OPEN 已經寫死的鍵不覆蓋
+  const OPEN_AT = { exchange: '2026-11-04', temple: '2026-11-06', church: '2026-11-07' };
+  Object.keys(OPEN_AT).forEach(k => { if (!(k in OPEN)) Object.defineProperty(OPEN, k, { enumerable: true, get: () => typeof S !== 'undefined' && !!S && !!S.today && S.today >= OPEN_AT[k] }); });
   KEEPER.temple.open = { first: '哎唷，你來了！廟終於整理好了，姨媽泡了一壺茶。這間廟的故事、節慶和老街的由來，都寫在下面，慢慢看，看累了喝茶。',
     hello: ['廟埕剛掃好，坐一下。', '今天想聽哪一段？姨媽講給你聽。', '下次唱一段歌仔戲給你聽好不好？'] };
   KEEPER.church.open = { first: '你好你好！教會整修好了，歡迎進來坐坐。教會的歷史、節期和這棟建築的故事，都寫在下面，慢慢看。',
@@ -274,24 +277,26 @@
   const notesHtml = () => bookHtml('shanhai');
   // 列島的方位（爸爸 2026-10-26）：角度÷π，0 東、0.5 南、1 西、-0.5 北；她東、爸爸西、媽媽南、姐姐東北（爸爸 10/27 從北邊改過來）、姑姑西南，智慧島東南，新加入的家人依序用預留的五個位置
   const ISLE_DIR = { 爸爸: 1, 媽媽: 0.5, 姐姐: -0.25, 姑姑: 0.75 }, SPARE = [-0.5, -0.75, 0.38, -0.38, 0.88];
-  let isles = null, herBg = null, loading = false, info = null, board = null, boardBusy = false;
+  let isles = null, herBg = null, herNm = null, loading = false, info = null, board = null, boardBusy = false;
 
   function met(k) { return local.get('mainMet:' + k) === '1'; }
   function meet(k) { local.set('mainMet:' + k, '1'); }
   function her() { return !ownMode() && !isFamily(); }
   const famKey = () => 'f' + (isles || []).findIndex(x => x.name === S.who.name);   // 家人自己的那座島
   function myIsle() { return ownMode() ? famKey() : 'her'; }   // 「回到」的那座島：家人觀看時是她的島
-  const backLabel = () => isFamily() ? '回到她的島' : '回到我的島';
+  const backLabel = () => isFamily() ? '回到' + (D.cfg && D.cfg.islandName || (typeof herIsle === 'function' ? herIsle() : '島上')) : '回到我的島';   // COPY55_v1：家人看她的島時用她的島名（文案審查 44、55）
   function isleList() {
-    const herName = !ownMode() && D.cfg && D.cfg.islandName ? D.cfg.islandName : '她的島';
-    const out = [{ key: 'her', slot: 'her', a: 0, name: herName, mine: her(), bg: herBg || (D.cfg && !ownMode() ? D.cfg.bg : '') || 'sea' }];
+    const herKnown = !ownMode() && D.cfg && D.cfg.islandName ? D.cfg.islandName : herNm && herNm.n ? herNm.n : '';   // ISLE_NAMES_v1：她自訂的島名（互訪開著才拿得到）
+    const herName = herKnown || (typeof herIsle === 'function' ? herIsle() : '她的島');   // 拿不到島名：和 family.js 一樣照稱呼說關係「女兒的島」（工程顧問 10/29）
+    const herCall = herKnown && herNm && herNm.c ? herKnown + '（' + herNm.c + '）' : herName;
+    const out = [{ key: 'her', slot: 'her', a: 0, name: herName, label: herCall, mine: her(), bg: herBg || (D.cfg && !ownMode() ? D.cfg.bg : '') || 'sea' }];
     if (!ownMode() && !isFamily()) out.push({ key: 'wisdom', slot: 'wisdom', a: 0.25, name: '智慧島' });
     let spare = 0;
     (isles || []).forEach((x, i) => {
       const mine = (ownMode() || isFamily()) && x.name === S.who.name;
       const a = ISLE_DIR[x.name] != null ? ISLE_DIR[x.name] : SPARE[spare++];
       if (a == null) return;
-      out.push({ key: 'f' + i, slot: 'f' + i, a, name: mine && D.cfg ? D.cfg.islandName : x.name + '的島', sub: x.open ? '' : '還沒開島', open: x.open, mine, bg: x.bg || 'sea' });
+      out.push({ key: 'f' + i, slot: 'f' + i, a, name: mine && D.cfg && ownMode() ? D.cfg.islandName : x.islandName || (x.callMe || x.name) + '的島', label: !mine && x.islandName ? x.islandName + '（' + (x.callMe || x.name) + '）' : undefined, sub: x.open ? '' : '還沒開島', open: x.open, mine, bg: x.bg || 'sea', visit: !!x.visit && !mine, who: x.name });
     });
     return out;
   }
@@ -312,6 +317,8 @@
     if (isFamily() && key === famKey()) return sail(() => famOwnSwitch(true));
     if (key === 'her') return sail(() => ownMode() ? famOwnSwitch(false) : go('home'));
     if (key === 'wisdom') return sail(() => go('wisdom'));
+    const fv = isleList().find(x => x.key === key && x.visit);   // 互訪（11/6）：島主開放參觀的家人島，只能看
+    if (fv && typeof openFamVisit === 'function') return sail(() => openFamVisit(fv.who));
   };
   window.mainFocus = function (key) { if (window.MainIsle3D && MainIsle3D.focus) MainIsle3D.focus(key); mainInfo('isle', key); };   // 點下面的島名：鏡頭轉過去（工程顧問 10/27）
   window.mainInfo = function (kind, key, greeted) {
@@ -363,9 +370,15 @@
     return `<div class="resident"><span class="avatar">${kp.face || kp.ic}</span><div><b>${esc(kp.name)}</b><div class="muted">${esc(kp.role)}・${esc(kp.intro)}</div></div></div>
       <div class="speech" style="margin-top:8px">${esc(line)}</div>`;
   }
-  function ferryRows() {
-    return isleList().filter(x => x.key === myIsle() || x.key === 'her' || x.key === 'wisdom' || (isFamily() && x.key === famKey() && x.open)).map(x =>
-      `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainSail('${x.key}')">🎈 ${x.key === myIsle() ? backLabel() : esc(x.name)}</button>`).join('');
+  function ferryRows() {   // 爸爸 10/28：自己的島、主島、智慧島、其他家人的島（她是家人之一）
+    const L = isleList(), btn = (key, label) => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainSail('${key}')">🎈 ${esc(label)}</button>`;
+    const own = her() ? L.find(x => x.key === 'her') : L.find(x => x.key === famKey() && x.open);
+    const out = [];
+    if (own) out.push(btn(own.key, '我的島'));
+    out.push(`<button class="ghost" style="margin:4px 4px 0 0" disabled>⛰️ 主島（你在這裡）</button>`);
+    if (her() || (typeof wisdomOn === 'function' && wisdomOn())) out.push(btn('wisdom', '智慧島'));
+    L.filter(x => x !== own && (x.key === 'her' || x.visit)).forEach(x => out.push(btn(x.key, x.label || x.name)));
+    return out.join('');
   }
   function infoHtml() {
     if (!info) return '<div class="muted">👆 點飛船碼頭搭飛船；點其他建物看看它們什麼時候開門。用手指拖曳可以轉動，兩指可以縮放。</div>';
@@ -376,6 +389,7 @@
     const x = isleList().find(i => i.key === info.key); if (!x) return '';
     if (x.mine) return `<b>🏝️ ${esc(x.name)}</b><div class="muted">這是你的島。</div>${x.open !== false ? `<button style="margin-top:8px" onclick="mainSail('${x.key}')">🎈 ${isFamily() ? '去我的島' : '回到我的島'}</button>` : ''}`;
     if (x.key === 'her' || x.key === 'wisdom') return `<b>🏝️ ${esc(x.name)}</b><div style="margin-top:8px">${`<button onclick="mainSail('${x.key}')">🎈 搭飛船過去</button>`}</div>`;
+    if (x.visit) return `<b>🏝️ ${esc(x.name)}</b><div style="margin-top:8px"><button onclick="mainSail('${x.key}')">🎈 搭飛船過去</button></div>`;
     return `<b>🏝️ ${esc(x.name)}</b><div class="muted">${x.open ? '島主同意分享以後，才能搭飛船過去拜訪。' : '還沒開島。'}</div>`;
   }
   function paintInfo() { const el = document.getElementById('miInfo'); if (el) el.innerHTML = infoHtml(); }
@@ -384,7 +398,7 @@
     loadCredits();   // 碼頭照片的授權清單，進主島時先讀（清單版和 3D 版都要），點碼頭才載當天那張照片
     if (!isles && !loading) {
       loading = true;
-      call('getIsles', { bg: 1 }).then(r => { if (Array.isArray(r)) isles = r; else { isles = (r && r.isles) || []; herBg = r && r.herBg; } })   // 舊後端回傳陣列，照舊畫（沒有背景）
+      call('getIsles', { bg: 1 }).then(r => { if (Array.isArray(r)) isles = r; else { isles = (r && r.isles) || []; herBg = r && r.herBg; herNm = r && (r.herName || r.herCall) ? { n: r.herName || '', c: r.herCall || '' } : null; } })   // 舊後端回傳陣列，照舊畫（沒有背景）
         .catch(e => { isles = []; toast('列島清單讀不到：' + (e.message || e)); })
         .then(() => { loading = false; if (tab === 'mainisle') render(); });
     }
