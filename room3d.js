@@ -4,6 +4,7 @@
  * Room3D.mount(container, opts)
  *   opts = { wall: '#rrggbb', accent: '#rrggbb', items: [{ ic, z: 'wall'|'floor'|'out', cell?, flip? }], visitor: { emoji, img }, visitorCell?, night }
  *   cell：地上 5×5 格（0 在左後角，往右、往前數）；沒有 cell 的照舊依序擺
+ *   style（v2.50 ROOMS_v1）：沒有＝客廳；'wa' 和室、'bed' 二樓臥室。和室、臥室沒有門口，門口的東西放窗台
  */
 (function () {
   // 紫色的烏龜：🐢 先畫在另一張畫布，把綠色轉成紫色再貼上（和 CSS 的 hue-rotate(185deg) saturate(1.4) 一樣）
@@ -85,14 +86,34 @@
   // v2.48.1（HOOKS_v1）窗台沿窗戶的三個位置（0 號是原本的位置）、門口石板上的三個位置
   const SILL_U = [-0.4, -1.05, 0.25], DOOR_X = [-2.0, 0, 2.0];
   const hookOk = (v, n) => Number.isInteger(v) && v >= 0 && v < n;
+  // 好幾個長方體合成一個網格（各自的顏色存在頂點色），少幾次 draw call：[寬, 高, 深, x, y, z, 顏色, 繞 z 轉?]
+  function mergeBoxes(list) {
+    const pos = [], nor = [], col = [];
+    list.forEach(([w, h, d, x, y, z, c, rz]) => { const g = new THREE.BoxGeometry(w, h, d).toNonIndexed(); if (rz) g.rotateZ(rz); g.translate(x, y, z);
+      const cc = new THREE.Color(c); pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array);
+      for (let i = 0; i < g.attributes.position.count; i++) col.push(cc.r, cc.g, cc.b); g.dispose(); });
+    const m = new THREE.BufferGeometry();
+    m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); m.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    return m;
+  }
+  function disposeAll(g) { g.traverse(m => { if (m.geometry) m.geometry.dispose(); [].concat(m.material || []).forEach(x => { if (x.map) x.map.dispose(); x.dispose(); }); }); }
   function build(o) {
-    if (content) scene.remove(content);
+    if (content) { scene.remove(content); disposeAll(content); }   // 換房間：上一間還給 GPU
     content = new THREE.Group(); scene.add(content);
     const wallC = new THREE.Color(o.wall || '#fdf6ec'), accent = new THREE.Color(o.accent || '#741b47');
     // 地板（木頭條紋）、兩面牆、踢腳板
     const floor = new THREE.Group();
+    const FL = o.style === 'bed' ? [0xeedfc4, 0xe3d0ae] : [0xcfa979, 0xd9b88f];   // 臥室：淺色木頭
+    if (o.style === 'wa') {   // 和室：8 畳祝儀敷き（四個角不交在同一點），一張 4×2；底下深綠的一片當邊條；長押沿兩面牆。全部合成一個網格（美術 10/29）
+      const B = [[8, 0.1, 8, 0, -0.07, 0, 0x4f5a3a]];
+      [[0, 0, 1], [2, 0, 1], [0, 1, 0], [1, 1, 1], [3, 1, 0], [1, 2, 1], [0, 3, 1], [2, 3, 1]].forEach(([x, z, h], i) => {
+        const c = i % 2 ? 0xb8b77a : 0xc4c286;
+        B.push(h ? [3.98, 0.12, 1.9, -4 + 2 * x + 2, -0.04, -4 + 2 * z + 1, c] : [1.9, 0.12, 3.98, -4 + 2 * x + 1, -0.04, -4 + 2 * z + 2, c]); });
+      B.push([8, 0.1, 0.03, 0, 3.4, -3.945, 0xb08a5a], [0.03, 0.1, 8, -3.945, 3.4, 0, 0xb08a5a]);   // 長押：窗戶上緣再上面一點，貼在牆面、掛的東西在它前面
+      floor.add(new THREE.Mesh(mergeBoxes(B), std(0xffffff, { vertexColors: true })));
+    } else
     for (let i = 0; i < 8; i++) {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(1, 0.12, 8), std(i % 2 ? 0xd9b88f : 0xcfa979));
+      const b = new THREE.Mesh(new THREE.BoxGeometry(1, 0.12, 8), std(FL[i % 2]));
       b.position.set(-3.5 + i, -0.06, 0); floor.add(b);
     }
     content.add(floor);
@@ -105,17 +126,30 @@
     content.add(back, left, tb, tl);
     // 窗戶：白天看得到天空，晚上是夜空
     const win = new THREE.Group();
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.5), new THREE.MeshBasicMaterial({ color: o.night ? 0x223060 : 0xaee3ff }));
-    const fr = std(0xffffff);
-    [[0, 0.8, 2.2, 0.12], [0, -0.8, 2.2, 0.12], [-1.05, 0, 0.12, 1.7], [1.05, 0, 0.12, 1.7], [0, 0, 0.06, 1.6], [0, 0, 2, 0.06]].forEach(f => {
+    if (o.style === 'bed') {   // 臥室：圓窗
+      win.add(new THREE.Mesh(new THREE.CircleGeometry(0.85, 28), new THREE.MeshBasicMaterial({ color: o.night ? 0x223060 : 0xaee3ff })));
+      const fr = std(0xffffff), ring = new THREE.Mesh(new THREE.TorusGeometry(0.88, 0.07, 6, 28), fr); ring.position.z = 0.04; win.add(ring);
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.7, 0.1), fr); bar.position.z = 0.04; win.add(bar);
+    } else {
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.5), new THREE.MeshBasicMaterial({ color: o.style === 'wa' ? (o.night ? 0xead09a : 0xf6f1e4) : o.night ? 0x223060 : 0xaee3ff }));   // 和室：紙門（和紙白、淺木格子），晚上透出暖光
+    const fr = std(o.style === 'wa' ? 0xb08a5a : 0xffffff);
+    (o.style === 'wa' ? [[0, 0.8, 2.2, 0.12], [0, -0.8, 2.2, 0.12], [-1.05, 0, 0.12, 1.7], [1.05, 0, 0.12, 1.7], [-0.5, 0, 0.05, 1.6], [0, 0, 0.05, 1.6], [0.5, 0, 0.05, 1.6], [0, -0.4, 2, 0.05], [0, 0.05, 2, 0.05], [0, 0.45, 2, 0.05]]
+      : [[0, 0.8, 2.2, 0.12], [0, -0.8, 2.2, 0.12], [-1.05, 0, 0.12, 1.7], [1.05, 0, 0.12, 1.7], [0, 0, 0.06, 1.6], [0, 0, 2, 0.06]]).forEach(f => {
       const b = new THREE.Mesh(new THREE.BoxGeometry(f[2], f[3], 0.1), fr); b.position.set(f[0], f[1], 0.04); win.add(b);
     });
-    win.add(glass); win.rotation.y = Math.PI / 2; win.position.set(-3.95, 2.4, -0.4);
-    if (o.night) { const moon = new THREE.Mesh(new THREE.CircleGeometry(0.22, 20), new THREE.MeshBasicMaterial({ color: 0xfff3c4 })); moon.position.set(0.5, 0.35, 0.02); win.add(moon); }
+    win.add(glass);
+    }
+    win.rotation.y = Math.PI / 2; win.position.set(-3.95, 2.4, -0.4);
+    if (o.night && o.style !== 'wa') { const moon = new THREE.Mesh(new THREE.CircleGeometry(0.22, 20), new THREE.MeshBasicMaterial({ color: 0xfff3c4 })); moon.position.set(0.5, 0.35, 0.02); win.add(moon); }
     content.add(win);
     // 小地毯
     const rug = new THREE.Mesh(new THREE.CircleGeometry(1.9, 40), std(accent.clone().lerp(new THREE.Color(0xffffff), 0.65)));
-    rug.rotation.x = -Math.PI / 2; rug.position.set(0.4, 0.015, 0.6); content.add(rug);
+    rug.rotation.x = -Math.PI / 2; rug.position.set(0.4, 0.015, 0.6); if (o.style !== 'wa') content.add(rug); else rug.geometry.dispose();   // 和室不鋪地毯
+    if (o.style === 'bed') {   // 二樓：左邊一面淺杉木色的斜屋頂＋3 根椽木，合成一個網格（美術 10/29：縮小、改淺色）；在牆的上面，不擋掛點
+      const A = 0.9, L = 1.5, at = (u, v) => [-4 + Math.sin(A) * u + Math.cos(A) * v, 4.6 + Math.cos(A) * u - Math.sin(A) * v];   // u 沿斜面往上、v 往房間裡
+      const [px, py] = at(L / 2, 0.08), R = [[0.1, L, 8.1, px, py, 0, 0xd9b98a, -A]];   // 往房間裡收一點，不伸出牆外（美術複審）
+      [-2.7, 0, 2.7].forEach(z => { const [x, y] = at(L / 2, 0.18); R.push([0.12, L, 0.14, x, y, z, 0xb8955f, -A]); });
+      content.add(new THREE.Mesh(mergeBoxes(R), std(0xffffff, { vertexColors: true }))); }
 
     const items = o.items || [];
     let fi = 0, wi = 0, door = false;
@@ -125,7 +159,7 @@
     items.forEach(it => {
       const wn = it.z === 'wall' ? (usedW[it.w] === it ? it.w : nextW()) : -1;
       if (wn >= 0) { const w = WALL_SPOTS[wn]; content.add(wallItem(it.ic, w[0], w[1], w[2], 1.1)); }
-      else if (it.z === 'out' && hookOk(it.d, DOOR_X.length)) { content.add(floorItem(it.ic, DOOR_X[it.d], 4.75, 1.2, it.flip)); door = true; }   // 門口
+      else if (it.z === 'out' && hookOk(it.d, DOOR_X.length) && !o.style) { content.add(floorItem(it.ic, DOOR_X[it.d], 4.75, 1.2, it.flip)); door = true; }   // 門口
       else if (it.z === 'out') { const f = floorItem(it.ic, 0, 0, 0.7); f.rotation.y = Math.PI / 2; f.position.set(-3.6, 1.62, SILL_U[hookOk(it.s, SILL_U.length) ? it.s : 0]); content.add(f); }   // 窗台上
       else if (it.cell != null) { const p = cellPos(it.cell); content.add(floorItem(it.ic, p[0], p[1], 1.35, it.flip)); }
       else if (fi < FLOOR_SPOTS.length) { const p = FLOOR_SPOTS[fi++]; content.add(floorItem(it.ic, p[0], p[1], 1.45)); }
