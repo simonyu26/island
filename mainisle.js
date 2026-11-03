@@ -35,7 +35,7 @@
   };
   const OPEN = { port: true, hall: true, notes: true };
   // OPENAT_v1：三本書照日期開門（爸爸 10/31），和智慧島一樣用 S.today 比；OPEN 已經寫死的鍵不覆蓋
-  const OPEN_AT = { exchange: '2026-11-04', temple: '2026-11-06', church: '2026-11-07' };
+  const OPEN_AT = { temple: '2026-11-06', church: '2026-11-07' };   // EXCHANGE_PENDING_v1：交易所先 pending（爸爸 11/2），開張日定了再加回 exchange
   Object.keys(OPEN_AT).forEach(k => { if (!(k in OPEN)) Object.defineProperty(OPEN, k, { enumerable: true, get: () => typeof S !== 'undefined' && !!S && !!S.today && S.today >= OPEN_AT[k] }); });
   KEEPER.temple.open = { first: '哎唷，你來了！廟終於整理好了，姨媽泡了一壺茶。這間廟的故事、節慶和老街的由來，都寫在下面，慢慢看，看累了喝茶。',
     hello: ['廟埕剛掃好，坐一下。', '今天想聽哪一段？姨媽講給你聽。', '下次唱一段歌仔戲給你聽好不好？'] };
