@@ -342,11 +342,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.1.1';
+const APP_VERSION = '2.50.1.2';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11/6（五）', items: ['🌳 預計 11/6（五）：衛星小島上也可以種樹了，每座 4 格；讀完的書長出的地標，本島放不下時也會長到小島上。如果時間有變，會在島上另外跟你說。'], fam: true };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.1.2', date: '2026-11-05', fam: [0, 1], items: ['🌱 計時分兩次也會合起來算了：同一天、同一種計時的分鐘加在一起，每 25 分鐘一個，例如 15 分鐘加 10 分鐘也有一個。之前的紀錄也重新算過{綠}。', '🕘 忘了按計時也沒關係：讀書、運動、藝文、閱讀的計時卡片下面多了「補登一筆」，可以補今天和前兩天，填開始和結束的時間，綠點跟計時一樣算。'] },   // HANDLOG_v1
   { v: '2.50.1.1', date: '2026-11-04', items: ['⏳ 學習摘要的停留時間換了算法：讀書計時開著的時候，手機放在旁邊沒動也算讀書（一次最多 2 小時）；運動和藝文計時另外記，不算進讀書、延伸、其他三類；書店店面的時間改記在「其他」，看書店裡的書還是算「延伸」。'] },
   { v: '2.50.1', date: '2026-11-04', fam: [2, 3, 7], items: ['🎁 屋台做好的料理可以送給島民和智慧島的老師了：每位一天收一份，他們會跟你道謝；送到最喜歡的那道，交情會多一點。送出去的料理就不能再賣了。', '🍵 有茶園小島的話，那天讀完一格國文計畫，茶園會多採 1 份茶葉給你，可以拿去屋台做料理。11/1 以後讀了國文的日子也補給你了。', '❓ 換衛星小島時，每種樣子都有一個 ❓，點開就知道這座小島能做什麼；小島頁也看得到。', '🖼️ 換了島民的圖片，回到小島時 3D 會馬上換成新的，不用重新整理。', '🗒️ 按「確認這週」以後，會把這週整理成三句話（只有數字和名稱，不放你寫的字），放在航海日誌那一週。先只有你看得到，選了人才會給家人看。', '📖 書店的「親子共讀」改名「閱讀計時」：讀課外書的時候，自己讀或和家人一起讀都可以按，每 25 分鐘一枚書籤 🔖。', '🏝️ 衛星小島的說明補上了每種小島能做什麼；預計 12 月底起，植木屋、獨立書店、島の屋台和音樂廳也可以搬一間到小島上住。', '🌦️ 右上角的天氣修正了：預報的雨量是 0 的時候，不會再寫「下雨」，島上也不會跟著下雨。'] },
   { v: '2.50.0.3', date: '2026-11-03', minor: true, items: ['🪙 家人用家人碼看島時，沒分享的部分會顯示「—」，不會再出現 0 或負數的島幣、綠點。你自己的數字沒有變，也沒有多分享任何東西。'] },
@@ -878,11 +879,14 @@ function derive(S) {
   // 讀書計時（focus:日期）：同一次計時（s）每整整 25 分鐘一顆砂時計 +10 綠點，不設每日上限（爸爸，2026-10-26）；只看時間，跟打勾無關。
   // 砂時計不給經驗值和島幣（爸爸，2026-10-25），綠點只從這裡來，種樹那邊用 D.focusGreen 算（開張禮＋focusGreen－種樹花掉的）
   // 運動計時（move:日期）：每運動滿 25 分鐘一個足あと +10 綠點，不設每日上限（爸爸，2026-10-26）；不給經驗值和島幣（爸爸，2026-10-25）
-  const moveDays = {}; let moveSteps = 0;
+  // DAYSUM_v1（11/4 定）：同一天、同一種（運動、藝文、閱讀各自）的分鐘合起來，每 25 分鐘一個；old 是舊算法（每筆各自算），只用來告訴她補了多少
+  const moveDays = {}; let moveSteps = 0, moveStepsOld = 0;
   Object.keys(save).filter(k => k.startsWith('move:') && save[k]).forEach(k => {
-    const list = save[k].list || [], steps = list.reduce((a, m) => a + Math.floor((m.min || 0) / MOVE_STEP), 0);
-    moveDays[k.slice(5)] = { min: list.reduce((a, m) => a + (m.min || 0), 0), steps };
-    moveSteps += steps;
+    const list = save[k].list || [], byK = {};
+    list.forEach(m => { byK[m.k || 'move'] = (byK[m.k || 'move'] || 0) + (m.min || 0); });
+    const steps = Object.values(byK).reduce((a, x) => a + Math.floor(x / MOVE_STEP), 0);
+    moveDays[k.slice(5)] = { min: list.reduce((a, m) => a + (m.min || 0), 0), steps, byK };
+    moveSteps += steps; moveStepsOld += list.reduce((a, m) => a + Math.floor((m.min || 0) / MOVE_STEP), 0);
   });
   // 喝水（water:日期，v2.35.1）：每 250cc +10 綠點，一天最多算 2,000cc；超過的照樣記，只是不給點（工程顧問，爸爸 2026-10-26 同意）
   const waterDays = {}; let waterGreen = 0;
@@ -890,13 +894,13 @@ function derive(S) {
     const cc = (save[k].list || []).reduce((a, w) => a + (w.cc || 0), 0), g = Math.floor(Math.min(cc, WATER_CAP) / WATER_CUP) * WATER_GREEN;
     waterDays[k.slice(6)] = { cc, green: g }; waterGreen += g;
   });
-  const focusDays = {}; let focusGlass = 0;
+  const focusDays = {}; let focusGlass = 0, focusGlassOld = 0;   // DAYSUM_v1：一天的讀書計時合起來算；舊算法是每一次計時（s）各自算
   Object.keys(save).filter(k => k.startsWith('focus:') && save[k]).forEach(k => {
     const per = {}, d = { min: 0, glass: 0 };
     (save[k].list || []).forEach(x => { per[x.s] = (per[x.s] || 0) + (x.min || 0); d.min += x.min || 0; });
-    d.glass = Object.values(per).reduce((a, m) => a + Math.floor(m / FOCUS_GLASS), 0);
+    d.glass = Math.floor(d.min / FOCUS_GLASS);
     focusDays[k.slice(6)] = d;
-    focusGlass += d.glass;
+    focusGlass += d.glass; focusGlassOld += Object.values(per).reduce((a, m) => a + Math.floor(m / FOCUS_GLASS), 0);
   });
   const exCoins = Object.values(exWeeks).filter(n => n >= EX_GOAL).length * 3;
   let exStreak = 0, exBest = 0;
@@ -963,7 +967,7 @@ function derive(S) {
 
   return { cfg, xp, coins, planBonus: Math.round(planBonus), coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent, matSpent: shop.matSpent, sellEarned: shop.sellEarned }, shop, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
-           exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps, waterDays, waterGreen,
+           exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps, daySumAdd: (focusGlass - focusGlassOld) * FOCUS_GREEN + (moveSteps - moveStepsOld) * MOVE_GREEN, waterDays, waterGreen,
            // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計＋運動／練習＋喝水－種樹花掉的；不扣經驗值、不影響等級
            green: (save['keeper:garden'] ? GARDEN_GIFT : 0) + focusGlass * FOCUS_GREEN + moveSteps * MOVE_GREEN + waterGreen - ((save.garden && save.garden.spent) || 0) };
 }
@@ -1056,10 +1060,10 @@ function render() {
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
   if (ownMode()) tabs.splice(2, 1);   // 家人島沒有大考
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', hand: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (TAB_HELP[tab]) app.insertAdjacentHTML('afterbegin', helpChip());
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
@@ -1879,6 +1883,7 @@ function famSeen(kind, id) {
 // v2.46 版本說明裡的 {補}：照她自己的紀錄寫補了多少經驗值
 function newsText(i) {
   const n = (D && D.planBonus) || 0;
+  if (i.indexOf('{綠}') >= 0) { const g = (D && D.daySumAdd) || 0; i = i.replace('{綠}', g > 0 ? '，多算回 +' + g + ' 綠點' : ''); }   // DAYSUM_v1
   return i.replace('{補}', n > 0 ? ' +' + n + ' 經驗值（大約可以多換 ' + Math.floor(n / 10) + ' 枚島幣）' : '經驗值');
 }
 function newsItems() {
@@ -2988,10 +2993,10 @@ function readHtml() {
   if (isFamily() && typeof seeOpen === 'function' && !seeOpen('study')) return '';   // READ_NAME_v1：家人碼在她沒分享「計畫和讀書紀錄」時拿不到 move:，整張不出現（不顯示 0 次）
   const w = readWeek(), marks = Math.floor(w.min / MOVE_STEP), days = [];
   for (let i = 0; i < 14 && days.length < 8; i++) { const d = addD(S.today, -i), list = ((S.save['move:' + d] || {}).list || []).filter(r => r.k === 'read');
-    if (list.length) days.push({ d, min: list.reduce((a, r) => a + (r.min || 0), 0), n: list.length }); }
+    if (list.length) days.push({ d, min: list.reduce((a, r) => a + (r.min || 0), 0), n: list.length, hand: list.some(r => r.src === 'hand') }); }
   return `${moveBlock('read')}<div class="card"><h3 style="margin:0 0 6px">🔖 這週閱讀</h3>
       <div>${w.n ? `讀了 ${w.n} 次、共 ${w.min} 分鐘${marks ? '・' + '🔖'.repeat(Math.min(marks, 20)) : ''}` : '這週還沒有閱讀紀錄。'}</div>
-      ${days.length ? `<div style="margin-top:8px">${days.map(x => `<div class="row" style="font-size:14px"><span class="grow">${short(x.d)}</span><span class="muted">${x.n} 次・${x.min} 分鐘</span></div>`).join('')}</div>` : ''}</div>`;
+      ${days.length ? `<div style="margin-top:8px">${days.map(x => `<div class="row" style="font-size:14px"><span class="grow">${short(x.d)}</span><span class="muted">${x.n} 次・${x.min} 分鐘${x.hand ? '・🕘 補登' : ''}</span></div>`).join('')}</div>` : ''}</div>`;
 }
 // 這週（週一起）的藝文紀錄：只看 move:日期 裡 k:'art' 的分鐘數，不另存欄位（工程顧問 10/27）
 function hallWeek(wk) {
@@ -3010,7 +3015,7 @@ function viewHall() {
   const kp = keeperOf('hall'), daily = S.save['daily:' + S.today], fam = isFamily(), w = hallWeek();
   const days = [];
   for (let i = 0; i < 14 && days.length < 8; i++) { const d = addD(S.today, -i), list = ((S.save['move:' + d] || {}).list || []).filter(r => r.k === 'art');
-    if (list.length) days.push({ d, min: list.reduce((a, r) => a + (r.min || 0), 0), n: list.length }); }
+    if (list.length) days.push({ d, min: list.reduce((a, r) => a + (r.min || 0), 0), n: list.length, hand: list.some(r => r.src === 'hand') }); }
   const notes = Math.floor(w.min / MOVE_STEP);
   return `<div class="card"><h2 style="margin:0">🎼 音樂廳</h2><div class="muted">上課、練習、樂團排練、去聽去看、自己創作，都可以來這裡計時。</div>
       ${fam ? '' : placeIntro('hall')}
@@ -3019,7 +3024,7 @@ function viewHall() {
     <div class="card"><h3 style="margin:0 0 6px">🎵 這週</h3>
       <div>${w.n ? `來了 ${w.n} 次、共 ${w.min} 分鐘${notes ? '・' + '🎵'.repeat(Math.min(notes, 20)) : ''}` : '這週還沒來過。'}</div>
       <div class="muted" style="margin-top:4px;font-size:13px">${w.n ? '這週有來，晚上音樂廳的大玻璃會亮著。' : '這週來計時一次，晚上音樂廳的大玻璃就會亮起來。'}</div>
-      ${days.length ? `<div style="margin-top:8px">${days.map(x => `<div class="row" style="font-size:14px"><span class="grow">${short(x.d)}</span><span class="muted">${x.n} 次・${x.min} 分鐘</span></div>`).join('')}</div>` : ''}</div>
+      ${days.length ? `<div style="margin-top:8px">${days.map(x => `<div class="row" style="font-size:14px"><span class="grow">${short(x.d)}</span><span class="muted">${x.n} 次・${x.min} 分鐘${x.hand ? '・🕘 補登' : ''}</span></div>`).join('')}</div>` : ''}</div>
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button>${kp && !fam ? `<button class="ghost" onclick="openKeeper('hall')">${kpPic(kp)} 管理員設定</button>` : ''}</div>`;
 }
 function yataiNote() {
@@ -5232,6 +5237,7 @@ function focusOptions(sel) {
     + Object.keys(bySub).map(k => `<optgroup label="${esc(k)}">${bySub[k].map(opt).join('')}</optgroup>`).join('');
 }
 function glassText(min, date) {
+  min += ((D.focusDays || {})[date] || {}).min || 0;   // DAYSUM_v1：當天已經存好的讀書計時也算進去
   const n = Math.floor(min / FOCUS_GLASS);
   return (n ? '已集 ' + '⏳'.repeat(n) + '・' : '') + '下一顆還差 ' + (FOCUS_GLASS - min % FOCUS_GLASS) + ' 分鐘';
 }
@@ -5239,7 +5245,7 @@ function focusBlock() {
   if (isFamily()) return '';
   const f = focusActive();
   if (!f) return `<div class="focus"><div class="muted">要開始讀了嗎？按項目旁的 ⏳，或在這裡選一項開始計時。每專心 ${FOCUS_GLASS} 分鐘集一顆砂時計，🌱 +${FOCUS_GREEN} 綠點。</div>
-      <div class="row" style="margin-top:6px"><select id="fStart">${focusOptions(-1)}</select><button class="tbtn" onclick="focusStart(Number(document.getElementById('fStart').value))">⏳ 開始</button></div></div>`;
+      <div class="row" style="margin-top:6px"><select id="fStart">${focusOptions(-1)}</select><button class="tbtn" onclick="focusStart(Number(document.getElementById('fStart').value))">⏳ 開始</button></div>${handLink('focus')}</div>`;
   const cur = f.segs[f.segs.length - 1], w = focusWho(cur.row), min = Math.floor(focusMs(f) / 60000);
   const lines = ['我陪你一起讀，加油！', '專心一下下，等等再休息。', '你已經開始了，最難的一步做完了。'];   // 用開始時間挑一句，同一次計時不會一直換
   return `<div class="focus" id="focusBox"><div class="row"><span class="grow"><b>${esc(itemLabel(cur.row))}</b>${f.date !== S.today ? '（' + short(f.date) + ' 開始的）' : ''}</span><span class="muted">${f.pausedAt ? '☕ 休息中' : '⏳ 計時中'}</span></div>
@@ -5319,7 +5325,7 @@ function viewFocusStop() {
   const byRow = {}; cut.forEach(g => byRow[g.row] = (byRow[g.row] || 0) + g.ms);
   const lg = logOf(f.date), w = focusWho(f.segs[0].row);
   const capped = st.maxEnd < Date.now() - 60000;
-  const before = (D.focusDays[f.date] || {}).glass || 0, gain = Math.floor(min / FOCUS_GLASS);
+  const dayMin = (D.focusDays[f.date] || {}).min || 0, gain = Math.floor((dayMin + min) / FOCUS_GLASS) - Math.floor(dayMin / FOCUS_GLASS);   // DAYSUM_v1
   const rowsHere = Object.keys(st.choice).map(Number);
   const planRows = planOf(mondayOf(f.date)).days[dayIdx(f.date)].filter(r => D.itemsByRow[r] && !rowsHere.includes(r));
   const line = r => `<div class="item"><div class="name">${esc(itemLabel(r))}${byRow[r] ? `<div class="muted">這次讀了 ${Math.round(byRow[r] / 60000)} 分鐘</div>` : ''}</div>${lg[r] === 2 ? '<span class="muted">✓ 今天已經記過完成了</span>'
@@ -5416,6 +5422,7 @@ function moveMs(m, now) { now = now || Date.now(); return Math.max(0, now - m.st
 function moveClockText(ms) { if (ms >= MOVE_MAX * 60000) return MOVE_MAX + ':00+'; const t = Math.floor(ms / 1000);
   return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
 function stepText(min, date, k) {
+  min += (((D.moveDays || {})[date] || {}).byK || {})[k || 'move'] || 0;   // DAYSUM_v1
   const n = Math.floor(min / MOVE_STEP), K = MOVE_KIND[k || 'move'];
   return (n ? '已有 ' + K.step.repeat(n) + '・' : '') + '下一' + (K.unit || '個') + K.stepName + '還差 ' + (MOVE_STEP - min % MOVE_STEP) + ' 分鐘';
 }
@@ -5425,13 +5432,13 @@ function moveBlock(kind) {
   if (m && (m.k || 'move') !== (kind || 'move')) return `<div class="card muted">${mk(m).ic} ${mk(m).did}計時還在跑，<a href="#" onclick="moveBack('${m.k || 'move'}');return false">去那邊看 ›</a></div>`;
   if (!m && kind === 'art') return `<div class="card"><h3 style="margin:0">⏱️ 藝文計時</h3>
       <div class="muted" style="margin-top:4px">開始前選一種，結束了再按一下。每 ${MOVE_STEP} 分鐘一個音符 🎵 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；不用拍照、不用證明。</div>
-      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<div style="display:grid;gap:8px;margin-top:10px">${Object.keys(ART_T).map(t => `<button onclick="moveStart('art','${t}')">${ART_T[t].ic} ${ART_T[t].name}</button>`).join('')}</div>`}</div>`;
+      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<div style="display:grid;gap:8px;margin-top:10px">${Object.keys(ART_T).map(t => `<button onclick="moveStart('art','${t}')">${ART_T[t].ic} ${ART_T[t].name}</button>`).join('')}</div>`}${handLink('art')}</div>`;
   if (!m && kind === 'read') return `<div class="card"><h3 style="margin:0">⏱️ 閱讀計時</h3>
       <div class="muted" style="margin-top:4px">讀課外書的時候，自己讀或和家人一起讀都可以：開始時按<span style="white-space:nowrap">「開始閱讀」</span>，讀完再按一下。每 ${MOVE_STEP} 分鐘一枚書籤 🔖 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；不用證明，也不記書名。</div>
-      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<button style="width:100%;margin-top:10px" onclick="moveStart('read')">📖 開始閱讀</button>`}</div>`;
+      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<button style="width:100%;margin-top:10px" onclick="moveStart('read')">📖 開始閱讀</button>`}${handLink('read')}</div>`;
   if (!m) return `<div class="card"><h3 style="margin:0">⏱️ 運動計時</h3>
       <div class="muted" style="margin-top:4px">出門運動前按「出發」，回來按「回來了」。每運動 ${MOVE_STEP} 分鐘一個足あと 👣 +${MOVE_GREEN} 綠點，動多久都算；一次滿 ${MOVE_STAMP} 分鐘自動蓋今天的章。沒帶手機（體育課、校隊）就用下面的「今天運動了」蓋章，只是沒有綠點。</div>
-      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再出發。</div>' : `<button style="width:100%;margin-top:10px" onclick="moveStart()">🏃 出發！</button>`}</div>`;
+      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再出發。</div>' : `<button style="width:100%;margin-top:10px" onclick="moveStart()">🏃 出發！</button>`}${handLink('move')}</div>`;
   const ms = moveMs(m), min = Math.floor(ms / 60000);
   const K = mk(m), art = m.k === 'art';
   return `<div class="card"><div class="focus" style="margin:0"><div class="row"><b class="grow">${K.ic} ${K.doing}${m.date !== S.today ? '（' + short(m.date) + ' 開始）' : ''}</b>${kp ? `<span>${kpPic(kp)} ${esc(kp.name)}陪你</span>` : ''}</div>
@@ -5472,7 +5479,7 @@ function moveMinutes(st) { return Math.max(0, Math.floor(Math.min(st.endAt - st.
 function viewMoveStop() {
   const st = draft.move; if (!st) { tab = 'walk'; return viewWalk(); }
   const m = st.m, min = moveMinutes(st), art = !!m.k, K = mk(m), kp = keeperOf(K.page);   // art：不是運動（藝文或共讀）
-  const gain = Math.floor(min / MOVE_STEP);
+  const dayMin = (((D.moveDays || {})[m.date] || {}).byK || {})[m.k || 'move'] || 0, gain = Math.floor((dayMin + min) / MOVE_STEP) - Math.floor(dayMin / MOVE_STEP);   // DAYSUM_v1
   const stamp = !art && min >= MOVE_STAMP && !S.save['ex:' + m.date];
   const who = kp ? kpPic(kp) + ' ' + esc(kp.name) : guide().emoji + ' ' + esc(guide().name);
   return `<div class="card"><h2>🏁 這次${K.did}了 ${min} 分鐘</h2>
@@ -5508,6 +5515,92 @@ function moveDiscard() {
   const k = (moveActive() || {}).k;
   if (!confirm('這次的' + mk(moveActive()).did + '計時不記下來，確定嗎？')) return;
   movePut(null); draft = {}; moveBack(k);
+}
+/* ===== HANDLOG_v1 計時補登（11/5）：忘了按計時，可以補今天和前兩天，填開始、結束時間；綠點換算和計時一樣。
+   紀錄寫進同一個 focus:／move:日期，多一個 src:'hand'；後端（handCheck_）再擋一次天數、筆數、分鐘、重疊、跨午夜。 ===== */
+const HAND_DAYS = 2, HAND_N = 2, HAND_MAX = 120;
+const HAND_CSS = `<style>.hl-opt{background:#fff;color:var(--ink);border:1px solid #d8d4ce;border-radius:10px;padding:8px 6px;font-weight:400;line-height:1.25;min-height:44px}
+.hl-opt small{display:block;font-size:11px;color:var(--muted)}.hl-opt[aria-checked="true"]{background:var(--plum-light);border:2px solid var(--plum);color:var(--plum);font-weight:700}
+.hl-opt[aria-checked="true"]::before{content:"✓ "}.hl-off{background:#f7f1e5!important;color:#5f5a55!important;border:1px dashed #d8d4ce!important}
+#hlBox input[aria-invalid="true"]{border:2px solid #a33a2a}.hl-g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.hl-g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.hl-q{margin-top:12px;font-weight:700}</style>`;
+function handName(k) { return k === 'focus' ? (ownMode() ? '專心' : '讀書') : mk(k === 'move' ? null : { k }).did === '練習' ? '藝文' : k === 'read' ? '閱讀' : '運動'; }
+function handLink(k) { return isFamily() ? '' : `<div style="text-align:center;margin-top:4px"><a href="#" onclick="handOpen('${k}');return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline;text-underline-offset:3px">🕘 忘了計時？補登一筆</a></div>`; }
+function handOpen(k) {
+  if (isFamily()) return;
+  draft = { hand: { k, t: 'play', day: 0, row: 0, a: '', b: hhmm(Date.now()), done: 0 } }; tab = 'hand'; render(); window.scrollTo(0, 0);
+}
+function handSet(f, v) { const h = draft.hand; if (!h) return; h[f] = f === 'a' || f === 'b' || f === 't' ? String(v) : Number(v); render(); }
+function handWho(h) { if (h.k === 'focus') { const w = h.row ? focusWho(h.row) : guide(); return w.emoji + ' ' + esc(w.name); } const kp = keeperOf(MOVE_KIND[h.k].page); return kp ? kpPic(kp) + ' ' + esc(kp.name) : guide().emoji + ' ' + esc(guide().name); }
+function handTw(ms) { const d = new Date(ms), h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0'); return (h < 12 ? '上午 ' : '下午 ') + ((h + 11) % 12 + 1) + ':' + m; }
+function handRange(a, b) { const x = handTw(a), y = handTw(b); return x + '～' + (x.slice(0, 2) === y.slice(0, 2) ? y.slice(3) : y); }
+// 算這一筆：回傳 { date, start, end, min, err（給管理員說的話）}；err 為空才能存
+function handCalc(h) {
+  const date = addD(S.today, -h.day), t = v => { const m = String(v || '').match(/^(\d{2}):(\d{2})$/); return m ? parseD(date).getTime() + (Number(m[1]) * 60 + Number(m[2])) * 60000 : null; };
+  const start = t(h.a), end = t(h.b), r = { date, start, end, min: 0, err: '', bad: false };
+  if (start == null || end == null) { r.wait = true; return r; }
+  if (end <= start) { r.err = '補登要在同一天裡喔。過了半夜 12 點的部分，可以選隔天再補一筆。'; r.bad = true; return r; }
+  if (end > Date.now() + 60000) { r.err = '這個時間還沒到喔，改一下結束的時間吧。'; r.bad = true; return r; }
+  r.min = Math.floor((end - start) / 60000);
+  const one = h.k === 'focus' ? FOCUS_MAX : MOVE_MAX;
+  if (r.min > one) { r.err = '一筆最多算 ' + one + ' 分鐘，可以分兩筆補。'; r.bad = true; return r; }
+  const kindOf = x => h.k === 'focus' ? 'focus' : (x.k || 'move');
+  const fl = (S.save['focus:' + date] || {}).list || [], ml = (S.save['move:' + date] || {}).list || [];
+  const mine = (h.k === 'focus' ? fl : ml).filter(x => x.src === 'hand' && kindOf(x) === h.k), used = mine.reduce((a, x) => a + (x.min || 0), 0);
+  if (mine.length >= HAND_N) { r.err = '這天的補登已經滿 ' + HAND_N + ' 筆了。'; return r; }
+  if (used >= HAND_MAX) { r.err = '這天的補登已經滿 ' + HAND_MAX + ' 分鐘了。'; return r; }
+  if (used + r.min > HAND_MAX) { r.err = '這天的補登最多再 ' + (HAND_MAX - used) + ' 分鐘喔。'; r.bad = true; return r; }
+  const live = [focusActive(), moveActive()].filter(x => x && x.date === date).map(x => ({ start: x.segs ? x.segs[0].start : x.start, end: Date.now() }));
+  const hit = fl.concat(ml, live).find(x => x.start < end && start < x.end);
+  if (hit) { r.err = handRange(Math.max(hit.start, start), Math.min(hit.end, end)) + ' 這段已經' + (hit.src === 'hand' ? '補登過了' : '用計時記過了') + '，改一下開始或結束的時間吧。'; r.bad = true; }
+  return r;
+}
+function viewHand() {
+  const h = draft.hand; if (!h) { tab = 'home'; return viewHome(); }
+  const r = handCalc(h), name = handName(h.k), who = handWho(h);
+  const opt = (on, txt, js, sub) => `<button class="hl-opt" role="radio" aria-checked="${on}" onclick="${js}">${txt}${sub ? `<small>${sub}</small>` : ''}</button>`;
+  const step = h.k === 'focus' ? '⏳' : MOVE_KIND[h.k].step, per = h.k === 'focus' ? FOCUS_GLASS : MOVE_STEP, dayMin = h.k === 'focus' ? ((D.focusDays[r.date] || {}).min || 0) : (((D.moveDays[r.date] || {}).byK || {})[h.k] || 0), gain = Math.floor((dayMin + r.min) / per) - Math.floor(dayMin / per);   // DAYSUM_v1
+  const stepName = h.k === 'focus' ? '顆砂時計' : (MOVE_KIND[h.k].unit || '個') + MOVE_KIND[h.k].stepName;
+  const ok = !r.wait && !r.err;
+  const inv = r.bad ? ' aria-invalid="true"' : '';
+  const lg = h.k === 'focus' && h.row ? logOf(r.date)[h.row] || 0 : 0;
+  return HAND_CSS + `<div class="card" id="hlBox"><h2 style="margin:0">🕘 補登一筆${name}時間</h2>
+    <div class="speech" style="margin-top:8px">${who}：「忘了按也沒關係，跟我說是什麼時候就好。」</div>
+    <div class="hl-q" id="hlDayQ">哪一天</div><div class="hl-g3" role="radiogroup" aria-labelledby="hlDayQ">${['今天', '昨天', '前天'].slice(0, HAND_DAYS + 1).map((t, i) => opt(h.day === i, t, `handSet('day',${i})`, short(addD(S.today, -i)))).join('')}</div>
+    ${h.k === 'art' ? `<div class="hl-q" id="hlTQ">做了什麼</div><div class="hl-g2" role="radiogroup" aria-labelledby="hlTQ">${Object.keys(ART_T).map(t => opt(h.t === t, ART_T[t].ic + ' ' + ART_T[t].name, `handSet('t','${t}')`)).join('')}</div>` : ''}
+    ${h.k === 'focus' ? `<div class="hl-q"><label for="hlRow">讀了哪一項</label></div><select id="hlRow" style="margin-top:6px" onchange="handSet('row',this.value)">${focusOptions(h.row)}</select>` : ''}
+    <div class="row" style="margin-top:12px"><label class="grow" style="margin:0" for="hlA">開始</label><input type="time" lang="zh-TW" id="hlA" value="${h.a}"${inv} style="width:auto" onchange="handSet('a',this.value)"></div>
+    <div class="row" style="margin-top:8px"><label class="grow" style="margin:0" for="hlB">結束</label><input type="time" lang="zh-TW" id="hlB" value="${h.b}"${inv} style="width:auto" onchange="handSet('b',this.value)"></div>
+    ${r.wait ? `<div class="muted" id="hlWhy" style="margin-top:10px">填好開始的時間，就會算出幾分鐘。</div>`
+      : r.err ? `<div class="speech" id="hlWhy" style="margin-top:12px">${who}：「${r.err}」</div>`
+      : `<div class="focus" style="margin-top:12px"><b>${r.min} 分鐘</b>${gain ? '・' + step.repeat(gain) + ' ' + ['', '一', '兩', '三', '四'][gain] + stepName + '，+' + gain * (h.k === 'focus' ? FOCUS_GREEN : MOVE_GREEN) + ' 綠點' : ''}</div>`}
+    ${h.k === 'focus' && h.row && ok ? (lg === 2 ? '<div class="muted" style="margin-top:10px">✓ 這一項那天已經記過完成了</div>' : `<div class="hl-q" id="hlDoneQ">這一項讀完了嗎？</div><div class="hl-g3" role="radiogroup" aria-labelledby="hlDoneQ">${[[0, '還沒完'], [1, '部分'], [2, '讀完了']].map(([v, t]) => opt(h.done === v, t, `handSet('done',${v})`)).join('')}</div>`) : ''}
+    <div class="row" style="margin-top:12px">${ok ? '<button class="grow" onclick="handSave()">存起來 ✨</button>' : '<button class="grow hl-off" aria-disabled="true" aria-describedby="hlWhy">存起來 ✨</button>'}<button class="ghost" onclick="handBack()">不補了</button></div>
+    <div class="muted" style="margin-top:8px">${h.k === 'move' ? '運動補登滿 ' + MOVE_STAMP + ' 分鐘，一樣會蓋那天的章。' : `可以補今天和前兩天。補登的會標「🕘 補登」；每種計時一天最多補 ${HAND_N} 筆、共 ${HAND_MAX} 分鐘。家人看得到的時間紀錄，也會標「🕘 補登」。`}</div></div>`;
+}
+function handBack() { const k = (draft.hand || {}).k; draft = {}; if (k === 'focus') focusOpen(); else moveBack(k); }
+function handSave() {
+  const h = draft.hand; if (!h) return;
+  const r = handCalc(h); if (r.wait || r.err) return;
+  const date = r.date;
+  if (h.k === 'focus') {
+    const xp0 = D.xp, g0 = D.focusGlass, m0 = Object.assign({}, D.mats.got);
+    const all = ((S.save['focus:' + date] || {}).list || []).concat([{ row: h.row, s: r.start, start: r.start, end: r.end, min: r.min, src: 'hand' }]);
+    S.save['focus:' + date] = { list: all }; queueSave('focus:' + date, 'saveFocus', date, all);
+    if (h.row && h.done > (logOf(date)[h.row] || 0)) { const rows = Object.assign({}, logOf(date), { [h.row]: h.done }); S.save['log:' + date] = { rows }; queueSave('log:' + date, 'logDay', date, rows); }
+    D = derive(S); matToast(m0, 2200);
+    const green = (D.focusGlass - g0) * FOCUS_GREEN, xp = D.xp - xp0;
+    toast('補好了！' + (green ? '+' + green + ' 綠點 ⏳' : '') + (xp ? ' +' + xp + ' 經驗值' : ''));
+  } else {
+    const rec = { start: r.start, end: r.end, min: r.min, pauses: 0, src: 'hand' }; if (h.k !== 'move') rec.k = h.k;
+    const all = ((S.save['move:' + date] || {}).list || []).concat([rec]);
+    S.save['move:' + date] = { list: all }; queueSave('move:' + date, 'saveMove', date, all);
+    const stamp = h.k === 'move' && r.min >= MOVE_STAMP && !S.save['ex:' + date];
+    if (stamp) { S.save['ex:' + date] = { at: S.today, src: 'move' }; queueSave('ex:' + date, 'saveExercise', date, true, 'move'); }
+    const g0 = D.moveSteps; D = derive(S);
+    const green = (D.moveSteps - g0) * MOVE_GREEN;
+    toast('補好了！' + (green ? '+' + green + ' 綠點 ' + MOVE_KIND[h.k].step : '') + (stamp ? ' 那天的章蓋好了 🏃' : ''));
+  }
+  handBack(); window.scrollTo(0, 0);
 }
 function focusDiscard() {
   if (!confirm('這次的計時不記下來，確定嗎？')) return;
@@ -5752,7 +5845,7 @@ function zoneTimer(zoneOf, get, save, busy) {   // TM_RULES_v2：busy() 為真�
 // 她的三區對照（學習策略顧問 10/30 定）。智慧島照老師分：會考學科類算讀書，其餘算延伸
 const TM_STUDY_TABS = ['plan', 'confirm', 'scan', 'pick', 'light', 'lamp', 'log', 'bottle', 'wrongScan', 'exam', 'words', 'printWrong', 'focus', 'lightword', 'paper', 'story'];
 const TM_EXT_TABS = ['book'];   // TM_RULES_v2：書店店面改算其他；音樂廳是藝文計時頁，三區都不算
-const TM_OFF_TABS = ['walk', 'moveStop', 'hall'];   // 運動、藝文計時頁：離開螢幕的好事，不算進任何一區
+const TM_OFF_TABS = ['walk', 'moveStop', 'hall', 'hand'];   // HANDLOG_v1 補登表單也不算   // 運動、藝文計時頁：離開螢幕的好事，不算進任何一區
 const TM_WISDOM_STUDY = ['einstein', 'yirong', 'mi', 'alu'];   // 自然、社會（歷史）、國文、社會（公民：看新聞）
 const TM_BOARD_STUDY = ['plan', 'xq', 'light'];   // 首頁今日板展開讀書計畫、挑戰任務、漂流瓶
 function tmZone() {
