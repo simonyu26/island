@@ -151,14 +151,14 @@
     for (let i = 0; i < 3; i++) g.add(box(0.16, 0.32, 0.04, lampMat(), (i - 1) * 0.55, 0.7, 0.46));   // 二樓三扇窗（夜光和廟燈籠、教會彩窗同一個強度；深綠窗框和半圓拱留給近版）
     return g;
   }
-  function church() {   // 教會（公東教堂風，遠版 ≤84）：清水混凝土方塊、頂樓斜屋頂小堂、白十字、彩色格窗帶、戶外斜梯
-    const g = new THREE.Group(), conc = mat('concrete', 0xc9c6bf), white = mat('crossWhite', 0xf6f6f2);
+  function church() {   // 教會（CHURCH_BACK_v1：公東教堂風＋鐘樓，遠版 ≤84）：清水混凝土方塊、頂樓小堂、正面右側高鐘樓、鐘樓頂金十字架、彩繪玻璃窗帶
+    const g = new THREE.Group(), conc = mat('concrete', 0xc9c6bf), gold = mat('crossGold', 0xd9a03a);
     g.add(box(1.3, 1.45, 1.0, conc));
-    const chap = box(0.75, 0.42, 0.65, conc, 0.15, 1.45, -0.1); g.add(chap);
-    const roof = box(0.85, 0.08, 0.78, mat('roofDark', 0x4a3b36), 0.15, 1.9, -0.1); roof.rotation.z = 0.22; g.add(roof);
-    g.add(box(0.06, 0.42, 0.06, white, 0.35, 1.98, -0.1)); g.add(box(0.24, 0.06, 0.06, white, 0.35, 2.28, -0.1));   // 十字架（和廟的剪黏一樣大）
-    g.add(box(0.9, 0.5, 0.05, lampMat(), -0.05, 0.55, 0.51));   // 正面的彩色格窗帶（近版才分成 3×4 格）
-    const st = box(0.22, 0.06, 1.2, conc, -0.76, 0.65, 0); st.rotation.x = -0.9; g.add(st);   // 戶外斜梯
+    const chap = box(0.75, 0.42, 0.65, conc, -0.15, 1.45, -0.1); g.add(chap);
+    const roof = box(0.85, 0.08, 0.78, mat('roofDark', 0x4a3b36), -0.15, 1.9, -0.1); roof.rotation.z = 0.22; g.add(roof);
+    g.add(box(0.32, 2.55, 0.32, mat('towerWhite', 0xe9e5dc), 0.62, 0, 0.36));   // 鐘樓（10/27 示意圖那座，比主體高一截）
+    [box(0.075, 0.55, 0.075, gold, 0.62, 2.55, 0.36), box(0.31, 0.08, 0.08, gold, 0.62, 2.88, 0.36)].forEach(c => { c.userData.tint = new THREE.Color(0.69, 0.46, 0.115); g.add(c); });   // 鐘樓頂的金十字架：放大 1.25、加粗 1.3、山吹（美術 10/31）；併進發光網格，晚上看得到；tint 照畫面實測：晚上（夜光最強）等於彩窗山吹格、不比彩窗亮，白天暗一階（美術 10/31 18:20、18:24）
+    g.add(box(0.9, 0.5, 0.05, lampMat(), -0.12, 0.55, 0.51));   // 正面的彩繪玻璃窗帶（近版才分成 3×4 格）
     return g;
   }
   function temple() {   // 媽祖廟（鹿港天后宮風，遠版 ≤156）：紅牆三開間、屋頂中高兩低、燕尾更翹、兩盞燈籠
@@ -200,9 +200,26 @@
   const BUILD = { exchange, church, temple, port, hall };
   // 近版（BUILD_v1）：每棟一個細節網格＋一個發光網格；第一次需要時才建（工程顧問 10/29）
   const PAL = { templeRed: 0xc8372d, pillar: 0x9e2a22, plinth: 0xd9cbb4, gold: 0xf2c14e, door: 0x7a2a1f, jade: 0x2f8a6a, ai: 0x2f5f8a, concrete: 0xc9c6bf, line: 0xb9b5ad, dark: 0x3d3a36,
-    wash: 0xd8cfbf, washLine: 0xc4baa8, frame: 0x2f5d62, medal: 0xb8ad98,
+    washi: 0xfffdf8, wash: 0xd8cfbf, washLine: 0xc4baa8, frame: 0x2f5d62, medal: 0xb8ad98,
     shu: 0xc8452d, yamabuki: 0xd9a03a, matcha: 0x4f7a3e, glassAi: 0x2f5f8a, lamp: 0xffd98a, lampWarm: 0xf2bf55 };   // 新顏色（美術 10/29；色票表 C.*）
   const NEAR_IN = 16, NEAR_OUT = 19;
+  // 教會彩繪玻璃（CHURCH_BACK_v1，美術 11/1）：四色降彩度，上到下 BGAB／ARBG／GBRA
+  const GLASS = { B: 0x3d5f8a, G: 0x6f8f6a, A: 0xc99a4a, R: 0xa8584a }, GLASS_ROWS = ['BGAB', 'ARBG', 'GBRA'], GW = 0.21, GH = 0.15, GX = -0.12, GY = 0.66, GZ = 0.556, GIN = 0.07;
+  function glassCols(hex, night) {   // 一格四角 [左上, 右上, 左下, 右下]（sRGB 算完再轉線性）
+    const mix = (c, h, t) => c.clone().lerp(new THREE.Color(h), t), base = new THREE.Color(hex);
+    let q;
+    if (!night) { const b = base.clone().multiplyScalar(0.7), top = mix(b, 0xcfe3ee, 0.3), bot = b.clone().multiplyScalar(0.78); q = [mix(top, 0xcfe3ee, 0.5), top, bot, bot]; }   // 白天：外面看偏暗、上緣反天空、左上角斜向反光
+    else { const b = mix(base.clone().multiplyScalar(1.1), 0xffc070, 0.18), top = b.clone().multiplyScalar(0.85), bot = mix(b, 0xfff0c8, 0.15); q = [top, top, bot, bot]; }   // 晚上：裡面透出暖光（美術建議 ×1.35，畫面實測最亮那格比十字架亮兩成多，改 ×1.1）
+    return q.map(c => new THREE.Color(Math.min(1, c.r), Math.min(1, c.g), Math.min(1, c.b)).convertSRGBToLinear());
+  }
+  function glassInit(n) {   // 發光網格前 72 個頂點是 12 格玻璃（PlaneGeometry 展開的順序：左上、左下、右上、左下、右下、右上）
+    n.glass = {};
+    [false, true].forEach(night => { const arr = new Float32Array(72 * 3); let v = 0;
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { const q = glassCols(GLASS[GLASS_ROWS[2 - r][c]], night); [0, 2, 1, 2, 3, 1].forEach(i => { arr.set([q[i].r, q[i].g, q[i].b], v * 3); v++; }); }
+      n.glass[night ? 'n' : 'd'] = arr; });
+    glassSet(n);
+  }
+  function glassSet(n) { if (!n.glass || !n.glow) return; const a = n.glow.geometry.attributes.color; a.array.set(glowK >= 1 ? n.glass.n : n.glass.d, 0); a.needsUpdate = true; }
   const near = {};   // k → { body, glow, on }
   const bx = (w, h, d, c, x, y, z, rz, ry, glow) => ({ geo: new THREE.BoxGeometry(w, h, d), m: new THREE.Matrix4().compose(new THREE.Vector3(x || 0, (y || 0) + h / 2, z || 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry || 0, rz || 0)), new THREE.Vector3(1, 1, 1)), top: linC(c), bot: linC(c), glow });
   const disc = (r, n, half, c, x, y, z, glow) => ({ geo: new THREE.CircleGeometry(r, n, 0, half ? Math.PI : Math.PI * 2), m: new THREE.Matrix4().makeTranslation(x, y, z), top: linC(c), bot: linC(c), glow });
@@ -213,15 +230,18 @@
       bx(0.26, 0.38, 0.04, PAL.door, -0.53, 0.2, 0.465), bx(0.26, 0.38, 0.04, PAL.door, 0.53, 0.2, 0.465),
       bx(0.15, 0.15, 0.06, PAL.jade, -0.11, 1.6, 0, Math.PI / 4), bx(0.15, 0.15, 0.06, PAL.ai, 0.11, 1.6, 0, Math.PI / 4),
       bx(0.5, 0.06, 0.03, PAL.gold, 0, 0.6, 0.49)],   // 門楣（金）
-    church: () => {   // 正面 3×4 彩色玻璃格窗（固定的不規則排列）、入口深色門、戶外斜梯的踏階、側面兩道細長窗、樓層線
-      const C = [PAL.shu, PAL.yamabuki, PAL.matcha, PAL.glassAi], O = [0, 2, 1, 3, 3, 0, 2, 1, 1, 3, 0, 2], out = [];
-      for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) out.push(quad(0.17, 0.12, C[O[r * 4 + c]], -0.05 + (c - 1.5) * 0.21, 0.66 + r * 0.15, 0.54));
-      out.push(bx(0.3, 0.44, 0.04, PAL.dark, 0.42, 0, 0.51));
-      [0, 1, 2].forEach(i => out.push(bx(0.24, 0.05, 0.2, PAL.concrete, -0.78, 0.18 + i * 0.25, 0.32 - i * 0.24)));
-      out.push(bx(0.04, 0.5, 0.12, PAL.lamp, 0.66, 0.45, 0.22, 0, 0, 1), bx(0.04, 0.5, 0.12, PAL.lamp, 0.66, 0.45, -0.22, 0, 0, 1));
-      out.push(bx(1.34, 0.05, 1.04, PAL.line, 0, 1.18, 0));
+    church: () => {   // 正面 3×4 彩繪玻璃格窗＋淺石框、窗下入口深色門、側面兩道細長窗（避開鐘樓）、鐘樓的鐘窗、樓層線（CHURCH_BACK_v1）
+      const out = [];
+      out.push(bx(1.0, 0.53, 0.02, PAL.washi, -0.12, 0.555, 0.54));   // 淺石框（白天彩窗和清水混凝土分得開）
+      out.push({ geo: new THREE.PlaneGeometry(4 * GW, 3 * GH), m: new THREE.Matrix4().makeTranslation(GX, GY + GH, GZ - 0.003), top: linC(0x2f2a26), bot: linC(0x2f2a26) });   // 鉛條：墨色底板，玻璃往內縮露出縫（美術 11/1）
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) out.push(quad(GW * (1 - 2 * GIN), GH - GW * 2 * GIN, 0xffffff, GX + (c - 1.5) * GW, GY + r * GH, GZ));   // 12 格玻璃（顏色由 glassInit 依白天／晚上填）
+      out.push(bx(0.3, 0.44, 0.04, PAL.dark, -0.12, 0, 0.51));
+      out.push(bx(0.04, 0.5, 0.12, PAL.lamp, -0.66, 0.45, 0.2, 0, 0, 1), bx(0.04, 0.5, 0.12, PAL.lamp, -0.66, 0.45, -0.2, 0, 0, 1));
+      out.push(bx(0.16, 0.3, 0.02, PAL.dark, 0.62, 1.95, 0.525));   // 鐘樓的鐘窗
+      out.push(bx(1.34, 0.05, 1.04, PAL.line, -0.0, 1.18, 0));
       return out;
     },
+
     exchange: () => [   // 二樓拱窗（深綠窗框＋半圓拱）、山頭圓徽、兩側柱頭、騎樓招牌帶（不寫字）、洗石子分格線
       ...[-0.55, 0, 0.55].map(x => bx(0.32, 0.4, 0.03, PAL.frame, x, 0.66, 0.445)),
       ...[-0.55, 0, 0.55].map(x => disc(0.16, 4, 1, PAL.frame, x, 1.06, 0.462)),
@@ -232,7 +252,7 @@
   };
   function bakeFar(g) {   // 遠版：同一個不受光以外的物件都合成一個頂點色網格；夜光（lampMat）的合成另一個
     const body = [], lit = [];
-    g.children.slice().forEach(c => { if (!c.isMesh) return; c.updateMatrix(); const lamp = c.material === M.lamp, col = lamp ? new THREE.Color(1, 1, 1) : c.material.color.clone();
+    g.children.slice().forEach(c => { if (!c.isMesh) return; c.updateMatrix(); const lamp = c.material === M.lamp || !!c.userData.tint, col = c.userData.tint ? c.userData.tint.clone() : lamp ? new THREE.Color(1, 1, 1) : c.material.color.clone();
       (lamp ? lit : body).push({ geo: c.geometry, m: c.matrix.clone(), top: col, bot: col }); g.remove(c); });
     if (body.length) g.add(new THREE.Mesh(merged(body), M.nearBody || (M.nearBody = std(0xffffff, { vertexColors: true }))));
     if (lit.length) { const lm = lampMat().clone(); lm.vertexColors = true; g.add(new THREE.Mesh(merged(lit), M.lampV || (M.lampV = Object.assign(lm, {})))); }
@@ -243,7 +263,7 @@
     const parts = NEAR[k](), body = parts.filter(p => !p.glow), lit = parts.filter(p => p.glow), n = { on: false };
     n.body = new THREE.Mesh(merged(body), M.nearBody || (M.nearBody = std(0xffffff, { vertexColors: true })));
     g.add(n.body);
-    if (lit.length) { if (!M.glowV) { M.glowV = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }); M.glowV.color.setScalar(glowK); } n.glow = new THREE.Mesh(merged(lit), M.glowV); g.add(n.glow); }
+    if (lit.length) { if (!M.glowV) { M.glowV = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }); M.glowV.color.setScalar(glowK); } n.glow = new THREE.Mesh(merged(lit), M.glowV); g.add(n.glow); if (k === 'church') glassInit(n); }
     [n.body, n.glow].forEach(o => { if (o) { o.visible = false; o.userData.near = 1; } });
     return (near[k] = n);
   }
@@ -342,7 +362,8 @@
     Object.keys(PLACE).forEach(k => {
       const p = P[k]; if (!p) return;
       const sp = labelSprite((PLACE[k].ic ? PLACE[k].ic + ' ' : '') + p.name, p.sub || null, { scale: 1.5, color: p.closed ? '#6a6a6a' : '#741b47' });
-      sp.position.set(PLACE[k].x, (k === 'church' ? 3.0 : 2.6) + (PLACE[k].top || 0), PLACE[k].z); sp.userData.place = k; labelLayer.add(sp);
+      // 教會名牌底邊在十字架頂（2.96）上面，不蓋住十字架（CHURCH_BACK_v1）
+      sp.position.set(PLACE[k].x, (k === 'church' ? 3.25 + sp.scale.y / 2 : 2.6) + (PLACE[k].top || 0), PLACE[k].z); sp.userData.place = k; labelLayer.add(sp);
     });
     const sig = JSON.stringify(ctx.isles || []);
     if (sig === sigIsles) return;
@@ -420,7 +441,7 @@
     if (rain) rain.visible = wet && !CALM;
     flash = env.weather === 'storm' && !CALM ? 1 : 0;
     glassMat.emissiveIntensity = night || ph === 'dusk' || wet ? 1.0 : 0.15;
-    glowK = night || ph === 'dusk' || wet ? 1.0 : 0.8; if (M.glowV) M.glowV.color.setScalar(glowK); if (M.lamp) M.lamp.color.setHex(0xf2bf55).multiplyScalar(glowK); if (M.lampV) M.lampV.color.setHex(0xf2bf55).multiplyScalar(glowK);   // 三棟同一個夜光強度（燈籠、彩色玻璃、交易所窗）
+    glowK = night || ph === 'dusk' || wet ? 1.0 : 0.8; if (M.glowV) M.glowV.color.setScalar(glowK); if (M.lamp) M.lamp.color.setHex(0xf2bf55).multiplyScalar(glowK); if (M.lampV) M.lampV.color.setHex(0xf2bf55).multiplyScalar(glowK); Object.keys(near).forEach(k => glassSet(near[k]));   // 三棟同一個夜光強度（燈籠、彩色玻璃、交易所窗）
     if (container) container.style.background = '#' + sky.getHexString();
     if (renderer) renderer.toneMappingExposure = night ? 0.8 : 0.62;
   }

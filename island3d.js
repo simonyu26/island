@@ -955,8 +955,25 @@
       });
       [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]].forEach(([x, z]) => add(new THREE.CylinderGeometry(0.04, 0.04, 0.7, 5), red, x, 1.2, z));
       add(new THREE.ConeGeometry(0.85, 0.4, 4), 0x4a4f5a, 0, 1.75, 0).rotation.y = Math.PI / 4;
+      g.add(teaRows());   // TEA_v1 採茶（v2.50.1）
     }
     return g;
+  }
+  // 茶園採茶（v2.50.1）：面向本島那一側（小島本地 −z）在最下兩層梯田上各加一段弧形茶畦（和梯田同圓心、沿用梯田的綠 0x4f8f4a，美術 10/29），橋頭另一邊一個裝了茶葉的竹簍；全部合成一個網格（頂點色），只多 1 個 draw call
+  function teaRows() {
+    const parts = [], put = (geo, c, x, y, z) => { const q = geo.index ? geo.toNonIndexed() : geo; if (q !== geo) geo.dispose(); q.translate(x, y, z); parts.push([q, c]); };
+    const t0 = -Math.PI / 2 - 1.0;   // 本島方向是 −π/2，橋在正中間，茶畦從橋左邊 0.25 弧度外排到 1.0 弧度
+    [[2.3, 0.31], [1.7, 0.61]].forEach(([r, y]) => put(new THREE.TorusGeometry(r, 0.08, 5, 10, 0.75).rotateX(Math.PI / 2).rotateY(-t0), 0x4f8f4a, 0, y, 0));   // 最下層、第二層梯田的內側（離沙灘邊 0.4 以上）
+    const ba = -Math.PI / 2 + 0.55, bxz = [Math.cos(ba) * 3.05, Math.sin(ba) * 3.05];
+    put(new THREE.CylinderGeometry(0.2, 0.15, 0.3, 10, 1, true), 0xc49a5c, bxz[0], 0.2, bxz[1]);   // 竹簍
+    put(new THREE.TorusGeometry(0.2, 0.03, 4, 10).rotateX(Math.PI / 2), 0x9a6b4a, bxz[0], 0.35, bxz[1]);
+    put(new THREE.SphereGeometry(0.17, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0x6fae4f, bxz[0], 0.3, bxz[1]);   // 簍裡的茶葉
+    const pos = [], nor = [], col = [];
+    parts.forEach(([q, c]) => { q.computeVertexNormals(); const cc = lin(new THREE.Color(c)); pos.push(...q.attributes.position.array); nor.push(...q.attributes.normal.array);
+      for (let i = 0; i < q.attributes.position.count; i++) col.push(cc.r, cc.g, cc.b); q.dispose(); });
+    const m = new THREE.BufferGeometry();
+    m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); m.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    return new THREE.Mesh(m, std(0xffffff, { vertexColors: true }));
   }
   // 紅色太鼓橋：從本島的沙灘拱到小島
   function drumBridge(a) {
@@ -1769,7 +1786,7 @@
     applyBg(); setEnvironment(envNow);
     el.appendChild(renderer.domElement);
     resize();
-    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.home, ctx.light, ctx.garden, ctx.marks, ctx.islets, ctx.hall]) + weekIdx;
+    const sig = JSON.stringify([ctx.walk || 0, ctx.sig || ctx.S.grid, ctx.S.assessments.length, ctx.bond, ctx.S.save && ctx.S.save.config, ctx.S.save && ctx.S.save.imgv /* IMGSIG_v1 換圖片也重畫 */, ctx.home, ctx.light, ctx.garden, ctx.marks, ctx.islets, ctx.hall]) + weekIdx;
     if (sig !== signature) { signature = sig; buildDynamic(false); }
     floatFix();
     shadowDirty = true;
