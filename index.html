@@ -3232,6 +3232,8 @@ function bottles() {
     const rv = b.rv = S.save['rv:' + b.id] || {};
     b.lantern = rv.lantern || null; b.streak = reviewStreak(rv);
     b.due = reviewDue(rv, b.wrongAt); b.friend = !!b.lantern;
+    const w = b.rec.src ? '' : notYetOpen(laneOf(b.rec, b.lane), unitOf(b.rec, b.id));   // 九下暫緩：還沒教到的單元先停在海灘（自己拍的錯題、單字不算）
+    if (w && !(b.due > w)) { b.due = w; b.wait = w; }
   });
   return out.sort((a, b) => (b.wrongAt || '').localeCompare(a.wrongAt || ''));
 }
@@ -3363,10 +3365,10 @@ async function stkLoadEx(sid) {
 }
 // 練一題：先找這個次觀念、她沒做過的會考考古題（不用 AI）；沒有才請 AI 對準這個次觀念出一題
 async function pickSidBank(lane, sid) {
-  const b = await loadBank(); if (!b || !b.items || !conceptsData) return null;
+  const b = await loadBank(); await loadUnits(); if (!b || !b.items || !conceptsData) return null;
   const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
   const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);
-  const list = b.items.filter(x => x.lane === lane && conceptsData.bank[x.id] === sid && !used.has(x.id) && noGroup(x));
+  const list = b.items.filter(x => x.lane === lane && conceptsData.bank[x.id] === sid && !used.has(x.id) && noGroup(x) && !bankNotYet(x));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
 async function stkPractice(sid) {
@@ -3568,7 +3570,7 @@ function viewLightBody() {
     ${fam ? '' : photoCard()}
     ${fam ? '' : lightWordCard()}
     ${wrongTypesCard(fam, open ? '今天還有一題挑戰沒回答（在這一頁上方），答完就能按「練一題」。' : full ? '今天的 ' + XQ_DAILY + ' 題挑戰做完了，明天就能再按「練一題」。' : '')}
-    ${later.length ? `<details class="card" ${lightDet('later')}><summary><b>🌫️ 還在海上漂的瓶子（${later.length}）</b></summary>${later.slice(0, 30).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.due)} 漂回</span>`)).join('')}</details>` : ''}
+    ${later.length ? `<details class="card" ${lightDet('later')}><summary><b>🌫️ 還在海上漂的瓶子（${later.length}）</b></summary>${later.slice(0, 30).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.due)} ${b.wait ? '學校教到再' : ''}漂回</span>`)).join('')}</details>` : ''}
     <details class="card" ${lightDet('furn')}><summary><b>🎁 燈籠送的家具</b><span class="muted">・${LANTERN_REWARDS.filter(f => st.lanterns >= f.lanterns).length}／${LANTERN_REWARDS.length} 件</span></summary><div class="muted" style="margin-top:6px">放走的紙燈籠累積起來，守燈人會送你燈塔風格的家具，不用島幣，送了就不會收回，可以擺在我的家。</div>
       <div class="furn">${LANTERN_REWARDS.map(f => { const has = st.lanterns >= f.lanterns;
         return `<button class="${has ? 'has' : ''}" disabled><span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? '已經送到家了' : st.lanterns + '／' + f.lanterns + ' 盞'}</small></button>`; }).join('')}</div></details>
@@ -4542,11 +4544,34 @@ function loadBank() {
 function bankLoading() { if (BETA3D && bankData === null) { loadBank().then(() => { if (tab === 'home') softRender(); }); return true; } return false; }
 // 她的意見（v2.23.1）：數學和自然不出題組題（題組是要先讀一段共用文章或圖的題）
 function noGroup(x) { return !(x.ctx && (x.subject === '數' || x.subject === '自')); }
+// 九下暫緩（爸爸 2026-11-04）：還沒教到的單元：到開放日以前，考古題先不出、答錯過的瓶子先停在海灘，到日期自動打開。
+// 九下 2027-02 開學，分三批跟著學校進度打開，四模（4/15）前全部打開。只管學生本人，家人不受影響
+const NOT_YET = {
+  '數|二次函數': '2027-03-01', '數|統計與機率': '2027-03-22', '數|立體圖形（三視圖、柱體與錐體）': '2027-04-12',
+  '理化|電流的熱效應與化學效應': '2027-03-01', '理化|電與磁': '2027-03-22', '理化|能源與永續': '2027-04-12',
+  '地科|地球的組成與岩石': '2027-03-01', '地科|風化侵蝕與地形': '2027-03-01', '地科|地質年代': '2027-03-01', '地科|板塊構造與地震火山': '2027-03-01',
+  '地科|大氣與天氣': '2027-03-22', '地科|氣候與氣候變遷': '2027-03-22', '地科|海洋與潮汐': '2027-03-22',
+  '地科|晝夜四季與月相': '2027-04-12', '地科|太陽系與宇宙': '2027-04-12',
+  '歷史|帝國主義與世界大戰': '2027-03-01', '歷史|冷戰與當代世界': '2027-03-22',
+  '地理|美洲': '2027-03-01', '地理|漠南非洲、大洋洲與兩極': '2027-03-22', '地理|全球關聯與環境議題': '2027-04-12',
+  '公民|全球化與國際關係': '2027-03-22'
+};
+function notYetOpen(lane, unit) {   // 回傳開放日；已經開放、不認得的單元、家人都回傳空字串
+  if (!unit || isFamily()) return '';
+  const d = NOT_YET[lane + '|' + newUnit(lane, unit)] || '';
+  return d && S.today < d ? d : '';
+}
+function bankNotYet(x) { return !!(unitsData && notYetOpen((unitsData.lanes || {})[x.id] || x.lane, (unitsData.tags || {})[x.id])); }
+function laneNotYet(lane) {   // 這條巷子的單元全部還沒教到（例如地科），故事任務先不抽它
+  const list = unitsData && (unitsData.units || {})[lane];
+  return !!(list && list.length && list.every(u => notYetOpen(lane, u)));
+}
+function unitsLoading() { if (BETA3D && unitsData === null) { loadUnits().then(() => { if (tab === 'home') softRender(); }); return true; } return false; }
 async function pickBank(tier, lane) {
-  const b = await loadBank(); if (!b || !b.items) return null;
+  const b = await loadBank(); await loadUnits(); if (!b || !b.items) return null;
   const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
   const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);   // 今天故事任務的題也不要再出一次
-  const list = b.items.filter(x => TIER_KEY[x.tier] === tier && (!lane || x.lane === lane) && !used.has(x.id) && noGroup(x));
+  const list = b.items.filter(x => TIER_KEY[x.tier] === tier && (!lane || x.lane === lane) && !used.has(x.id) && noGroup(x) && !bankNotYet(x));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
 // v2.36 錯題循環②：撿瓶子時照錯因換練法。觀念不熟、用猜的→先看觀念小卡；看不懂題目→先選「這題在問什麼」；一時看錯→同單元的題先提醒
@@ -4637,12 +4662,13 @@ async function pickUnitBank(lane, unit, tier, sid) {   // sid：只挑這個次�
   const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
   const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);
   if (sid && !(conceptsData && conceptsData.bank)) return null;
-  const list = b.items.filter(x => x.lane === lane && unitsData.tags[x.id] === unit && (!tier || TIER_KEY[x.tier] === tier) && (!sid || conceptsData.bank[x.id] === sid) && !used.has(x.id) && noGroup(x));
+  const list = b.items.filter(x => x.lane === lane && unitsData.tags[x.id] === unit && (!tier || TIER_KEY[x.tier] === tier) && (!sid || conceptsData.bank[x.id] === sid) && !used.has(x.id) && noGroup(x) && !bankNotYet(x));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
 async function practiceUnit(lane, unit) {
   if (!UNIT_TOOLS || xqBusy || todayChallenges().length >= XQ_DAILY) return;
   if (todayChallenges().some(q => !q.done)) return toast('還有一題沒回答，先把它答完');
+  const w = notYetOpen(lane, unit); if (w) return toast('這個單元學校還沒教到，' + short(w) + ' 起再練。');
   xqBusy = true; render();
   try {
     await flush();
@@ -4670,6 +4696,7 @@ async function pickWeakBank(tier) {
 async function challengeXq(tier) {
   if (xqBusy || todayChallenges().length >= XQ_DAILY) return;
   const sel = document.getElementById('xqLane'), chosen = sel && sel.value;
+  if (chosen) { await loadUnits(); if (laneNotYet(chosen)) return toast(laneLabel(chosen) + '的單元學校還沒教到，開學後會自動打開。先選別條巷子吧。'); }
   xqBusy = true; softRender();
   try {
     await flush();
@@ -4853,7 +4880,8 @@ function questHistory() {
 function pickQuest(date, rerolls, avoid) {
   const vals = QLANES.map(l => D.ptsBy[l] || 0).sort((a, b) => a - b), median = vals[Math.floor(vals.length / 2)];
   const recent = questHistory().filter(q => q.at >= addD(date, -3)).map(q => q.lane);
-  const cands = QLANES.filter(l => l !== avoid).map(l => {
+  if (unitsLoading()) return { lane: QLANES[0], loading: true, chapter: 1 };   // 九下暫緩：先知道哪些單元還沒教到，再抽巷子
+  const cands = QLANES.filter(l => l !== avoid && !laneNotYet(l)).map(l => {
     let w = 1;
     if ((D.ptsBy[l] || 0) < median) w *= 2.5;
     if (recent.includes(l)) w *= 0.3;
@@ -4879,7 +4907,7 @@ function pickQuest(date, rerolls, avoid) {
 function storyBank(lane, date, rerolls) {
   if (!bankData) return null;
   const used = new Set(Object.keys(S.save).filter(k => S.save[k] && (k.startsWith('quest:') ? k.slice(6) < date : k.startsWith('xq:') && S.save[k].date < date)).map(k => S.save[k].bank).filter(Boolean));
-  const ok = x => x.lane === lane && noGroup(x) && !used.has(x.id);
+  const ok = x => x.lane === lane && noGroup(x) && !used.has(x.id) && !bankNotYet(x);
   const adv = bankData.items.filter(x => ok(x) && x.tier === '進階'), mid = bankData.items.filter(x => ok(x) && x.tier === '中級');
   const r = seeded(date.split('-').reduce((a, x) => a * 31 + Number(x), 7) + rerolls * 104729);
   const list = (r() < 0.3 && adv.length) || !mid.length ? adv : mid;
