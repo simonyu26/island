@@ -341,11 +341,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.2';
+const APP_VERSION = '2.50.2.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11/6（五）', items: ['🌳 預計 11/6（五）：衛星小島上也可以種樹了，每座 4 格；讀完的書長出的地標，本島放不下時也會長到小島上。如果時間有變，會在島上另外跟你說。'], fam: true };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.2.1', date: '2026-11-05', fam: [0], items: ['🏮 燈室多了兩張以週為單位的圖：「補好的題」看最近 12 週累積了幾盞燈籠，點某一週可以看那週亮了哪幾盞；「錯的時候，最常是哪一種」那張卡的最上面，多了最近 8 週每週錯在哪一種。'] },
   { v: '2.50.2', date: '2026-11-05', fam: [2, 3, 5, 6], items: ['🎒 智慧島碼頭多了一張「你的生活」小卡：勾幾個你常碰到的生活場景，「搬到你的生活」那一步會換成比較貼近你的情境（先從阿律的第 9、10、12 講開始），也可以按「換個情境看看」。只有你自己看得到。', '✉️ 智慧島交完筆記、老師回了以後，可以再回老師一句，老師會再回你；不回也沒關係。', '🏝️ 家人自己的島：「更多」頁多了「其他」，有吃藥提醒、航海日誌和「讓島順起來」；首頁不再顯示連續週數和休息卡。', '🎒 家人的智慧島也多了「你的生活」小卡，可以勾幾個你常碰到的生活場景；大人版的情境還在寫，寫好會慢慢換上。勾了什麼只有你自己看得到。', '🔐 玩法說明補上兩段：每個月的讀書感覺和各畫面待了幾分鐘，記在哪裡、誰看得到；還有寫給智慧島老師的那一句會交給 AI，寫到讓人擔心的話會怎麼處理。', '🌦️ 右上角的天氣改用中央氣象署臺北站的實際觀測，大約 10 分鐘更新一次；氣象署暫時沒有資料時，才用原本的預報。', '🌧️ 主島和智慧島也會跟著臺北的天氣變：臺北下雨，主島和智慧島也一起下雨。選在「宇宙裡」的島本來就沒有天氣。', '🗺️ 智慧島頁多了一張碼頭導覽地圖：從上面看整座島，上過課的小屋會亮燈，點小屋就能進去。', '🧺 拿到素材的小提示更準了：如果這包沒讓竹籃變多，會直接告訴你；網路不穩的時候，做好的料理也不會被記成兩次。'] },
   { v: '2.50.1.2', date: '2026-11-05', fam: [0, 1], items: ['🌱 計時分兩次也會合起來算了：同一天、同一種計時的分鐘加在一起，每 25 分鐘一個，例如 15 分鐘加 10 分鐘也有一個。之前的紀錄也重新算過{綠}。', '🕘 忘了按計時也沒關係：讀書、運動、藝文、閱讀的計時卡片下面多了「補登一筆」，可以補今天和前兩天，填開始和結束的時間，綠點跟計時一樣算。'] },   // HANDLOG_v1
   { v: '2.50.1.1', date: '2026-11-04', items: ['⏳ 學習摘要的停留時間換了算法：讀書計時開著的時候，手機放在旁邊沒動也算讀書（一次最多 2 小時）；運動和藝文計時另外記，不算進讀書、延伸、其他三類；書店店面的時間改記在「其他」，看書店裡的書還是算「延伸」。'] },
@@ -3784,6 +3785,54 @@ function unitFines(lane, unit) {
   bottles().filter(b => !b.lantern && laneOf(b.rec, b.lane) === lane && unitOf(b.rec, b.id) === unit).forEach(b => { const x = sidFine(b.rec, b.id); if (x) (m[x.id] = m[x.id] || { sid: x.id, name: x.short || x.name, n: 0 }).n++; });
   return Object.values(m).filter(x => x.n >= 2).sort((a, b) => b.n - a.n || a.sid.localeCompare(b.sid)).slice(0, 2);
 }
+/* --- LAMPCHART_v1 燈室分析圖表：週為單位，中性色；「一時看錯」用 --note（這陣子的重點）--- */
+// 美術 11/2（配色規範 v2 第 2 期色票）：由下到上 一時看錯 kuri、觀念不熟 nezumi、看不懂題目 ishi、用猜的 hinoki、還沒標 kinari＋虛線框 gray-light；段與段留 1.5px 白縫
+const LC_COLORS = { careless: 'var(--kuri, #8a5a2c)', concept: 'var(--nezumi, #5f5a55)', reading: 'var(--ishi, #a9a59c)', guess: 'var(--hinoki, #c9a273)', none: 'var(--kinari, #f7f1e5)' };
+const LC_DASH = 'var(--gray-light, #d8d4ce)';
+const LC_W = 328, LC_H = 132, LC_L = 22, LC_B = 20;   // 畫布寬、高、左邊刻度寬、下面週標籤高
+function lcWeeks(n) { const out = [], m = mondayOf(S.today); for (let i = n - 1; i >= 0; i--) out.push(addD(m, -7 * i)); return out; }
+function lcAxis(weeks, step, ticks, max) {
+  const ih = LC_H - LC_B - 8, y = v => 8 + ih - v / max * ih;
+  return ticks.map(v => `<line x1="${LC_L}" x2="${LC_W}" y1="${y(v)}" y2="${y(v)}" stroke="#ece7e1" stroke-width="1"/><text x="${LC_L - 4}" y="${y(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${v}</text>`).join('')
+    + weeks.map((w, i) => i % step === (weeks.length - 1) % step ? `<text x="${LC_L + (i + 0.5) * (LC_W - LC_L) / weeks.length - (i === weeks.length - 1 ? 8 : 0)}" y="${LC_H - 5}" text-anchor="middle" font-size="10" fill="var(--muted)">${short(w)}</text>` : '').join('');
+}
+function lcTicks(max) { const t = max <= 4 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10; const out = []; for (let v = 0; v <= max; v += t) out.push(v); return out; }
+function lampCharts() {
+  const fam = isFamily(), all = bottles(), W = LC_W - LC_L;
+  // ① 補好的題：累積燈籠（rv.lantern 是變成燈籠那天）
+  const wk12 = lcWeeks(12), lit = all.filter(b => b.lantern), cum = wk12.map(w => lit.filter(b => b.lantern <= addD(w, 6)).length);
+  const max1 = Math.max(4, ...cum), bw = W / wk12.length, ih = LC_H - LC_B - 8, y = v => 8 + ih - v / max1 * ih;
+  const pts = cum.map((v, i) => `${LC_L + i * bw},${y(v)} ${LC_L + (i + 1) * bw},${y(v)}`).join(' ');
+  const sel = wk12.indexOf(draft.lcWeek) >= 0 ? draft.lcWeek : null;
+  const svg1 = `<svg viewBox="0 0 ${LC_W} ${LC_H}" width="100%" role="img" aria-label="最近 12 週累積的燈籠數，只會往上">${lcAxis(wk12, 2, lcTicks(max1), max1)}
+    <polygon points="${LC_L},${y(0)} ${pts} ${LC_W},${y(0)}" fill="var(--plum-light)" opacity=".7"/><polyline points="${pts}" fill="none" stroke="var(--plum-mid)" stroke-width="2"/>
+    ${sel ? `<rect x="${LC_L + wk12.indexOf(sel) * bw}" y="8" width="${bw}" height="${ih}" fill="var(--plum)" opacity=".08"/>` : ''}
+    ${wk12.map((w, i) => `<rect x="${LC_L + i * bw}" y="0" width="${bw}" height="${LC_H}" fill="transparent" style="cursor:pointer" onclick="draft.lcWeek=${sel === w ? 'null' : `'${w}'`};render()"><title>${short(w)} 那週</title></rect>`).join('')}</svg>`;
+  const wkLit = sel ? lit.filter(b => b.lantern >= sel && b.lantern <= addD(sel, 6)) : [];
+  const detail = sel ? `<div style="margin-top:6px;font-size:13px"><b>${short(sel)} 那週</b>${wkLit.length ? '亮了這幾盞：' : '沒有新的燈籠。'}
+      ${wkLit.length ? `<div class="row" style="gap:6px;margin-top:4px">${wkLit.map(b => { const u = unitOf(b.rec, b.id); return `<span class="pill">🏮 ${esc(laneLabel(laneOf(b.rec, b.lane)))}${u ? '・' + esc(u) : ''}</span>`; }).join('')}</div>` : ''}</div>`
+    : `<div class="muted" style="font-size:12px;margin-top:4px">點某一週，看那週亮了哪幾盞。</div>`;
+  const card1 = `<div class="card"><h3>🏮 補好的題</h3>${svg1}${detail}
+    <div class="muted" style="font-size:12px;margin-top:6px">每一盞燈籠，都是答錯過、後來記牢的題。</div></div>`;
+  return card1;
+}
+// ② 錯在哪一種（美術 11/2：放進下面「🔍 錯的時候，最常是哪一種」那張卡的最上面，標題只留一個 🔍）
+function lampWhyChart() {
+  const fam = isFamily(), all = bottles(), W = LC_W - LC_L, ih = LC_H - LC_B - 8;
+  // ② 錯在哪一種：最近 8 週，照瓶子第一次漂來那週（答錯那週）歸類
+  const wk8 = lcWeeks(8), keys = ['careless', 'concept', 'reading', 'guess', 'none'];
+  const cnt = wk8.map(w => { const c = {}; keys.forEach(k => c[k] = 0);
+    all.filter(b => !b.guess && (!fam || b.rv.why) && b.wrongAt && b.wrongAt >= w && b.wrongAt <= addD(w, 6)).forEach(b => c[REASONS.some(r => r[0] === b.rv.why) ? b.rv.why : 'none']++); return c; });
+  const tot = cnt.map(c => keys.reduce((a, k) => a + c[k], 0)), max2 = Math.max(4, ...tot), bw2 = W / wk8.length, y2 = v => 8 + ih - v / max2 * ih;
+  const bars = cnt.map((c, i) => { let acc = 0; return keys.map(k => { if (!c[k]) return ''; const y0 = y2(acc), y1 = y2(acc += c[k]);
+    return `<rect x="${LC_L + i * bw2 + bw2 * 0.18}" y="${y1 + 0.75}" width="${bw2 * 0.64}" height="${Math.max(0, y0 - y1 - 1.5)}" fill="${LC_COLORS[k]}"${k === 'none' ? ` stroke="${LC_DASH}" stroke-width="1" stroke-dasharray="2 2"` : ''}/>`; }).join(''); }).join('');
+  const names = Object.fromEntries(REASONS.concat([['none', '還沒標']]));
+  // 美術 11/2：圖 2 併進下面「🔍 錯的時候，最常是哪一種」那張卡的最上面（lampWhyChart），標題只留一個 🔍
+  return tot.some(Boolean) ? `<div style="margin:4px 0 10px"><b style="font-size:14px">最近 8 週，錯在哪一種</b>
+    <svg viewBox="0 0 ${LC_W} ${LC_H}" width="100%" role="img" aria-label="最近 8 週，每週答錯的題是哪一種原因">${lcAxis(wk8, 1, lcTicks(max2), max2)}${bars}</svg>
+    <div class="row" style="gap:4px 12px;font-size:12px;margin-top:4px">${keys.map(k => `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${LC_COLORS[k]};${k === 'none' ? 'border:1px dashed ' + LC_DASH + ';box-sizing:border-box;' : ''}margin-right:4px;vertical-align:-1px"></span>${names[k]}</span>`).join('')}</div>
+    <div class="muted" style="font-size:12px;margin-top:6px">一時看錯，留一句下次要檢查的事；觀念不熟，先看觀念小卡；看不懂題目，先找出這題在問什麼。</div></div>` : '';
+}
 function lampBar(pct, color, ref) {
   return `<div style="position:relative;height:10px;background:var(--sand);border-radius:5px;margin:3px 0">
     <div style="width:${Math.min(100, pct)}%;height:100%;background:${color};border-radius:5px"></div>
@@ -3933,13 +3982,13 @@ function viewLampBody() {
         : `<div class="row" style="flex-wrap:nowrap;font-size:13px"><span style="width:7em">一開始 ${x.first.n} 題</span><div class="grow">${lampBar(x.first.me, 'var(--plum-light)', x.first.nat)}</div><span style="width:3em;text-align:right">${x.first.me}%</span></div>
           <div class="row" style="flex-wrap:nowrap;font-size:13px"><span style="width:7em">最近 ${x.last.n} 題</span><div class="grow">${lampBar(x.last.me, 'var(--plum-mid)', x.last.nat)}</div><span style="width:3em;text-align:right">${x.last.me}%</span></div>
           <div class="muted" style="font-size:12px">${x.last.me > x.first.me ? '答對率比一開始高了 ' + (x.last.me - x.first.me) + ' 個百分點。' : x.last.me === x.first.me ? '跟一開始一樣穩。' : '最近的題比較難抓，可以先撿這一科的瓶子。'}　最近這批題的全國平均 ${x.last.nat}%</div>`}</div>`).join('')}</details>`;
-  const whyCard = `<details class="card" ${lightDet('why')}><summary><b>🔍 錯的時候，最常是哪一種</b><span class="muted">・記了 ${d.whyN} 題</span></summary>
+  const whyCard = `<details class="card" ${lightDet('why')}><summary><b>🔍 錯的時候，最常是哪一種</b><span class="muted">・記了 ${d.whyN} 題</span></summary>${lampWhyChart()}
     <div class="muted" style="font-size:12px;margin-bottom:6px">合計漂流瓶上記的「為什麼會錯」和紙船、親子船填的錯因（<b>含紙本檢討</b>）。${fam ? '瓶子只算分享給你的。' : ''}</div>
     ${REASONS.map(r => { const v = d.why[r[0]], n = v.bottle + v.paper; return `<div style="margin-top:6px"><div class="row"><b class="grow">${r[1]}</b><span class="muted" style="font-size:12px">🍶 ${v.bottle}・⛵ ${v.paper}${d.whyN >= LAMP_MIN ? '・' + pctOf(n, d.whyN) + '%' : ''}</span></div>
       ${d.whyN >= LAMP_MIN ? lampBar(pctOf(n, d.whyN), 'var(--plum-mid)') : ''}</div>`; }).join('')}
     <div class="muted" style="font-size:12px;margin-top:6px">${d.whyN >= LAMP_MIN ? '一共記了 ' + d.whyN + ' 題。' : '已經記了 ' + d.whyN + ' 題，滿 ' + LAMP_MIN + ' 題再算比例。在瓶子上點「為什麼會錯」就會記進來。'}</div></details>`;
   return `${lightFloors('lamp')}<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓，照照哪裡還沒會、時間花在哪裡。不加分也不扣分。下面收起來的卡，點標題就會打開。</div>${fam ? '' : '<details class="muted" style="font-size:13px;margin-top:4px"><summary>家人看得到哪些？</summary>燈室的卡，只有你在「誰看得到什麼」選了的人看得到；瓶子上寫的原因和那一句話，要在瓶子上選人才看得到。</details>'}${greet}</div>
-    ${advisorCard()}${unitCard}${lookCard}${easyCard}${selfCard}${invCard}${whyCard}
+    ${advisorCard()}${unitCard}${lookCard}${easyCard}${lampCharts()}${selfCard}${invCard}${whyCard}
     <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 /* --- 燈室的學習顧問（AI）：她自己請一位（keeper:advisor）；爸爸把和學習顧問（AI）討論好的建議貼回來（advice:<週一>，後端 Advisor.gs）。
@@ -7530,7 +7579,7 @@ function viewGuide() {
     p('燈塔最上面有一列樓層：1F 是海灘（撿瓶子）、2F 是航海日誌（一週一頁，按「上一週」可以往前翻；切到「月末繪卷」看一整個月，每週達成率和一路走來的紀錄也在這裡；按「看那一週的島」可以看那一週的小島）、3F 是燈室，旁邊是紙船停靠的小碼頭，按一下就過去。還在海上漂的瓶子、放走的燈籠和燈籠送的家具平常收起來，點標題才打開。') +
     p('👀 <b>再看一眼</b>：變成燈籠的題會當老朋友漂回來；那時沒答到的，會列在燈室的「再看一眼」，最多 5 題。燈籠不會變回瓶子，一週後會再漂回來，答到了就不再列。') +
     p('📷 <b>收這場的錯題</b>：記完 Boss 戰，只要有一科不是 A++，會問你要不要把這場的錯題拍照收進燈塔海灘；按「先不用」就回小島。') +
-    p('🔭 <b>燈室</b>（燈塔頂樓）：四張卡。①「大家會、你還沒會」：全國 60% 以上考生答對、你答錯、還沒變成燈籠的考古題，先列 3 題（可以按「看全部」），點了打開瓶子。②「跟一開始的自己比」：每一科做過的考古題，一開始和最近各一批的答對率，灰線是同一批題的全國平均，一科做滿 10 題才會顯示。③「時間花在哪裡」：最近 4 週有用計時器的分鐘、計畫完成點數、做過的考古題數。④「最常錯的原因」：漂流瓶和紙船填的錯因合計，滿 10 題才算比例。②③④和「已補強」平常收起來，點標題才打開。燈室不加分也不扣分。你在「誰看得到什麼」選了的家人看得到這四張卡；瓶子上寫的原因和那一句話，要在瓶子上選人才看得到。') +
+    p('🔭 <b>燈室</b>（燈塔頂樓）：五張卡。①「大家會、你還沒會」：全國 60% 以上考生答對、你答錯、還沒變成燈籠的考古題，先列 3 題（可以按「看全部」），點了打開瓶子。②「補好的題」：最近 12 週累積的燈籠數，只會往上；點某一週，看那週亮了哪幾盞（只列科目和單元）。③「跟一開始的自己比」：每一科做過的考古題，一開始和最近各一批的答對率，灰線是同一批題的全國平均，一科做滿 10 題才會顯示。④「時間花在哪裡」：最近 4 週有用計時器的分鐘、計畫完成點數、做過的考古題數。⑤「最常錯的原因」：漂流瓶和紙船填的錯因合計，滿 10 題才算比例；最上面是最近 8 週每週答錯的題是哪一種原因，有點猜答對的不算。③④⑤和「已補強」平常收起來，點標題才打開。燈室不加分也不扣分。你在「誰看得到什麼」選了的家人看得到這五張卡；「最常錯的原因」給家人看時，只算你在瓶子上選了那位家人的題。瓶子上寫的原因和那一句話，也要在瓶子上選人才看得到。') +
     p('🧭 <b>燈室的學習顧問（AI）</b>：燈室可以請一位學習顧問（AI），名字、樣子、個性由你決定，名字後面一律加「（AI）」。學習顧問看得到你在計畫頁按「給學習顧問（AI）看」交出去的計畫，還有爸爸給的每週檢討和大考成績；日めくり、瓶子上寫的話看不到。爸爸跟學習顧問討論完，會把下週的建議貼在燈室的「下週的航線」，「學習顧問（AI）的建議」和「爸爸的話」分開放。只是建議，不打勾、不算分數，要不要照做由你決定。這些建議預設只有你看得到；你在「誰看得到什麼」選了誰，誰才看得到。爸爸沒被選也能把建議貼給你，只是看不到你的航線。不想要的時候，按「請學習顧問先休息」就會收起來，想再聽的時候再請回來。') +
     p('🏷️ <b>解說的來源標籤</b>：📜 心測中心＝官方的題目、答案和全國答對率；📘 課本觀念＝AI 指出這題用到的觀念；📖 島上題庫＝故事任務寫好的題目；🤖 AI 推論＝AI 自己推的解題步驟，可能會錯，覺得怪怪的就跟爸爸說。'))}
   ${sec('🍁', '二十四節氣', p('整座島會跟著節氣換季：立春到清明櫻花慢慢開、花瓣飄落；芒種到小暑的夜晚有螢火蟲；寒露到立冬楓葉轉紅、紅葉飄下；冬天換上深綠的冬裝。右上角會顯示今天的節氣，嚮導打招呼時也可能聊到。'))}
