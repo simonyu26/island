@@ -51,6 +51,7 @@
   let landed = false;
 
   // ---------- 收起來的東西 ----------
+  const kairan0 = window.kairanCard;   // FAM_COMMON2_v1：島民每天的信開著才用回去
   window.kairanCard = () => '';
   // 衛星小島（isletCard）2b-1 起開放：商店照她的畫
   // ---------- 智慧島（2c-1 最小版）：FAM_WISDOM 開了才有；成人版課文由 Index.html 的 wisdomAdult() 載入 ----------
@@ -60,6 +61,7 @@
   PLACES.wisdom.lead = '去智慧島的渡船由你請一位主人來開：取名字、選樣子、寫個性。';
   PLACES.wisdom.about = ['從這裡開船去智慧島，四位老師的課照順序上，每天可以上一講，同一位老師每週一講', '每一講最後寫一句交給老師，老師會回你一句', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你島上的家'];
   const AI_OK = '你在智慧島寫給老師的那一句，會交給 AI，讓老師回你一句。這個 AI 用的是 Google Gemini 的付費版，你寫的字不會被拿去訓練 AI。你寫的和老師的回話，在 App 裡只有你自己看得到，其他家人都看不到；資料存在 App 管理員的 Google 試算表裡，管理員答應過不會去讀。';   // 文案審查 25
+  const ensureDaily0 = window.ensureDaily;   // FAM_COMMON2_v1
   window.ensureDaily = async () => {};
   window.feelCard = () => ''; window.setFeel = () => {};   // FAM_TMFEEL_v1：每月自評家人版還沒做（v2.49.4）
   window.seedDefaults = async () => {};
@@ -76,8 +78,6 @@
       <div class="hud">
         <div><b>${D.xp}</b><span class="muted">經驗值</span></div>
         <div class="tap" onclick="go('shop')" role="button" aria-label="商店與兌換"><b>${D.coins}</b><span class="muted">🪙 島幣${D.coinParts.canEx ? `<span class="pill" style="margin-left:4px">可換 ${D.coinParts.canEx}</span>` : ''}</span></div>
-        <div><b>${D.streak}</b><span class="muted">🔥 連續週</span></div>
-        <div><b>${D.cards}</b><span class="muted">🛌 休息卡</span></div>
       </div>
       <div class="bar"><i style="width:${pct}%"></i></div>
       <div class="row" style="margin-top:4px"><span class="muted grow">距離 Lv.${D.level + 1} 還差 ${D.lvNext - D.xp} 經驗值</span><span class="env" id="envChip">${envText()}</span></div>
@@ -139,13 +139,13 @@
         return `<div class="row" style="margin-top:6px"><span style="width:84px" class="muted">${short(x.start)} 週</span>
           <div class="bar grow" style="margin-top:0"><i style="width:${pc}%"></i></div><span style="width:92px;text-align:right">${pc}%（${x.got}/${x.total}）</span></div>`; }).join('')
         : '<div class="muted">排好一週的計畫、週末按「確認這週」後，這裡會開始記錄每週達成率。</div>'}</div>
-    <div class="card"><h3>📊 紀錄</h3><div>有紀錄的週數：${D.recordedWeeks}　最長連續：${D.best} 週</div>
-      <div class="muted" style="margin-top:6px">每累積 6 週紀錄會得到 1 張休息卡，某週沒記錄時會自動使用，連續週數不會中斷。</div></div>
+    <div class="card"><h3>📊 紀錄</h3><div>有紀錄的週數：${D.recordedWeeks}</div></div>
     <div class="card"><div class="row"><button class="ghost" onclick="go('guide')">❓ 玩法說明</button>
       <button class="ghost" onclick="famOwnSwitch(false)">⛴️ ${esc(herGo())}</button></div>
       <div class="muted" style="margin-top:8px">版本 v${APP_VERSION}・家人島第一版</div></div>
     ${privacy()}
     ${visitCard()}
+    ${commonCard()}
     ${BETA3D ? `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🖥️ 3D 高畫質</b><div class="muted">開著會有影子、比較細的海浪；手機變慢或發燙就關掉。</div></div>
       <button class="ghost" onclick="toggleHQ()">${hqOn() ? '✅ 開著' : '⬜ 關著'}</button></div></div>` : ''}`;
   };
@@ -316,8 +316,8 @@
     // 家人島沒有的卡片（日めくり的分享按鈕、跨科連結、燈塔的話、學習顧問、管理員上傳圖片）由 Index.html 的 card() 照 OWN_CARDS 不畫；這裡只剩管理員介紹裡講到它們的那幾行
     app.querySelectorAll('li').forEach(li => { if (/分享給家人|每天會寫一句話/.test(li.textContent)) rm(li); });   // 日めくり還不能分享；小島管理員每天的一句話要 AI（2c-2）
     if (t === 'plan') {
-      const scan = document.getElementById('scanFile'); if (scan) { const card = scan.closest('.card'); rm(scan.closest('label')); if (card) card.querySelectorAll('.muted').forEach(m => { if (m.querySelector('[onclick*="abbr"]')) rm(m); }); }
-      app.querySelectorAll('[onclick*="go(\'abbr\')"],[onclick*="go(\'items\')"]').forEach(rm);
+      const scan = document.getElementById('scanFile'); if (scan && !scanOn()) { const card = scan.closest('.card'); rm(scan.closest('label')); if (card) card.querySelectorAll('.muted').forEach(m => { if (m.querySelector('[onclick*="abbr"]')) rm(m); }); }
+      app.querySelectorAll(scanOn() ? '[onclick*="go(\'items\')"]' : '[onclick*="go(\'abbr\')"],[onclick*="go(\'items\')"]').forEach(rm);   // FAM_COMMON2_v1
     }
     if (t === 'shop') {
       app.querySelectorAll('[onclick*="xqCard"]').forEach(b => rm(b.closest('.card')));
@@ -333,6 +333,8 @@
     }
     if (b1On()) { const w = document.createTreeWalker(app, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) if (n.nodeValue.indexOf('讀書計時') >= 0) n.nodeValue = n.nodeValue.split('讀書計時').join('專心計時'); }   // B1（文案審查 10/28）：家人島的計時叫專心計時，首頁、音樂廳同一包一起改
     if (t === 'home') visitRefresh();
+    commonAfter();   // FAM_COMMON_v1
+    common2After(t);   // FAM_COMMON2_v1
     app.querySelectorAll('[onclick^="shareDiaryPage"],[onchange^="shareDiaryPage"]').forEach(b => {   // 互訪：分享按鈕的字和說明；FAM_VISIT 沒開就不給分享（沒有人看得到）
       const box = b.tagName === 'INPUT' ? b.closest('label') : (b.tagName === 'BUTTON' ? b : null);   // FAM_SEECHK_v1：分享重整起是勾選框（她那邊的字是乘船券），家人島換成互訪的字
       if (!box) return rm(b);   // 認不出來的寫法（沒有 label 的勾選框、不是按鈕的東西）就拿掉，不留她那邊的字
@@ -494,5 +496,117 @@
     const i = html.lastIndexOf('<div class="row">');
     return html.slice(0, i) + `<div class="card" id="famLand">${lines}</div>` + html.slice(i);
   };
+  // ---------- 通案化第一批（FAM_COMMON_v1，爸爸 10/30）：她的島有、家人也用得到的，照她的畫面開給家人島 ----------
+  OWN_TABS.push('log', 'wish'); OWN_CARDS.push('moveRead');
+  ['saveMed', 'saveMedCfg', 'addWish'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+  // 吃藥：おつとめ板的那一行只在自己打開提醒以後才出現（她的一直都在）
+  KEEP_BOARD.push('med');
+  const medRow = BOARD.find(b => b.key === 'med'); if (medRow) medRow.on = () => !!(S && S.save && S.save.med);
+  function medOn() { return !!(S.save && S.save.med); }
+  window.famMedSet = async function (on) {
+    try { await flush(); S = await call('saveMedCfg', on ? { am: [7, 10], pm: [19, 22] } : null); D = derive(S); } catch (e) { return toast('沒有存到：' + (e.message || e)); }
+    toast(on ? '💊 打開了，首頁的おつとめ板會提醒你' : '關掉了，之前的紀錄還留著，一樣只有你看得到'); render();
+  };
+  // 共讀：家人島也開（後端 getState 帶 features: ['read']）；計時卡放在書店的書架下面（書店是書架小巷 FAM_SHOP 的，沒套或沒開就沒有這張）
+  window.readOn = () => (S.features || []).includes('read');
+  const viewBookstore1 = window.viewBookstore;
+  window.viewBookstore = function () {
+    const h = viewBookstore1(), at = '<div class="card"><h3>➕ 自己加一本</h3>';
+    return typeof shopOn === 'function' && shopOn() && readOn() && h.indexOf(at) >= 0 ? h.replace(at, card('moveRead', readHtml()) + at) : h;
+  };
+  // 航海日誌：只留「照計畫做」和換週；會考的段落（這週一句話、瓶子、紙船、跨科連結）和燈塔的樓層列收起來
+  const viewLog0 = window.viewLog;
+  window.viewLog = function () {
+    const box = document.createElement('div'); box.innerHTML = viewLog0();
+    box.querySelectorAll('.card').forEach(c => { const h = c.querySelector('h3'); if (h && /^(✍️|🍶|⛵|🔗)/.test(h.textContent.trim())) c.remove(); });
+    const top = box.querySelector('h2'); if (top) { const card0 = top.closest('.card'); while (card0 && card0.previousElementSibling) card0.previousElementSibling.remove(); }
+    const intro = top && top.parentNode.querySelector('.muted'); if (intro) intro.textContent = '一週一頁：照計畫做了多少。這裡只是紀錄，不加分也不扣分。';
+    box.querySelectorAll('button').forEach(b => { if (/去海灘/.test(b.textContent)) b.remove(); });
+    box.querySelectorAll('h3').forEach(h => { if (h.textContent.trim() === '📅 照計畫讀') h.textContent = '📅 照計畫做'; });
+    box.querySelectorAll('.muted').forEach(m => { if (m.innerHTML.indexOf('🏮 變成燈籠的瓶子') >= 0) m.innerHTML = m.innerHTML.split('🏮 變成燈籠的瓶子・⛵ 紙船・🚢 親子船・🔗 跨科連結・').join(''); });   // 月末繪卷的圖例：只留家人有的
+    box.querySelectorAll('.card div').forEach(d => { if (!d.children.length && /^(🍶 新漂來|⛵ 放了|Boss 項目達成|故事任務：)/.test(d.textContent.trim())) d.remove(); });   // 月末繪卷：合計和一路走來只留家人有的（瓶子、紙船、Boss、故事任務是她的）
+    box.querySelectorAll('.card div').forEach(d => { const t = d.textContent.trim(); if (d.children.length) return;
+      if (/^每累積 \d+ 週紀錄/.test(t)) d.remove(); else if (/^有紀錄的週數：/.test(t)) d.textContent = t.split(/\s*最長連續/)[0]; });   // 不用連續週數當指標（文案審查 65 補）
+    return box.innerHTML;
+  };
+  // 讓島順起來：同一個分頁，轉交的人是管理員；只看得到自己寫的（後端只給自己的列）
+  const viewWish0 = window.viewWish;
+  window.viewWish = () => viewWish0().split('我會轉交給爸爸').join('我會轉交給 App 管理員').split('送出給爸爸 📮').join('送出給App 管理員 📮')
+    .split('<b>爸爸</b>：').join('<b>App 管理員</b>：').split('例如：希望挑戰任務可以選年份、3D 房間想要能自己移動家具……').join('例如：希望可以多一種玩法、3D 房間想要能自己移動家具……');
+  window.sendWish = async function () {
+    const w = draft.wish; w.text = document.getElementById('wishText').value;
+    if (!w.text.trim()) return toast('先寫下你的想法吧');
+    document.getElementById('wishGo').disabled = true;
+    try { await flush(); S = await call('addWish', w.kind, w.text, w.shot); D = derive(S); }
+    catch (e) { document.getElementById('wishGo').disabled = false; return toast('送出失敗：' + (e.message || e)); }
+    draft = {}; toast('📮 收到了！App 管理員會看到你的想法'); render(); window.scrollTo(0, 0);
+  };
+  function commonCard() {
+    return `<div class="card" id="famCommonCard"><h3>🧰 其他</h3>
+      <div class="row" style="gap:6px"><button class="ghost grow" onclick="draft={}; go('log')">📖 航海日誌</button><button class="ghost grow" onclick="draft={}; go('wish')">💡 讓島順起來</button></div>
+      <div class="row" style="flex-wrap:nowrap;margin-top:10px"><div class="grow"><b>💊 吃藥提醒</b><div class="muted">打開以後，首頁的おつとめ板會在你設的時段問一聲；紀錄在 App 裡只有你自己看得到，其他家人都看不到。</div></div>
+        <button class="ghost" onclick="famMedSet(${medOn() ? 'false' : 'true'})">${medOn() ? '✅ 開著' : '⬜ 關著'}</button></div>${dailyRow()}</div>`;
+  }
+  function commonAfter() {   // 吃藥卡片：家人島沒有「讓爸爸也看得到」；共讀／閱讀計時卡片的字換成家人版
+    const app = document.getElementById('app');
+    app.querySelectorAll('[onchange^="medSetShare"]').forEach(i => { const l = i.closest('label'); if (!l) return; const n = l.nextElementSibling; if (n && n.classList.contains('muted')) n.remove(); l.remove(); });
+    // 11/1 READ_NAME_v1 改名「閱讀計時」後：家人島不寫「讀書」「課外書」（文案審查 104）；改名前的「親子共讀」照舊換成「共讀」
+    const RW = [['讀書計時（課本）、運動、藝文和閱讀（課外書），一次只能開一個。', '運動、藝文和閱讀，一次只能開一個。'], ['讀課外書的時候', '看想讀的書的時候'], ['課外書', '想讀的書'], ['親子共讀', '共讀']];
+    const w = document.createTreeWalker(app, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) RW.forEach(([x, y]) => { if (n.nodeValue.indexOf(x) >= 0) n.nodeValue = n.nodeValue.split(x).join(y); });
+  }
+  // ---------- 通案化第二批（FAM_COMMON2_v1，工程顧問 10/30）：拍手寫計畫、島民每天的信；都會叫 AI，和智慧島共用每人每天的次數 ----------
+  function scanOn() { return !!(S && S.scanOk); }
+  function dailyOn() { return !!(S && S.dailyOk && S.save && S.save.aiDaily && S.save.aiDaily.on); }
+  OWN_TABS.push('scan', 'abbr');   // 後端沒開 FAM_SCAN 時計畫頁沒有拍照按鈕，進不來這兩頁；就算進來，scanPlan 也會被後端擋
+  ['scanPlan', 'saveAbbr', 'getDaily', 'setAiDaily'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+  const SCAN_NOTE = '📷 照片會交給 AI（Google Gemini 付費版）讀，讀完只留下排好的計畫。App 不會存照片，照片也不會被拿去訓練 AI。'   // 文案審查 67;
+  window.abbrOf = (abbrOf0 => () => S.save.abbr ? abbrOf0() : { map: {}, ignore: [] })(window.abbrOf);   // 她的預設字典是她的寫法，家人從空的開始
+  window.viewAbbr = (v0 => () => v0().split('右邊是週檢討表上的項目').join('右邊是你島上的項目').split('例如：理複、Wei M').join('例如：英聽、晨跑')
+    .split('全部都要做（例如「國三」＝online、閱策、成語）').join('全部都要做（例如「早上」＝伸展、喝水）').split('其中一項，上課後才知道（例如「Wei H」）').join('其中一項，做了才知道是哪一項')
+    .split('跟讀書無關的行程').join('跟項目無關的行程').split('例如才藝課、運動。').join('例如開會、聚餐。').split('例如：violin').join('例如：開會'))(window.viewAbbr);
+  window.viewScan = (v0 => () => v0().split('不是讀書的行程，按「無關」').join('不是項目的行程，按「無關」'))(window.viewScan);
+  // 拍照：和她的一樣，只多一種結果：今天的 AI 次數用完了（後端回 { quota: true }），說一聲、讓他自己排，不當成錯誤
+  window.scanPlanPhoto = async function (file) {
+    const wk = planWeek, t0 = Date.now();
+    const tick = () => scanOverlay(`<div class="big">🔍</div><h3 style="text-align:center">島民正在讀你的計畫…</h3><div class="muted" style="text-align:center">大約 10 到 60 秒・已經 ${Math.round((Date.now() - t0) / 1000)} 秒</div>`);
+    tick(); clearInterval(scanOverlay.t); scanOverlay.t = setInterval(tick, 1000);
+    try {
+      const photo = await shrinkPhoto(file);
+      await flush();
+      const res = await Promise.race([call('scanPlan', wk, photo),
+        new Promise((_, bad) => setTimeout(() => bad(new Error('等了 150 秒還沒讀完，可能是網路或 AI 太忙，過一下再拍一次')), 150000))]);
+      if (res && res.quota) {
+        clearInterval(scanOverlay.t);
+        return scanOverlay(`<div class="big">🌙</div><h3 style="text-align:center">今天的 AI 次數用完了</h3><div class="muted" style="text-align:center">這週的計畫可以點日子自己排，明天再拍也可以。</div><div class="row" style="margin-top:12px"><button class="grow" onclick="scanOverlayClose()">好，我自己排</button></div>`);
+      }
+      scanOverlayClose();
+      draft = { scan: res, week: wk, markDone: true }; tab = 'scan'; render(); window.scrollTo(0, 0);
+    } catch (e) {
+      clearInterval(scanOverlay.t);
+      scanOverlay(`<div class="big">😵</div><h3 style="text-align:center">這次沒讀出來</h3><div class="muted" style="text-align:center">${esc(e.message || String(e))}</div><div class="row" style="margin-top:12px"><button class="grow" onclick="scanOverlayClose()">知道了</button></div>`);
+    }
+  };
+  // 島民每天的信：開著才有回覧板（沒有新聞），每天第一次回到島上叫一次；次數用完或 AI 出錯，回覧板照舊用內建的島上消息
+  window.kairanCard = () => dailyOn() ? kairan0().split('爸爸回覆了').join('App 管理員回覆了') : '';
+  window.guideNews = () => '';
+  function dailyRow() {
+    if (!S.dailyOk) return '';
+    const on = dailyOn();
+    return `<div class="row" style="flex-wrap:nowrap;margin-top:10px"><div class="grow"><b>✉️ 島民每天的信</b><div class="muted">打開以後，每天第一次回到島上，島民會各寫一句話給你，放在首頁的回覧板。信是 AI（Google Gemini 付費版）寫的，送出去的只有島民的名字、個性、說話方式、負責的方向和跟你的交情；你寫的紀錄、成績和App 管理員的備註都不送。一天寫一次。</div></div>
+        <button class="ghost" onclick="famDailySet(${on ? 'false' : 'true'})">${on ? '✅ 開著' : '⬜ 關著'}</button></div>`;
+  }
+  window.famDailySet = async function (on) {
+    try { await flush(); S = await call('setAiDaily', on); D = derive(S); } catch (e) { return toast('沒有存到：' + (e.message || e)); }
+    toast(on ? '✉️ 打開了，回到島上就會收到今天的信' : '關掉了，首頁的回覧板收起來了'); render();
+  };
+  function common2After(t) {
+    const app = document.getElementById('app');
+    if (t === 'plan' && scanOn()) {
+      const f = document.getElementById('scanFile'), card = f && f.closest('.card'), m = card && card.querySelector('.muted');
+      if (m && !card.querySelector('#famScanNote')) m.insertAdjacentHTML('afterend', `<div class="muted" id="famScanNote" style="margin-top:6px;font-size:12px">${SCAN_NOTE}</div>`);
+    }
+    if (t === 'abbr') app.querySelectorAll('[onclick*="go(\'items\')"]').forEach(b => b.remove());
+    if (t === 'home' && dailyOn() && !S.save['daily:' + S.today]) ensureDaily0();
+  }
   window.FamIsle = { apply, after, cards: OWN_CARDS };
 })();

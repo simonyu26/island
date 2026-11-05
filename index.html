@@ -189,7 +189,6 @@
   .hanko { display: inline-flex; width: 30px; height: 30px; border: 2px solid #c0392b; border-radius: 50%; color: #c0392b; font-weight: 700; align-items: center; justify-content: center; transform: rotate(-8deg); }
   .greet { position: fixed; inset: 0; background: rgba(60, 20, 45, .35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; animation: fadeIn .3s; }
   .greet-card { background: #fff; border-radius: 24px; padding: 22px 18px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.2); animation: popIn .45s cubic-bezier(.2,1.4,.4,1); }
-  .pollx{position:relative}.pollx::after{content:'';position:absolute;inset:-13px -2px}.pollo{display:block;width:100%;min-height:44px;text-align:left;margin-top:6px;padding:8px 12px;border:2px solid transparent}.pollo.on{border-color:var(--plum)}
   .greet-pic { font-size: 64px; line-height: 1; } .greet-pic .pic { width: 84px; height: 84px; }
   @keyframes fadeIn { from { opacity: 0; } } @keyframes popIn { from { transform: scale(.7); opacity: 0; } }
   .exq img { display: block; width: 100%; height: auto; background: #fff; border: 1px solid var(--plum-light); border-radius: 10px; margin: 10px 0 6px; }
@@ -199,7 +198,7 @@
   .furn button.on { border-color: var(--plum); background: var(--plum-light); } .furn button.has { background: var(--sand); }
   .agrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #d9b88f; padding: 6px; border-radius: 10px; border-top: 6px solid var(--plum-light); border-left: 6px solid var(--plum-light); max-width: 300px; margin: 0 auto; }
   .agrid button { aspect-ratio: 1; padding: 0; background: #f3e3c9; border: 1.5px dashed #c7a578; color: var(--ink); font-size: 24px; min-width: 0; }
-  .wphoto{margin:4px 0 8px}.wphoto img{display:block;width:100%;max-height:260px;object-fit:contain;background:#f4efe6;border-radius:12px;cursor:zoom-in}.wzoom{position:fixed;inset:0;z-index:1000;background:rgba(20,16,12,.92);overflow:auto;cursor:zoom-out;display:flex}.wzoom img{margin:auto;max-width:none;display:block}.wzoom button{position:fixed;top:12px;right:12px;width:44px;height:44px;padding:0;border:0;border-radius:22px;background:rgba(0,0,0,.55);color:#fff;font-size:22px;line-height:44px;cursor:pointer}.wphoto figcaption{font-size:13px;color:#6b5a4a;margin-top:4px;line-height:1.5}.wphoto figcaption span{display:block;font-size:11px;color:#9a8a7a}
+  .wphoto{margin:4px 0 8px}.wphoto img{display:block;width:100%;max-height:260px;object-fit:contain;background:#f4efe6;border-radius:12px;cursor:zoom-in}.wmap svg{width:100%;height:auto;display:block}.wmap .mh{cursor:pointer}.wzoom{position:fixed;inset:0;z-index:1000;background:rgba(20,16,12,.92);overflow:auto;cursor:zoom-out;display:flex}.wzoom img{margin:auto;max-width:none;display:block}.wzoom button{position:fixed;top:12px;right:12px;width:44px;height:44px;padding:0;border:0;border-radius:22px;background:rgba(0,0,0,.55);color:#fff;font-size:22px;line-height:44px;cursor:pointer}.wphoto figcaption{font-size:13px;color:#6b5a4a;margin-top:4px;line-height:1.5}.wphoto figcaption span{display:block;font-size:11px;color:#9a8a7a}
 .agrid button.on { background: var(--plum-light); border: 2px solid var(--plum); }
   .arow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .arow.a3 { grid-template-columns: repeat(3, 1fr); }
@@ -342,11 +341,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.1.2';
+const APP_VERSION = '2.50.2';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '11/6（五）', items: ['🌳 預計 11/6（五）：衛星小島上也可以種樹了，每座 4 格；讀完的書長出的地標，本島放不下時也會長到小島上。如果時間有變，會在島上另外跟你說。'], fam: true };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.2', date: '2026-11-05', fam: [2, 3, 5, 6], items: ['🎒 智慧島碼頭多了一張「你的生活」小卡：勾幾個你常碰到的生活場景，「搬到你的生活」那一步會換成比較貼近你的情境（先從阿律的第 9、10、12 講開始），也可以按「換個情境看看」。只有你自己看得到。', '✉️ 智慧島交完筆記、老師回了以後，可以再回老師一句，老師會再回你；不回也沒關係。', '🏝️ 家人自己的島：「更多」頁多了「其他」，有吃藥提醒、航海日誌和「讓島順起來」；首頁不再顯示連續週數和休息卡。', '🎒 家人的智慧島也多了「你的生活」小卡，可以勾幾個你常碰到的生活場景；大人版的情境還在寫，寫好會慢慢換上。勾了什麼只有你自己看得到。', '🔐 玩法說明補上兩段：每個月的讀書感覺和各畫面待了幾分鐘，記在哪裡、誰看得到；還有寫給智慧島老師的那一句會交給 AI，寫到讓人擔心的話會怎麼處理。', '🌦️ 右上角的天氣改用中央氣象署臺北站的實際觀測，大約 10 分鐘更新一次；氣象署暫時沒有資料時，才用原本的預報。', '🌧️ 主島和智慧島也會跟著臺北的天氣變：臺北下雨，主島和智慧島也一起下雨。選在「宇宙裡」的島本來就沒有天氣。', '🗺️ 智慧島頁多了一張碼頭導覽地圖：從上面看整座島，上過課的小屋會亮燈，點小屋就能進去。', '🧺 拿到素材的小提示更準了：如果這包沒讓竹籃變多，會直接告訴你；網路不穩的時候，做好的料理也不會被記成兩次。'] },
   { v: '2.50.1.2', date: '2026-11-05', fam: [0, 1], items: ['🌱 計時分兩次也會合起來算了：同一天、同一種計時的分鐘加在一起，每 25 分鐘一個，例如 15 分鐘加 10 分鐘也有一個。之前的紀錄也重新算過{綠}。', '🕘 忘了按計時也沒關係：讀書、運動、藝文、閱讀的計時卡片下面多了「補登一筆」，可以補今天和前兩天，填開始和結束的時間，綠點跟計時一樣算。'] },   // HANDLOG_v1
   { v: '2.50.1.1', date: '2026-11-04', items: ['⏳ 學習摘要的停留時間換了算法：讀書計時開著的時候，手機放在旁邊沒動也算讀書（一次最多 2 小時）；運動和藝文計時另外記，不算進讀書、延伸、其他三類；書店店面的時間改記在「其他」，看書店裡的書還是算「延伸」。'] },
   { v: '2.50.1', date: '2026-11-04', fam: [2, 3, 7], items: ['🎁 屋台做好的料理可以送給島民和智慧島的老師了：每位一天收一份，他們會跟你道謝；送到最喜歡的那道，交情會多一點。送出去的料理就不能再賣了。', '🍵 有茶園小島的話，那天讀完一格國文計畫，茶園會多採 1 份茶葉給你，可以拿去屋台做料理。11/1 以後讀了國文的日子也補給你了。', '❓ 換衛星小島時，每種樣子都有一個 ❓，點開就知道這座小島能做什麼；小島頁也看得到。', '🖼️ 換了島民的圖片，回到小島時 3D 會馬上換成新的，不用重新整理。', '🗒️ 按「確認這週」以後，會把這週整理成三句話（只有數字和名稱，不放你寫的字），放在航海日誌那一週。先只有你看得到，選了人才會給家人看。', '📖 書店的「親子共讀」改名「閱讀計時」：讀課外書的時候，自己讀或和家人一起讀都可以按，每 25 分鐘一枚書籤 🔖。', '🏝️ 衛星小島的說明補上了每種小島能做什麼；預計 12 月底起，植木屋、獨立書店、島の屋台和音樂廳也可以搬一間到小島上住。', '🌦️ 右上角的天氣修正了：預報的雨量是 0 的時候，不會再寫「下雨」，島上也不會跟著下雨。'] },
@@ -529,7 +529,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 const FAMILY_FNS = ['getState', 'getImages', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks', 'answerBack', 'postAdvice', 'getIsles', 'getBoard', 'postBoard', 'delBoard', 'famSnap', 'askSee', 'markSeen'];   // askSee／markSeen：請她分享、回報看過（See.gs）；postAdvice：後端只收爸爸的家人碼（Advisor.gs）
 function isFamily() { return !!(S && S.who && S.who.role === 'family'); }
 /* ===== 家人島（列島，做法 B）：家人按「🏝️ 我的島」，畫面和她一樣，但讀寫的是自己的島；畫面的差別都在 family.js，只有家人島才載入 ===== */
-const OWN_FNS = ['saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard'];
+const OWN_FNS = ['saveLifeTags', 'saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard'];
 function ownOn() { return local.get('famOwn') === '1'; }
 function ownMode() { return !!(S && S.who && S.who.role === 'own'); }
 // 卡片白名單：家人島只畫 family.js 的 OWN_CARDS 裡有的 key；主線新加的卡片請用 card('key', html) 包起來，家人島預設看不到
@@ -1335,7 +1335,8 @@ function wisdomAdultMerge(j, a) {
       const m = Object.assign({}, s);
       if (Array.isArray(p.q)) m.q = p.q;
       if (Array.isArray(p.after)) m.after = p.after;
-      if (Array.isArray(p.opts) && Array.isArray(s.opts) && p.opts.length === s.opts.length) m.opts = p.opts;   // 選項數不同就不換，答案位置才不會錯
+      if (Array.isArray(p.opts) && Array.isArray(s.opts) && p.opts.length === s.opts.length) m.opts = p.opts;
+      if (Array.isArray(p.variants)) m.variants = p.variants;   // 「你的生活」大人用的版本（標籤是大人的清單）   // 選項數不同就不換，答案位置才不會錯
       return m;
     }) });
     if (typeof o.closing === 'string') M.closing = o.closing;
@@ -1495,6 +1496,8 @@ function viewWisdom() {
       return `<div class="card whcard" style="border-left:5px solid ${t.color}" onclick="openWisdomHut('${k}')"><div class="row" style="flex-wrap:nowrap">
         <span style="font-size:30px">${t.ic}</span><div class="grow"><b>${esc(t.place)}</b>・${esc(t.name)}<div class="muted" style="font-size:13px">《${esc((wisdomBook(x.book) || {}).title || '')}》${wisdomCount(k)}／13 講</div></div>
         <span class="st ${x.why ? 'info' : 'todo'}">${wisdomStatus(k)}</span></div></div>`; }).join('')}
+    ${wisdomLifeCard()}
+    ${wisdomMap()}
     ${wisdomStampBook()}
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
@@ -1530,6 +1533,36 @@ function ferryKeeper(today) {
   const line = (daily && daily.messages && daily.messages.wisdom) || (today ? '今天的課上完了，回程的船隨時開。' : '上船吧，今天想去哪一間？');
   return placeIntro('wisdom') || `<div class="row" style="margin-top:8px;flex-wrap:nowrap;${fam ? '' : 'cursor:pointer'}" onclick="${fam ? '' : "openKeeper('wisdom')"}"><span style="font-size:28px">${kpPic(k)}</span>
     <div class="speech grow" style="font-size:14px"><b>${esc(k.name)}</b>${k.role ? '（' + esc(k.role) + '）' : ''}：${esc(line)}</div></div>`;
+}
+/** 碼頭導覽地圖：從上面看的島，座標和 wisdom3d.js 的 HUTS 同一組（x, z），一單位 12px；上過課的小屋亮燈 */
+const WMAP_AT = { kongming: [-2.7, -3.4], xiaomiao: [2.9, -3.5], alu: [-4.3, 1.2], einstein: [4.2, 1.0], yirong: [-4.3, -10.0], mi: [0, -11.2], guo: [4.3, -10.0] };
+const WMAP_CAPE = { yirong: 1, mi: 1, guo: 1 };   // 岬角上的三間，路從主島後面的小徑繞過去
+let wisdomMapOpen = false;   // 打開後重畫頁面仍然開著
+function wisdomMap(list = WISDOM_ORDER) {
+  const P = ([x, z]) => [150 + 12 * x, 30 + 12 * (z + 14)], ks = list.filter(k => WMAP_AT[k] && WISDOM_T[k]);
+  const plaza = P([0, 0.9]), trunk = [P([1.0, -1.6]), P([1.25, -4.7]), P([1.05, -8.2])];
+  const line = pts => `<polyline points="${pts.map(q => q.join(',')).join(' ')}" fill="none" stroke="#c9a46a" stroke-width="3" stroke-dasharray="1 6" stroke-linecap="round"/>`;
+  const paths = ks.map(k => line(WMAP_CAPE[k] ? [plaza, ...trunk, P(WMAP_AT[k])] : [plaza, P(WMAP_AT[k])])).join('');
+  const hut = k => { const t = WISDOM_T[k], col = /^#[0-9a-f]{3,6}$/i.test(t.color) ? t.color : '#6b4a2b', [x, y] = P(WMAP_AT[k]), lit = wisdomCount(k) > 0, closed = wisdomClosed(k);
+    return `<g class="mh" onclick="openWisdomHut('${k}')" transform="translate(${x} ${y})" opacity="${lit ? 1 : .55}">
+      ${lit ? '<circle r="20" cy="-6" fill="url(#wmGlow)"/>' : ''}
+      <rect x="-9" y="-8" width="18" height="12" rx="1.5" fill="#f3e6cc" stroke="#6b4a2b" stroke-width="1.2"/>
+      <path d="M-12 -7 L0 -17 L12 -7 Z" fill="${col}" stroke="#6b4a2b" stroke-width="1.2" stroke-linejoin="round"/>
+      <rect x="-3" y="-5" width="6" height="5" rx="1" fill="${lit ? '#f6d27a' : '#2f2a26'}" ${lit ? '' : 'fill-opacity=".6"'}/>
+      ${closed ? '<ellipse cy="-6" rx="17" ry="9" fill="#fff" opacity=".7"/>' : ''}
+      <text y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#2f2a26" stroke="#fffdf8" stroke-width="2" paint-order="stroke">${esc(t.name)}</text></g>`; };
+  return `<details class="card fold wmap" ${wisdomMapOpen ? 'open' : ''} ontoggle="wisdomMapOpen = this.open"><summary><b>🪧 碼頭導覽地圖</b></summary>
+    <svg viewBox="0 0 300 330" role="img" aria-label="碼頭導覽地圖"><defs><radialGradient id="wmGlow"><stop offset="0" stop-color="#d9a03a" stop-opacity=".45"/><stop offset="1" stop-color="#d9a03a" stop-opacity="0"/></radialGradient></defs>
+      <rect width="300" height="330" rx="12" fill="#d9eaee"/>
+      ${[[-7.15, -7.4, 14], [7.15, -7.6, -14]].map(([x, z, a]) => { const [cx, cy] = P([x, z]); return `<ellipse cx="${cx}" cy="${cy}" rx="8" ry="20" transform="rotate(${a} ${cx} ${cy})" fill="#ecd7a4"/>`; }).join('')}
+      <path d="M61 198 62 186 72 71 73 64 76 57 81 51 87 45 95 40 104 36 115 32 126 30 138 28 150 28 162 28 174 30 185 32 196 36 205 40 213 45 219 51 224 57 227 64 228 71 238 186 239 198 238 210 236 221 232 232 227 242 220 252 213 261 204 268 194 275 184 280 173 284 162 286 150 287 138 286 127 284 116 280 106 275 96 268 87 261 80 252 73 242 68 232 64 221 62 210Z" fill="#ecd7a4" stroke="#f7fbfb" stroke-width="3" stroke-opacity=".8"/>
+      ${[[-7.1, -6.3, 0.42], [-6.9, -9.1, 0.3], [7.15, -6.6, 0.45], [6.85, -9.7, 0.28], [-6.5, -11.7, 0.36]].map(([x, z, r]) => { const [cx, cy] = P([x, z]); return `<circle cx="${cx}" cy="${cy}" r="${(r * 10).toFixed(1)}" fill="#9c958a"/>`; }).join('')}
+      <path d="M72 198 79 71 80 65 83 60 87 54 93 50 100 45 108 42 118 39 128 37 139 35 150 35 161 35 172 37 182 39 192 42 200 45 207 50 213 54 217 60 220 65 221 71 228 198 227 208 225 218 222 228 218 237 212 245 205 253 197 260 189 266 180 270 170 273 160 275 150 276 140 275 130 273 120 270 111 266 103 260 95 253 88 245 82 237 78 228 75 218 73 208Z" fill="#a9d08a"/>
+      <rect x="143" y="276" width="14" height="46" rx="2" fill="#b98a5a"/><path d="M138 270 H162 M141 270 V280 M159 270 V280" stroke="#b23a3a" stroke-width="3" fill="none"/>
+      ${line([P([0, 6.4]), plaza])}${paths}<circle cx="${plaza[0]}" cy="${plaza[1]}" r="9" fill="#e8d9b5"/>
+      ${ks.map(hut).join('')}
+      <text x="164" y="312" font-size="12" font-weight="700" fill="#2f2a26" stroke="#fffdf8" stroke-width="2" paint-order="stroke">碼頭</text></svg>
+    <div class="muted" style="font-size:13px">亮著燈的，是你上過課的小屋。每一間都可以點進去。</div></details>`;
 }
 /** 集章冊：四位導師各 13 格，上完一講蓋一個章；上完的書也會擺到書店的書架 */
 function wisdomStampBook() {
@@ -1591,13 +1624,68 @@ function viewWisdomLesson() {
     const widget = i === 2 && L.widget ? wisdomWidget(L.widget) : '';
     const photo = i === 0 && L.photo ? `<figure class="wphoto"><img src="${esc(L.photo.src)}" alt="${esc(L.photo.cap)}" loading="lazy" onclick="zoomPhoto(this)"><figcaption>${esc(L.photo.cap)}${L.photo.credit ? '<span>' + esc(L.photo.credit) + '</span>' : ''}</figcaption></figure>` : '';
     const next = i === w.step && i < last ? `<button style="width:100%;margin-top:10px;background:${t.color}" ${needShow && !shown && !s.steps ? 'disabled' : ''} onclick="draft.wl.step++;render();setTimeout(()=>{const e=document.getElementById('wsec${i + 1}');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},30)">繼續 →</button>` : '';
-    return `<div class="card" id="wsec${i}"><h3 style="margin-top:0;color:${t.color}">${esc(s.h)}</h3>${photo}${s.q.map(p).join('')}${widget}${opts}${reveal}${after}${i === last ? wisdomNoteHtml(L, t, rec) : next}</div>`;
+    return `<div class="card" id="wsec${i}"><h3 style="margin-top:0;color:${t.color}">${esc(s.h)}</h3>${photo}${s.q.map(p).join('')}${widget}${opts}${reveal}${after}${i === 2 ? lifeExtra(s, shown) : ''}${i === last ? wisdomNoteHtml(L, t, rec) : next}</div>`;
   };
   return `<div class="card" style="border-top:5px solid ${t.color}"><div class="muted" style="font-size:13px">${t.ic} ${esc(t.place)}・《${esc(j.title)}》</div>
       <h2 style="margin:4px 0">第 ${w.n} 講　${esc(L.title)}</h2><div class="muted" style="font-size:13px">${esc(L.stamp)}</div>
       ${L.article ? `<div style="margin-top:8px;font-size:14px">📰 這講對應的文章：<a href="${esc(L.article.url)}" target="_blank" rel="noopener">${esc(L.article.title)}</a>${esc(L.article.note || '')}</div>` : ''}</div>
-    ${L.sections.slice(0, w.step + 1).map(secHtml).join('')}
+    ${lifeSections(L, w).slice(0, w.step + 1).map(secHtml).join('')}
     <div class="row"><button class="ghost grow" onclick="openWisdomHut('${teacher}')">回到${esc(t.place)}</button><button class="ghost grow" onclick="go('wisdom')">回到碼頭 ⛴️</button></div>`;
+}
+/* ===== 智慧島「🎒 你的生活」（設計稿 10/30，爸爸選 B）：勾一到三個生活場景，第三步「搬到你的生活」照標籤挑事先寫好、爸爸勾過的版本 =====
+ * 標籤另存在 save.lifeTags，只有本人看得到（See.gs 登記成 never）；家人用家人碼看她的島時不出現這張卡。
+ * 沒勾標籤：每一講和原本一字不差。「搬到你的戰場」那幾講不個人化。 */
+const LIFE_TAGS = { kid: [['club', '社團或運動'], ['art', '音樂或畫畫'], ['sib', '家裡和手足'], ['class', '朋友和班上'], ['read', '閱讀和寫作'], ['make', '手作和實驗'], ['net', '手機和網路'], ['lang', '學外語']], adult: [['work', '工作'], ['home', '家庭'], ['care', '照顧家人'], ['health', '健康'], ['friend', '朋友'], ['learn', '學習新東西']] };
+function lifeTagList() { return LIFE_TAGS[ownMode() ? 'adult' : 'kid']; }
+function lifeTags() { const ok = lifeTagList().map(x => x[0]), t = S && S.save && S.save.lifeTags; return Array.isArray(t) ? t.filter(x => ok.includes(x)).slice(0, 3) : []; }
+let lifeOpen = false;   // 打開後重畫頁面仍然開著
+function wisdomLifeCard() {
+  if (isFamily()) return '';
+  const cur = lifeTags(), on = draft.life || cur, same = on.length === cur.length && on.every(x => cur.includes(x));
+  return `<details class="card fold" ${lifeOpen ? 'open' : ''} ontoggle="lifeOpen = this.open"><summary><b>🎒 你的生活</b></summary>
+    <div class="muted" style="margin-top:6px;font-size:13px;line-height:1.7">勾一到三個你常碰到的生活場景，「搬到你的生活」那一步會挑比較貼近你的情境；不勾也沒關係，會用原本的情境。只有你自己在 App 裡看得到，家人看不到，隨時可以改。</div>
+    <div class="opts" style="grid-template-columns:1fr 1fr;margin-top:8px">${lifeTagList().map(([id, name]) => `<button class="opt ${on.includes(id) ? 'mine' : ''}" style="text-align:center;min-height:44px" onclick="lifePick('${id}')">${esc(name)}</button>`).join('')}</div>
+    <button style="width:100%;margin-top:8px${same ? ';background:#f7f1e5;color:#5f5a55;border:1px dashed #d8d4ce;opacity:1' : ''}" ${same ? 'disabled' : ''} onclick="lifeSave()">存起來</button></details>`;
+}
+function lifePick(id) {
+  const on = (draft.life || lifeTags()).slice(), k = on.indexOf(id);
+  if (k >= 0) on.splice(k, 1); else if (on.length >= 3) return toast('最多勾三個，先取消一個再換'); else on.push(id);
+  draft.life = on; render();
+}
+async function lifeSave() {
+  try { await flush(); S = await call('saveLifeTags', draft.life || lifeTags()); D = derive(S); delete draft.life; toast('存好了'); render(); }
+  catch (e) { toast(String(e.message || e)); }
+}
+/** 第三步可以用的版本：爸爸勾過（reviewed）、標籤是這個人勾的；有選項的題目，選項數要和原題一樣（答案位置才不會錯） */
+function lifeVariants(L) {
+  const s = L.sections && L.sections[2], tags = lifeTags();
+  if (!s || !tags.length || !/搬到你的生活/.test(s.h) || !Array.isArray(s.variants)) return [];
+  return s.variants.filter(v => v && v.reviewed === true && tags.includes(v.tag) && Array.isArray(v.q) && Array.isArray(v.after)
+    && (s.opts.length ? Array.isArray(v.opts) && v.opts.length === s.opts.length : !(v.opts || []).length));
+}
+/** 挑版本要能重現：用講次和標籤算 hash，不用亂數；同一講、同一組標籤永遠先出同一版。「換個情境看看」照順序換下去，最後一個是原題 */
+function lifeHash(str) { let h = 2166136261; for (const c of str) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
+function lifeCycle(L, book) {
+  const vs = lifeVariants(L);
+  if (!vs.length) return [];
+  const k = lifeHash(book + ':' + L.n + ':' + lifeTags().slice().sort().join(',')) % vs.length;
+  return vs.slice(k).concat(vs.slice(0, k), [null]);
+}
+function lifeSections(L, w) {
+  const cyc = lifeCycle(L, w.book), v = cyc.length ? cyc[(w.alt || 0) % cyc.length] : null;
+  if (!v) return L.sections;
+  return L.sections.map((s, i) => i === 2 ? Object.assign({}, s, { q: v.q, after: v.after }, s.opts.length ? { opts: v.opts } : {}) : s);
+}
+function lifeExtra(s, shown) {
+  if (!lifeTags().length || !/搬到你的生活/.test(s.h)) return '';
+  const w = draft.wl, many = lifeCycle(wisdomLessonNow(), w.book).length > 1;
+  return `${many ? `<button class="ghost" style="width:100%;margin-top:8px" onclick="lifeSwap()">換個情境看看</button>` : ''}
+    ${shown || s.steps ? `<p class="muted" style="margin:10px 0 0;line-height:1.8">你的生活裡，還有哪裡用得到？</p>` : ''}`;
+}
+function lifeSwap() {
+  const w = draft.wl; w.alt = (w.alt || 0) + 1;
+  if (!w.review) { delete w.pick[2]; delete w.shown[2]; }   // 換了情境就重新選；回看時照樣看得到老師的話
+  render();
 }
 function wisdomPick(i, k) {
   const w = draft.wl, s = wisdomLessonNow().sections[i], cur = w.pick[i] || [];
@@ -1612,9 +1700,26 @@ function wisdomNoteHtml(L, t, rec) {
     <div class="row" style="margin-top:10px;align-items:center"><span class="hanko" style="border-color:${t.color};color:${t.color}">${w.n}</span><span class="muted grow" style="font-size:13px">集章冊蓋好第 ${w.n} 個章了</span></div>
     ${L.source ? `<div class="muted" style="margin-top:8px;font-size:12px">出處：${esc(L.source)}</div>` : ''}`;
   if (done) return `<div class="wnote"><b>你寫的：</b>${esc(done.note)}</div>
-    ${done.reply ? `<div class="row" style="flex-wrap:nowrap;margin-top:8px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(done.reply)}</div></div>` : ''}${tail}`;
+    ${done.reply ? `<div class="row" style="flex-wrap:nowrap;margin-top:8px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(done.reply)}</div></div>` : ''}${wisdomTalkHtml(done, t)}${tail}`;
   return `<textarea id="wNote" rows="3" maxlength="200" placeholder="寫一句就好" style="width:100%;margin-top:8px" oninput="draft.wl.note=this.value">${esc(w.note)}</textarea>
     <button id="wGo" style="width:100%;margin-top:8px;background:${t.color}" onclick="wisdomSubmit()">交給${esc(t.name)} ✉️</button>`;
+}
+/** 再回老師一句（爸爸 10/30）：老師回了以後，上課當天可以再回一句，每講一次，老師回完就收尾；回看時兩段都看得到。家人看不到，家人自己的島這版不開 */
+function wisdomTalkHtml(done, t) {
+  const w = draft.wl, k = done.talk;
+  if (k) return `<div class="wnote" style="margin-top:8px"><b>你回的：</b>${esc(k.note)}</div>
+    ${k.reply ? `<div class="row" style="flex-wrap:nowrap;margin-top:8px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(k.reply)}</div></div>` : ''}`;
+  if (!done.reply || done.at !== S.today || isFamily() || ownMode()) return '';
+  return `<textarea id="wTalk" rows="2" maxlength="200" placeholder="想回${esc(t.name)}的話，寫一句就好：你同意哪一點，或哪裡想得不一樣？" style="width:100%;margin-top:8px" oninput="draft.wl.talk=this.value">${esc(w.talk || '')}</textarea>
+    <button id="wTalkGo" class="ghost" style="width:100%;margin-top:6px" onclick="wisdomTalk()">回${esc(t.name)}一句 ✉️</button>`;
+}
+async function wisdomTalk() {
+  const w = draft.wl, L = wisdomLessonNow(), t = WISDOM_T[w.book.replace(/2$/, '')], text = String(w.talk || '').trim();
+  if (!text) return toast('寫一句再交給老師吧');
+  const btn = document.getElementById('wTalkGo'); if (btn) { btn.disabled = true; btn.textContent = t.name + '正在看你寫的…'; }
+  try { await flush(); S = await call('talkBack', w.book, w.n, text, { title: L.title, ask: L.sections[L.sections.length - 1].q.join('') }); D = derive(S); }
+  catch (e) { if (btn) { btn.disabled = false; btn.textContent = '再送一次'; } return toast(String(e.message || e)); }
+  delete w.talk; render();
 }
 async function wisdomSubmit() {
   const w = draft.wl, L = wisdomLessonNow(), note = String(w.note || '').trim();
@@ -1774,14 +1879,15 @@ function seeToggle(sel, n) {
 function seeTap(el) {
   const k = el.dataset.k, n = el.dataset.n, i = k.indexOf(':'), kind = k.slice(0, i), id = k.slice(i + 1);
   if (kind === 'ask') { draft.seeAsk = draft.seeAsk || {}; draft.seeAsk[id] = seeToggle(draft.seeAsk[id] || [], n); return render(); }
-  if (kind === 'cat') { const list = seeToggle(seeList(id), n); seeSet(id, list); toast(list.length ? '👀 ' + list.join('、') + ' 看得到' + SEE_UI[id][1] : SEE_UI[id][1] + '只有你看得到'); return render(); }
+  if (kind === 'cat') { const list = seeToggle(seeList(id), n); seeSet(id, list); toast(list.length ? '👀 ' + list.join('、') + '看得到' + SEE_UI[id][1] : SEE_UI[id][1] + '只有你看得到'); return render(); }
   const key = kind + ':' + id, cur = Object.assign({}, S.save[key] || {}), list = seeToggle(cur.to || [], n);   // kind：rv、diary、week3（本週三句話）
   if (kind === 'diary' && !cur.text) return;
   if (list.length) cur.to = list; else delete cur.to;
   if (kind === 'rv') delete cur.share;
   S.save[key] = cur; queueSave('to:' + key, 'shareTo', kind, id, list);
-  toast(list.length ? '👀 ' + list.join('、') + ' 看得到這' + (kind === 'rv' ? '個瓶子上的話' : '一頁') : '收回了，只有你看得到'); render();
+  toast(list.length ? '👀 ' + list.join('、') + '看得到這' + (kind === 'rv' ? '個瓶子上的話' : '一頁') : '收回了，只有你看得到'); render();
 }
+// SEE_TOAST_v1：提示的名字和「看得到」之間不空格（文案 152）
 function seeSet(cat, list) {
   const c = seeCfg(), see = { v: 1, cats: Object.assign({}, c.cats), ans: Object.assign({}, c.ans), at: S.today };
   see.cats[cat] = list; see.ans[cat] = 1; S.save.see = see;
@@ -1799,7 +1905,7 @@ function seeAskCard(cat) {
 function seeAnswer(cat, keep) {
   const list = keep ? ((draft.seeAsk || {})[cat] || []) : [];
   seeSet(cat, list); if (draft.seeAsk) delete draft.seeAsk[cat];
-  toast(list.length ? '👀 ' + list.join('、') + ' 看得到' + SEE_UI[cat][1] : '好，' + SEE_UI[cat][1] + '先只有你看得到'); render();
+  toast(list.length ? '👀 ' + list.join('、') + '看得到' + SEE_UI[cat][1] : '好，' + SEE_UI[cat][1] + '先只有你看得到'); render();
 }
 // 誰看過：seen:<週一> = { 'cat:study': { 媽媽: 日期 } }，只有她拿得到
 function seeBy(k) {
@@ -1881,6 +1987,7 @@ function famSeen(kind, id) {
 }
 /* --- 郵便受け：小島更新、家人的明信片、邀請、爸爸的回覆都寄到這裡，首頁右上角亮紅點 --- */
 // v2.46 版本說明裡的 {補}：照她自己的紀錄寫補了多少經驗值
+const MILK_ATE = '。這包先拿去補竹籃之前不夠的部分，所以竹籃的數字沒變。';   // MILK_FIX_v1 文案審查 153 追記二
 function newsText(i) {
   const n = (D && D.planBonus) || 0;
   if (i.indexOf('{綠}') >= 0) { const g = (D && D.daySumAdd) || 0; i = i.replace('{綠}', g > 0 ? '，多算回 +' + g + ' 綠點' : ''); }   // DAYSUM_v1
@@ -1986,27 +2093,8 @@ function greetFallback() {
   return lines[daySeed() % lines.length];
 }
 const GUARDIAN_ = '爸爸';   // 監護人稱謂（只定義一次）
-// POLL1102_v1
-const POLL_K = 'poll:2026-11-02', POLL_Q = [['打開 App 時，你通常先做什麼？', 'a看島、到處逛逛|b看今天的讀書計畫|c直接開計時讀書|d看漂流瓶／日めくり／信箱|e看錯題、題庫|z都不是'],
-  ['有沒有哪個地方讓你覺得「又要去弄一下」很煩？', 'a沒有|b每天要回報心情|c記錄時間、計時|d看每週的確認／回顧|e漂流瓶、日めくり這類訊息|f島上的照顧（澆水之類）|z都不是（說不上來）'],
-  ['哪個功能真的幫你讀書？', 'a計時|b錯題、錯因|c題庫、每日的題|d讀書計畫|e學習顧問的建議|f燈塔|z都沒有']];
-let pollT = 0, pollA = {}, pollI = 0; const $p = () => document.getElementById('poll');
-function pollSkips() { return +(local.get('islandPoll1102Skip') || 0); }
-function pollDue() { return tab === 'home' && !isFamily() && !ownMode() && !S.save[POLL_K] && pollSkips() < 3 && !$p(); }
-function pollSoon() { if (pollT || !pollDue()) return; pollT = setTimeout(() => { pollT = 0; if (pollDue()) document.getElementById('greet') ? pollSoon() : (pollI = 0, pollDraw()); }, 1000); }
-function pollDraw(done) {
-  const box = ($p() || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'poll', className: 'greet', innerHTML: '<div class="greet-card" style="text-align:left"></div>' }))).firstChild;
-  const q = POLL_Q[pollI], k = 'q' + (pollI + 1), last = pollI === 2;
-  box.innerHTML = done ? `<h3>謝謝，收到了</h3><button style="width:100%" onclick="$p().remove()">好</button>`
-    : `<div class="row" style="flex-wrap:nowrap"><b class="grow">${esc(GUARDIAN_)}想問你三個問題，一分鐘就好</b><button class="ghost pollx" style="padding:4px 10px;font-size:13px" onclick="pollLater()">晚點再填</button></div>
-    <div class="muted" style="margin-top:8px">第 ${pollI + 1}／3 題</div><b style="display:block;margin:4px 0 8px">${q[0]}</b>
-    ${q[1].split('|').map(o => `<button onclick="pollA.${k}='${o[0]}';pollDraw()" class="ghost pollo${pollA[k] === o[0] ? ' on">✓ ' : '">'}${o.slice(1)}</button>`).join('')}
-    ${pollA[k] ? '' : '<div class="muted" style="margin-top:8px">選一個就可以下一步</div>'}<div class="row" style="margin-top:8px">${pollI ? '<button class="ghost" onclick="pollI--;pollDraw()">上一題</button>' : ''}<button class="grow" ${pollA[k] ? '' : 'disabled'} onclick="${last ? 'pollSend()' : 'pollI++;pollDraw()'}">${last ? '送出' : '下一題'}</button></div>`;
-}
-function pollLater() { local.set('islandPoll1102Skip', pollSkips() + 1); $p().remove(); }
-function pollSend() { const a = Object.assign({}, pollA); S.save[POLL_K] = a; queueSave(POLL_K, 'savePoll', POLL_K.slice(5), a); pollDraw(true); }
+// POLL1102_OFF：11/2 家長問卷已收回（她填好了；後端 savePoll 先留著）
 function maybeGreet() {
-  pollSoon();
   if (tab !== 'home' || !D.cfg || local.get('islandGreeted') === S.today || dailyState === 'loading' || document.getElementById('greet')) return;
   const g = guide(), d = S.save['daily:' + S.today], h = taipeiClock().h;
   const plan = (planOf(mondayOf(S.today)).days[dayIdx(S.today)] || []).length;
@@ -2952,7 +3040,10 @@ function matsOf(save, itemsByRow, today) {
     const rows = (save['log:' + d] && save['log:' + d].rows) || {};
     if (Object.keys(rows).some(r => rows[r] === 2 && itemsByRow[r] && (GROUP[itemsByRow[r].subject] || itemsByRow[r].subject) === '國')) add('tea', d, 'islet'); });
   const used = {}, cooked = {}, cooks = [], bought = {}, sold = {}, gifted = {}, gifts = [];   // GIFT_v1：送給島民的料理
+  const seenId = {}, fixed = {}, fixes = [];   // MILK_FIX_v1：同一個 id 只算一次；fix 是一次性補發
   Object.keys(save).filter(k => k.startsWith('craft:')).sort().forEach(k => ((save[k] && save[k].log) || []).forEach(e => {
+    if (e && e.id) { if (seenId[e.id]) return; seenId[e.id] = 1; }
+    if (e.t === 'fix' && e.add) { Object.keys(e.add).forEach(m => { if (MATS[m]) fixed[m] = (fixed[m] || 0) + Math.max(0, Number(e.add[m]) || 0); }); fixes.push(e); return; }
     if (e.t === 'buy' && MATS[e.mat]) { bought[e.mat] = (bought[e.mat] || 0) + (Number(e.n) || 0); return; }
     if (e.t === 'sell') { sold[e.dish] = (sold[e.dish] || 0) + 1; return; }
     if (e.t === 'gift') { gifted[e.dish] = (gifted[e.dish] || 0) + 1; gifts.push(e); return; }
@@ -2960,18 +3051,22 @@ function matsOf(save, itemsByRow, today) {
     cooked[d.id] = (cooked[d.id] || 0) + 1; cooks.push(e);
     Object.keys(d.use).forEach(m => used[m] = (used[m] || 0) + d.use[m]);
   }));
-  const have = {}; Object.keys(MATS).forEach(m => have[m] = Math.max(0, (got[m] || 0) + (bought[m] || 0) - (used[m] || 0)));   // 取消勾選讓存量變少時最低 0，做好的料理不收回
+  const have = {}; Object.keys(MATS).forEach(m => have[m] = Math.max(0, (got[m] || 0) + (bought[m] || 0) + (fixed[m] || 0) - (used[m] || 0)));   // 取消勾選讓存量變少時最低 0，做好的料理不收回
   const left = {}; DISHES.forEach(d => left[d.id] = Math.max(0, (cooked[d.id] || 0) - (sold[d.id] || 0) - (gifted[d.id] || 0)));
-  return { got, used, have, cooked, cooks, by, bought, sold, left, gifted, gifts };
+  return Object.assign({ got, used, have, cooked, cooks, by, bought, sold, left, gifted, gifts }, fixes.length ? { fixed, fixes } : {});   // MILK_FIX_v1：沒有補發時和改前逐欄相同
 }
 function canCook(d) { return Object.keys(d.use).every(m => (D.mats.have[m] || 0) >= d.use[m]); }
 function knowDish(d) { return Object.keys(d.use).some(m => D.mats.got[m] > 0) || D.mats.cooked[d.id] > 0; }   // 拿到其中一種素材，店主就教你這道
 function matText(m) { const x = MATS[m]; return x.ic + x.n; }
 function matStreet(m) { const s = MATS[m].s; return s === '智' ? '智慧島的老師' : SUBJECT_NAME[s] + '街的' + resident(s).name; }
 // 首頁勾「完成」之後：剛拿到的素材跳一個小提示
+function matSnap() { return { got: Object.assign({}, D.mats.got), have: Object.assign({}, D.mats.have) }; }   // MILK_FIX_v1
 function matToast(before, wait) {
-  const now = D.mats.got, m = Object.keys(now).find(k => (now[k] || 0) > (before[k] || 0));
-  if (m) setTimeout(() => toast(matStreet(m) + '塞給你一包' + matText(m) + (MATS[m].rare ? '（稀有！）' : '')), wait || 400);
+  const b = before && before.got ? before : { got: before || {}, have: null };
+  const now = D.mats.got, m = Object.keys(now).find(k => (now[k] || 0) > (b.got[k] || 0));
+  if (!m) return;
+  const into = !b.have || (D.mats.have[m] || 0) > (b.have[m] || 0);   // 竹籃真的多了一個；沒有多就照實說
+  setTimeout(() => toast(matStreet(m) + '塞給你一包' + matText(m) + (MATS[m].rare ? '（稀有！）' : '') + (into ? '' : MILK_ATE)), wait || 400);
 }
 function openYatai() {
   if (!keeperOf('yatai') && !isFamily()) return openKeeper('yatai');
@@ -3092,9 +3187,10 @@ async function giftDishNow(to) {
   } catch (err) { toast('沒送成：' + (err.message || err)); }
   giftBusy = false; render();
 }
+function craftId() { return (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).slice(0, 16); }
 async function cookDish(id) {
   const d = dishOf(id); if (!d || !canCook(d) || isFamily()) return;
-  const month = S.today.slice(0, 7), k = 'craft:' + month, e = { t: 'cook', dish: id, at: S.today };
+  const month = S.today.slice(0, 7), k = 'craft:' + month, e = { t: 'cook', dish: id, at: S.today, id: craftId() };   // MILK_FIX_v1：帶 id，重送也只記一次
   const cur = S.save[k] || { log: [] }; S.save[k] = { log: (cur.log || []).concat([e]) }; D = derive(S);
   queueSave(k + ':' + Date.now(), 'saveCraft', month, e);
   toast(d.ic + ' ' + d.n + '做好了！'); render();
@@ -5149,9 +5245,10 @@ async function doFlush() {
   const jobs = Object.entries(pending);
   if (!jobs.length) return;
   jobs.forEach(([k]) => delete pending[k]);
+  let sent = 0;   // MILK_FIX_v1：送成功的不再重送
   try {
     let st = null;
-    for (const [, j] of jobs) st = await call(j.fn, ...j.args);
+    for (const [, j] of jobs) { st = await call(j.fn, ...j.args); sent++; }
     const mine = S.save;
     S = st;
     Object.keys(pending).forEach(k => S.save[k] = mine[k]);   // 送出後又改的部分，以畫面上的為準
@@ -5159,7 +5256,7 @@ async function doFlush() {
     setSync(Object.keys(pending).length ? '同步中…' : '✓ 已存到試算表');
     softRender();
   } catch (e) {
-    jobs.forEach(([k, j]) => { if (!pending[k]) pending[k] = j; });
+    jobs.slice(sent).forEach(([k, j]) => { if (!pending[k]) pending[k] = j; });
     setSync('⚠️ 還沒存到，稍後重試');
     clearTimeout(syncTimer); syncTimer = setTimeout(() => flush().catch(() => {}), 8000);
     throw e;
@@ -5183,7 +5280,7 @@ function setLog(date, r, s) {
   const rows = Object.assign({}, logOf(date));
   if (rows[r] === s) delete rows[r]; else rows[r] = s;
   S.save['log:' + date] = { rows };
-  const mBefore = Object.assign({}, D.mats.got);
+  const mBefore = matSnap();
   D = derive(S); matToast(mBefore);
   queueSave('log:' + date, 'logDay', date, rows);
   softRender();
@@ -5366,7 +5463,7 @@ function bindFocusStop() {
     const rows = Object.assign({}, logOf(date)); let changed = false;
     Object.keys(st.choice).forEach(r => { const v = st.choice[r]; if (v > (rows[r] || 0)) { rows[r] = v; changed = true; } });
     if (changed) { S.save['log:' + date] = { rows }; queueSave('log:' + date, 'logDay', date, rows); }
-    const before = D.xp, gBefore = D.focusGlass, mBefore = Object.assign({}, D.mats.got);
+    const before = D.xp, gBefore = D.focusGlass, mBefore = matSnap();
     focusPut(null); D = derive(S); matToast(mBefore, 2200);
     const gain = D.xp - before, green = (D.focusGlass - gBefore) * FOCUS_GREEN;
     toast('存好了！' + (green ? '+' + green + ' 綠點 ⏳' : '') + (gain ? ' +' + gain + ' 經驗值' : ''));
@@ -5524,7 +5621,7 @@ const HAND_CSS = `<style>.hl-opt{background:#fff;color:var(--ink);border:1px sol
 .hl-opt[aria-checked="true"]::before{content:"✓ "}.hl-off{background:#f7f1e5!important;color:#5f5a55!important;border:1px dashed #d8d4ce!important}
 #hlBox input[aria-invalid="true"]{border:2px solid #a33a2a}.hl-g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.hl-g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.hl-q{margin-top:12px;font-weight:700}</style>`;
 function handName(k) { return k === 'focus' ? (ownMode() ? '專心' : '讀書') : mk(k === 'move' ? null : { k }).did === '練習' ? '藝文' : k === 'read' ? '閱讀' : '運動'; }
-function handLink(k) { return isFamily() ? '' : `<div style="text-align:center;margin-top:4px"><a href="#" onclick="handOpen('${k}');return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline;text-underline-offset:3px">🕘 忘了計時？補登一筆</a></div>`; }
+function handLink(k) { return (isFamily() || ownMode()) ? '' : `<div style="text-align:center;margin-top:4px"><a href="#" onclick="handOpen('${k}');return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline;text-underline-offset:3px">🕘 忘了計時？補登一筆</a></div>`; }
 function handOpen(k) {
   if (isFamily()) return;
   draft = { hand: { k, t: 'play', day: 0, row: 0, a: '', b: hhmm(Date.now()), done: 0 } }; tab = 'hand'; render(); window.scrollTo(0, 0);
@@ -7251,7 +7348,7 @@ function privacyCard() {
     <div style="overflow-x:auto;margin-top:8px"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人</th><th>訪客</th></tr>
       ${WHO_SEES.map(r => `<tr><td style="text-align:left;white-space:normal">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div>
     <div style="margin-top:8px;font-size:13px">家人在 App 裡只看得到你選了給他們看的。沒選的、燈塔的話，還有你在智慧島、紙船這些地方寫的字，家人都看不到。這些資料存在爸爸管理的試算表和雲端硬碟裡，所以爸爸技術上打得開；他答應過，不會去讀你沒分享的內容。有疑問，隨時可以直接問爸爸。</div>
-    <div class="muted" style="margin-top:6px;font-size:12px">你寫給智慧島老師和燈塔的一句話，會交給 AI 產生回覆；AI 不會把內容告訴家人。每週檢討和大考成績，爸爸會交給 AI 學習顧問分析讀書方法。家人只能看、寄明信片、送書和鼓勵卡，不能改你的紀錄。漂流瓶和日めくり要選了人才算分享。訪客只看得到你確認過的那張邀請裡的快照；連續週數要發邀請時有勾才給看；邀請到期或收回就看不到。用到 AI 的功能（拍照讀計畫和錯題、出題、講解、島民的話）會把那一次的內容送到 Google 的 Gemini 產生回答。</div>
+    <div class="muted" style="margin-top:6px;font-size:12px">你寫給智慧島老師和燈塔的話（包括再回老師的那一句），會交給 AI 產生回覆；AI 不會把內容告訴家人。每週檢討和大考成績，爸爸會交給 AI 學習顧問分析讀書方法。家人只能看、寄明信片、送書和鼓勵卡，不能改你的紀錄。漂流瓶和日めくり要選了人才算分享。訪客只看得到你確認過的那張邀請裡的快照；連續週數要發邀請時有勾才給看；邀請到期或收回就看不到。用到 AI 的功能（拍照讀計畫和錯題、出題、講解、島民的話）會把那一次的內容送到 Google 的 Gemini 產生回答。</div>
     </details>
     <button class="ghost" style="width:100%;margin-top:10px" onclick="logoutPhone()">🚪 登出這支手機</button>
     <div class="muted" style="margin-top:4px;font-size:12px">清掉這支手機上的配對碼和存著的資料。島上的紀錄都還在，之後輸入配對碼就能回來。</div></div>`;
@@ -7359,7 +7456,8 @@ function viewGuide() {
       <li>按「確認這週」，看看達成率和蓋了幾棟房子。</li>
       <li>接著排下週的計畫，拍照或自己加都可以。</li></ol>` +
     p('<b>達成率</b>＝計畫的次數裡完成了幾次。例如英文單字排了 5 次、做了 4 次，就是 4/5；計畫外多做的不會拉低達成率，還是照樣蓋房子。') +
-    p('週檢討表的顏色會自動塗好：排了幾次就做滿幾次是深色，做了一部分是中間色，沒做是淺色。計畫外做過的項目也會塗上。'))}
+    p('週檢討表的顏色會自動塗好：排了幾次就做滿幾次是深色，做了一部分是中間色，沒做是淺色。計畫外做過的項目也會塗上。') +
+    p('📊 <b>讀書感覺和停留時間</b>：每個月第一次按完「確認這週」，會問你這個月對讀書的感覺（1～5，沒有對錯，也可以先不填）。小島也會記下你在讀書、延伸、其他畫面各待了幾分鐘。這兩樣不加分，家人碼看不到，小島也不會自己送給 AI；只放在計畫頁「整理學習摘要」的「這個月」裡，摘要要不要複製給' + GUARDIAN_ + '，由你決定。')  /* GUIDE_PRIV_v1 */)}
   ${sec('⭐', '經驗值怎麼算', `<table>${row('完成一次', '+25')}${row('部分完成一次', '+12')}${row('Boss 項目（歷屆、模卷、學測題）', '雙倍')}
       ${row('週末確認這週', '+20')}${row('計畫達成一半／80%／全部', '+10／+25／+40')}${row('故事任務答對／答錯', '+15／+5')}${row('挑戰任務答對（基礎／中級／進階）', '+10／+15／+20')}${row('記錄一場 Boss 戰', '+50')}${row('發現一條跨科連結', '+15')}${row('燈塔撿瓶子答對', '基礎 +10、中級 +15、進階 +20')}${row('燈塔撿瓶子沒答對', '+3')}${row('拍照收錯題（一天最多算 10 題，不換島幣）', '每題 +5')}${row('運動蓋一章', '+5')}</table>` +
     p('同一項做幾次就算幾次，例如英文單字做了 5 天就是 5 × 25 = 125。') +
@@ -7453,7 +7551,9 @@ function viewGuide() {
     (readOn() ? p('📖 閱讀計時：讀課外書的時候，自己讀或和家人一起讀，都在書店按「📖 開始閱讀」，讀完再按「讀完了」，中途可以休息（休息的時間不算）。每 ' + MOVE_STEP + ' 分鐘一枚書籤 🔖 +' + MOVE_GREEN + ' 綠點，多久都算，跟運動一樣；不用證明，也不記書名。讀書計時（課本）、運動、藝文和閱讀（課外書），一次只能開一個。') : ''))}
   ${wisdomOn() ? sec('⛴️', '智慧島', p('海邊有一座渡船碼頭，坐船就能到智慧島。島上住著七位老師：') + `<ul style="margin:2px 0 8px;padding-left:22px;line-height:1.8">${['隆中草廬的孔明：《孫子兵法》', '湯屋的小苗：放鬆和好好記住東西的方法', '巷口柑仔店的阿律：讀新聞', 'NASA 分站的愛因斯坦：數學和科學家的故事', '老教室的怡容：用一張老照片講一段歷史', '暗房小屋的瞇：慢慢讀一首詩', '海邊物理治療所的郭哥：吃、動、休息背後的道理'].map(x => '<li>' + x + '</li>').join('')}</ul>` +
     p('每一講都是四步：聽故事、你來選、搬到你的生活、寫一句。最後寫的那一句交給老師，老師會回你一句話，集章冊就蓋一個章。') +
+    p('🔐 寫給老師的那一句會交給 AI，讓老師回你一句話；在 App 裡只有你自己看得到。如果寫到讓人擔心的話，回應會附上可以求助的地方，也會寄一封信請' + GUARDIAN_ + '關心你（信裡沒有你寫的字）。') +  /* GUIDE_PRIV_v1 */
     p('<b>每天可以上一講</b>，同一位老師<b>每週一講</b>（週一重新算），想上幾位老師都可以，不用急。上過的課可以在小屋或集章冊回看，也會擺到書店的「你的書架」上。') +
+    p('智慧島上有一張碼頭導覽地圖，從上面看整座島；上過課的小屋會亮燈，點小屋就能進去。') +  /* GUIDE_MAP_v1 */
     p('渡船屋可以請一位主人：名字、樣子、個性都由你決定，他會幫你開船，每天跟你說一句話。') +
     p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木湯桶、阿律的打字機、愛因斯坦的航海望遠鏡、怡容的木頭講桌、瞇的紅色安全燈、郭哥的瑜珈墊。不用島幣，在我的家的家具店最下面可以擺出來。')) : ''}
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
@@ -7637,9 +7737,15 @@ function updateEnv() {
   const t = taipeiClock();
   env.hhmm = t.hhmm; env.phase = phaseOf(t.h);
   const chip = document.getElementById('envChip'); if (chip) chip.textContent = envText();
-  if (window.Island3D && Island3D.setEnvironment) Island3D.setEnvironment({ phase: env.phase, weather: env.weather || 'clear' });
+  const e3 = { phase: env.phase, weather: env.weather || 'clear' };   // WEATHER_SYNC_v1：每個 3D 畫面同一份台北天氣
+  [window.Island3D, window.MainIsle3D, window.Wisdom3D].forEach(m => { if (m && m.setEnvironment) try { m.setEnvironment(e3); } catch (e) { } });
 }
 async function fetchWeather() {
+  // WEATHER_CWA_v1：先用氣象署臺北站的實測（後端代抓、存 10 分鐘）；沒配對、斷線或氣象署沒資料，才退回 Open-Meteo
+  try {
+    const w = store.get('islandToken') ? await (typeof callAsOwner === 'function' ? callAsOwner : call)('getWeather') : null;   // WEATHER_OWN_v1：家人島、家人碼也直接問（後端 weatherRoute_ 本來就認家人碼），不走 OWN_FNS 白名單，才不會跳「你的島還沒有這個功能」
+    if (w && w.kind && WEATHER_NAME[w.kind]) { env.weather = w.kind; if (w.temp != null) env.temp = w.temp; updateEnv(); return; }
+  } catch (e) { /* 退回 Open-Meteo */ }
   try {
     const j = await (await fetch(WEATHER_URL)).json();
     env.temp = Math.round(j.current.temperature_2m);
