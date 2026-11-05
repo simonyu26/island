@@ -197,7 +197,7 @@
         yatai: snap.yatai || null,    // v2.30.3：島の屋台（訪客只看外觀）
         marks: snap.marks || null     // v2.19：讀完書長出的地標（只有樣子，不給點）
       });
-      Island3D.setEnvironment({ phase: phaseOf(taipeiHour()), weather: 'clear' });
+      Island3D.setEnvironment({ phase: phaseOf(taipeiHour()), weather: (typeof env !== 'undefined' && env.weather) || 'clear' });   // WEATHER_SYNC_v1
     } catch (e) {
       el.innerHTML = `<div style="padding:16px">${SUBJECTS.map(s => `<div class="card" style="cursor:pointer" data-s="${s}">
         <div class="resident"><span class="avatar">${esc(resident(s).emoji)}</span><b>${SUBJECT_NAME[s]}街</b></div></div>`).join('')}</div>`;

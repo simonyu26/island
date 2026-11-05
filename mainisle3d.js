@@ -30,6 +30,7 @@
   const PEAK = xz(120.96, 23.47);   // 玉山
   const RIDGE = [[121.64, 24.66, 1.6], [121.40, 24.55, 2.0], [121.28, 24.25, 2.4], [121.15, 23.95, 2.6], [120.82, 23.20, 2.6], [120.80, 22.90, 2.2], [120.78, 22.55, 1.6], [120.80, 22.25, 1.1]];
   // 列島：以主島為中心，各島方位固定（爸爸 2026-10-26：她東、爸爸西、媽媽南、姐姐北、姑姑西南；s.a 是角度÷π，0 東、0.5 南、1 西、-0.5 北）
+  const RAIN_N = 1200, RAIN_LEN = 1.0, RAIN_DX = -0.08;   // WEATHER_SYNC_v1：總覽的雨（線）
   const RX = 13.5, RZ = 19;   // 列島排成橢圓（主島南北長），直式手機也放得下
 
   let renderer, scene, camera, controls, clock, container, ctx, root, isleLayer, labelLayer, water, hemi, sun, glassMat;
@@ -297,10 +298,11 @@
     mist = new THREE.Group(); const mm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25, depthWrite: false }), mr = rng(41);
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + mr() * 0.5, d = 6 + mr() * 8, c = new THREE.Mesh(new THREE.SphereGeometry(2.6 + mr() * 1.2, 6, 2), mm); c.scale.set(1.8, 0.35, 1.2); c.position.set(Math.cos(a) * d, LIFT - 0.6 + mr() * 1.2, Math.sin(a) * d); mist.add(c); }
     mist.visible = false; scene.add(mist);
-    const rp = new Float32Array(700 * 3), rr = rng(43);
-    for (let i = 0; i < 700; i++) { rp[i * 3] = (rr() - 0.5) * 50; rp[i * 3 + 1] = rr() * 16; rp[i * 3 + 2] = (rr() - 0.5) * 50; }
+    // WEATHER_SYNC_v1：雨改成線（美術 11/2：和 她的島同一種樣子；一個 LineSegments，dc 不變；總覽鏡頭遠，線長 1.0）
+    const rp = new Float32Array(RAIN_N * 6), rr = rng(43);
+    for (let i = 0; i < RAIN_N; i++) { const x = (rr() - 0.5) * 50, y = rr() * 16, z = (rr() - 0.5) * 50; rp.set([x, y, z, x + RAIN_DX, y - RAIN_LEN, z], i * 6); }
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(rp, 3));
-    rain = new THREE.Points(rg, new THREE.PointsMaterial({ color: 0xcfe3f2, size: 0.12, transparent: true, opacity: 0.7 })); rain.visible = false; scene.add(rain);
+    rain = new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: 0xcfe0f0, transparent: true, opacity: 0.55 })); lin(rain.material.color); rain.visible = false; scene.add(rain);
     const pts = outline();
     root.add(slab(pts.filter((q, i) => i % 2 === 0), 1.06, 0.45, -0.75, mat('sand', 0xf1dfb0)));   // 沙灘只露一圈邊，用一半的點就夠（省下的三角形給浮空的岩塊和雲）
     // 島底下：一層層往內收的石台（爸爸 10/27 給的造型概念），最下面垂著幾根岩根
@@ -368,6 +370,7 @@
     const sig = JSON.stringify(ctx.isles || []);
     if (sig === sigIsles) return;
     sigIsles = sig;
+    rainAvoid((ctx.isles || []).filter(s => s.bg === 'space').map(s => { const a = (s.a || 0) * Math.PI; return [Math.cos(a) * RX, Math.sin(a) * RZ, 3.4 * (s.mine ? 1.0 : 0.8) * 1.2]; }));   // WEATHER_SYNC_v1：宇宙沒有天氣
     clearLayer(isleLayer);
     const sand = mat('sand', 0xf1dfb0), grass = mat('grass', 0x8cc56f), off = mat('offIsle', 0xd8d2c0);
     const rocks = [], falls = [], puffParts = [], one = new THREE.Color(1, 1, 1), dim = new THREE.Color(0.9, 0.9, 0.9);
@@ -424,6 +427,17 @@
     lin(M.grass.color.setHex(c[0])); if (M.tree) lin(M.tree.color.setHex(c[1]));
     if (M.snow) lin(M.snow.color.setHex(/小雪|大雪|冬至|小寒|大寒/.test(term) ? 0xffffff : 0xeef3f6));
   }
+  // WEATHER_SYNC_v1：雨避開宇宙裡的島（每條線看上端，xz 在圈內的整條推到圈邊；記住原位置，重算不會越推越遠；只改既有的 position，不新建幾何）
+  function rainAvoid(holes) {
+    if (!rain) return; const pa = rain.geometry.attributes.position, ra = pa.array, n = ra.length / 6;
+    const o = rain.userData.xz || (rain.userData.xz = Float32Array.from({ length: n * 2 }, (_, k) => ra[(k >> 1) * 6 + (k & 1 ? 2 : 0)]));
+    for (let i = 0; i < n; i++) {
+      let x = o[i * 2], z = o[i * 2 + 1];
+      holes.forEach(([hx, hz, r0]) => { const r = r0 + 0.1, dx = x - hx, dz = z - hz, d = Math.hypot(dx, dz); if (d < r) { if (d > 1e-6) { x = hx + dx * r / d; z = hz + dz * r / d; } else x = hx + r; } });
+      ra[i * 6] = x; ra[i * 6 + 2] = z; ra[i * 6 + 3] = x + RAIN_DX; ra[i * 6 + 5] = z;
+    }
+    pa.needsUpdate = true;
+  }
   function setEnvironment(e) {
     const env = Object.assign({ phase: 'day', weather: 'clear' }, e || {}), ph = env.phase, wet = env.weather === 'rain' || env.weather === 'storm', night = ph === 'night';
     const fog = env.weather === 'fog', cloudy = env.weather === 'cloudy';
@@ -438,7 +452,7 @@
     { const sk = sky.clone().convertSRGBToLinear();   // 和背景完全同色，雲海外緣才會變成柔和的地平線（美術 10/29）
       paintClouds(wet ? linC(CLOUD_WET) : night ? linC(CLOUD_NIGHT) : linC(PAPER).lerp(sk, 0.3).multiplyScalar(fog || cloudy ? 0.94 : 1), sk); }
     scene.fog.near = fog ? 45 : wet ? 55 : 70; scene.fog.far = fog ? 110 : wet ? 125 : 140;   // 總覽：島都在 90 以內，不要被霧洗白（美術 10/29）
-    if (rain) rain.visible = wet && !CALM;
+    if (rain) rain.visible = wet;   // WEATHER_SYNC_v1：減少動態效果時雨照畫、不落下（美術 11/2）
     flash = env.weather === 'storm' && !CALM ? 1 : 0;
     glassMat.emissiveIntensity = night || ph === 'dusk' || wet ? 1.0 : 0.15;
     glowK = night || ph === 'dusk' || wet ? 1.0 : 0.8; if (M.glowV) M.glowV.color.setScalar(glowK); if (M.lamp) M.lamp.color.setHex(0xf2bf55).multiplyScalar(glowK); if (M.lampV) M.lampV.color.setHex(0xf2bf55).multiplyScalar(glowK); Object.keys(near).forEach(k => glassSet(near[k]));   // 三棟同一個夜光強度（燈籠、彩色玻璃、交易所窗）
@@ -490,7 +504,7 @@
     if (!renderer.domElement.isConnected) { running = false; nearAll(); return; }
     if (document.hidden) { setTimeout(() => requestAnimationFrame(loop), 1000); return; }
     const t = CALM ? 0 : performance.now() / 1000;
-    if (rain && rain.visible) { const ra = rain.geometry.attributes.position.array; for (let i = 1; i < ra.length; i += 3) { ra[i] -= 0.25; if (ra[i] < -0.5) ra[i] += 16; } rain.geometry.attributes.position.needsUpdate = true; }
+    if (rain && rain.visible && !CALM) { const ra = rain.geometry.attributes.position.array; for (let i = 1; i < ra.length; i += 6) { let y = ra[i] - 0.25; if (y < -0.5) y += 16; ra[i] = y; ra[i + 3] = y - RAIN_LEN; } rain.geometry.attributes.position.needsUpdate = true; }   // WEATHER_SYNC_v1：一條線兩個點一起落
     if (flash) { const f = Math.sin(t * 0.7) > 0.995; hemi.intensity = f ? 1.6 : 0.37; }   // 雷雨：偶爾閃一下
     if (boat) { boat.position.y = -0.25 + Math.sin(t * 1.3) * 0.06; boat.rotation.z = Math.sin(t * 0.9) * 0.03; }
     turnStep(); controls.update(); farNear(); nearStep(); renderer.render(scene, camera);

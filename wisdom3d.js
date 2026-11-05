@@ -596,5 +596,5 @@
     buildDockLabels();
     if (!running) { running = true; clock.getDelta(); loop(); }
   }
-  window.Wisdom3D = { mount };
+  window.Wisdom3D = { mount, setEnvironment: e => { if (!scene || !e) return; Object.assign(opts, { phase: e.phase || opts.phase, weather: e.weather || 'clear' }); setEnvironment(); } };   // WEATHER_SYNC_v1
 })();
