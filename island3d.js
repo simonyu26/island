@@ -632,6 +632,7 @@
   // 空地格：和 index.html 的 gardenSlot() 用同一個公式，改一邊就要改另一邊
   // 0–24 街與街之間的中線（由內往外）、25–34 外圈街道間兩側（Lv.5 開放）、35–39 外圈街道正前方（Lv.8 開放）
   function gardenSlot(i) {
+    if (i >= 40) { const s = Math.floor((i - 40) / 4), it = (ctx.islets || []).find(x => x.slot === s); return it ? isleTree(s, (i - 40) % 4, it.style) : null; }   // ISLET2_v1 小島
     const gap = j => -Math.PI / 2 + (j + 0.5) * (Math.PI * 2 / 5), dis = j => -Math.PI / 2 + j * (Math.PI * 2 / 5);
     let r, a;
     if (i < 25) { r = [4.8, 6.3, 7.8, 9.3, 10.8][Math.floor(i / 5)]; a = gap(i % 5); }
@@ -734,7 +735,7 @@
   }
   function buildGarden() {
     const G = ctx.garden || null, ti = Math.max(0, TERM_ORDER.indexOf(seasonNow || ctx.season));
-    const sig = JSON.stringify([G, ti]);
+    const isl = (ctx.islets || []).map(it => [it.slot, it.style]), sig = JSON.stringify([G, ti, isl]);
     if (sig === gardenSig) return;
     gardenSig = sig;
     clearLayer(gardenLayer);
@@ -755,9 +756,9 @@
       lb.position.set(HUT.x, 1.55, HUT.z); lb.userData.garden = true; gardenLayer.add(lb);
     }
     (G.list || []).forEach(p => {
-      const q = GARDEN_SLOTS[p.slot]; if (!q) return;
-      const m = plantMesh(p.k, ti, p.stage);
-      m.position.set(q.x, 0.2, q.z); m.rotation.y = (p.slot * 1.7) % (Math.PI * 2);
+      const q = p.slot < 40 ? GARDEN_SLOTS[p.slot] : gardenSlot(p.slot); if (!q) return;
+      const m = plantMesh(p.k, ti, p.stage); if (p.slot >= 40) m.scale.setScalar(ISLET_TREE_S);   // 小島上的樹縮小，樹冠才不會超出沙灘
+      m.position.set(q.x, p.slot < 40 ? 0.2 : isleGround(p.slot), q.z); m.rotation.y = (p.slot * 1.7) % (Math.PI * 2);
       m.userData.plant = p.id || String(p.slot);
       gardenLayer.add(m);
     });
@@ -917,6 +918,25 @@
   // ctx.islets = [{ key, slot, style, name, ic, keeper }]：本島外的海上排好六個位置（避開燈塔岬 -0.62π、渡船 0.9π 和遠方的智慧島），
   // 每座小島用紅色太鼓橋接回本島；點小島或橋就呼叫 ctx.onIslet(key)
   const ISLET_A = [0.3, 0.06, -0.18, -0.4, 0.62, 1.15].map(k => k * Math.PI), ISLET_R = 21.5;
+  // ISLET2_v1 小島種樹格：ISLET_TREE、isleTree 和 index.html 同一份，改一邊就要改另一邊。每種樣子 4 格 [離中心, 相對往本島方向的弧度]，
+  // 避開布景、地標和橋；小島上的樹縮成 ISLET_TREE_S 倍，最大的鳳凰木樹冠也不超出沙灘（美術、工程顧問 10/29）
+  const ISLET_TREE = { sand: [[1.8, -1.85], [2.5, -1.35], [2.5, 1.0], [2.5, 1.55]], pine: [[2.5, -1.6], [2.3, -0.95], [2.5, 0.95], [2.5, 1.5]], port: [[2.5, -1.55], [2.5, -1.0], [1.8, 0.95], [2.5, 1.45]], tea: [[1.8, -1.8], [2.5, -1.3], [1.8, 0.25], [2.2, 0.9]] }, ISLET_TREE_S = 0.7;
+  function isleTree(s, k, style) {   // 第 s 個位置、樣子 style 的小島上第 k 格的位置；[r, d]：離小島中心 r、相對「往本島」方向偏 d 弧度
+    const a = ISLET_A[s], t = (ISLET_TREE[style] || [])[k]; if (a == null || !t) return null;
+    return { x: Math.cos(a) * ISLET_R - Math.cos(a + t[1]) * t[0], z: Math.sin(a) * ISLET_R - Math.sin(a + t[1]) * t[0] };
+  }
+  // 小島格的地面高度：沙洲的白沙台、漁港的草地、茶園的梯田比沙灘高
+  function isleGround(i) {
+    const s = Math.floor((i - 40) / 4), it = (ctx.islets || []).find(x => x.slot === s), t = it && (ISLET_TREE[it.style] || [])[(i - 40) % 4]; if (!t) return 0.05;
+    const lx = t[0] * Math.sin(t[1]), lz = -t[0] * Math.cos(t[1]);
+    if (it.style === 'sand') return t[0] < 2.9 ? 0.16 : 0.05;
+    if (it.style === 'port') return Math.hypot(lx + 0.3, lz + 0.3) < 2.6 ? 0.2 : 0.05;
+    if (it.style === 'tea') return t[0] < 1.5 ? 0.85 : t[0] < 2.1 ? 0.55 : t[0] < 2.7 ? 0.25 : 0.05;
+    return 0.05;
+  }
+  // 小島的地標位（每座 2 個，本地座標）：避開各樣子的布景；茶園的橋頭右邊有竹簍、左邊有茶畦，所以放在外側；松樹岩島的岩石大，往沙灘外緣挪
+  const ISLET_MARK = { sand: [[1.25, -2.15], [-1.25, -2.15]], pine: [[1.55, -2.5], [-1.55, -2.5]], port: [[1.25, -2.15], [-1.25, -2.15]], tea: [[2.35, 1.75], [-2.35, 1.75]] };
+  function isleXZ(a, x, z) { const t = -a + Math.PI / 2; return { x: Math.cos(a) * ISLET_R + x * Math.cos(t) + z * Math.sin(t), z: Math.sin(a) * ISLET_R - x * Math.sin(t) + z * Math.cos(t) }; }
   let isletLayer, isletSig = null;
   function isletMesh(style) {
     const g = new THREE.Group();
@@ -1485,20 +1505,25 @@
   }
   function buildMarks() {
     const end = weekIdx != null && ctx.S.weeks[weekIdx] ? ctx.S.weeks[weekIdx].end : null;
-    const list = (ctx.marks || []).filter(m => !end || !m.at || m.at <= end), sig = JSON.stringify(list);
+    const list = (ctx.marks || []).filter(m => !end || !m.at || m.at <= end), isl = ctx.islets || [], sig = JSON.stringify([list, isl.map(it => [it.slot, it.style])]);
     if (sig === markSig) return;
     const had = markSig === null ? null : new Set(markLayer.children.map(c => c.userData.mark));
     markSig = sig;
     clearLayer(markLayer);
     spinners = [];
-    const used = {};
+    const used = {}; let over = 0;
     list.forEach(m => {
       const j = SUBJECTS.indexOf(m.s); if (j < 0) return;
-      const n = used[m.s] = (used[m.s] || 0) + 1; if (n > MARK_SLOTS.length) return;
+      const n = used[m.s] = (used[m.s] || 0) + 1, mk = n <= MARK_SLOTS.length || isl[Math.floor(over / 2)] ? markMesh(m.model || m.id) : null;
+      if (n > MARK_SLOTS.length) {   // ISLET2_v1 本島這條街滿了：長到小島上，正面朝外海
+        const it = isl[Math.floor(over / 2)], k = over++ % 2; if (!it || ISLET_A[it.slot] == null) return;
+        const a = ISLET_A[it.slot], sp = (ISLET_MARK[it.style] || ISLET_MARK.sand)[k], q = isleXZ(a, sp[0], sp[1]), o = isleXZ(a, sp[0] * 3, sp[1] * 3);
+        mk.position.set(q.x, 0.05, q.z); mk.lookAt(o.x, 0.05, o.z);
+      } else {
       const [r, da] = MARK_SLOTS[n - 1], a = -Math.PI / 2 + j * (Math.PI * 2 / 5) + da;
-      const mk = markMesh(m.model || m.id);
       mk.position.set(Math.cos(a) * r, 0.18, Math.sin(a) * r);
       mk.lookAt(Math.cos(a) * (r + 5), 0.18, Math.sin(a) * (r + 5));   // 正面朝海
+      }
       mk.userData.mark = m.id;
       markLayer.add(mk);
       // 這次打開 App 之後才讀完的：冒出來

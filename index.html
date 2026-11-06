@@ -167,6 +167,22 @@
   .furn { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 8px; }
   .furn button { background: #fff; color: var(--ink); border: 1.5px solid var(--plum-light); padding: 8px 4px; font-size: 13px; }
   .furn button span { display: block; font-size: 26px; } .furn button small { display: block; color: var(--muted); font-size: 11px; }
+  /* 四港航路 PORTS_v1：一條海路串起六個港 */
+  .seg3 button { flex: 1 1 auto !important; white-space: nowrap; padding: 6px 4px; }
+  .ports { position: relative; height: 150px; margin-top: 12px; border-radius: 12px; overflow: hidden; border: 1.5px solid #c9a273; background-color: #f6efe0;
+           background-image: linear-gradient(#e3d7bf 1px, transparent 1px), linear-gradient(90deg, #e3d7bf 1px, transparent 1px); background-size: 100% 36px, 36px 100%; }   /* 古地圖：老紙色＋經緯格線（美術方向 A，爸爸 11/1） */
+  .ports .pmap { position: absolute; z-index: 1; pointer-events: none; top: 0; left: 22px; width: calc(100% - 44px); height: 100%; overflow: visible; }   /* 航線畫在選中底上面 */
+  .ports .pmap path { fill: none; vector-effect: non-scaling-stroke; }
+  .ports .pdeco { position: absolute; z-index: 1; transform: translateX(-50%); line-height: 0; pointer-events: none; }   /* 放在相鄰兩港的中點；畫在選中底的上面，不會被切掉 */
+  .ports .pmap .sail { stroke: #2b4a6f; stroke-width: 2.5; }   /* 走過的航段：實線 */
+  .ports .pmap .sea { stroke: #8a8580; stroke-width: 2; stroke-dasharray: 1 5; stroke-linecap: round; }   /* 還沒走：點線（不只靠顏色） */
+  .ports .prose { position: absolute; left: 9px; top: 4px; }   /* 羅盤左上（一模在低位，左上空著） */
+  .ports .port { position: absolute; top: 4px; bottom: 4px; width: 44px; margin-left: -22px; padding: 92px 0 0; display: flex; flex-direction: column; align-items: center; background: none; color: #2f2a26; border-radius: 10px; }   /* 一整欄：港上方 12px 到字下方，選中底和觸控區都是這一欄 */
+  .ports .port .ppic { position: absolute; z-index: 2; left: 14px; line-height: 0; }
+  .ports .port b { font-size: 13px; line-height: 1.2; white-space: nowrap; }
+  .ports .port small { display: block; font-size: 12px; line-height: 1.2; color: #5f5a55; font-weight: 400; white-space: nowrap; }
+  .ports .port.on { background: var(--plum-light); }
+  @media (max-width: 359px) { .seg3 button { font-size: 15px; } }
   /* 今日のおつとめ板 */
   .board .brow { display: flex; align-items: center; gap: 8px; width: 100%; background: none; color: var(--ink); padding: 10px 2px; border-radius: 0; border-top: 1px dashed var(--plum-light); text-align: left; }
   .board .brow:first-of-type { border-top: 0; }
@@ -341,11 +357,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.2.1';
+const APP_VERSION = '2.50.3.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
-const NEXT_UP = { when: '11/6（五）', items: ['🌳 預計 11/6（五）：衛星小島上也可以種樹了，每座 4 格；讀完的書長出的地標，本島放不下時也會長到小島上。如果時間有變，會在島上另外跟你說。'], fam: true };
+const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.3.1', date: '2026-11-06', items: ['📅 九下才會教的單元先不出考古題了，例如二次函數、電與磁和機率，地科也整科先不出；這些單元答錯過的瓶子還在海灘上，先不會出給你。2/1 會自動打開，九上的單元照常出。', '🎒 「你的生活」小卡多了幾講：瞇的第 4、5、6 講和郭哥的第 3、5、8 講。你在「你的生活」勾過的話，「搬到你的生活」那一步會換成比較貼近你的情境。'] },
+  { v: '2.50.3', date: '2026-11-06', fam: [0], items: ['🌳 衛星小島的沙灘上可以種樹了：每座 4 格，在植木屋地圖下面的「小島的沙灘」種，本島的樹也能移植過去', '🏞️ 本島一條街的地標放滿 18 個以後，新讀完的書會把地標長到小島上', '⚓ 航海日誌多了「航路」：每一次模考和會考都是一個港，一模和校模已經到過了。想的話，校模的港也可以寫歸港三句，寫的內容在 App 裡只有你自己看得到。'] },
   { v: '2.50.2.1', date: '2026-11-05', fam: [0], items: ['🏮 燈室多了兩張以週為單位的圖：「補好的題」看最近 12 週累積了幾盞燈籠，點某一週可以看那週亮了哪幾盞；「錯的時候，最常是哪一種」那張卡的最上面，多了最近 8 週每週錯在哪一種。'] },
   { v: '2.50.2', date: '2026-11-05', fam: [2, 3, 5, 6], items: ['🎒 智慧島碼頭多了一張「你的生活」小卡：勾幾個你常碰到的生活場景，「搬到你的生活」那一步會換成比較貼近你的情境（先從阿律的第 9、10、12 講開始），也可以按「換個情境看看」。只有你自己看得到。', '✉️ 智慧島交完筆記、老師回了以後，可以再回老師一句，老師會再回你；不回也沒關係。', '🏝️ 家人自己的島：「更多」頁多了「其他」，有吃藥提醒、航海日誌和「讓島順起來」；首頁不再顯示連續週數和休息卡。', '🎒 家人的智慧島也多了「你的生活」小卡，可以勾幾個你常碰到的生活場景；大人版的情境還在寫，寫好會慢慢換上。勾了什麼只有你自己看得到。', '🔐 玩法說明補上兩段：每個月的讀書感覺和各畫面待了幾分鐘，記在哪裡、誰看得到；還有寫給智慧島老師的那一句會交給 AI，寫到讓人擔心的話會怎麼處理。', '🌦️ 右上角的天氣改用中央氣象署臺北站的實際觀測，大約 10 分鐘更新一次；氣象署暫時沒有資料時，才用原本的預報。', '🌧️ 主島和智慧島也會跟著臺北的天氣變：臺北下雨，主島和智慧島也一起下雨。選在「宇宙裡」的島本來就沒有天氣。', '🗺️ 智慧島頁多了一張碼頭導覽地圖：從上面看整座島，上過課的小屋會亮燈，點小屋就能進去。', '🧺 拿到素材的小提示更準了：如果這包沒讓竹籃變多，會直接告訴你；網路不穩的時候，做好的料理也不會被記成兩次。'] },
   { v: '2.50.1.2', date: '2026-11-05', fam: [0, 1], items: ['🌱 計時分兩次也會合起來算了：同一天、同一種計時的分鐘加在一起，每 25 分鐘一個，例如 15 分鐘加 10 分鐘也有一個。之前的紀錄也重新算過{綠}。', '🕘 忘了按計時也沒關係：讀書、運動、藝文、閱讀的計時卡片下面多了「補登一筆」，可以補今天和前兩天，填開始和結束的時間，綠點跟計時一樣算。'] },   // HANDLOG_v1
@@ -1178,7 +1196,7 @@ function viewHomeBody() {
       <div class="card" style="margin-top:12px" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子；點燈塔、中間的家、植木屋、書店可以走進去，點你種的樹會看到小木牌。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>
       <details class="card" ${replay.idx != null || replay.timer ? 'open' : ''}><summary><b>⏳ 成長回放</b><span class="muted">・看小島一週一週長大</span></summary><div id="i3dTime" style="margin-top:10px">${card('timeline', timelineHtml())}</div></details>`
     : `<div class="island"><div class="districts">${districts}</div></div>`;
-  return hud() + week3FamCard() + boardCard() + (use3D() ? '' : placesRow()) + `
+  return hud() + week3FamCard() + portEveCard() + boardCard() + (use3D() ? '' : placesRow()) + `
     ${toggle}${islandView}
     ${card('kairan', kairanCard())}`;
 }
@@ -2737,6 +2755,15 @@ PLACES.advisor = { name: '燈室', ic: '🧭', tab: 'lamp', title: '🧭 燈室�
 const ISLET_COST = [300, 500, 800, 1200, 1600, 2000];
 const ISLET_DIRS = ['右前方', '右邊', '右後方', '後方', '左前方', '左後方'];   // 位置的角度在 island3d.js 的 ISLET_A，避開燈塔岬和渡船
 const ISLET_KEYS = ['islea', 'isleb', 'islec', 'isled', 'islee', 'islef'];   // 管理員存在 keeper:<key>
+// ISLET2_v1 小島的種樹格（40 + 位置×4 + k）：ISLET_A、ISLET_R、ISLET_TREE、isleTree 和 island3d.js 同一份，改一邊就要改另一邊（測試會比兩邊每種樣子、64 格的座標）
+// 每種樣子 4 格，避開布景、地標和橋，樹冠（小島上的樹縮成 0.7 倍）不超出沙灘（美術、工程顧問 10/29）
+const ISLET_A = [0.3, 0.06, -0.18, -0.4, 0.62, 1.15].map(k => k * Math.PI), ISLET_R = 21.5;
+const ISLET_TREE = { sand: [[1.8, -1.85], [2.5, -1.35], [2.5, 1.0], [2.5, 1.55]], pine: [[2.5, -1.6], [2.3, -0.95], [2.5, 0.95], [2.5, 1.5]], port: [[2.5, -1.55], [2.5, -1.0], [1.8, 0.95], [2.5, 1.45]], tea: [[1.8, -1.8], [2.5, -1.3], [1.8, 0.25], [2.2, 0.9]] };
+function isleTree(s, k, style) {   // 第 s 個位置、樣子 style 的小島上第 k 格的位置；[r, d]：離小島中心 r、相對「往本島」方向偏 d 弧度
+  const a = ISLET_A[s], t = (ISLET_TREE[style] || [])[k]; if (a == null || !t) return null;
+  return { x: Math.cos(a) * ISLET_R - Math.cos(a + t[1]) * t[0], z: Math.sin(a) * ISLET_R - Math.sin(a + t[1]) * t[0] };
+}
+const MARK_PER_ST = 18, MARK_PER_ISLE = 2;   // 本島每條街的地標位（island3d.js 的 MARK_SLOTS.length）、每座小島的地標位
 const ISLET_STYLES = {
   sand: { name: '沙洲小島', ic: '🏖️', desc: '白沙灘、貝殼，還有一座小小的祠', roles: ['撿貝殼的島主', '海龜', '寄居蟹', '海邊小屋的店長'], emojis: ['🐢', '🦀', '🐚', '🦭', '🧑‍🦱', '👧'] },
   pine: { name: '松樹岩島', ic: '🌲', desc: '灰色的岩石上長著彎彎的松樹，旁邊立著石燈籠', roles: ['守松的老爺爺', '石燈籠的狐狸', '寫生的畫家', '松鼠'], emojis: ['👴', '🦊', '🧑‍🎨', '🐿️', '🦉', '🐒'] },
@@ -2749,7 +2776,7 @@ const ISLET_PLAY = {
   pine: { soon: '11 月下旬', play: '岩石邊有 7 盞石燈籠。這週每有一天讀書，就多亮一盞，週一換新的一週。亮幾盞都好，沒亮的那天就當作休息日。' },
   port: { soon: '11 月下旬', play: '那天讀完一格社會計畫，漁船回港會分你 1 條魚或 1 片昆布，可以拿去屋台做料理。' },
   tea: { play: '那天讀完一格國文計畫，茶園會多採 1 份茶葉給你（一天 1 個），可以拿去屋台做料理。' } };
-const ISLET_COMMON = [['每座小島都可以請一位你自己設定的主人，主人會寫話給你。'], ['小島上有 4 格可以種樹，讀完的書長出來的地標，本島放不下時也會長到小島上。', '11/13']];
+const ISLET_COMMON = [['每座小島都可以請一位你自己設定的主人，主人會寫話給你。'], ['小島上有 4 格可以種樹，讀完的書長出來的地標，本島放不下時也會長到小島上。']];
 ISLET_COMMON.push(['植木屋、獨立書店、島の屋台和音樂廳可以搬到小島上住，每座小島住一間，隨時可以搬回本島。', '12 月底']);   // ISLEPREVIEW_v1 搬建物預告（12/20 前確認日期）
 function isletPlayHtml(style) {
   const x = ISLET_PLAY[style], li = (t, soon) => `<li>${soon ? `<span class="pill" style="font-size:11px;margin-right:4px">即將開放（${soon}）</span>` : ''}${esc(t)}</li>`;
@@ -2851,6 +2878,7 @@ function inSeason(p) { const t = termIdx(), [a, b] = p.best; return a <= b ? t >
 // 空地格：和 island3d.js 的 gardenSlot() 用同一個公式，改一邊就要改另一邊
 // 0–24 街與街之間的中線（由內往外）、25–34 外圈街道間兩側（Lv.5 開放）、35–39 外圈街道正前方（Lv.8 開放）
 function gardenSlot(i) {
+  if (i >= 40) { const s = Math.floor((i - 40) / 4), x = islets().find(y => y.slot === s); return x ? isleTree(s, (i - 40) % 4, x.style) : null; }   // ISLET2_v1 小島
   const gap = j => -Math.PI / 2 + (j + 0.5) * (Math.PI * 2 / 5), dis = j => -Math.PI / 2 + j * (Math.PI * 2 / 5);
   let r, a;
   if (i < 25) { r = [4.8, 6.3, 7.8, 9.3, 10.8][Math.floor(i / 5)]; a = gap(i % 5); }
@@ -2859,10 +2887,13 @@ function gardenSlot(i) {
   return { x: Math.cos(a) * r, z: Math.sin(a) * r };
 }
 function slotName(i) {
+  if (i >= 40) { const x = islets().find(y => y.slot === Math.floor((i - 40) / 4)); return (x ? isletName(x) : '小島') + '的沙灘'; }
   if (i >= 35) return SUBJECT_NAME[SUBJECTS[i - 35]] + '街前面的海邊';
   const j = (i < 25 ? i : i - 25) % 5;
   return SUBJECT_NAME[SUBJECTS[j]] + '街和' + SUBJECT_NAME[SUBJECTS[(j + 1) % 5]] + '街之間' + (i >= 25 ? '的海邊' : '');
 }
+// 已經蓋好的小島上的種樹格（小島蓋好就開放，不看等級）
+function isletSlots() { return islets().flatMap(x => [0, 1, 2, 3].map(k => 40 + x.slot * 4 + k)); }
 function slotCount() { return D.level >= 8 ? 40 : D.level >= 5 ? 35 : 25; }
 function gardenOf() { const g = S.save.garden || {}; return { list: (g.list || []).slice(), spent: g.spent || 0 }; }
 function plantStage(p) { const d = Math.round((parseD(S.today) - parseD(p.at)) / 86400000); return d >= 14 ? 2 : d >= 7 ? 1 : 0; }
@@ -2895,23 +2926,36 @@ function gardenMap() {
   const streets = SUBJECTS.map((s, i) => { const a = -Math.PI / 2 + i * (Math.PI * 2 / 5), x = Math.cos(a) * 7.2, z = Math.sin(a) * 7.2;
     return `<polygon points="${hex(x, z, 3.6)}" fill="${PLATE_C[s]}" opacity=".55"/><text x="${x}" y="${z + 0.5}" font-size="1.5" text-anchor="middle" fill="#3a2a33">${SUBJ_IC[s]}${esc(SUBJECT_NAME[s])}街</text>`; }).join('');
   const hut = { x: Math.cos(Math.PI / 10) * 3.2, z: Math.sin(Math.PI / 10) * 3.2 };
-  const slots = Array.from({ length: 40 }, (_, i) => { const q = gardenSlot(i), p = used[i], on = draft.gSlot === i;
-    if (p) { const pl = plantOf(p.k), me = draft.gView === p.id || draft.gMove === p.id;
-      return `<g onclick="openGarden('${p.id}')" style="cursor:pointer">${me ? `<circle cx="${q.x}" cy="${q.z}" r="0.95" fill="none" stroke="#741b47" stroke-width=".18"/>` : ''}<text x="${q.x}" y="${q.z + 0.45}" font-size="${[0.9, 1.15, 1.4][plantStage(p)]}" text-anchor="middle">${pl ? pl.ic : '🌱'}</text></g>`; }
-    if (i >= n) return `<circle cx="${q.x}" cy="${q.z}" r="0.3" fill="#9aa48a" opacity=".5"/>`;
-    return `<circle class="${picking ? 'free' : ''}" cx="${q.x}" cy="${q.z}" r="${on ? 0.8 : 0.55}" fill="${on ? '#741b47' : '#fff'}" stroke="#8a5f42" stroke-width=".12" stroke-dasharray="${picking ? '0' : '.3 .2'}" ${picking ? `onclick="gardenTapSlot(${i})"` : ''}/>`; }).join('');
+  const slots = Array.from({ length: 40 }, (_, i) => slotDot(i, gardenSlot(i), used[i], picking, i >= n)).join('');
   return `<svg class="gmap" viewBox="-14.6 -14.6 29.2 29.2" role="img" aria-label="小島的空地地圖">
     <circle r="14.4" fill="#e6c98e"/><circle r="13" fill="#9bc87a"/>${streets}
     <circle r="1.6" fill="#ead1dc"/><text y=".5" font-size="1.4" text-anchor="middle">${houseTier().ic}</text>
     <text x="${hut.x}" y="${hut.z + 0.5}" font-size="1.4" text-anchor="middle">🛖</text>
     <text x="${Math.cos(-Math.PI * 0.62) * 13.6}" y="${Math.sin(-Math.PI * 0.62) * 13.6 + 0.5}" font-size="1.4" text-anchor="middle">🗼</text>
-    ${slots}</svg>`;
+    ${slots}</svg>${isletGardenMap(used, picking)}`;
+}
+function slotDot(i, q, p, picking, locked) {
+  const on = draft.gSlot === i;
+  if (p) { const pl = plantOf(p.k), me = draft.gView === p.id || draft.gMove === p.id;
+    return `<g onclick="openGarden('${p.id}')" style="cursor:pointer">${me ? `<circle cx="${q.x}" cy="${q.z}" r="0.95" fill="none" stroke="#741b47" stroke-width=".18"/>` : ''}<text x="${q.x}" y="${q.z + 0.45}" font-size="${[0.9, 1.15, 1.4][plantStage(p)]}" text-anchor="middle">${pl ? pl.ic : '🌱'}</text></g>`; }
+  if (locked) return `<circle cx="${q.x}" cy="${q.z}" r="0.3" fill="#9aa48a" opacity=".5"/>`;
+  return `<circle class="${picking ? 'free' : ''}" cx="${q.x}" cy="${q.z}" r="${on ? 0.8 : 0.55}" fill="${on ? '#741b47' : '#fff'}" stroke="#8a5f42" stroke-width=".12" stroke-dasharray="${picking ? '0' : '.3 .2'}" ${picking ? `onclick="gardenTapSlot(${i})"` : ''}/>`;
+}
+// 小島的空地：每座小島一張小地圖，紅色的是太鼓橋（往本島那一邊在上面），格子的相對位置和 3D 一樣
+function isletGardenMap(used, picking) {
+  const have = islets(); if (!have.length) return '';
+  return `<div class="muted" style="margin-top:10px;font-size:13px">🏝️ 小島的沙灘（紅色是太鼓橋，往本島那一邊）</div>
+    <div class="row" style="gap:6px;justify-content:center;margin-top:4px">${have.map(x => `<div style="text-align:center;width:30%;min-width:92px">
+      <svg class="gmap" viewBox="-4.4 -4.8 8.8 9" role="img" aria-label="${esc(isletName(x))}的空地"><circle r="3.8" fill="#e6c98e"/><circle r="2.7" fill="#9bc87a" opacity=".7"/><rect x="-.45" y="-4.8" width=".9" height="1.3" fill="#c0392b"/>
+        <text y=".6" font-size="1.7" text-anchor="middle">${ISLET_STYLES[x.style].ic}</text>
+        ${ISLET_TREE[x.style].map(([r, d], k) => { const i = 40 + x.slot * 4 + k, t = -Math.PI / 2 + d; return slotDot(i, { x: +(Math.cos(t) * r).toFixed(2), z: +(Math.sin(t) * r).toFixed(2) }, used[i], picking, false); }).join('')}</svg>
+      <div style="font-size:12px">${esc(isletName(x))}</div></div>`).join('')}</div>`;
 }
 function viewGarden() {
   const kp = keeperOf('garden'), daily = S.save['daily:' + S.today], g = gardenOf(), fam = isFamily();
   const pick = draft.gPick && plantOf(draft.gPick), moving = draft.gMove && g.list.find(p => p.id === draft.gMove);
   const view = draft.gView && g.list.find(p => p.id === draft.gView);
-  const free = slotCount() - g.list.filter(p => p.slot < slotCount()).length;
+  const free = slotCount() - g.list.filter(p => p.slot < slotCount()).length + isletSlots().filter(i => !g.list.some(p => p.slot === i)).length;
   const head = `<div class="card"><div class="row"><h2 class="grow" style="margin:0">🌱 植木屋</h2>${famNumOk('green') ? `<span class="muted">你有 <b>${D.green}</b> 綠點</span>` : ''}</div>
     ${placeIntro('garden')}
     ${kp && local.get('islandMet:garden') ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.garden) || gardenKeeperLine())}</div></div>` : ''}
@@ -3329,6 +3373,8 @@ function bottles() {
     const rv = b.rv = S.save['rv:' + b.id] || {};
     b.lantern = rv.lantern || null; b.streak = reviewStreak(rv);
     b.due = reviewDue(rv, b.wrongAt); b.friend = !!b.lantern;
+    const w = b.rec.src ? '' : (b.rec.bank && bankIdNotYet(b.rec.bank)) || notYetOpen(laneOf(b.rec, b.lane), unitOf(b.rec, b.id));   // 九下暫緩：還沒教到的單元先停在海灘（自己拍的錯題、單字不算）
+    if (w && !(b.due > w)) { b.due = w; b.wait = w; }
   });
   return out.sort((a, b) => (b.wrongAt || '').localeCompare(a.wrongAt || ''));
 }
@@ -3460,10 +3506,10 @@ async function stkLoadEx(sid) {
 }
 // 練一題：先找這個次觀念、她沒做過的會考考古題（不用 AI）；沒有才請 AI 對準這個次觀念出一題
 async function pickSidBank(lane, sid) {
-  const b = await loadBank(); if (!b || !b.items || !conceptsData) return null;
+  const b = await loadBank(); await loadUnits(); if (!b || !b.items || !conceptsData) return null;
   const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
   const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);
-  const list = b.items.filter(x => x.lane === lane && conceptsData.bank[x.id] === sid && !used.has(x.id) && noGroup(x));
+  const list = b.items.filter(x => x.lane === lane && conceptsData.bank[x.id] === sid && !used.has(x.id) && noGroup(x) && !bankNotYet(x));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
 async function stkPractice(sid) {
@@ -3618,8 +3664,8 @@ function lightCard() {
 const lightOpen = {};
 const lightDet = k => `${lightOpen[k] ? 'open' : ''} ontoggle="lightOpen['${k}']=this.open"`;
 function lightFloors(cur) {
-  const f = [['light', '1F', '🌊 海灘'], ['log', '2F', '📖 航海日誌'], ['lamp', '3F', '🔭 燈室'], ['paper', '', '⛵ 碼頭']];
-  return `<div class="floors">${f.map(([t, n, name]) => `<button class="${cur === t ? 'on' : ''}" ${cur === t ? 'disabled' : `onclick="go('${t}');window.scrollTo(0,0)"`}><small>${n || '岬角下'}</small>${name}</button>`).join('')}</div>`;
+  const f = [['light', '1F', '🌊 海灘'], ['log', '2F', '📖 <span style="white-space:nowrap">航海</span><span style="white-space:nowrap">日誌</span>'], ['lamp', '3F', '🔭 燈室'], ['paper', '', '⛵ 碼頭']];
+  return `<div class="floors">${f.map(([t, n, name]) => `<button class="${cur === t ? 'on' : ''}" ${cur === t ? 'disabled' : `onclick="go('${t}');window.scrollTo(0,0)"`}><small>${n || '岬角下'}</small>${name}</button>`).join('')}</div>${cur === 'log' && draft.logMode === 'port' ? '' : portHint()}`;
 }
 function viewLight() {
   if (isFamily() && !seeOpen('exam')) return famLock('exam');
@@ -3665,7 +3711,7 @@ function viewLightBody() {
     ${fam ? '' : photoCard()}
     ${fam ? '' : lightWordCard()}
     ${wrongTypesCard(fam, open ? '今天還有一題挑戰沒回答（在這一頁上方），答完就能按「練一題」。' : full ? '今天的 ' + XQ_DAILY + ' 題挑戰做完了，明天就能再按「練一題」。' : '')}
-    ${later.length ? `<details class="card" ${lightDet('later')}><summary><b>🌫️ 還在海上漂的瓶子（${later.length}）</b></summary>${later.slice(0, 30).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.due)} 漂回</span>`)).join('')}</details>` : ''}
+    ${later.length ? `<details class="card" ${lightDet('later')}><summary><b>🌫️ 還在海上漂的瓶子（${later.length}）</b></summary>${later.slice(0, 30).map(b => row(b, `<span class="muted" style="font-size:12px">${short(b.due)} ${b.wait ? '學校教到再' : ''}漂回</span>`)).join('')}</details>` : ''}
     <details class="card" ${lightDet('furn')}><summary><b>🎁 燈籠送的家具</b><span class="muted">・${LANTERN_REWARDS.filter(f => st.lanterns >= f.lanterns).length}／${LANTERN_REWARDS.length} 件</span></summary><div class="muted" style="margin-top:6px">放走的紙燈籠累積起來，守燈人會送你燈塔風格的家具，不用島幣，送了就不會收回，可以擺在我的家。</div>
       <div class="furn">${LANTERN_REWARDS.map(f => { const has = st.lanterns >= f.lanterns;
         return `<button class="${has ? 'has' : ''}" disabled><span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? '已經送到家了' : st.lanterns + '／' + f.lanterns + ' 盞'}</small></button>`; }).join('')}</div></details>
@@ -3843,6 +3889,7 @@ function logWeeks() { return weekList().filter(w => w <= S.today); }
 function logGo(wk) { draft = { logWeek: wk }; render(); window.scrollTo(0, 0); }
 function viewLog() {
   if (draft.logMode === 'month') return viewLogMonth();
+  if (draft.logMode === 'port' && portOn()) return viewLogPort();
   const weeks = logWeeks(), cur = mondayOf(S.today), fam = isFamily();
   const wk = weeks.indexOf(draft.logWeek) >= 0 ? draft.logWeek : weeks[weeks.length - 1] || cur, i = weeks.indexOf(wk);
   const c = lightWordCtx(wk), end = addD(wk, 6), inWk = d => d && d >= wk && d <= end;
@@ -3884,7 +3931,107 @@ function logBack() { const f = replay.from || {}; go('log'); draft = f.month ? {
 function logIslandBtn(wk) { return logIslandOk() ? `<button class="ghost" style="width:100%;margin-bottom:8px" onclick="logIsland('${wk}')">🏝️ 看那一週的島</button>` : '<div class="muted" style="text-align:center;margin-bottom:8px">打開 3D 小島才看得到那一週的島</div>'; }
 function logModes(cur) {
   const b = (k, t, js) => `<button data-s="2" class="${cur === k ? 'on' : ''}" style="flex:1" ${cur === k ? '' : `onclick="${js}"`}>${t}</button>`;
-  return `<div class="seg" style="margin-top:8px">${b('week', '📄 一週一頁', "logGo('')")}${b('month', '🖼️ 月末繪卷', "logMonthGo('')")}</div>`;
+  return `<div class="seg${portOn() ? ' seg3' : ''}" style="margin-top:8px">${b('week', '📄 一週一頁', "logGo('')")}${b('month', '🖼️ 月末繪卷', "logMonthGo('')")}${portOn() ? b('port', '⚓ 航路', "logPortGo('')") : ''}</div>`;
+}
+/* ===== 四港航路 PORTS_v1（爸爸 10/31）：每次模考前一晚寫出航前夜兩句、考完寫歸港三句，六個港連成一條航路（爸爸 11/1：每次大考一個港，一模、校模上線時已走過，不從零開始）。
+   全是她自己的話，不顯示分數、不給獎勵、沒有集滿進度，不送 AI；port:<id> 家人看不到（See never）。場次日期每年要更新（學習指引/重要日期.md） ===== */
+const PORTS = [
+  { id: 'mo0', name: '一模', days: ['2026-09-08', '2026-09-09'], start: true },   // 出發港：只有歸港、沒有錯因統計
+  { id: 'mo1', name: '校模', days: ['2026-10-29', '2026-10-30'] },   // 上線時已走過：前夜那段不畫，可以補寫歸港
+  { id: 'mo2', name: '二模', days: ['2026-12-23', '2026-12-24'] },
+  { id: 'mo3', name: '三模', days: ['2027-02-18', '2027-02-19'] },
+  { id: 'mo4', name: '四模', days: ['2027-04-15', '2027-04-16'] },
+  { id: 'cap', name: '會考', days: EXAM_DATES }];
+const PORT_EVE = [['這次我想驗證的一件事', '例：文言題先看注釋，會不會比較順'], ['我的答題打算', '例：英文閱讀先看題目再看文章']];
+const PORT_BACK = [['我想驗證的事，結果怎樣？', ''], ['這次最常見的錯因', ''], ['下一段航程，我想留下、換掉，或第一次試試的一個方法', '']];
+const PORT_BACK_NOEVE = '這次考完，最意外的一件事？';   // 沒寫出航前夜的港（校模、一模、略過的）第 1 句換這句，免得湊答案（學習策略 11/1）
+function portBackQ(r) { return portHas(r.eve) ? PORT_BACK : [[PORT_BACK_NOEVE, '']].concat(PORT_BACK.slice(1)); }
+const PORT_NOTE = '這句在 App 裡只有你自己看得到。如果寫到讓人擔心的話，爸爸會收到一則提醒（提醒裡沒有你寫的字），請他找時間關心你。';   // 和寒假合宿同一句（文案審查 99、100）
+const PORT_NOTE_OFF = '這句在 App 裡只有你自己看得到。如果寫到讓人擔心的話，畫面上會出現輔導室、1925 安心專線這些可以找人聊聊的方式，不會通知任何人。';   // CONCERN_LOCAL_MAIL 關著（工程顧問 11/3：getState 的 concernMail 布林，沒設當 false）
+function portNote() { return S && S.concernMail === true ? PORT_NOTE : PORT_NOTE_OFF; }
+let PORT_STAGE = 1;   // 第一段（11/7 v2.50.3，工程顧問 11/1）：只有航路頁和校模的歸港；改 2 開出航前夜卡、前夜表單、一模歸港（12/16 前，趕二模）
+const PORT_EVE_END = 21;
+// 海圖的小圖（美術方向 A）：到過的港＝實心藍圓＋白錨，還沒到＝空圈；右上角羅盤（viewBox 上緣多留 6px，N 不被切）
+const PORT_Y = [48, 48, 48, 48, 48, 48];   // 六個港一樣高：港有高低會被讀成成績折線圖（爸爸 11/1），起伏只交給航線
+const PORT_BEND = [[.35, -19, .4, -19], [.5, 3, .5, -2], [.4, 15, .3, 15], [.3, -24, .45, -24], [.5, 13, .35, 13]];   // 每段航線繞法不同：幅度約 10～18px 不規則，第二段幾乎是直的（美術 11/1：不要像正弦波）   // 每段航線兩個控制點：[起點往前比例, 起點上下偏移, 終點往回比例, 終點上下偏移]，繞的樣子各不相同
+const PORT_DECO = [['r', 1, 76], ['w', 2, 16], ['r', 3, 12], ['w', 3, 80], ['w', 4, 20]];   // 海的裝飾（美術 11/1）：[種類, 第幾段航線中間, y]；三道波紋、兩塊礁石，各自一張小 SVG 不被拉扁，離航線 8px 以上
+const PORT_WAVE = '<svg viewBox="0 -1 9 4" width="18" height="8"><path d="M0.5 1.5q2 -2.4 4 0t4 0" fill="none" stroke="#a9c7dc" stroke-width=".75" stroke-linecap="round"/></svg>';   // ～ 形波浪（美術 11/1）
+const PORT_REEF = '<svg viewBox="0 1 8 5" width="16" height="10"><path d="M1 3.5q2 -3 5 -1q1.5 2.5 -1 3q-3 .8 -4 -2z" fill="#c9a273" stroke="#2f2a26" stroke-width=".5"/></svg>';   // 不規則扁石
+const PORT_PIN = '<svg viewBox="-8 -8 16 16" width="16" height="16"><circle r="8" fill="#2b4a6f"/><path d="M0 -4v8M-4 1q4 4 8 0M-2.5 -2h5" stroke="#fffdf8" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>';
+const PORT_RING = '<svg viewBox="-8 -8 16 16" width="16" height="16"><circle r="6" fill="#f6efe0" stroke="#5f5a55" stroke-width="2"/></svg>';
+const PORT_ROSE = '<svg class="prose" viewBox="-16 -26 32 42" width="18" height="24" aria-hidden="true"><circle r="12" fill="none" stroke="#c9a273" stroke-width="1"/><path d="M0 -14L3 0L0 14L-3 0Z" fill="#2b4a6f"/><path d="M-14 0L0 3L14 0L0 -3Z" fill="#c9a273"/><text y="-17" text-anchor="middle" font-size="9" fill="#2b4a6f">N</text></svg>';   // 21:00 以後不出現（學習策略：考前一晚要睡好）
+function portOn() { return !!(S && S.save && D && D.cfg) && !isFamily() && !ownMode(); }
+function portOf(id) { return S.save['port:' + id] || {}; }
+function portHas(a) { return Array.isArray(a) && a.some(x => String(x || '').trim()); }
+function portLast(P) { return P.days[P.days.length - 1]; }
+function portEveDue() {
+  if (!portOn() || PORT_STAGE < 2 || new Date().getHours() >= PORT_EVE_END) return null;
+  const P = PORTS.find(x => !x.start && addD(x.days[0], -1) === S.today); if (!P) return null;
+  const r = portOf(P.id); return portHas(r.eve) || r.skip ? null : P;
+}
+function portHelp(r) { return r && r.c && r.help ? `<div class="speech" style="margin-top:10px;font-size:14px">${esc(r.help)}</div>` : ''; }   // 本機擔心過濾命中時，後端在那筆放的求助說明（字照樣存）
+function portEveCard() {
+  const H = portOn() && PORTS.find(x => addD(x.days[0], -1) === S.today && portOf(x.id).c);   // 剛寫完的出航前夜命中擔心字詞：當天首頁留著求助說明
+  if (H) return card('portEve', `<div class="card">${portHelp(portOf(H.id)).replace('margin-top:10px;', '')}</div>`);
+  const P = portEveDue(); if (!P) return '';
+  return card('portEve', `<div class="card"><h3 style="margin:0">🌙 出航前夜</h3>
+    ${draft.portEve === P.id ? portForm(P, 'eve') : `<div style="margin-top:6px">明天是${P.name}。想寫兩句給自己嗎？</div>
+      <div class="row" style="margin-top:10px"><button class="grow" onclick="draft.portEve='${P.id}';render()">寫兩句</button><button class="ghost grow" onclick="portSkip('${P.id}')">今天先不寫</button></div>`}</div>`);
+}
+function portHint() {
+  if (!portOn()) return '';
+  const P = PORTS.find(x => S.today > portLast(x) && S.today <= addD(portLast(x), 14) && !portHas(portOf(x.id).back)); if (!P) return '';
+  return `<div class="muted" style="margin:-4px 0 10px;font-size:13px;text-align:center"><a href="#" onclick="logPortGo('${P.id}');return false">⚓ ${P.name}的港可以寫了</a></div>`;
+}
+// 這場的錯因：只算她自己標了這個場次的瓶子（拍錯題的 mock＝那場的日期），不用日期猜；只寫幾瓶，不寫百分比
+function portWhy(P) {
+  if (P.start) return '';
+  const bs = bottles().filter(b => b.rec && b.rec.mock && P.days.includes(b.rec.mock)); if (!bs.length) return '';
+  const n = {}; bs.forEach(b => { const w = b.rv && b.rv.why; if (w) n[w] = (n[w] || 0) + 1; });
+  const got = REASONS.filter(r => n[r[0]]).map(r => r[1] + ' ' + n[r[0]] + ' 瓶'), un = bs.filter(b => !(b.rv && b.rv.why)).length;
+  return `<div class="muted" style="font-size:13px;margin-top:4px">${got.length ? '這場標了場次的瓶子：' + got.join('、') : ''}${got.length && un ? '<br>' : ''}${un ? '還有 ' + un + ' 瓶沒標錯因' : ''}</div>`;
+}
+function portForm(P, part) {
+  const r = portOf(P.id), L = part === 'eve' ? PORT_EVE : portBackQ(r), cur = (draft.portText && draft.portText[part]) || r[part] || [];
+  const hint = i => part === 'back' && i === 0 && portHas(r.eve) && String((r.eve || [])[0] || '').trim() ? `<div class="muted" style="font-size:13px;margin-top:4px">出航前夜寫的：${esc(r.eve[0])}</div>`
+    : part === 'back' && i === 1 ? portWhy(P) : '';
+  return L.map(([q, ex], i) => `<label style="margin-top:10px;display:block${part === 'back' && i === 2 ? ';font-weight:700;color:var(--plum)' : ''}">${q}</label>${hint(i)}
+      <input maxlength="60" placeholder="${esc(ex)}" value="${esc(cur[i] || '')}" oninput="portType('${part}',${i},this.value)">`).join('')
+    + `<div class="muted" style="font-size:12px;margin-top:6px">${portNote()}</div>`
+    + `<div class="row" style="margin-top:10px"><button class="grow" onclick="portSave('${P.id}','${part}')">存好</button>${part === 'eve' ? `<button class="ghost" onclick="draft.portEve='';draft.portText=null;render()">取消</button>` : ''}</div>`;
+}
+function portType(part, i, v) { draft.portText = draft.portText || {}; const a = draft.portText[part] || (portOf(draft.portId || draft.portEve || '')[part] || []).slice(); a[i] = v; draft.portText[part] = a; }
+function portPut(id, part, val) {
+  const k = 'port:' + id, cur = Object.assign({}, portOf(id)); cur[part] = val; cur.at = S.today; S.save[k] = cur;
+  queueSave(k + ':' + part, 'savePort', id, part, part === 'skip' ? [] : val);
+}
+function portSave(id, part) {
+  const n = part === 'eve' ? PORT_EVE.length : PORT_BACK.length, a = ((draft.portText || {})[part] || portOf(id)[part] || []).slice(0, n).map(x => String(x || '').trim().slice(0, 60));
+  while (a.length < n) a.push('');
+  portPut(id, part, a); draft.portText = null; draft.portEve = ''; toast('存好了'); render();
+}
+function portSkip(id) { portPut(id, 'skip', true); render(); }
+function logPortGo(id) { tab = 'log'; draft = { logMode: 'port', portId: id || '' }; render(); window.scrollTo(0, 0); }
+function viewLogPort() {
+  const sel = PORTS.find(x => x.id === draft.portId), today = S.today;
+  const st = P => today >= P.days[0] ? 'past' : PORTS.find(x => today < x.days[0]) === P ? 'next' : 'far';
+  const n = PORTS.length, X = i => i * 100 / (n - 1), Y = i => PORT_Y[i % PORT_Y.length];   // 古地圖航線（美術方向 A，爸爸 11/1）：上帶是航線和港，高低不規則（爸爸 11/1：不要上下上下太整齊），下帶是港名日期同一條基線；左右各留 22px
+  const seg = PORTS.slice(1).map((P, k) => { const x1 = X(k), x2 = X(k + 1); return `<path class="${st(P) === 'past' ? 'sail' : 'sea'}" d="M${x1} ${Y(k)} C${x1 + (x2 - x1) * PORT_BEND[k][0]} ${Y(k) + PORT_BEND[k][1]} ${x2 - (x2 - x1) * PORT_BEND[k][2]} ${Y(k + 1) + PORT_BEND[k][3]} ${x2} ${Y(k + 1)}"/>`; }).join('');
+  const route = `<div class="ports"><svg class="pmap" viewBox="0 0 100 147" preserveAspectRatio="none" aria-hidden="true">${seg}</svg>${PORT_DECO.map(([k, m, y]) => `<span class="pdeco" aria-hidden="true" style="left:calc(22px + (100% - 44px) * ${m * .2 + .1});top:${y}px">${k === 'w' ? PORT_WAVE : PORT_REEF}</span>`).join('')}${PORT_ROSE}${PORTS.map((P, i) => `<button class="port ${st(P)}${i && st(P) === 'past' ? ' done' : ''}${sel === P ? ' on' : ''}" style="left:calc(22px + (100% - 44px) * ${X(i) / 100})" onclick="draft={logMode:'port',portId:'${P.id}'};render()"><span class="ppic" style="top:${Y(i) - 12}px">${st(P) === 'past' ? PORT_PIN : PORT_RING}</span><b>${P.start ? P.name + '<small>出發港</small>' : P.name}</b><small>${short(P.days[0])}</small></button>`).join('')}</div>`;
+  let body = '';
+  if (sel) {
+    const r = portOf(sel.id), eveDay = addD(sel.days[0], -1);
+    const show = (L, a) => L.map(([q], i) => String((a || [])[i] || '').trim() ? `<div style="margin-top:8px"><b>${q}</b><div class="speech" style="margin-top:4px">${esc(a[i])}</div></div>` : '').join('');
+    const eveGone = today >= sel.days[0] && !portHas(r.eve) && draft.portEdit !== 'eve';   // 考完沒寫前夜：整段不畫，不留「沒寫」的痕跡（文案審 99）
+    const eve = sel.start || eveGone || PORT_STAGE < 2 ? '' : `<h3 style="margin:12px 0 0">🌙 出航前夜</h3>${portHas(r.eve) && draft.portEdit !== 'eve' ? show(PORT_EVE, r.eve) + `<button class="ghost" style="margin-top:8px" onclick="draft.portEdit='eve';render()">改一下</button>`
+      : today >= eveDay && today < sel.days[0] || draft.portEdit === 'eve' ? portForm(sel, 'eve') : `<div class="muted" style="margin-top:4px">${short(eveDay)}（考前一天）可以寫。</div>`}`;
+    const back = sel.start && PORT_STAGE < 2 ? '' : `<h3 style="margin:14px 0 0">⚓ 歸港</h3>${today < sel.days[0] ? '<div class="muted" style="margin-top:4px">這個港還沒到。</div>'
+      : portHas(r.back) && draft.portEdit !== 'back' ? show(portBackQ(r), r.back) + `<button class="ghost" style="margin-top:8px" onclick="draft.portEdit='back';render()">改一下</button>` : portForm(sel, 'back')}`;
+    body = `<div class="card"><h2 style="margin:0">${sel.start ? '⚓ ' + sel.name + '（出發港）' : '⚓ ' + sel.name}</h2><div class="muted">${sel.days.map(short).join('、')}</div>${eve}${back}${portHelp(r)}</div>`;
+  }
+  return `${lightFloors('log')}<div class="card"><h2>📖 航海日誌</h2><div class="muted">把每一次模考和會考當成一個港口。考前寫出航前夜，考完寫歸港，都是你自己的話，不加分也不扣分。寫的內容在 App 裡只有你自己看得到。</div>${logModes('port')}${route}<div class="muted" style="font-size:12px;margin-top:6px">點一個港口打開。</div></div>
+    ${body}
+    <div class="row"><button class="ghost grow" onclick="go('light')">去海灘 🌊</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 // 一週算哪個月：看週一落在哪個月。航海日誌月頁和學習摘要的月摘要都叫這個函式，只有這一份（工程顧問、學習界面串 10/30）
 function weekMonth(wk) { return wk.slice(0, 7); }
@@ -4687,11 +4834,38 @@ function loadBank() {
 function bankLoading() { if (BETA3D && bankData === null) { loadBank().then(() => { if (tab === 'home') softRender(); }); return true; } return false; }
 // 她的意見（v2.23.1）：數學和自然不出題組題（題組是要先讀一段共用文章或圖的題）
 function noGroup(x) { return !(x.ctx && (x.subject === '數' || x.subject === '自')); }
+// 九下暫緩（爸爸 2026-11-04）：還沒教到的單元：到開放日以前，考古題先不出、答錯過的瓶子先停在海灘，到日期自動打開。
+// 九上的單元照常出；九下的單元 2027-02-01 全部打開（爸爸 2026-11-04 定）。只管學生本人，家人（家人碼、家人自己的島）不受影響
+const NOT_YET = {
+  '數|二次函數': '2027-02-01', '數|立體圖形（三視圖、柱體與錐體）': '2027-02-01',
+  '理化|電流的熱效應與化學效應': '2027-02-01', '理化|電與磁': '2027-02-01', '理化|能源與永續': '2027-02-01',
+  '地科|地球的組成與岩石': '2027-02-01', '地科|風化侵蝕與地形': '2027-02-01', '地科|地質年代': '2027-02-01', '地科|板塊構造與地震火山': '2027-02-01',
+  '地科|大氣與天氣': '2027-02-01', '地科|氣候與氣候變遷': '2027-02-01', '地科|海洋與潮汐': '2027-02-01',
+  '地科|晝夜四季與月相': '2027-02-01', '地科|太陽系與宇宙': '2027-02-01',
+  '歷史|帝國主義與世界大戰': '2027-02-01', '歷史|冷戰與當代世界': '2027-02-01',
+  '地理|美洲': '2027-02-01', '地理|漠南非洲、大洋洲與兩極': '2027-02-01', '地理|全球關聯與環境議題': '2027-02-01',
+  '公民|全球化與國際關係': '2027-02-01'
+};
+// 「統計與機率」七年級的統計圖表、平均數、中位數照常出；只擋九下才教的四分位數、盒狀圖、機率（題目文字有「機率」「盒狀圖」的 11 題）
+const NOT_YET_BANK = { '106-math-06': '2027-02-01', '107-math-06': '2027-02-01', '107-math-19': '2027-02-01', '108-math-14': '2027-02-01', '109-math-03': '2027-02-01',
+  '110-math-11': '2027-02-01', '111-math-09': '2027-02-01', '112-math-12': '2027-02-01', '113-math-06': '2027-02-01', '114-math-11': '2027-02-01', '115-math-04': '2027-02-01' };
+function bankIdNotYet(id) { const d = !isFamily() && !ownMode() && NOT_YET_BANK[id]; return d && S.today < d ? d : ''; }
+function notYetOpen(lane, unit) {   // 回傳開放日；已經開放、不認得的單元、家人都回傳空字串
+  if (!unit || isFamily() || ownMode()) return '';
+  const d = NOT_YET[lane + '|' + newUnit(lane, unit)] || '';
+  return d && S.today < d ? d : '';
+}
+function bankNotYet(x) { return !!(bankIdNotYet(x.id) || (unitsData && notYetOpen((unitsData.lanes || {})[x.id] || x.lane, (unitsData.tags || {})[x.id]))); }
+function laneNotYet(lane) {   // 這條巷子的單元全部還沒教到（例如地科），故事任務先不抽它
+  const list = unitsData && (unitsData.units || {})[lane];
+  return !!(list && list.length && list.every(u => notYetOpen(lane, u)));
+}
+function unitsLoading() { if (BETA3D && unitsData === null) { loadUnits().then(() => { if (tab === 'home') softRender(); }); return true; } return false; }
 async function pickBank(tier, lane) {
-  const b = await loadBank(); if (!b || !b.items) return null;
+  const b = await loadBank(); await loadUnits(); if (!b || !b.items) return null;
   const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
   const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);   // 今天故事任務的題也不要再出一次
-  const list = b.items.filter(x => TIER_KEY[x.tier] === tier && (!lane || x.lane === lane) && !used.has(x.id) && noGroup(x));
+  const list = b.items.filter(x => TIER_KEY[x.tier] === tier && (!lane || x.lane === lane) && !used.has(x.id) && noGroup(x) && !bankNotYet(x));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
 // v2.36 錯題循環②：撿瓶子時照錯因換練法。觀念不熟、用猜的→先看觀念小卡；看不懂題目→先選「這題在問什麼」；一時看錯→同單元的題先提醒
@@ -4782,12 +4956,13 @@ async function pickUnitBank(lane, unit, tier, sid) {   // sid：只挑這個次�
   const used = new Set(Object.keys(S.save).filter(k => /^(xq|quest):/.test(k) && S.save[k]).map(k => S.save[k].bank).filter(Boolean));
   const sq = todayQuest().item; if (sq && sq.bank) used.add(sq.bank);
   if (sid && !(conceptsData && conceptsData.bank)) return null;
-  const list = b.items.filter(x => x.lane === lane && unitsData.tags[x.id] === unit && (!tier || TIER_KEY[x.tier] === tier) && (!sid || conceptsData.bank[x.id] === sid) && !used.has(x.id) && noGroup(x));
+  const list = b.items.filter(x => x.lane === lane && unitsData.tags[x.id] === unit && (!tier || TIER_KEY[x.tier] === tier) && (!sid || conceptsData.bank[x.id] === sid) && !used.has(x.id) && noGroup(x) && !bankNotYet(x));
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 }
 async function practiceUnit(lane, unit) {
   if (!UNIT_TOOLS || xqBusy || todayChallenges().length >= XQ_DAILY) return;
   if (todayChallenges().some(q => !q.done)) return toast('還有一題沒回答，先把它答完');
+  const w = notYetOpen(lane, unit); if (w) return toast('這個單元學校還沒教到，' + short(w) + ' 起再練。');
   xqBusy = true; render();
   try {
     await flush();
@@ -4815,6 +4990,7 @@ async function pickWeakBank(tier) {
 async function challengeXq(tier) {
   if (xqBusy || todayChallenges().length >= XQ_DAILY) return;
   const sel = document.getElementById('xqLane'), chosen = sel && sel.value;
+  if (chosen) { await loadUnits(); if (laneNotYet(chosen)) return toast(laneLabel(chosen) + '的單元學校還沒教到，開學後會自動打開。先選別條巷子吧。'); }
   xqBusy = true; softRender();
   try {
     await flush();
@@ -4998,7 +5174,8 @@ function questHistory() {
 function pickQuest(date, rerolls, avoid) {
   const vals = QLANES.map(l => D.ptsBy[l] || 0).sort((a, b) => a - b), median = vals[Math.floor(vals.length / 2)];
   const recent = questHistory().filter(q => q.at >= addD(date, -3)).map(q => q.lane);
-  const cands = QLANES.filter(l => l !== avoid).map(l => {
+  if (unitsLoading()) return { lane: QLANES[0], loading: true, chapter: 1 };   // 九下暫緩：先知道哪些單元還沒教到，再抽巷子
+  const cands = QLANES.filter(l => l !== avoid && !laneNotYet(l)).map(l => {
     let w = 1;
     if ((D.ptsBy[l] || 0) < median) w *= 2.5;
     if (recent.includes(l)) w *= 0.3;
@@ -5024,7 +5201,7 @@ function pickQuest(date, rerolls, avoid) {
 function storyBank(lane, date, rerolls) {
   if (!bankData) return null;
   const used = new Set(Object.keys(S.save).filter(k => S.save[k] && (k.startsWith('quest:') ? k.slice(6) < date : k.startsWith('xq:') && S.save[k].date < date)).map(k => S.save[k].bank).filter(Boolean));
-  const ok = x => x.lane === lane && noGroup(x) && !used.has(x.id);
+  const ok = x => x.lane === lane && noGroup(x) && !used.has(x.id) && !bankNotYet(x);
   const adv = bankData.items.filter(x => ok(x) && x.tier === '進階'), mid = bankData.items.filter(x => ok(x) && x.tier === '中級');
   const r = seeded(date.split('-').reduce((a, x) => a * 31 + Number(x), 7) + rerolls * 104729);
   const list = (r() < 0.3 && adv.length) || !mid.length ? adv : mid;
@@ -5217,7 +5394,7 @@ function showInfo3D(s) {
       return `<div class="lane"><span class="lane-name" style="flex-basis:110px">${esc(name)}</span><span class="town">${town(pts[l] || 0)}</span></div>`; }).join('')}</div>
     <div class="muted" style="margin-top:10px">最近四週完成次數</div>
     <div class="row" style="justify-content:space-around;margin-top:4px">${recent}</div>
-    ${(lm => lm.length ? `<div class="muted" style="margin-top:10px">讀完書長出的地標</div>${lm.map(m => `<div class="item" style="cursor:pointer" onclick="openBook('${m.key}')"><span>🏞️</span><div class="name grow">${esc(m.name)}<div class="muted" style="font-size:12px">${esc(m.title)}${m.from ? '・' + esc(m.from) + '送' : ''}・${esc(short(m.at))} 讀完</div></div><span>›</span></div>`).join('')}` : '')(landmarkList().filter(m => m.s === s))}
+    ${(lm => lm.length ? `<div class="muted" style="margin-top:10px">讀完書長出的地標</div>${lm.map(m => `<div class="item" style="cursor:pointer" onclick="openBook('${m.key}')"><span>🏞️</span><div class="name grow">${esc(m.name)}<div class="muted" style="font-size:12px">${esc(m.title)}${m.from ? '・' + esc(m.from) + '送' : ''}・${esc(short(m.at))} 讀完${(mi => m.id in mi ? '・' + (mi[m.id] ? '長在' + esc(isletName(mi[m.id])) + '上' : '街上放滿了') : '')(markIsles())}</div></div><span>›</span></div>`).join('')}` : '')(landmarkList().filter(m => m.s === s))}
     <button class="ghost" style="width:100%;margin-top:10px" onclick="openHouse('${s}')">🏠 去${esc(r.name)}家作客</button>`;
 }
 
@@ -6744,10 +6921,20 @@ function landmarkList() {
   });
   return out.sort((a, b) => (a.at || '').localeCompare(b.at || ''));
 }
+// 地標長在哪裡：本島的街滿了的，長到第幾座小島（沒有小島或小島也滿了就是 null，只列在書和街道資訊裡）
+function markIsles() {
+  const used = {}, have = islets(), out = {}; let over = 0;
+  landmarkList().forEach(m => { if ((used[m.s] = (used[m.s] || 0) + 1) <= MARK_PER_ST) return; out[m.id] = have[Math.floor(over++ / MARK_PER_ISLE)] || null; });
+  return out;
+}
 function landLine(id, done, how) {
   const l = landmarkOf(id); if (!l) return '';
+  const mi = markIsles();
+  if (done && id in mi) return mi[id] ? `<div class="bkland" onclick="go('home')">🏞️ ${esc(l.street)}放滿了，「${esc(l.name)}」長在${esc(isletName(mi[id]))}上<span class="muted">・回小島看看 ›</span></div>`
+    : `<div class="bkland off">🏞️ ${esc(l.street)}放滿了，「${esc(l.name)}」先記在這裡，之後有空位就會長過去</div>`;
+  const full = !done && landmarkList().filter(m => m.s === l.s).length >= MARK_PER_ST;
   return done ? `<div class="bkland" onclick="go('home')">🏞️ ${esc(l.street)}長出了「${esc(l.name)}」<span class="muted">・回小島看看 ›</span></div>`
-    : `<div class="bkland off">🌱 ${how}，${esc(l.street)}會長出「${esc(l.name)}」</div>`;
+    : `<div class="bkland off">🌱 ${how}，${full ? '會長出「' + esc(l.name) + '」（' + esc(l.street) + '放滿了，會長到小島上）' : esc(l.street) + '會長出「' + esc(l.name) + '」'}</div>`;
 }
 function catalogOf(id) { return allBooks().find(b => b.id === id) || null; }
 // 書單分批（v2.20）：先上架第 1 批；上架的書只剩十本沒讀完（或家人能挑的只剩十本）就上架下一批。
@@ -7491,6 +7678,7 @@ function viewGuide() {
   ${sec('🌱', '植木屋（種樹）', p('碼頭旁有一間植木屋，第一次去要先幫它請一位管理員（取名字、選樣子、寫個性），見面時送你 ' + GARDEN_GIFT + ' 綠點當開張禮。點首頁上方的「🌱 綠點」，或在 3D 小島點那間小屋就能進去。') +
     p('綠點從<b>計時</b>和<b>喝水</b>來：讀書每專心 ' + FOCUS_GLASS + ' 分鐘一顆砂時計 +' + FOCUS_GREEN + ' 綠點；運動、藝文活動、閱讀每 ' + MOVE_STEP + ' 分鐘 +' + MOVE_GREEN + '；喝水每 ' + WATER_CUP + 'cc +' + WATER_GREEN + '（一天最多算 ' + WATER_CAP + 'cc）。種樹花的是綠點，經驗值、島幣和島嶼等級都不會少。') +
     p('選一種植物，再點地圖上白色的空地格，就種下去了。可以寫一塊小木牌（最多 20 字），之後在 3D 小島點那棵樹就看得到。種下 7 天變小樹、14 天長大，不用澆水，也不會枯掉。種錯地方可以免費移植；拔掉的話綠點不會退回。') +
+    p('有衛星小島的話，每座小島的沙灘上還有 4 格空地，小島蓋好就能種，不看等級；在植木屋地圖下面的「小島的沙灘」點空地格就行，本島和小島之間也可以移植。') +
     `<table><tr><th>種類</th><th>綠點</th><th>植物</th></tr>${['花草', '灌木', '樹', '名木'].map(k => `<tr><td>${k}</td><td>${PLANTS.find(p => p.kind === k).price}</td><td style="text-align:left">${PLANTS.filter(p => p.kind === k).map(p => p.ic + ' ' + p.name + (p.lv > 1 ? '（Lv.' + p.lv + '）' : '')).join('、')}</td></tr>`).join('')}</table>` +
     p('每種植物都有自己最好看的節氣，例如櫻花在驚蟄到清明開、楓樹在寒露到立冬變紅、鳳凰木在芒種到小暑開花（剛好是會考完、畢業的時候）。植木屋標著「當季」的，就是現在最漂亮的。') +
     p('島上一開始有 25 格空地，島嶼升到 Lv.5 多 10 格、Lv.8 再多 5 格。主屋和它旁邊的小院子不能種，那是家裡的範圍。訪客，還有你選了看「島的樣子」的家人，登島時看得到你種的植物；小木牌只有你自己看得到。'))}
@@ -7528,6 +7716,7 @@ function viewGuide() {
   ${sec('🏝️', '衛星小島', p('在商店的兌換卡下面，可以用經驗值換一座衛星小島：挑一種樣子（沙洲小島、松樹岩島、漁港小島、茶園小島）、一個方向，也可以幫它取名字。小島會出現在本島旁邊的海上，用紅色太鼓橋接回來，在 3D 小島上點小島或橋就能過去。') +
     p('第一座 300 點，之後 500、800、1200、1600、2000 點，最多六座。換小島和換島幣用的是同一包「可換的經驗值」：換了之後經驗值總數和島嶼等級都不會變，房子也不會變小，只是用掉的那些點數不能再換島幣。') +
     p('每座小島可以請一位你自己設定的主人（名字、樣子、個性）。第一次去的時候，主人會先打招呼，之後也會寫話給你。') +
+    p('每座小島的沙灘上有 4 格空地可以種樹（在植木屋種）。讀完的書長出的地標，本島一條街最多放 ' + MARK_PER_ST + ' 個；放滿以後，新的地標會照讀完的先後長到小島上，每座小島 ' + MARK_PER_ISLE + ' 個。') +
     p('🍵 茶園小島：那天讀完一格國文計畫，茶園會多採 1 份茶葉給你（一天 1 個），可以拿去屋台做料理。小島給的素材不算進商店收購的上限。') +
     p('⚓ 漁港小島（即將開放）：讀完一格社會計畫的那天，漁船回港會分你 1 條魚或 1 片昆布。') +
     p('🌲 松樹岩島（即將開放）：岩石邊有 7 盞石燈籠，這週有讀書的每一天都會亮一盞，週一換新的一週。') +
