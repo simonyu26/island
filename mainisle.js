@@ -380,11 +380,17 @@
     L.filter(x => x !== own && (x.key === 'her' || x.visit)).forEach(x => out.push(btn(x.key, x.label || x.name)));
     return out.join('');
   }
+  // COINBOOK_v1 自己的島幣帳本：只有島主（她，或家人在自己的島）看得到
+  function coinBtn() {
+    if (isFamily() || typeof viewCoins !== 'function') return '';
+    return `<div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#f3f7fb"><div class="row"><b class="grow">🪙 我的島幣帳本</b><button class="ghost" onclick="coinFrom='mainisle';go('coins')">打開</button></div>
+      <div class="muted" style="margin-top:2px">看看自己的島幣從哪裡來、去了哪裡，也可以訂一個存錢目標。</div></div>`;
+  }
   function infoHtml() {
     if (!info) return '<div class="muted">👆 點飛船碼頭搭飛船；點其他建物看看它們什麼時候開門。用手指拖曳可以轉動，兩指可以縮放。</div>';
     if (info.kind === 'place') {
       const k = info.key;
-      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
+      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') + (k === 'exchange' ? coinBtn() : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
     }
     const x = isleList().find(i => i.key === info.key); if (!x) return '';
     if (x.mine) return `<b>🏝️ ${esc(x.name)}</b><div class="muted">這是你的島。</div>${x.open !== false ? `<button style="margin-top:8px" onclick="mainSail('${x.key}')">🎈 ${isFamily() ? '去我的島' : '回到我的島'}</button>` : ''}`;

@@ -608,5 +608,6 @@
     if (t === 'abbr') app.querySelectorAll('[onclick*="go(\'items\')"]').forEach(b => b.remove());
     if (t === 'home' && dailyOn() && !S.save['daily:' + S.today]) ensureDaily0();
   }
+  ['coinBook', 'coinGoal', 'coinFoot'].forEach(k => { if (OWN_CARDS.indexOf(k) < 0) OWN_CARDS.push(k); });   // COINBOOK_v1 家人自己的島也有島幣帳本、存錢目標
   window.FamIsle = { apply, after, cards: OWN_CARDS };
 })();
