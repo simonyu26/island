@@ -357,11 +357,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.3.1';
+const APP_VERSION = '2.50.4';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.4', date: '2026-11-07', fam: true, items: ['🧮 商店裡的島幣明細改成『我的島幣帳本』：可以看這個月進來、出去多少，也可以訂一個存錢目標；在主島的交易所也打得開。'] },
   { v: '2.50.3.1', date: '2026-11-06', items: ['📅 九下才會教的單元先不出考古題了，例如二次函數、電與磁和機率，地科也整科先不出；這些單元答錯過的瓶子還在海灘上，先不會出給你。2/1 會自動打開，九上的單元照常出。', '🎒 「你的生活」小卡多了幾講：瞇的第 4、5、6 講和郭哥的第 3、5、8 講。你在「你的生活」勾過的話，「搬到你的生活」那一步會換成比較貼近你的情境。'] },
   { v: '2.50.3', date: '2026-11-06', fam: [0], items: ['🌳 衛星小島的沙灘上可以種樹了：每座 4 格，在植木屋地圖下面的「小島的沙灘」種，本島的樹也能移植過去', '🏞️ 本島一條街的地標放滿 18 個以後，新讀完的書會把地標長到小島上', '⚓ 航海日誌多了「航路」：每一次模考和會考都是一個港，一模和校模已經到過了。想的話，校模的港也可以寫歸港三句，寫的內容在 App 裡只有你自己看得到。'] },
   { v: '2.50.2.1', date: '2026-11-05', fam: [0], items: ['🏮 燈室多了兩張以週為單位的圖：「補好的題」看最近 12 週累積了幾盞燈籠，點某一週可以看那週亮了哪幾盞；「錯的時候，最常是哪一種」那張卡的最上面，多了最近 8 週每週錯在哪一種。'] },
@@ -549,6 +550,7 @@ const FAMILY_FNS = ['getState', 'getImages', 'familyInvite', 'postcardCandidates
 function isFamily() { return !!(S && S.who && S.who.role === 'family'); }
 /* ===== 家人島（列島，做法 B）：家人按「🏝️ 我的島」，畫面和她一樣，但讀寫的是自己的島；畫面的差別都在 family.js，只有家人島才載入 ===== */
 const OWN_FNS = ['saveLifeTags', 'saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard'];
+if (OWN_FNS.indexOf('saveCoinGoal') < 0) OWN_FNS.push('saveCoinGoal');   // COINBOOK_v1 存錢目標
 function ownOn() { return local.get('famOwn') === '1'; }
 function ownMode() { return !!(S && S.who && S.who.role === 'own'); }
 // 卡片白名單：家人島只畫 family.js 的 OWN_CARDS 裡有的 key；主線新加的卡片請用 card('key', html) 包起來，家人島預設看不到
@@ -1125,26 +1127,108 @@ function xpExCard() {
       <div class="muted">每 10 點經驗值換 1 枚。換了經驗值不會減少，島嶼等級和房子都不會變小。</div>
       <div style="margin-top:4px">${c.canEx ? `現在可以換 <b>🪙 ${c.canEx}</b> 枚` : `再 <b>${left}</b> 點經驗值就能換 1 枚`}</div></div>
       <button ${c.canEx ? '' : 'disabled'} onclick="exchangeXpNow()">兌換</button></div>
-    <div class="muted" style="margin-top:6px"><a href="#" onclick="go('coins');return false">看島幣明細</a></div></div>`;
+    <div class="muted" style="margin-top:6px"><a href="#" onclick="coinFrom='';go('coins');return false">看我的島幣帳本</a></div></div>`;
 }
-// 島幣明細：每一筆來源
+// COINBOOK_v1 我的島幣帳本：每一筆有日期的進出，和 derive 的 coinParts 同一套規則（測試逐項對）；只讀她自己的存檔，不寫任何東西
+function coinTpe(ms) { const n = Number(ms); return n > 0 ? new Date(n + 8 * 3600e3).toISOString().slice(0, 10) : ''; }
+function coinBook() {
+  const save = S.save || {}, log = [], add = (k, n, date) => { if (n) log.push({ k, n, date }); };
+  Object.keys(save).filter(k => k.startsWith('xq:') && save[k] && save[k].done && save[k].tier).forEach(k => { const q = save[k]; add('xq', q.coins || 0, String(q.at || q.date || coinTpe(k.slice(3))).slice(0, 10)); });
+  Object.keys(D.exWeeks || {}).forEach(w => { if (D.exWeeks[w] >= EX_GOAL) add('ex', 3, w); });   // 一週算在星期一那一天
+  (D.paperSessions || []).forEach(ss => { if (ss.paid) add('paper', ss.coins || 0, ss.date); });
+  (save.purchases || []).filter(p => !RETIRED_FURN.includes(p.furniture)).forEach(p => add('spent', -(Number(p.price) || 0), p.date));
+  Object.keys(save).filter(k => k.startsWith('craft:') && save[k]).sort().forEach(k => (save[k].log || []).forEach(e => {
+    if (e.t === 'buy') add('mat', -(Number(e.n) || 0) * MAT_PRICE, e.at);
+    if (e.t === 'sell') add('sell', Number(e.price) || 0, e.at);
+  }));
+  return log;
+}
+const COIN_ROWS = [
+  { k: 'gift', ic: '🎁', name: '開島禮物', inn: 1 }, { k: 'fromXp', ic: '⭐', name: '經驗值換來的', inn: 1 }, { k: 'xq', ic: '⚔️', name: '挑戰任務答對', inn: 1 },
+  { k: 'ex', ic: '🏃', name: '運動達標', inn: 1 }, { k: 'paper', ic: '⛵', name: '紙本檢討', inn: 1 }, { k: 'sell', ic: '💰', name: '收購賣得', inn: 1 },
+  { k: 'spent', ic: '🛍️', name: '在商店花掉' }, { k: 'mat', ic: '🧺', name: '素材櫃花掉' }];
+let coinScope = 'month', goalEdit = null, goalMsg = '';
+function coinSums(month) {
+  const c = D.coinParts, o = {};
+  COIN_ROWS.forEach(r => { o[r.k] = 0; });
+  if (!month) Object.assign(o, { gift: c.gift, fromXp: c.fromXp });   // 開島禮物、經驗值換的不分月份，只算在「全部」
+  coinBook().forEach(e => { if (!month || String(e.date || '').slice(0, 7) === month) o[e.k] += e.n; });
+  return o;
+}
+function goalOpts() {
+  const seen = {}, out = [];
+  FURNITURE.filter(f => !RETIRED_FURN.includes(f.id)).forEach(f => { seen[f.name] = 1; out.push({ name: f.ic + ' ' + f.name, price: f.price }); });
+  ((D.cfg && D.cfg.shop) || []).filter(x => x && x.name && Number(x.price) > 0 && !seen[x.name]).forEach(x => out.push({ name: String(x.name).slice(0, 40), price: Math.round(Number(x.price)) }));
+  return out;
+}
+function goalHtml() {
+  const g = S.save['goal:coin'], left = g ? g.price - D.coins : 0;
+  if (goalEdit) {
+    const opts = goalOpts(), weeks = Array.from({ length: 26 }, (_, i) => addD(S.today, 7 * (i + 1)));
+    return `<div id="goalBox"><b>🎯 存錢目標</b>
+      <div class="muted" style="margin-top:4px">想好要什麼、什麼時候要，再算每週存多少，這就是計畫。</div>
+      <label class="muted" style="display:block;margin-top:8px">從商店挑一樣，或自己寫</label>
+      <select id="goalPick" style="width:100%;min-height:44px" onchange="goalPickNow(this.value)"><option value="">自己寫…</option>${opts.map((o, i) => `<option value="${i}">${esc(o.name)}（🪙 ${o.price}）</option>`).join('')}</select>
+      <input id="goalName" maxlength="40" placeholder="想存錢買什麼" value="${esc(goalEdit.name || '')}" style="width:100%;margin-top:6px;min-height:44px" oninput="goalEdit.name=this.value">
+      <div class="row" style="margin-top:6px;flex-wrap:nowrap"><span>🪙</span><input id="goalPrice" type="number" inputmode="numeric" min="1" max="9999" placeholder="要幾枚" value="${goalEdit.price || ''}" class="grow" style="min-height:44px" oninput="goalEdit.price=this.value"></div>
+      <label class="muted" style="display:block;margin-top:6px">什麼時候以前</label>
+      <select id="goalBy" style="width:100%;min-height:44px" onchange="goalEdit.by=this.value">${weeks.map((d, i) => `<option value="${d}"${d === goalEdit.by ? ' selected' : ''}>${i + 1} 週後（${d.slice(5).replace('-', '/')}）</option>`).join('')}${goalEdit.by && !weeks.includes(goalEdit.by) ? `<option value="${goalEdit.by}" selected>照原本的（${goalEdit.by.slice(5).replace('-', '/')}）</option>` : ''}</select>
+      <div class="row" style="margin-top:8px"><button class="grow" onclick="goalSave()">存好計畫</button><button class="ghost" onclick="goalEdit=null;render()">先不要</button></div></div>`;
+  }
+  if (!g) return `<div id="goalBox"><b>🎯 存錢目標</b><div class="muted" style="margin-top:4px">想好要什麼、什麼時候要，再算每週存多少，這就是計畫。</div>
+      <button class="ghost" style="margin-top:8px" onclick="goalStart()">訂一個存錢目標</button></div>`;
+  const days = Math.round((parseD(g.by) - parseD(S.today)) / 864e5), wk = Math.max(1, Math.ceil(days / 7));
+  const per = Math.ceil(left / wk);   // 不推估「趕不趕得上」：經驗值換的沒有日期，用速度推估會偏低（工程顧問 10/31）
+  return `<div id="goalBox"><b>🎯 存錢目標</b>
+    <div style="margin-top:6px"><b>${esc(g.name)}</b>　🪙 ${g.price}　<span class="muted">${g.by.slice(5).replace('-', '/')} 以前</span></div>
+    ${goalMsg ? `<div class="muted" style="margin-top:4px">${goalMsg}</div>` : ''}
+    ${left > 0 ? `<div style="margin-top:6px">還差 <b>🪙 ${left}</b> 枚${days >= 0 ? `，每週大約存 ${per} 枚就夠（參考）` : ''}。</div>`
+      : `<div style="margin-top:6px">你照自己訂的計畫存到了。要不要買、什麼時候買，你自己決定。</div><div class="muted" style="margin-top:4px">想一想（不用寫下來）：這次存到了，哪個做法對你有用？</div>`}
+    <div class="row" style="margin-top:8px"><button class="ghost" onclick="goalStart()">改計畫</button><button class="ghost" onclick="goalDel()">刪掉目標</button></div></div>`;
+}
+function goalStart() { const g = S.save['goal:coin']; goalEdit = g ? { name: g.name, price: g.price, by: g.by, old: 1 } : { name: '', price: '', by: addD(S.today, 28) }; goalMsg = ''; render(); }
+function goalPickNow(i) { const o = goalOpts()[i]; if (!o) return; goalEdit.name = o.name; goalEdit.price = o.price; render(); }
+function goalSave() {
+  if (isFamily()) return;
+  const name = String(goalEdit.name || '').trim().slice(0, 40), price = Number(goalEdit.price), by = goalEdit.by || addD(S.today, 28);
+  if (!name) return toast('寫一下想存錢買什麼');
+  if (!(Number.isInteger(price) && price >= 1 && price <= 9999)) return toast('枚數要是 1 到 9999 的整數');
+  const g = { name, price, by, at: S.today }, edited = goalEdit.old;
+  S.save['goal:coin'] = g; goalEdit = null; goalMsg = edited ? '計畫可以改，改到適合自己最重要。' : '';
+  queueSave('goal:coin', 'saveCoinGoal', g); render();
+}
+function goalDel() {
+  if (isFamily() || !confirm('刪掉這個存錢目標？')) return;
+  S.save['goal:coin'] = null; goalEdit = null; goalMsg = '';
+  queueSave('goal:coin', 'saveCoinGoal', null); render();
+}
+function coinBack() { return coinFrom === 'mainisle' ? `<button class="ghost" onclick="coinFrom='';go('mainisle')">回到主島</button>` : `<button class="ghost" onclick="go('home')">回到小島</button>`; }
+let coinFrom = '';
+// 島幣明細（COINBOOK_v1 起是「我的島幣帳本」）：商店的「看島幣明細」和主島交易所的按鈕都到這一頁
 function viewCoins() {
-  const c = D.coinParts, left = 10 - (c.avail % 10);
-  const row = (ic, name, n, note) => `<div class="row" style="flex-wrap:nowrap;padding:8px 0;border-bottom:1px dashed var(--plum-light)"><span style="font-size:22px">${ic}</span>
-    <div class="grow"><b>${name}</b>${note ? `<div class="muted">${note}</div>` : ''}</div><b>${n >= 0 ? '+' : '−'}${Math.abs(n)}</b></div>`;
-  return `<div class="card"><h2>🪙 島幣明細</h2>
-      <div class="muted">每 10 點經驗值可以換 1 枚島幣。換了之後經驗值<b>不會減少</b>，島嶼等級和房子都不會變小。</div>
-      <div class="muted" style="margin:8px 0">兌換在商店：${c.canEx ? `現在可以換 <b>🪙 ${c.canEx}</b> 枚` : `再 <b>${left}</b> 點經驗值就能換 1 枚`}。</div>
-      ${row('🎁', '開島禮物', c.gift)}
-      ${row('⭐', '經驗值換來的', c.fromXp, `已經換了 ${c.exXp} 點（開島後的計畫、故事任務、試煉才能換；開島前補記的舊紀錄只算經驗值）${c.landXp ? '；另外 ' + c.landXp + ' 點換了衛星小島' : ''}`)}
-      ${row('⚔️', '挑戰任務答對', c.xqCoins, '直接給的，不再從經驗值換')}
-      ${row('🏃', '運動達標', c.exCoins, '一週集滿 3 章 +3')}
-      ${row('⛵', '紙本檢討', c.paperCoins)}
-      ${row('🛍️', '在商店花掉', -c.spent)}
-      ${c.matSpent ? row('🧺', '素材櫃花掉', -c.matSpent) : ''}
-      ${c.sellEarned ? row('💰', '收購賣得', c.sellEarned) : ''}
-      <div class="row" style="margin-top:10px"><b class="grow">現在有</b><b style="font-size:20px">🪙 ${famNum('coins', D.coins)}</b></div>
-      <div class="row" style="margin-top:12px"><button class="grow" onclick="go('shop')">去商店兌換、逛逛</button><button class="ghost" onclick="go('home')">回到小島</button></div></div>`;
+  if (isFamily()) return `<div class="card"><h2>🪙 島幣帳本</h2><div class="muted">這本帳只有島主自己看得到。</div><div class="row" style="margin-top:12px">${coinBack()}</div></div>`;   // 家人碼看她的島：不給看（fail-closed）
+  const c = D.coinParts, left = 10 - (c.avail % 10), month = S.today.slice(0, 7), m = coinScope === 'month', o = coinSums(m ? month : '');
+  const row = (r, n, note) => `<div class="row" style="flex-wrap:nowrap;padding:8px 0;border-bottom:1px dashed var(--plum-light)"><span style="font-size:22px">${r.ic}</span>
+    <div class="grow"><b>${r.name}</b>${note ? `<div class="muted">${note}</div>` : ''}</div><b>${n >= 0 ? '+' : '−'}${Math.abs(n)}</b></div>`;
+  const notes = { fromXp: `已經換了 ${c.exXp} 點（開島後的計畫、故事任務、試煉才能換；開島前補記的舊紀錄只算經驗值）${c.landXp ? '；另外 ' + c.landXp + ' 點換了衛星小島' : ''}`, xq: '直接給的，不再從經驗值換', ex: '一週集滿 3 章 +3' };
+  const ins = COIN_ROWS.filter(r => r.inn && (m ? o[r.k] : (o[r.k] || ['gift', 'fromXp', 'xq', 'ex', 'paper'].includes(r.k))));
+  const outs = COIN_ROWS.filter(r => !r.inn && (m ? o[r.k] : (o[r.k] || r.k === 'spent')));
+  const tin = ins.reduce((a, r) => a + o[r.k], 0), tout = -outs.reduce((a, r) => a + o[r.k], 0);
+  const seg = (k, t) => `<button class="${coinScope === k ? '' : 'ghost'}" aria-pressed="${coinScope === k}" style="flex:1;min-height:44px" onclick="coinScope='${k}';render()">${t}</button>`;
+  // 三塊都用 card() 包：家人在自己的島照 OWN_CARDS 畫（family.js 加 coinBook、coinGoal、coinFoot）；她的島 card() 原樣回傳
+  return card('coinBook', `<div class="card" id="coinBook"><h2>🪙 我的島幣帳本</h2>
+      <div style="margin-bottom:8px">這是你這個月的帳。看清楚錢從哪裡來、去了哪裡，下個月就比較好打算。</div>
+      <div class="row" style="flex-wrap:nowrap;gap:6px">${seg('month', '這個月')}${seg('all', '全部')}</div>
+      ${m ? `<div style="margin-top:10px"><b>這個月：進來 ${tin}、出去 ${tout}</b></div>` : ''}
+      <h3 style="margin-top:12px">進來</h3>${ins.length ? ins.map(r => row(r, o[r.k], m ? '' : notes[r.k])).join('') : '<div class="muted">這個月還沒有。</div>'}
+      <h3 style="margin-top:12px">出去</h3>${outs.length ? outs.map(r => row(r, o[r.k])).join('') : '<div class="muted">這個月還沒有。</div>'}
+      ${m ? `<div class="muted" style="margin-top:8px">開島禮物和經驗值換的島幣沒有日期（經驗值兌換只記累計），算在「全部」。運動達標照那一週的星期一算月份，跨月的那一週算在星期一那個月。</div>`
+        : `<div class="row" style="margin-top:10px"><b class="grow">現在有</b><b style="font-size:20px">🪙 ${D.coins}</b></div>
+      <div class="muted" style="margin-top:8px">每 10 點經驗值可以換 1 枚島幣。換了之後經驗值<b>不會減少</b>，島嶼等級和房子都不會變小。兌換在商店：${c.canEx ? `現在可以換 <b>🪙 ${c.canEx}</b> 枚` : `再 <b>${left}</b> 點經驗值就能換 1 枚`}。</div>`}
+      <div class="muted" style="margin-top:10px;padding:8px 10px;border-radius:10px;background:#f3f7fb">想一想（不用寫下來）：這個月花的裡面，哪一樣讓你最開心？哪一樣下次可能不會買？</div></div>`)
+    + card('coinGoal', `<div class="card">${goalHtml()}</div>`)
+    + card('coinFoot', `<div class="card"><div class="muted" style="font-size:12px">這本帳在 App 裡只有你自己看得到。</div>
+      <div class="row" style="margin-top:8px"><button class="grow" onclick="go('shop')">去商店兌換、<span style="white-space:nowrap;display:inline-block">逛逛</span></button>${coinBack()}</div></div>`);
 }
 // 家人碼看她的島（v2.50.0.3）：數字要從好幾類存檔一起算，她沒分享的那一類會少掉收入、只剩支出，算出來變 0 或負數。
 // 來源沒全開的數字一律顯示「—」；綠點含喝水（water: 誰都不給），家人碼永遠算不完整。她自己的手機不受影響
