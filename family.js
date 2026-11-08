@@ -33,6 +33,7 @@
   const OWN_CARDS = ['diaryShare', 'kairan', 'timeline', 'homeMate', 'moveArt', 'habit', 'move', 'islet', 'xpEx', 'water', 'diary', 'news', 'version'];   // water、diary：2b-1   // news、version：版本說明的兩張卡（FAM_NEWSCARDS_v1）
   function apply() {
     b1Open();   // B1
+    wordsOpen();   // 單字出題
     if (!OWN_TABS.includes(tab)) { tab = 'home'; draft = {}; }
     const all = (isle() && isle().dirs) || [], live = liveDirs();
     // 項目的科目換成方向的名字（計畫、確認頁的小標題用），GROUP 也加上方向名字 → 位置，經驗值和房子照位置算
@@ -101,9 +102,9 @@
         sig: JSON.stringify(D.weekPts), season: solarTerm(S.today), walk: D.exDays.length,
         home: homeOf() && { tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') },
         onHome: () => openHouse('me'),
-        layout: { lanes: false, light: false, off: SLOT.filter(s => live.indexOf(s) < 0), bg: D.cfg && D.cfg.bg },   // 島的背景：海上／宇宙／天空
-        light: null, ferry: { open: true, label: '⛴️ 港口', sub: '去別的島', far: false }, onFerry: openPort, yatai: { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null }, onYatai: () => openYatai(), book: null, marks: b1On() ? landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })) : [],
-        ...(b1On() ? { onMark: famMark, hall: (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()), onHall: () => openHall() } : {}),   // B1   // 港口（10/27）；屋台（10/28，開島就有）
+        layout: { lanes: false, light: b1On(), off: SLOT.filter(s => live.indexOf(s) < 0), bg: D.cfg && D.cfg.bg },   // 島的背景：海上／宇宙／天空
+        light: b1On() ? { name: lightTitle() } : null, ferry: { open: true, label: '⛴️ 港口', sub: '去別的島', far: false }, onFerry: openPort, yatai: { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null }, onYatai: () => openYatai(), book: null, marks: b1On() ? landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })) : [],
+        ...(b1On() ? { onLight: () => go('light'), onMark: famMark, hall: (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()), onHall: () => openHall() } : {}),   // B1   // 港口（10/27）；屋台（10/28，開島就有）
         garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),   // 2b-1：種樹、衛星小島
         islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
         grade: () => null, mainIsle: mainOpen() ? { a: -0.5 } : null, onMainIsle: () => go('mainisle'), onSelect: showInfo3D
@@ -150,13 +151,15 @@
       <button class="ghost" onclick="toggleHQ()">${hqOn() ? '✅ 開著' : '⬜ 關著'}</button></div></div>` : ''}`;
   };
   const WHO_VISIT = '如果你打開「讓家人來我的島看看」，家人可以來看你的島，港口選單上也會顯示你填的島名和稱呼；關掉以後，港口選單上就不會出現你的島。';   // 互訪
-  const WHO = '你的計畫、每天的紀錄、運動和商店，只有你自己在 App 裡看得到；其他家人目前都看不到你的島。'
-    + '紀錄存在 App 管理員的 Google 試算表裡的隱藏分頁，管理試算表的人看得到原始資料。除了你在智慧島同意後寫給老師的那一句，不會把任何內容送給 AI。'
-    + '日めくり和喝水紀錄也一樣：在 App 裡只有你自己看得到。資料存在 App 管理員的 Google 試算表裡，所以管理員技術上打得開，但管理員答應過不會去讀。有疑問，隨時可以直接問管理員。'
+  const WHO_ = () => { const her = (S && S.herCall) || (typeof herCall === 'function' ? herCall() : '家人');   // FAM_PRIVACY_v1：她的名字或稱呼（女兒／妹妹／姪女），家人畫面不寫「她」
+    return '你的計畫、每天的紀錄、運動和商店，在 App 裡只有你自己看得到；' + (S && S.visitOk ? '沒打開「讓家人來我的島看看」的話，' : '') + '其他家人和' + her + '都看不到你的島。'   // 文案審查 131：有互訪選項時不寫死
+    + '這些資料存在 App 管理員的 Google 試算表裡，和' + her + '的紀錄放在同一份試算表、不同的隱藏分頁，每天也會備份一份；App 管理員技術上打得開，但答應過不會去讀你沒分享的內容。'
+    + '除了你在智慧島同意後寫給老師的那一句，不會把任何內容送給 AI。'
+    + '沒按分享的日めくり，和喝水紀錄也一樣：在 App 裡只有你自己看得到。有疑問，隨時可以直接問 App 管理員。'
     + '在聚會所貼的公告，家人走進聚會所都看得到；用乘船券來玩的朋友看不到，也不會推到任何人的首頁。'   // 2b-2（爸爸 10/27；文案審查 19）
-    + '在主島的列島地圖上，其他家人看得到你的稱呼、有沒有開島和你選的島背景（海上、宇宙、天空），看不到島名和島上的任何東西。';
+    + '在主島的列島地圖上，其他家人看得到你的稱呼、有沒有開島和你選的島背景（海上、宇宙、天空），看不到島名和島上的任何東西。'; };
   function privacy() {
-    return `<div class="card"><h3>🔐 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO}${S.visitOk ? WHO_VISIT : ''}</div>
+    return `<div class="card"><h3>🔐 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO_()}${S.visitOk ? WHO_VISIT : ''}</div>
       <button class="ghost" style="width:100%;margin-top:10px" onclick="logoutPhone()">🚪 登出這支手機</button></div>`;
   }
 
@@ -225,7 +228,7 @@
     const left = freeSlot(f) >= 0 && f.dirs.length < MAX_DIRS;
     return `<div class="card"><div class="big">🏝️</div><h2 style="text-align:center">${f.first ? '開一座自己的島' : '修改我的島'}</h2>
       <div class="muted" style="text-align:center">玩法和${esc(herIsle())}一樣：排計畫、每天記錄、每週確認，島會跟著長大。學習和累積的方向由你自己訂。</div></div>
-    ${f.first ? `<div class="card"><h3>1. 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO}${S.visitOk ? WHO_VISIT : ''}</div>
+    ${f.first ? `<div class="card"><h3>1. 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO_()}${S.visitOk ? WHO_VISIT : ''}</div>
       <label class="row" style="margin-top:8px"><input type="checkbox" id="famConsent" ${f.consent ? 'checked' : ''} style="width:auto"> 我看過了，同意</label></div>` : ''}
     <div class="card"><h3>${f.first ? '2. ' : ''}你希望怎麼被稱呼</h3><div class="muted">${S.visitOk ? '島主夥伴和島民會這樣叫你。打開「讓家人來我的島看看」以後，家人在港口選單上也看得到。' : '島主夥伴和島民會這樣叫你，只有你自己的島上看得到。'}</div>
       <input data-c="callMe" value="${esc(c.callMe || '')}" maxlength="12" placeholder="例如：${esc(S.who.name)}"></div>
@@ -331,7 +334,7 @@
         <button class="ghost" style="width:100%;margin-top:8px" onclick="famAgreeAi()">我看過了，同意</button>
         <div class="muted" style="font-size:12px;margin-top:6px">先不同意也可以寫，老師會用事先寫好的一句話回你。</div></div>`);
     }
-    if (b1On()) { const w = document.createTreeWalker(app, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) if (n.nodeValue.indexOf('讀書計時') >= 0) n.nodeValue = n.nodeValue.split('讀書計時').join('專心計時'); }   // B1（文案審查 10/28）：家人島的計時叫專心計時，首頁、音樂廳同一包一起改
+    if (b1On()) { const w = document.createTreeWalker(app, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) [['讀書計時', '專心計時'], ['讀書計畫', '我的計畫']].forEach(([x, y]) => { if (n.nodeValue.indexOf(x) >= 0) n.nodeValue = n.nodeValue.split(x).join(y); }); }   // B1（文案審查 10/28）：家人島的計時叫專心計時，首頁、音樂廳同一包一起改
     if (t === 'home') visitRefresh();
     commonAfter();   // FAM_COMMON_v1
     common2After(t);   // FAM_COMMON2_v1
@@ -454,10 +457,12 @@
   function b1Open() {
     if (b1Ready || !b1On()) return; b1Ready = true;
     KEEP_PLACE.push('hall'); OWN_TABS.push('hall');   // 音樂廳：計時寫家人自己的 move:日期（saveMove），綠點照她的規則從那裡算
+    OWN_TABS.push('hand');   // HANDLOG_FAM_v1：計時補登頁（HANDLOG_v1），存進家人自己的 move:／focus:，後端 handCheck_ 一樣擋
     OWN_CARDS.push('matShelf', 'buyBack');   // 商店的素材櫃與收購
     ['buyMat', 'sellDish'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
     PLACES.hall = Object.assign({}, PLACES.hall, { about: PLACES.hall.about.map(a => a.replace('讀書計時', '專心計時')) });
     PLACES.yatai.about = PLACES.yatai.about.concat(['素材不夠的話，商店的素材櫃可以用島幣買常見素材；做好的料理也可以賣給商店']);
+    b1bOpen();   // B1b
   }
   // 素材櫃、收購：照她的卡片（價錢、每天的上限都一樣），只換掉講讀書的字
   const matShelf0 = matShelfCard, buyBack0 = buyBackCard;
@@ -609,5 +614,320 @@
     if (t === 'home' && dailyOn() && !S.save['daily:' + S.today]) ensureDaily0();
   }
   ['coinBook', 'coinGoal', 'coinFoot'].forEach(k => { if (OWN_CARDS.indexOf(k) < 0) OWN_CARDS.push(k); });   // COINBOOK_v1 家人自己的島也有島幣帳本、存錢目標
+  // ---------- B1b（內容規則 10/28、工程顧問 10/28 四點，排在 11/13）：燈塔、紙船碼頭、小巷；跟 B1 同一個開關，不碰 AI ----------
+  function b1bOpen() {
+    OWN_TABS.push('light', 'paper'); KEEP_PLACE.push('light', 'paper');   // 燈塔只有海灘一層；燈室、航海日誌不開
+    OWN_CARDS.push('link');   // 確認這週頁下面的小巷
+    ['saveLighthouse', 'addPaper', 'saveLink'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    const lk = PLACE_LINKS.find(p => p.key === 'light'); if (lk) lk.on = () => true;   // 還沒取名也能從「去島上走走」進燈塔
+    PLACES.lighthouse = Object.assign({}, PLACES.lighthouse, { lead: '燈塔由你請一位守燈人來顧：取名字、選樣子、寫個性。',
+      about: ['這座燈塔每天晚上都會亮著，替你的島照路', '燈塔下面的岬角有一個紙船碼頭，做完一件事想記一下心得，就去那裡放一艘船', '樓上的燈室還在整理，之後會再開放'] });
+    VISIT_NO.push('紙船上的心得、連結寫的那一句');
+  }
+  const famDir = code => ((isle() && isle().dirs) || []).find(d => SLOT[d.slot] === code);
+  const dirPill = code => { const d = famDir(code); return `<span class="pill">${d ? esc(d.ic) + ' ' + esc(d.name) : '🌾'}</span>`; };
+  function famFloors(cur) {
+    const f = [['light', '1F', '🌊 海灘'], ['lamp', '3F', '🔭 燈室'], ['paper', '岬角下', '⛵ 碼頭']];
+    return `<div class="floors">${f.map(([t, n, name]) => t === 'lamp' ? `<button disabled><small>${n}</small>${name}<small>整理中</small></button>`
+      : `<button class="${cur === t ? 'on' : ''}" ${cur === t ? 'disabled' : `onclick="go('${t}');window.scrollTo(0,0)"`}><small>${n}</small>${name}</button>`).join('')}</div>`;
+  }
+  // 這週（週一到今天）完成幾次、碼頭上放了幾艘船：只算這位家人自己的存檔
+  function famLightWeek() {
+    const wk = mondayOf(S.today), wd = weekData(wk);
+    return { done: Object.values(wd.done).reduce((a, b) => a + b, 0), boats: D.paperSessions.filter(x => x.date >= wk && x.date <= S.today).length };
+  }
+  // 守燈人的話：事先寫好的句子，只看這週有沒有完成項目、有沒有放船，不提高低、不比較
+  const LIGHT_SAY = {
+    both: ['這週做了好多事，也記下了心得，燈塔今晚照得特別亮。', '一邊做、一邊想，碼頭上的船都看得到喔。'],
+    done: ['這週一件一件做著，燈塔都看在眼裡。想記一句心得的話，碼頭隨時都在。', '做完的事情，燈塔都替你記得。'],
+    boats: ['碼頭上有新的船，我會幫你看著。', '寫下來的心得，會一直停在碼頭上。'],
+    none: ['燈塔每天晚上都會亮著，慢慢來就好。', '今天也辛苦了，燈塔替你照著路。'] };
+  function famLightSay(w) { const l = LIGHT_SAY[w.done && w.boats ? 'both' : w.done ? 'done' : w.boats ? 'boats' : 'none']; return l[daySeed() % l.length]; }
+  const viewLight0 = viewLight;
+  window.viewLight = function () {
+    if (!b1On()) return viewLight0();
+    if (!lighthouseName()) {
+      const v = draft.lightName != null ? draft.lightName : '';
+      return `<div class="card"><div class="big">🗼</div><h2 style="text-align:center">島的岬角上蓋了一座燈塔</h2>
+        <div class="muted" style="text-align:center">燈塔每天晚上都會亮著，替你的島照路。先幫燈塔取個名字吧！</div>
+        <div class="row" style="gap:6px;margin-top:12px;justify-content:center">${LIGHT_NAMES.map(n => `<button class="ghost" style="padding:6px 12px" onclick="draft.lightName='${n}';render()">${n}</button>`).join('')}</div>
+        <label>燈塔的名字（也可以自己取）</label><input id="lhName" maxlength="12" value="${esc(v)}" placeholder="例如：燈塔岬" oninput="draft.lightName=this.value">
+        <button style="width:100%;margin-top:12px" onclick="nameLighthouse()">就叫這個名字！</button></div>
+        <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+    }
+    const kp = keeperOf('lighthouse'), w = famLightWeek(), intro = placeIntro('lighthouse');
+    return `${famFloors('light')}<div class="card"><h2>🗼 ${esc(lightTitle())}</h2>
+        ${intro || (kp ? `<div class="row" style="flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('lighthouse')"><span style="font-size:32px">${kpPic(kp)}</span>
+          <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(famLightSay(w))}</div></div>`
+          : `<button class="ghost" style="width:100%" onclick="openKeeper('lighthouse')">🧓 燈塔還沒有守燈人，請一位來守燈吧</button>`)}
+        <div class="hud" style="margin-top:10px"><div><b>${w.done}</b><span class="muted">✅ 這週完成</span></div><div><b>${w.boats}</b><span class="muted">⛵ 這週的船</span></div></div></div>
+      <div class="card"><div class="row" style="flex-wrap:nowrap"><span style="font-size:28px">⛵</span><div class="grow"><b>燈塔下面的紙船碼頭</b>
+          <div class="muted">做完一件事，想記一句心得，就去碼頭放一艘船。</div></div>
+        <button onclick="go('paper');window.scrollTo(0,0)">去碼頭</button></div></div>
+      ${wordsOn() ? famWordCard() : ''}
+      <div class="row"><button class="ghost" onclick="renameLighthouse()">✏️ 改燈塔的名字</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+  };
+  // 紙船碼頭：做完一件事、想記一句心得就放一艘；沒有錯幾題、錯因、親子船。島幣照她的規則（一天第一艘 🪙2～4、+20 經驗值）
+  const viewPaper0 = viewPaper;
+  window.viewPaper = function () {
+    if (!b1On()) return viewPaper0();
+    const live = liveDirs(), f = draft.fpaper || (draft.fpaper = { lanes: [], note: '' });
+    f.lanes = f.lanes.filter(l => live.some(d => SLOT[d.slot] === l));
+    const used = D.paperSessions.some(x => x.date === S.today), gain = f.lanes.length ? Math.min(PAPER_MAX, 1 + f.lanes.length) : 0;
+    const list = D.paperSessions.slice().reverse().slice(0, 20);
+    const form = live.length ? `<div class="card">
+        <label>這次跟哪幾個方向有關（可以多選）</label>
+        <div class="row" style="gap:6px">${live.map(d => { const c = SLOT[d.slot]; return `<button class="${f.lanes.includes(c) ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="famPaperLane('${c}')">${esc(d.ic)} ${esc(d.name)}</button>`; }).join('')}</div>
+        <label style="margin-top:10px">今天最大的收穫（一句話）</label>
+        <input id="famPpNote" value="${esc(f.note)}" maxlength="200" placeholder="例如：早上先走 20 分鐘，下午比較有精神" oninput="draft.fpaper.note=this.value">
+        <div class="muted" style="margin-top:10px">${used ? '今天已經放過紙船了，這艘會記下來，但不會再給島幣。' : gain ? `這艘船：🪙 +${gain}、+20 經驗值` : '第一個方向 2 枚島幣，每多一個方向 +1 枚，一次最多 4 枚。'}</div>
+        <button style="width:100%;margin-top:10px" id="famPpGo" onclick="famSendPaper()">放船 ⛵</button></div>`
+      : `<div class="card"><div class="muted">先到「更多 → 我的方向」訂一個方向，才能放船。</div><button class="ghost" style="width:100%;margin-top:8px" onclick="go('more')">去我的方向</button></div>`;
+    return `${famFloors('paper')}<div class="card"><h2>⛵ 紙船碼頭</h2><div class="muted">做完一件事，想記一句心得，就放一艘船。船會停在燈塔下面的小碼頭，在島上只有你自己看得到。</div></div>
+      ${form}
+      <div class="card"><h3>🌊 碼頭上的船</h3>${list.length ? list.map(x => `<div class="item" style="display:block">
+          <div class="row"><b class="grow">⛵ 紙船　${x.lanes.map(dirPill).join('')}</b><span class="muted">${short(x.date)}${x.paid ? '・🪙 +' + x.coins : ''}</span></div>
+          <div style="margin-top:4px">💡 ${esc(x.note)}</div></div>`).join('')
+        : '<div class="muted">碼頭還空空的，放第一艘船吧！</div>'}</div>
+      <div class="row"><button class="ghost" onclick="go('light')">去燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+  };
+  const famPaperKeep = () => { const n = document.getElementById('famPpNote'); if (n) draft.fpaper.note = n.value; };
+  window.famPaperLane = function (c) { famPaperKeep(); const f = draft.fpaper; f.lanes = f.lanes.includes(c) ? f.lanes.filter(x => x !== c) : f.lanes.concat([c]); render(); };
+  window.famSendPaper = async function () {
+    famPaperKeep(); const f = draft.fpaper;
+    if (!f.lanes.length) return toast('選一下這次跟哪幾個方向有關');
+    if (!f.note.trim()) return toast('寫一句今天最大的收穫');
+    document.getElementById('famPpGo').disabled = true;
+    const before = D.coins;
+    try { await flush(); S = await call('addPaper', f.lanes, f.note); D = derive(S); }
+    catch (e) { document.getElementById('famPpGo').disabled = false; return toast('放船失敗：' + (e.message || e)); }
+    draft = {}; toast(D.coins > before ? '⛵ 船出發了！🪙 +' + (D.coins - before) : '⛵ 船停進碼頭了'); render(); window.scrollTo(0, 0);
+  };
+  // 小巷：確認這週頁下面，兩個方向之間的連結（+15 經驗值，兩位島民好感度上升）；少於兩個方向時不出現；一天最多 3 條、同一對不重複
+  const viewLinkForm0 = viewLinkForm;
+  window.viewLinkForm = function () {
+    if (!b1On()) return viewLinkForm0();
+    const live = liveDirs(); if (live.length < 2) return '';
+    const n = (S.save.links || []).filter(l => l.date === S.today).length;
+    const opts = pick => live.map((d, i) => `<option value="${SLOT[d.slot]}"${i === pick ? ' selected' : ''}>${esc(d.ic)} ${esc(d.name)}</option>`).join('');
+    return `<div class="card" id="famLink"><h3>🔗 發現兩個方向的連結（選填）</h3>
+      <div class="muted">例如「外語 × 健康：走路的時候聽外語 podcast」。每發現一條 +15 經驗值，兩位島民好感度上升。</div>
+      ${n >= 3 ? '<div class="muted" style="margin-top:8px">今天已經記了 3 條連結，明天再來吧。</div>' : `<div class="row" style="margin-top:8px"><select id="famLa" class="grow">${opts(0)}</select><span>×</span><select id="famLb" class="grow">${opts(1)}</select></div>
+      <label>它們怎麼連在一起？</label><input id="famLn" maxlength="100" placeholder="一句話就好">
+      <div style="margin-top:8px"><button class="ghost" id="famAddLink" onclick="famAddLink()">記下這條連結</button></div>`}</div>`;
+  };
+  window.famAddLink = async function () {
+    const $ = id => document.getElementById(id), a = $('famLa').value, b = $('famLb').value, note = $('famLn').value.trim();
+    if (a === b) return toast('選兩個不同的方向喔');
+    if ((S.save.links || []).some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a))) return toast('這兩個方向已經連過了');
+    if (!note) return toast('寫一句話說明它們怎麼連在一起');
+    if ($('note')) draft.note = $('note').value;
+    $('famAddLink').disabled = true;
+    try { S = await call('saveLink', { a, b, note }); D = derive(S); }
+    catch (e) { $('famAddLink').disabled = false; return toast('沒有存到：' + (e.message || e)); }
+    toast(resident(a).name + ' 和 ' + resident(b).name + ' 的好感度上升了！'); render();
+  };
+  // ---------- 單字出題（11/13 簡化版）：FAM_WORDS 開了、燈塔也有了才出現；她的 viewWords 一字不動 ----------
+  const wordsOn = () => !!(S && S.wordsOk) && b1On();
+  let wordsReady = false;
+  function wordsOpen() {
+    if (wordsReady || !wordsOn()) return; wordsReady = true;
+    OWN_TABS.push('words'); KEEP_PLACE.push('words');
+    ['scanWords', 'saveWords', 'delWords', 'wordQuest', 'answerWord', 'agreeWords'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    PLACES.lighthouse = Object.assign({}, PLACES.lighthouse, { about: PLACES.lighthouse.about.concat(['燈塔一樓可以拍單字出題：要背的英文、日文單字拍下來或打字，AI 照你選的程度出題給你練']) });
+    VISIT_NO.push('單字卡和練習的結果');
+  }
+  // 程度：每組單字卡自己選；新的一組的程度按鈕分英文、日文兩行，按鈕只寫「一般／學測／多益」「N5～N1」（美術 10/29），存了就不換（後端 FamWords.gs 的 FAM_WORD_LV）
+  const WORD_LV = [['en-gen', '英文・一般'], ['en-gsat', '英文・學測'], ['en-toeic', '英文・多益'], ['ja-n5', '日文・N5'], ['ja-n4', '日文・N4'], ['ja-n3', '日文・N3'], ['ja-n2', '日文・N2'], ['ja-n1', '日文・N1']];
+  const lvName = lv => (WORD_LV.find(x => x[0] === lv) || [0, ''])[1];
+  const lvJa = lv => /^ja-/.test(String(lv));
+  const famAiDay = () => (S && Number(S.wordsAiDay)) || 5;   // 家人 AI 每人每天幾次（後端 FAM_AI_DAY，和其他 AI 功能共用；「怎麼玩？」的說明在載入時算，用預設的 5）
+  const famWordAi = () => Math.max(0, Number(S.wordsAi) || 0);   // 今天還能叫幾次 AI（後端算，和智慧島共用）
+  const FAM_WORD_HOW = '拍課本、講義、單字表或書上<b>印刷</b>的英文或日文單字，或直接打字，存成單字卡；每組自己選程度（英文：一般、學測、多益；日文：N5～N1）。按「出 5 題」，AI 照這個程度出題，之前沒答對、還沒練過的字會先出。一天最多 ' + WORD_Q_DAILY + ' 題，答一題 +2 經驗值（一天最多 ' + WORD_XP_DAILY + '），不換島幣。AI 次數和其他 AI 功能（智慧島老師的回話、拍手寫計畫、島民的信）共用，一天 ' + famAiDay() + ' 次：拍一張算 1 次，出一組算 1 次。App 不留照片；單字卡和練習的結果在島上只有你看得到。請不要拍有個人資料或公司資料的東西。';
+  function famWordToday() {
+    const all = wordQuizzes();
+    return { made: all.filter(q => q.date === S.today).reduce((a, q) => a + (q.items || []).length, 0),
+      xp: all.reduce((a, q) => a + (q.items || []).filter(x => x.at === S.today).reduce((b, x) => b + (x.xp || 0), 0), 0),
+      open: all.find(q => !q.done) || null, last: all[all.length - 1] || null, ai: famWordAi() };
+  }
+  // 擋下的原因（工程顧問 10/29 條件 6：每一種都要在畫面上說明）
+  function famWordBlocked(t) {
+    return t.open ? '上一組還沒答完，答完再出新的一組。' : t.made >= WORD_Q_DAILY ? `今天的 ${WORD_Q_DAILY} 題練完了，休息一下，明天再來。`
+      : t.ai < 1 ? `今天的 AI 次數用完了（和其他 AI 功能共用，一天 ${famAiDay()} 次），明天再來。打字存單字卡不用 AI，現在就可以先存。` : '';
+  }
+  window.famWordCard = function () {
+    const t = famWordToday();
+    return `<div class="card"><div class="row" style="flex-wrap:nowrap"><span style="font-size:28px">🔤</span><div class="grow"><b>拍單字出題</b>
+        <div class="muted">要背的英文或日文單字拍下來或打字，AI 照你選的程度出題給你練。${t.open ? '有一組還沒答完。' : '今天 ' + t.made + '／' + WORD_Q_DAILY + ' 題。'}</div></div>
+      <button class="ghost" style="white-space:nowrap" onclick="go('words');window.scrollTo(0,0)">${t.open ? '繼續練' : '去練'}</button></div></div>`;
+  };
+  const consentCard = () => `<div class="card" id="fwConsent"><h3>🔒 開始之前</h3>
+      <div>你拍的照片和單字卡上的字，會送到 Google 的 AI（Gemini）讀字和出題，不會被拿去訓練 AI；App 不留照片。單字卡和練習的結果放在你自己的島上，在島上其他家人都看不到；資料存在試算表裡，管理 App 的人技術上打得開。請不要拍有個人資料或公司資料的東西。</div>
+      <div class="muted" style="margin-top:6px">打字存單字卡不用 AI，不同意也可以先存。</div>
+      <button style="width:100%;margin-top:10px" id="fwAgree" onclick="famAgreeWords()">我知道了，同意</button></div>`;
+  window.famAgreeWords = async function () {
+    document.getElementById('fwAgree').disabled = true;
+    try { await flush(); S = await call('agreeWords'); D = derive(S); } catch (e) { document.getElementById('fwAgree').disabled = false; return toast('沒有存到：' + (e.message || e)); }
+    render();
+  };
+  window.viewWords = function () {
+    if (!wordsOn()) return `<div class="card"><h2>🔤 拍單字出題</h2><div class="muted">單字出題還沒開放。開放以後，燈塔一樓會多一張「拍單字出題」的卡。</div></div>
+      <div class="row"><button class="x grow" onclick="go('light')">回燈塔 🗼</button></div>`;
+    if (draft.wv) return famWordNew(draft.wv);
+    const t = famWordToday(), kp = keeperOf('lighthouse'), sets = wordSets(), agreed = !!S.save.wordOk;
+    const show = t.open || (t.last && t.last.done && !t.last.lean && draft.wqShow === t.last.id ? t.last : null);
+    const block = famWordBlocked(t);
+    const setRow = x => {
+      const good = x.words.filter(wordGood).length, open = draft.wsOpen === x.id;
+      return `<div class="item" style="flex-wrap:wrap"><div class="name grow"><b>${esc(x.name)}</b> <span class="pill" style="font-size:12px">${esc(lvName(x.lv))}</span><div class="muted">${x.words.length} 個字・練熟 ${good} 個</div>
+          <div class="bar" style="margin-top:4px"><i style="width:${Math.round(good / Math.max(1, x.words.length) * 100)}%"></i></div></div>
+        ${t.open && t.open.set === x.id ? '<span class="muted" style="padding:6px 4px">練習中…</span>' : agreed ? `<button style="padding:6px 12px" onclick="wordQuestQ('${x.id}')" ${wordBusy || block ? 'disabled' : ''}>出 ${Math.min(5, x.words.length, WORD_Q_DAILY - t.made) || 5} 題</button>` : ''}
+        <button class="ghost" style="padding:6px 10px" onclick="draft.wsOpen=draft.wsOpen==='${x.id}'?null:'${x.id}';render()">${open ? '收起' : '看字'}</button>
+        ${open ? `<div style="width:100%;margin-top:6px">${x.words.map(w => `<div class="row" style="gap:6px;font-size:14px;padding:3px 0;border-bottom:1px solid #eee"><b class="grow">${esc(w.w)}</b>${sayBtn(w.w, x.lv)}<span class="muted">${esc(w.pos)} ${esc(w.zh)}</span><span class="muted" style="min-width:52px;text-align:right">${w.n ? (wordGood(w) ? '✅ ' : '') + w.ok + '／' + w.n : '還沒練'}</span></div>`).join('')}
+          <div class="row" style="margin-top:6px"><button class="ghost" onclick="famEditWords('${x.id}')">✏️ 修改</button><button class="ghost" onclick="famDelWords('${x.id}')">🗑️ 刪掉這組</button></div></div>` : ''}</div>`;
+    };
+    return `${famFloors('light')}<div class="card"><h2>🔤 拍單字出題</h2>
+        ${kp ? `<div class="row" style="flex-wrap:nowrap"><span style="font-size:32px">${kpPic(kp)}</span><div class="speech grow"><b>${esc(kp.name)}</b>：把要背的單字拍給我，或打字給我，我照你選的程度出題給你練。沒答對的字，下次會先出。</div></div>` : ''}
+        <div class="hud" style="margin-top:10px"><div><b>${t.made}／${WORD_Q_DAILY}</b><span class="muted">今天的單字題</span></div><div><b>${t.xp}／${WORD_XP_DAILY}</b><span class="muted">今天的經驗值</span></div><div><b>${t.ai} 次</b><span class="muted">今天還能用 AI</span></div></div>
+        <details class="muted" style="margin-top:8px;font-size:13px"><summary>怎麼玩？</summary>${FAM_WORD_HOW} ${SAY_HOW}</details>${sayNote(sets)}</div>
+      ${agreed ? '' : consentCard()}
+      ${show ? famWordQuiz(show) : ''}
+      ${wordBusy ? '<div class="card"><div class="muted">✍️ 守燈人正在照你的單字出題…（大約 10～30 秒）</div></div>' : ''}
+      <div class="card"><h3>📚 我的單字卡</h3>
+        ${agreed && block && !t.open ? `<div style="margin-bottom:6px;color:var(--plum)">⏳ ${block}</div>` : ''}
+        ${sets.length ? sets.map(setRow).join('') : '<div class="muted">還沒有單字卡。拍一張單字表，或直接打字，做第一組吧！</div>'}
+        <button class="${agreed ? '' : 'ghost'}" style="width:100%;margin-top:10px" onclick="famWordStart()">＋ 新的一組單字卡</button></div>
+      <div class="row"><button class="x grow" onclick="go('light')">回燈塔 🗼</button></div>`;
+  };
+  // 一組題：和她的一樣，只是沒有漂流瓶、題型多一個讀音題
+  function famWordQuiz(q) {
+    const ABCD = 'ABCD', items = q.items || [], cur = items.findIndex(x => x.choice == null);
+    const set = S.save[q.set], right = items.filter(x => x.correct).length, wrong = items.filter(x => x.choice != null && !x.correct).length;
+    const lastDone = cur < 0 ? items.length - 1 : cur - 1, ja = lvJa(set && set.lv);
+    const kindName = k => ja ? (k === '讀音' ? '漢字読み' : '文脈規定') : k === '片語' ? '片語題' : '字彙題';   // 日文照 JLPT 的題型名稱（文案審查 42）
+    const done = (x, i) => `<details class="item" style="display:block" ${i === lastDone ? 'open' : ''}><summary><b>${x.correct ? '⭕' : '❌'} ${esc(x.w)}</b> <span class="pill" style="font-size:12px;${x.correct ? 'background:var(--grass);color:#2e6b34' : 'background:#fbe3dc;color:#b5452b'}">${x.correct ? '答對' : '再練'}</span><span class="muted">・${kindName(x.kind)}</span></summary>
+        <div style="margin:6px 0;white-space:pre-wrap">${esc(x.q)}</div>
+        <div class="opts">${x.o.map((o, j) => `<button class="opt ${j === x.a ? 'right' : j === x.choice ? 'wrong' : ''}" disabled>(${ABCD.charAt(j)}) ${esc(o)}</button>`).join('')}</div>
+        <div class="speech" style="margin-top:6px">${esc(x.ex)}</div>${saySentence(x, set && set.lv)}
+        <div class="muted" style="font-size:12px;margin-top:4px">🤖 題目和解說是 AI 照你的單字卡出的，可能會錯；覺得怪怪的就查字典。</div></details>`;
+    return `<div class="card" id="wqCard"><h3>🔤 ${esc(set ? set.name : '單字題')}</h3>
+        <div class="muted">${q.done ? `這組答完了：答對 ${right}／${items.length} 題。${wrong ? '沒答對的 ' + wrong + ' 個字，下次出題會先出。' : '全部答對！'}` : `第 ${cur + 1}／${items.length} 題・答一題 +2 經驗值`}</div>
+        ${items.map((x, i) => x.choice != null ? done(x, i) : i === cur ? `<div style="margin:12px 0 8px;font-weight:700;white-space:pre-wrap">${esc(x.q)}</div>
+          <div class="opts">${x.o.map((o, j) => `<button class="opt" onclick="answerWordQ('${q.id}',${i},${j})">(${ABCD.charAt(j)}) ${esc(o)}</button>`).join('')}</div>` : '').join('')}</div>`;
+  }
+  window.famWordStart = function () {
+    const last = wordSets()[0];
+    draft.wv = { step: 'pick', name: '', items: [], text: '', lv: (last && last.lv) || 'en-gen' }; render(); window.scrollTo(0, 0);
+  };
+  window.famDelWords = async function (id) {
+    const x = S.save[id]; if (!x || !confirm('刪掉「' + x.name + '」這組單字卡嗎？練習的紀錄也會一起刪掉。')) return;
+    try { await flush(); S = await call('delWords', id); D = derive(S); } catch (e) { return toast('刪掉失敗：' + (e.message || e)); }
+    draft.wsOpen = null; render();
+  };
+  window.famEditWords = function (id) {
+    const x = S.save[id]; if (!x) return;
+    draft.wv = { step: 'review', id, lv: x.lv, name: x.name, items: x.words.map(w => ({ w: w.w, zh: w.zh, pos: w.pos, use: true })) }; render(); window.scrollTo(0, 0);
+  };
+  // 打字：英文照她的 parseTypedWords；日文一行一個，第一個空白（或逗號、頓號、冒號）前面是字，後面是中文意思
+  function famParseTyped(text, lv) {
+    if (!lvJa(lv)) return parseTypedWords(text);
+    return String(text || '').split(/\n+/).map(l => { const m = l.trim().match(/^([^\s,，、:：;；]+)[\s,，、:：;；]*(.*)$/); if (!m || !/[぀-ヿ㐀-鿿]/.test(m[1])) return null;
+      return { w: m[1].slice(0, 30), zh: m[2].trim().slice(0, 20), pos: '', use: true }; }).filter(Boolean).slice(0, 30);
+  }
+  window.famWordNext = function () {
+    const l = famParseTyped(draft.wv.text, draft.wv.lv);
+    if (!l.length) return toast(lvJa(draft.wv.lv) ? '還沒讀到日文單字' : '還沒讀到英文單字');
+    draft.wv.items = l; draft.wv.step = 'review'; render();
+  };
+  window.famWordPhoto = async function (input) {
+    const file = input.files && input.files[0]; if (!file) return;
+    input.value = '';
+    try { draft.wv.shot = await shrinkPhoto(file); } catch (e) { return toast(e.message || '讀不到這張照片'); }
+    famWordScan();
+  };
+  window.famWordScan = async function () {
+    const w = draft.wv, t0 = Date.now(), photo = w && w.shot; if (!photo) return;
+    const tick = () => scanOverlay(`<div class="big">🔍</div><h3 style="text-align:center">守燈人正在讀單字…</h3><div class="muted" style="text-align:center">大約 10 到 40 秒・已經 ${Math.round((Date.now() - t0) / 1000)} 秒</div>`);
+    tick(); clearInterval(scanOverlay.t); scanOverlay.t = setInterval(tick, 1000);
+    try {
+      await flush();
+      const res = await Promise.race([call('scanWords', photo, w.lv),
+        new Promise((_, bad) => setTimeout(() => bad(new Error('等了 120 秒還沒讀完，可能是網路或 AI 太忙，過一下再拍一次')), 120000))]);
+      scanOverlayClose();
+      w.items = w.items.concat(res.items.map(x => Object.assign(x, { use: true }))).slice(0, 30); w.shot = null; w.step = 'review';
+      S.wordsAi = Math.max(0, famWordAi() - 1);   // 畫面上的次數先減，下次同步會換成後端的數字
+      render(); window.scrollTo(0, 0);
+    } catch (e) {
+      clearInterval(scanOverlay.t);
+      scanOverlay(`<div class="big">😵</div><h3 style="text-align:center">這次沒讀出來</h3><div class="muted" style="text-align:center">${esc(e.message || String(e))}</div><div class="row" style="margin-top:12px">${famWordAi() ? '<button class="grow" onclick="scanOverlayClose();famWordScan()">🔁 用同一張再試一次</button>' : ''}<button class="ghost" onclick="scanOverlayClose()">先不用</button></div>`);
+    }
+  };
+  function famWordNew(w) {
+    const back = `<div class="row"><button class="x grow" onclick="draft.wv=null;render()">返回</button></div>`, ja = lvJa(w.lv), lang = ja ? '日文' : '英文';
+    if (w.step === 'pick') {
+      const photo = !S.save.wordOk ? '<div class="muted" style="margin-top:12px">📷 拍照要先回上一頁看過說明、按同意；打字不用。</div>'
+        : famWordAi() ? `<label class="btn" style="display:block;text-align:center;margin-top:12px">📷 拍單字表<input type="file" accept="image/*" hidden onchange="famWordPhoto(this)"></label>`
+        : `<div class="muted" style="margin-top:12px">⏳ 今天的 AI 次數用完了（和其他 AI 功能共用，一天 ${famAiDay()} 次），明天才能拍照讀字；可以先用打字的。</div>`;
+      return `<div class="card"><h2>🔤 新的一組單字卡</h2>
+        <label>這組的程度（存了就不能換）</label>
+        ${[['en', '英文'], ['ja', '日文']].map(([g, gn]) => `<div class="muted" style="font-size:12px;margin-top:6px">${gn}</div>
+        <div class="row" style="gap:6px;flex-wrap:wrap">${WORD_LV.filter(([k]) => k.startsWith(g + '-')).map(([k, n]) => `<button class="${w.lv === k ? '' : 'ghost'}" data-lv="${k}" style="padding:6px 10px;font-size:14px" onclick="draft.wv.lv='${k}';render()">${n.split('・')[1]}</button>`).join('')}</div>`).join('')}
+        <div style="margin-top:10px;color:var(--plum)">📖 請拍<b>印刷</b>的內容（課本、講義、單字表、書），不要拍自己寫的字。</div>
+        <div class="muted" style="margin-top:6px">AI 只讀印刷的${lang}單字${ja ? '' : '和片語'}，手寫的會略過。App 不留照片，也請不要拍有個人資料或公司資料的東西。一次拍一頁，光線亮一點、字要拍清楚。</div>
+        ${photo}
+        <label style="margin-top:14px">或直接打字（一行一個，${lang}後面可以寫中文意思）</label>
+        <textarea rows="6" placeholder="${ja ? '勉強 讀書&#10;予約 預約&#10;お願いします 拜託' : 'look forward to 期待&#10;reservation 預約&#10;luggage 行李'}" oninput="draft.wv.text=this.value;document.getElementById('wvNext').className=this.value.trim()?'':'ghost'">${esc(w.text || '')}</textarea>
+        <button id="wvNext" class="${String(w.text || '').trim() ? '' : 'ghost'}" style="width:100%;margin-top:8px" onclick="famWordNext()">下一步</button></div>${back}`;
+    }
+    const n = w.items.filter(x => x.use && String(x.w).trim()).length;
+    return `<div class="card"><h2>🔤 ${w.id ? '修改單字卡' : '讀到 ' + w.items.length + ' 個字'}</h2>
+        <div class="muted">${esc(lvName(w.lv))}・勾選要練的字；讀錯的地方直接改。一組最多 30 個字。</div>
+        <label>這組叫什麼？</label><input maxlength="20" value="${esc(w.name)}" placeholder="${ja ? '例如：N4 第 3 課' : '例如：旅行用字'}" oninput="draft.wv.name=this.value"></div>
+      <div class="card">${w.items.length ? w.items.map((x, i) => `<div class="row" style="gap:6px;flex-wrap:nowrap;${x.use ? '' : 'opacity:.55'}">
+          <input type="checkbox" class="check" ${x.use ? 'checked' : ''} onchange="draft.wv.items[${i}].use=this.checked;render()">
+          <input style="flex:3" maxlength="40" value="${esc(x.w)}" oninput="draft.wv.items[${i}].w=this.value">
+          <input style="flex:2" maxlength="20" value="${esc(x.zh)}" placeholder="中文意思" oninput="draft.wv.items[${i}].zh=this.value"></div>`).join('')
+        : `<div class="muted">照片上沒讀到印刷的${lang}單字。換個角度、拍亮一點再試一次，或改用打字。</div>`}
+        ${w.items.length < 30 ? `<button class="ghost" style="margin-top:8px" onclick="draft.wv.items.push({w:'',zh:'',pos:'',use:true});render()">＋ 加一個字</button>` : ''}</div>
+      <button id="wvGo" style="width:100%" onclick="famSaveWords()" ${n ? '' : 'disabled'}>存成單字卡（${n} 個字）</button>
+      <div class="row" style="margin-top:8px">${w.id ? '' : `<button class="ghost grow" onclick="draft.wv.step='pick';render()">再拍或打字</button>`}<button class="x" onclick="draft.wv=null;render()">取消</button></div>`;
+  }
+  window.famSaveWords = async function () {
+    const w = draft.wv, list = w.items.filter(x => x.use && String(x.w).trim()).map(x => ({ w: x.w, zh: x.zh, pos: x.pos }));
+    if (!list.length) return toast('勾一個要練的字');
+    document.getElementById('wvGo').disabled = true;
+    try { await flush(); S = await call('saveWords', w.id || '', w.name, list, w.lv); D = derive(S); }
+    catch (e) { document.getElementById('wvGo').disabled = false; return toast('存檔失敗：' + (e.message || e)); }
+    toast(S.save.wordOk ? '📚 存好了，按「出 5 題」開始練' : '📚 存好了。要出題的話，先看過上面的說明、按同意');
+    draft = {}; render(); window.scrollTo(0, 0);
+  };
+  // FAM_NOSTREAK_v1（文案審查 95）：家人島不顯示連續類的字。運動獎勵照累積達標週數解鎖（中間斷掉也算），
+  // 完走メダル改成拿到全部運動獎勵就解鎖（家人沒有會考週）；徽章「連續 N 週」改成「累積 N 週」，照有紀錄的週數算
+  const derive0ns = derive;
+  window.derive = function (st) {
+    const d = derive0ns(st);
+    if (d && d.exWeeks) { const n = Object.values(d.exWeeks).filter(x => x >= EX_GOAL).length; d.exStreak = n; d.exBest = n; }
+    if (d && Array.isArray(d.badges)) d.badges = d.badges.map(b => { const m = /^連續 (\d+) 週$/.exec(b.name || '');
+      return m ? Object.assign({}, b, { name: '累積 ' + m[1] + ' 週', ok: (d.recordedWeeks || 0) >= +m[1] }) : b; });
+    return d;
+  };
+  EX_MEDAL.lock = '拿到全部的運動獎勵';
+  window.exMedal = () => !!(D && EX_REWARDS.every(r => D.exBest >= r.weeks));
+  const furnRewards0ns = furnRewards;
+  window.furnRewards = () => furnRewards0ns().split('每週運動 3 天、連續達標就會解鎖，不用島幣。').join('每週運動 3 天就算一週，累積幾週就會解鎖，不用島幣。')
+    .replace(/連續 (\d+) 週/g, '累積 $1 週');
+  const habitCard0ns = habitCard;
+  window.habitCard = () => habitCard0ns().replace(/已經連續 (\d+) 週達標 🔥/, '已經累積 $1 週').replace(/・連續 (\d+) 週可以拿到/, '・累積 $1 週可以拿到')
+    .split('一週運動 3 天就達標').join('一週運動 3 天就算一週').split('海邊步道還沒有管理員').join('海邊步道還沒有主人');   // 管理員是 App 管理員的稱呼（文案審查 97）
+  // 地方的「管理員」在家人島叫「主人」（文案審查 68、97）；App 管理員不動；不用「他」指主人
+  const host = s => s.replace(/(?<!App )管理員/g, '主人').split('。他每天會用自己的個性跟你說話').join('。每天會用自己的個性跟你說話');
+  const viewKeeper0ns = viewKeeper, viewKizuna0ns = viewKizuna;
+  window.viewKeeper = (...a) => host(viewKeeper0ns(...a));
+  window.viewKizuna = (...a) => host(viewKizuna0ns(...a));
+  const moveBlock0ns = moveBlock;
+  window.moveBlock = (...a) => moveBlock0ns(...a).split('沒帶手機（體育課、校隊）').join('沒帶手機（例如打球、游泳）');
+  if (PLACES.walk && PLACES.walk.about) PLACES.walk.about = PLACES.walk.about.map(s => s === '連續幾週都達標，可以拿到排球、浴衣這些運動家具' ? '累積幾週運動 3 天，就可以拿到排球、浴衣這些運動家具' : s);
+  const flame = PLANTS.find(x => x.id === 'flame'); if (flame) flame.when = flame.when.split('，會考完、畢業的時候剛好開').join('，畢業季剛好開');
+  if (typeof S !== 'undefined' && S) D = derive(S);   // family.js 載入前畫面已經用快取算過一次 D，這裡用家人版重算
   window.FamIsle = { apply, after, cards: OWN_CARDS };
 })();
