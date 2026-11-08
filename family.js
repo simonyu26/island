@@ -115,6 +115,18 @@
       local.set('islandView', 'list'); toast('這支手機開不了 3D，先用清單模式'); render();
     }
   };
+  // ---------- FAM_WORDLINK：外語街直接進單字練習（語言模組串 11/8；11/26 P3a 外語街變語言街後由語言街取代） ----------
+  const FAM_LANG_DIR = /外語|日文|英文|日語|英語|語言/;
+  function famWordLink(d) {
+    if (!d || !wordsOn() || !(d.ic === '🔤' || FAM_LANG_DIR.test(String(d.name || '')))) return '';
+    return `<button class="ghost" style="width:100%;margin-top:8px" onclick="go('words');window.scrollTo(0,0)">🔤 去練單字</button>`;
+  }
+  const streets0 = window.streets;
+  window.streets = function (s) {
+    const base = streets0(s);
+    if (!ownMode() || !wordsOn()) return base;
+    return base + famWordLink(liveDirs().find(x => SLOT[x.slot] === s));
+  };
   window.showInfo3D = function (s) {
     const box = document.getElementById('i3dInfo'); if (!box) return;
     const r = resident(s), d = liveDirs().find(x => SLOT[x.slot] === s);
@@ -127,7 +139,7 @@
         <div><b>${esc(r.name)}</b><div class="muted">${esc(d.ic)} ${esc(d.name)}${r.personality ? '・' + esc(r.personality) : ''}</div></div></div>
       <div class="muted" style="margin-top:8px">${d.items.filter(it => !it.off).map(it => esc(it.name)).join('、')}</div>
       <div class="row" style="justify-content:space-around;margin-top:8px">${recent}</div>
-      <div class="muted" style="text-align:center;font-size:12px">最近四週完成的次數</div>${b1On() ? famMarkList(s) : ''}`;
+      <div class="muted" style="text-align:center;font-size:12px">最近四週完成的次數</div>${famWordLink(d)}${b1On() ? famMarkList(s) : ''}`;
   };
 
   // ---------- 更多 ----------
