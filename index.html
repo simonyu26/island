@@ -364,11 +364,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.4.1';
+const APP_VERSION = '2.50.5';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.5', date: '2026-11-08', minor: true, fam: true, items: ['🗼 家人自己的島：岬角上多了一座燈塔，可以取名字、請一位守燈人。燈塔下面有紙船碼頭，做完一件事想記一句心得，就放一艘船；確認這週時，也可以記一句：兩個方向之間，你發現了什麼關係。', '🔤 家人自己的島：多了單字卡。拍一張講義、字幕或書頁，就能把生字存成一組；想練的時候按「出題」，會出一組選擇題，也可以按 🔊 聽發音。照片和出題都會交給 AI，每天的次數和智慧島共用，畫面上會寫。'] },
   { v: '2.50.4.1', date: '2026-11-07', items: ['⚔️ 挑戰任務和漂流瓶不再限 10 題了：想練幾題都可以，答對一樣有經驗值和島幣。每 10 題會停下來問你要不要再一組；過了 10 題，題目都從考古題出。要請 AI 出的類型練習，還是每天前 10 題才能練。', '📷 拍照收錯題現在一天可以算到 20 題了（原本 10 題）。有時候一天要整理的錯題比較多，是好幾天累積下來的，所以放寬了。11/5 到 11/7 這三天也照新的規則算，多的經驗值已經補上。', '🚩 挑戰任務、漂流瓶、故事任務的作答結果下面，和考古題的 AI 講解下面，多了『🚩 這題怪怪的』。覺得題目或解說不對，可以按一下，寫一句哪裡怪；寫的內容只有爸爸看得到。爸爸回覆以後，首頁的おつとめ板會多一行『🚩 回報的題目有回覆』，回覆也會出現在那一題下面。', '📷 拍錯題的確認畫面多了一排按鈕：模考、學校卷、講義、3688、考古題、其他，可以選這題是從哪裡來的，會先幫你選好上次選的，不對的話再改。選了模考，可以再選是哪一次。不選也沒關係。'] },
   { v: '2.50.4', date: '2026-11-07', fam: true, items: ['🧮 商店裡的島幣明細改成『我的島幣帳本』：可以看這個月進來、出去多少，也可以訂一個存錢目標；在主島的交易所也打得開。'] },
   { v: '2.50.3.1', date: '2026-11-06', items: ['📅 九下才會教的單元先不出考古題了，例如二次函數、電與磁和機率，地科也整科先不出；這些單元答錯過的瓶子還在海灘上，先不會出給你。2/1 會自動打開，九上的單元照常出。', '🎒 「你的生活」小卡多了幾講：瞇的第 4、5、6 講和郭哥的第 3、5、8 講。你在「你的生活」勾過的話，「搬到你的生活」那一步會換成比較貼近你的情境。'] },
@@ -6018,7 +6019,7 @@ const HAND_CSS = `<style>.hl-opt{background:#fff;color:var(--ink);border:1px sol
 .hl-opt[aria-checked="true"]::before{content:"✓ "}.hl-off{background:#f7f1e5!important;color:#5f5a55!important;border:1px dashed #d8d4ce!important}
 #hlBox input[aria-invalid="true"]{border:2px solid #a33a2a}.hl-g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.hl-g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.hl-q{margin-top:12px;font-weight:700}</style>`;
 function handName(k) { return k === 'focus' ? (ownMode() ? '專心' : '讀書') : mk(k === 'move' ? null : { k }).did === '練習' ? '藝文' : k === 'read' ? '閱讀' : '運動'; }
-function handLink(k) { return (isFamily() || ownMode()) ? '' : `<div style="text-align:center;margin-top:4px"><a href="#" onclick="handOpen('${k}');return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline;text-underline-offset:3px">🕘 忘了計時？補登一筆</a></div>`; }
+function handLink(k) { return (isFamily() || (ownMode() && !(S && S.b1Ok))) ? '' :   /* HANDLOG_FAM_v1：家人島島主 B1 開了也能補登（反套 HANDLINK_OWN） */ `<div style="text-align:center;margin-top:4px"><a href="#" onclick="handOpen('${k}');return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline;text-underline-offset:3px">🕘 忘了計時？補登一筆</a></div>`; }
 function handOpen(k) {
   if (isFamily()) return;
   draft = { hand: { k, t: 'play', day: 0, row: 0, a: '', b: hhmm(Date.now()), done: 0 } }; tab = 'hand'; render(); window.scrollTo(0, 0);
