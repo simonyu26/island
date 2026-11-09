@@ -315,6 +315,31 @@
   .flagbtn { background: transparent; border: 0; padding: 7px 0; min-height: 44px; box-shadow: none; }
   .flagbtn span { display: inline-block; background: #fffdf8; border: 1px solid #5f5a55; color: #5f5a55; font-size: 13px; line-height: 28px; height: 30px; padding: 0 12px; border-radius: 15px; box-sizing: border-box; }
   .famreply { background: #f3f6ff; border-left: 3px solid #2b4a6f; border-radius: 10px; padding: 8px 12px; margin: 8px 0 10px; text-wrap: pretty; }
+  /* ESSAY_B_v1 作文街（美術 11/3 第二版） */
+  .esstep{font-size:12px;color:var(--muted)}
+  .esbox{display:block;width:100%;box-sizing:border-box;border:1px solid #d8d4ce;border-radius:10px;padding:8px 10px;margin-top:4px;background:#fff;font-size:15px}
+  .esbox:focus{outline:none;border:2px solid var(--plum);padding:7px 9px}
+  .esgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px}
+  .esgrid label,.eslab{font-size:13px;color:var(--muted);display:block;margin-top:6px}
+  .esbar{height:6px;border-radius:3px;background:#d8d4ce;overflow:hidden;margin-top:10px}
+  .esbar i{display:block;height:100%;background:#2f2a26;opacity:.55;transition:width 1s linear}
+  @media (prefers-reduced-motion: reduce){.esbar i{transition:none}.esup{animation:none!important}}
+  .esup{font-size:13px;color:var(--muted);text-align:center;margin-top:6px;min-height:18px;animation:esfade .8s ease-in}
+  @keyframes esfade{from{opacity:0}to{opacity:1}}
+  .esopt{display:block;width:100%;text-align:left;border:1px solid #d8d4ce;border-radius:12px;padding:10px 12px;background:#fff;color:var(--ink);margin-top:6px;min-height:44px}
+  .esopt.on{border:2px solid var(--plum);background:var(--plum-light);padding:9px 11px}
+  .esopt.on b::before{content:'✓ ';color:var(--plum)}
+  .esmat{border:1px solid #d8d4ce;border-radius:10px;padding:0 10px;margin-top:8px}
+  .esmat > button{display:flex;width:100%;min-height:44px;align-items:center;background:none;border:0;padding:0;color:var(--ink);font-weight:700;text-align:left}
+  .estag,.pill.es{display:inline-flex;align-items:center;position:relative;min-height:36px;padding:0 12px;border-radius:18px;margin:6px 6px 0 0;font-size:13px;cursor:pointer}
+  .estag{background:var(--sand);border:1px solid var(--plum-light);color:var(--ink)}
+  .pill.es{background:#fff;color:var(--ink);border:0;box-shadow:inset 0 0 0 1px #d8d4ce}
+  .pill.es.on{background:var(--plum-light);color:var(--plum);box-shadow:inset 0 0 0 1px var(--plum)}
+  .pill.es.on::before{content:'✓ '}
+  .estag::after,.pill.es::after{content:'';position:absolute;left:0;right:0;top:-4px;bottom:-4px}
+  .esside{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .esside > div{background:var(--sand);border-radius:10px;padding:8px;font-size:13px;line-height:1.6}
+  @media (max-width:400px){.esside{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -367,11 +392,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.5.2';
+const APP_VERSION = '2.50.5.2.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.5.2.1', date: '2026-11-10', fam: [1], items: ['✍️ 作文值班室多了『週日寫一段』：挑一個題目，先看材料、列素材，再到紙上寫一段，App 幫你計時；寫好了勾一勾自我檢查、留一句話。素材本在 App 裡只有你自己看得到。每次寫的紀錄，想給家人看的話，可以一則一則選要給誰；家人只看得到日期、題目、開頭的寫法、你勾的項目和留的那一句，看不到素材。', '🗼 家人自己的島：燈塔開了 2F「航海日誌」，原本在「更多 → 其他」的入口也還在。'] },
   { v: '2.50.5.2', date: '2026-11-10', fam: true, items: ['⚓ 主島的聚會所多了「今年的航程」：從一模到會考，幾場大考排成一條航線，日子到了，港口的燈就亮起來。只有日期，沒有成績；家人也看得到，訪客看不到。', '🖼️ 主島的五位島民有了自己的畫像，點島民卡就看得到。'] },
   { v: '2.50.5.1.1', date: '2026-11-09', items: ['✍️ 國文街多了一塊『巷口・作文值班室』的牌子：作文助教鳳梨刀開了一門《文學的力量》，一共 12 講，一週可以上一講。這門課看完不用寫一句，按『📌 我記下了』就蓋章。'] },
   { v: '2.50.5.1', date: '2026-11-09', minor: true, fam: true, items: ['📖 智慧島的第二門課：四位老師的上冊 13 講上完，就會接著上下冊，孔明的下冊是《三十六計》。下冊蓋滿 13 個章，老師也會再送一件畢業禮物。', '⛴️ 智慧島改成一天最多上兩講，同一位老師還是每週一講。'] },
@@ -1519,6 +1545,175 @@ viewWisdomHut = function () {
   const h = zwHome(zwHut0());
   const j = h.lastIndexOf('<div class="row"><button class="ghost grow"');
   return h.slice(0, j) + '<!-- ESSAY_B_SLOT -->' + h.slice(j);   // ESSAY_B（12/7）的「寫一段」「素材本」插在這裡
+};
+
+// ===== ESSAY_B_v1 作文街：週日寫一段（爸爸 11/3 定樣第二版；學習策略題目清單 11/3）=====
+// 不送 AI、不判斷擔心字詞（爸爸 11/3）；素材本只有她自己看得到；分享逐則選人，家人只看得到題目、開頭、勾了的項目和留的那一句
+const ES_MIN = 12;
+const ES_TOPICS = [
+  { t: '那一次，我學會了等待', tag: '題目' }, { t: '一個讓我多看兩眼的畫面', tag: '畫面' }, { t: '家裡最常聽到的一句話', tag: '某一次' },
+  { t: '從不會到會', tag: '說開' }, { t: '一件被我留下來的舊東西', tag: '某一次' },
+  { t: '分項：放鬆的一件事', tag: '某一次', ask: '一、說出你最常用來放鬆的一件事；二、寫出某一次它幫了你的經驗。', parts: ['說出最常用來放鬆的一件事', '寫某一次它幫了我'] },
+  { t: '分項：改變想法的時刻', tag: '說開', ask: '一、寫下一個你改變想法的時刻；二、說明你為什麼改變。', parts: ['寫一個改變想法的時刻', '說明為什麼改變'] },
+  { t: '情境：最想保留的校園角落', tag: '題目', ask: '學校要辦「最想保留的校園角落」票選。選一個角落，說明理由，並寫一個你在那裡的畫面。', parts: ['選一個角落、說理由', '寫一個我在那裡的畫面'] },
+  { t: '情境：舊物改新用途', tag: '說開', ask: '班上要把舊物改成新用途，像紙箱變書架。你想改什麼？怎麼改？為什麼？', parts: ['改什麼、怎麼改', '為什麼'] },
+  { t: '圖文：習慣、改變、勇氣', tag: '某一次', ask: '給三個詞「習慣、改變、勇氣」，選一個連結自己的一次經驗。', parts: ['選一個詞', '寫一次自己的經驗'] },
+  { t: '圖表：國中生每天用手機多久', tag: '材料', pic: 1, ask: '「國中生每天使用手機時間」長條圖，3 小時以上占四成（數字是舉例）。寫出你從圖上看到什麼，以及你的想法。', parts: ['寫我從圖上看到什麼', '寫我的想法'] },
+  { t: '觀點：多做就會多得？', tag: '說開', ask: '有人說「多做就會多得」，你同意嗎？用一件自己的事說明。', parts: ['同不同意', '用一件自己的事說明'] }];
+const ES_PAST = [['106', '在這樣的傳統習俗裡，我看見……', '引導式命題'], ['107', '我們這個世代', '引導式命題'], ['108', '青銀共居：年輕人與年長者的相處（不必訂題）', '圖文引導'],
+  ['109', '我想開設一家這樣的店', '引導式命題'], ['110', '「未成功的物品展覽會」：選一件未成功的物品參展（不必訂題）', '情境任務'], ['111', '「多做多得」：線上群組對話引發的體會（不必訂題）', '圖文引導'],
+  ['112', '臺灣民眾最喜愛的影劇類型統計圖：詮釋圖表並寫看法（不必訂題）', '圖表'], ['113', '標題：對標題設計方式與所反映現象的觀察或想法（不必訂題）', '圖文引導'],
+  ['114', '籠中動物圖，配六個詞：盲目、耽溺、選擇、冒險、自由、牢籠（不必訂題）', '圖文引導'], ['115', '賦予事物新面貌：園遊會交易方式、花磚改杯墊、香蕉行銷（不必訂題）', '圖文引導']];   // 103～105 未核對，先不放（學習策略 11/3）
+const ES_OPEN = { pic: '從一個畫面', say: '從一句話', ask: '從一個問題', '': '先寫再說' };
+const ES_SKILL = [['done', '寫完了'], ['once', '寫出了「某一次」'], ['why', '道理說開了'], ['ask', '題目要的都做到了']];
+const ES_F = [['when', '什麼時候', ''], ['where', '在哪裡', ''], ['act', '一個動作', ''], ['say', '一句話', '誰說了什麼？']];
+function esKeys() { return Object.keys(S.save).filter(k => k.indexOf('ess:') === 0 && S.save[k] && S.save[k].topic).sort(); }
+function esMat() { return Array.isArray(S.save.essmat) ? S.save.essmat : []; }
+function esSetMat(list) { S.save.essmat = list.slice(0, 60); queueSave('essmat', 'saveEssMat', S.save.essmat); }
+function esMatTitle(m) { return (m.t || (m.where || '') + (m.act || '') || m.when || m.say || '').slice(0, 20); }
+function esE() { return draft.es || (draft.es = { step: '' }); }
+function esGo(step) { esE().step = step; render(); window.scrollTo(0, 0); }
+function esStart(i) {
+  const T = ES_TOPICS[i]; draft.es = { step: T.ask ? 'look' : 'mats', ti: i, look: { a: '', b1: (T.parts || [])[0] || '', b2: (T.parts || [])[1] || '' }, mats: { when: '', where: '', act: '', say: '' }, open: null, el: 0, t0: 0, skills: [], line: '' };
+  render(); window.scrollTo(0, 0);
+}
+function esPick() { esStart(Math.floor(Math.random() * ES_TOPICS.length)); }
+function esIn(f, el) { const e = esE(), p = f.split('.'); if (p.length > 1) e[p[0]][p[1]] = el.value; else e[f] = el.value; }
+function esUseMat(i) { const m = esMat()[i]; if (!m) return; const e = esE(); ES_F.forEach(([k]) => { if (m[k]) e.mats[k] = m[k]; }); render(); }
+function esMatsDone() {
+  const e = esE(), m = e.mats;
+  if (ES_F.some(([k]) => (m[k] || '').trim())) {   // 列素材時寫的「那一次」自動收進素材本（同樣四格的不重複收）
+    const list = esMat(), same = list.some(x => ES_F.every(([k]) => (x[k] || '') === (m[k] || '').trim()));
+    if (!same) esSetMat([Object.assign({ t: '', at: S.today }, ...ES_F.map(([k]) => ({ [k]: (m[k] || '').trim() })))].concat(list));
+  }
+  esGo('open');
+}
+function esOpenEx(k) {
+  const m = esE().mats, w = (m.where || '').trim(), a = (m.act || '').trim(), q = (m.say || '').trim().replace(/^「|」$/g, '');
+  if (k === 'pic') return w || a ? w + (w && a ? '，' : '') + a + '。' : '先寫眼前的一個東西：一盞燈、一扇窗、一張桌子。';
+  if (k === 'say') return q ? '「' + q + '」' : '先寫一句誰說過的話。';
+  return '先問一個問題，再用這一段回答它。';
+}
+// 計時：在紙上寫，App 只走一條細條；過了一半、時間到各換一次字（減少動態時一分鐘跳一次）
+let esTick = null;
+function esMs() { const e = esE(); return e.el + (e.t0 ? Date.now() - e.t0 : 0); }
+function esStage(ms) { const f = ms / (ES_MIN * 60e3); return f >= 1 ? 2 : f >= .5 ? 1 : 0; }
+function esBarHtml() {
+  const ms = esMs(), f = Math.min(1, ms / (ES_MIN * 60e3)), st = esStage(ms);
+  return `<div class="esbar" id="esBar" role="progressbar" aria-label="寫一段的時間" aria-valuemin="0" aria-valuemax="${ES_MIN}" aria-valuenow="${Math.floor(ms / 60e3)}" aria-valuetext="${['剛開始', '過了一半', '時間到了'][st]}"><i style="width:${(f * 100).toFixed(1)}%"></i></div>
+    <div class="esup" id="esUp" data-st="${st}">${['', '過了一半，往結尾走。', '時間到了，寫到這裡也可以。'][st]}</div>`;
+}
+function esTickStart() {
+  clearInterval(esTick);
+  const slow = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  esTick = setInterval(() => {
+    const bar = document.getElementById('esBar'), up = document.getElementById('esUp');
+    if (!bar || !draft.es || draft.es.step !== 'write') { clearInterval(esTick); esTick = null; return; }
+    const ms = esMs(), f = Math.min(1, ms / (ES_MIN * 60e3)), st = esStage(ms);
+    bar.firstElementChild.style.width = (f * 100).toFixed(1) + '%';
+    bar.setAttribute('aria-valuenow', Math.floor(ms / 60e3)); bar.setAttribute('aria-valuetext', ['剛開始', '過了一半', '時間到了'][st]);
+    if (up && up.dataset.st !== String(st)) { up.dataset.st = st; up.textContent = ['', '過了一半，往結尾走。', '時間到了，寫到這裡也可以。'][st]; up.style.animation = 'none'; void up.offsetWidth; up.style.animation = ''; }
+    if (st === 2) { clearInterval(esTick); esTick = null; render(); }   // 時間到：「先停一下」拿掉，只剩寫好了
+  }, slow ? 60e3 : 1000);
+}
+function esWrite(open) { const e = esE(); e.open = open; e.step = 'write'; e.el = 0; e.t0 = Date.now(); render(); window.scrollTo(0, 0); }
+function esPause() { const e = esE(); if (e.t0) { e.el += Date.now() - e.t0; e.t0 = 0; } else e.t0 = Date.now(); render(); }
+function esRec(e) { const T = ES_TOPICS[e.ti] || {}; return { topic: T.t, kind: T.tag, look: e.look, mats: e.mats, open: e.open || '', skills: e.skills, line: (e.line || '').trim() }; }
+function esSave() {
+  const e = esE(), k = 'ess:' + S.today, cur = S.save[k] || {}, r = esRec(e);
+  S.save[k] = Object.assign({}, r, { at: S.today }, cur.to ? { to: cur.to } : {});
+  queueSave(k, 'saveEssay', S.today, r);
+}
+function esDone() { const e = esE(); if (e.t0) { e.el += Date.now() - e.t0; e.t0 = 0; } esSave(); esGo('done'); }
+function esSkill(k) { const e = esE(); e.skills = e.skills.indexOf(k) >= 0 ? e.skills.filter(x => x !== k) : ES_SKILL.map(x => x[0]).filter(x => x === k || e.skills.indexOf(x) >= 0); render(); }
+function esKeep() { esSave(); draft.es = { step: '' }; toast('存好了'); render(); window.scrollTo(0, 0); }
+function esAddMat() { const el = document.getElementById('esNewMat'), t = el ? el.value.trim().slice(0, 20) : ''; if (!t) return; esSetMat([{ t, when: '', where: '', act: '', say: '', at: S.today }].concat(esMat())); render(); }
+function esOpenRec(d) {   // 看今天寫的：回到「寫好了」那頁，可以改勾、改一句、改分享
+  const r = S.save['ess:' + d] || {}, i = Math.max(0, ES_TOPICS.findIndex(T => T.t === r.topic));
+  draft.es = { step: 'done', ti: i, look: r.look || { a: '', b1: '', b2: '' }, mats: r.mats || {}, open: r.open || '', el: 0, t0: 0, skills: (r.skills || []).slice(), line: r.line || '' };
+  render(); window.scrollTo(0, 0);
+}
+function esRow(d, fam) {
+  const r = S.save['ess:' + d] || {}, sk = ES_SKILL.filter(x => (r.skills || []).indexOf(x[0]) >= 0).map(x => x[1]);
+  const who = fam ? '' : '・' + (r.to && r.to.length ? '👀 ' + r.to.map(esc).join('、') + '看得到' : '🔒 只有你');
+  return `<div class="item"><div class="name grow"><b>${short(d)}〈${esc(r.topic)}〉</b><div class="muted">${esc(ES_OPEN[r.open || ''] || '')}${sk.length ? '・' + sk.map(esc).join('、') : ''}${who}</div>${r.line ? `<div style="font-size:14px;margin-top:2px">「${esc(r.line)}」</div>` : ''}${fam ? '' : seeByText('ess:' + d)}</div></div>`;
+}
+function esSide(d) { const r = S.save['ess:' + d] || {}, sk = ES_SKILL.filter(x => (r.skills || []).indexOf(x[0]) >= 0).map(x => x[1]);
+  return `<div><b>${short(d)}</b><br>〈${esc(r.topic)}〉<br>${esc(ES_OPEN[r.open || ''])}<br>勾：${sk.length ? sk.map(esc).join('、') : '—'}${r.line ? '<br>「' + esc(r.line) + '」' : ''}</div>`; }
+function esFam() {   // 家人碼：只看得到選了自己的那幾則（後端已過濾）
+  const ks = esKeys().reverse();
+  if (!ks.length) return '';
+  ks.forEach(k => famSeen('ess', k.slice(4)));
+  return `<div class="card"><h3 style="margin:0">🖋️ ${esc(herCall())}寫的一段</h3><div class="muted" style="font-size:12px">看得到題目、開頭、勾的項目和留的一句；素材和寫在紙上的段落不在這裡。</div>${ks.map(k => esRow(k.slice(4), true)).join('')}</div>`;
+}
+function esDesk() {
+  if (isFamily()) return esFam();
+  if (!seeMine()) return '';
+  const sun = parseD(S.today).getDay() === 0, mine = S.save['ess:' + S.today];
+  return `<div class="card"><h3 style="margin:0">🖋️ 週日寫一段</h3>
+    <div class="speech" style="margin-top:8px">鳳梨刀：${sun ? '今天週日，要不要寫一段？' : '想寫的話，哪天都可以寫一段。'}挑一個題目，先列素材，再寫十二分鐘就好。</div>
+    <div class="row" style="margin-top:10px">${mine ? `<button class="grow" onclick="esOpenRec('${S.today}')">看今天寫的</button>` : `<button class="grow" onclick="esGo('pick')">開始寫一段</button>`}</div>
+    <div class="muted" style="font-size:12px;margin-top:6px">不寫也沒關係。</div></div>
+    <div class="card"><div class="row" style="gap:8px"><button class="ghost grow" onclick="esGo('mat')">📒 素材本</button><button class="ghost grow" onclick="esGo('list')">📓 寫過的</button></div></div>`;
+}
+function esBack(to, label) { return `<div class="row" style="margin-top:4px"><button class="ghost grow" onclick="${to ? `esGo('${to}')` : `draft.es={step:''};render()`}">${label || '回到值班室'}</button></div>`; }
+function esView() {
+  const e = esE(), T = ES_TOPICS[e.ti] || {}, head = `<div class="card"><h2 style="margin:0">🖋️ 鳳梨刀的書桌</h2></div>`;
+  if (e.step === 'pick') return head + `<div class="card"><div class="esstep">1／4　挑題目</div><h3 style="margin:4px 0">今天寫哪一題？</h3>
+    ${ES_TOPICS.map((x, i) => `<div class="item" role="button" tabindex="0" style="cursor:pointer;min-height:44px" onclick="esStart(${i})"><div class="name grow"><b>〈${esc(x.t)}〉</b><br><span class="pill">${esc(x.tag)}</span></div>›</div>`).join('')}
+    <div class="muted" style="font-size:12px;margin-top:6px"><a href="javascript:void 0" class="tlink" onclick="esGo('past')">看看以前考過什麼 ›</a></div>
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="esPick()">🎲 幫我挑</button></div>` + esBack();
+  if (e.step === 'past') return head + `<div class="card"><h3 style="margin:0">以前考過什麼</h3><div class="muted" style="font-size:12px">只是看看，不用寫。</div>
+    ${ES_PAST.map(p => `<div class="item"><div class="name grow"><b>${p[0]} 年</b>　${esc(p[1])}<div class="muted">${esc(p[2])}</div></div></div>`).join('')}</div>` + esBack('pick', '回到挑題目');
+  if (e.step === 'look') return head + `<div class="card"><div class="esstep">看材料</div><h3 style="margin:4px 0">${esc(T.t)}</h3>
+    <div style="font-size:14px;line-height:1.6">${esc(T.ask)}</div><div class="muted" style="font-size:12px;margin-top:4px">先看清楚再列素材</div>
+    <label class="eslab" for="esLa">${T.pic ? '圖上' : '題目裡'}最重要的是</label><input id="esLa" class="esbox" maxlength="60" value="${esc(e.look.a)}" oninput="esIn('look.a',this)">
+    <label class="eslab" for="esLb1">題目要我做</label><input id="esLb1" class="esbox" maxlength="60" value="${esc(e.look.b1)}" placeholder="① " oninput="esIn('look.b1',this)">
+    <input class="esbox" maxlength="60" aria-label="題目要我做 ②" value="${esc(e.look.b2)}" placeholder="② " oninput="esIn('look.b2',this)">
+    <div class="row" style="margin-top:10px"><button class="grow" onclick="esGo('mats')">好了，列素材</button></div></div>` + esBack('pick', '換一題');
+  if (e.step === 'mats') { const ml = esMat();
+    return head + `<div class="card"><div class="esstep">2／4　列素材</div><h3 style="margin:4px 0">〈${esc(T.t)}〉</h3>
+    <div class="muted" style="text-align:center;font-size:12px;margin-top:6px">寫下「那一次」，關鍵字就好</div>
+    <div class="esgrid">${ES_F.map(([k, l, ph]) => `<div><label for="esM_${k}">${l}</label><input id="esM_${k}" class="esbox" maxlength="60" value="${esc(e.mats[k] || '')}"${ph ? ` placeholder="${ph}"` : ''} oninput="esIn('mats.${k}',this)"></div>`).join('')}</div>
+    <div class="muted" style="font-size:12px;margin-top:4px">不用填完也可以下一步。</div>
+    ${ml.length ? `<div style="margin-top:10px"><div class="muted" style="font-size:12px">素材本裡的「那一次」（點一下帶進來）</div>${ml.slice(0, 8).map((m, i) => `<button class="estag" onclick="esUseMat(${i})">${esc(esMatTitle(m))}</button>`).join('')}</div>` : ''}
+    <div class="row" style="margin-top:10px;gap:6px"><button class="ghost" onclick="esGo('${T.ask ? 'look' : 'pick'}')">再想一下</button><button class="grow" onclick="esMatsDone()">好了，下一步</button></div></div>`; }
+  if (e.step === 'open') return head + `<div class="card"><div class="esstep">3／4　開頭（可以跳過）</div><h3 style="margin:4px 0">想先想好怎麼開頭嗎？</h3>
+    ${['pic', 'say', 'ask'].map(k => `<button class="esopt${e.open === k ? ' on' : ''}" onclick="esWrite('${k}')"><b>${ES_OPEN[k]}</b><div class="muted" style="font-size:13px">${esc(esOpenEx(k))}</div></button>`).join('')}
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="esWrite('')">先寫再說 ›</button>
+    ${wisdomDone('zw')[8] ? `<div class="muted" style="font-size:12px;margin-top:6px"><a href="javascript:void 0" class="tlink" onclick="openWisdomLesson('zw',8)">想多看一點，看〈第 8 講 開頭和收尾〉›</a></div>` : ''}</div>` + esBack('mats', '回到列素材');
+  if (e.step === 'write') { const m = e.mats, once = ES_F.slice(0, 3).map(([k]) => (m[k] || '').trim()).filter(Boolean).join('・'), st = esStage(esMs());
+    setTimeout(() => { if (e.t0 && st < 2) esTickStart(); }, 0);
+    return head + `<div class="card"><div class="esstep">4／4　寫一段</div><h3 style="margin:4px 0">〈${esc(T.t)}〉</h3>${esBarHtml()}
+    <div class="muted" style="text-align:center;margin-top:6px">在紙上寫，寫完就好，不用寫滿。</div>
+    ${once ? `<div class="esbox" style="margin-top:8px;font-size:13px">那一次：${esc(once)}</div>` : ''}
+    <div class="row" style="margin-top:10px;gap:6px">${st < 2 ? `<button class="ghost grow" onclick="esPause()">${e.t0 ? '先停一下' : '繼續'}</button>` : ''}<button class="grow" onclick="esDone()">寫好了</button></div></div>`; }
+  if (e.step === 'done') { const d = S.today, cur = S.save['ess:' + d] || {};
+    return `<div class="card" style="text-align:center"><div style="font-size:40px">🖋️</div><h2 style="margin:4px 0">寫好了</h2><div class="muted">想的話，也可以拿給家人看看。</div></div>
+    <div class="card"><h3 style="margin:0">寫完看一看（可以不勾）</h3>
+    <div class="row" style="gap:0;flex-wrap:wrap;margin-top:4px">${ES_SKILL.map(([k, l]) => `<button class="pill es${e.skills.indexOf(k) >= 0 ? ' on' : ''}" aria-pressed="${e.skills.indexOf(k) >= 0}" onclick="esSkill('${k}')">${l}</button>`).join('')}</div>
+    <label class="eslab" for="esLine" style="margin-top:10px">留一句：最滿意的一句，或卡在哪（可以不寫）</label>
+    <textarea id="esLine" class="esbox" rows="2" maxlength="60" oninput="esIn('line',this)">${esc(e.line)}</textarea>
+    ${seeNames().length ? `<div style="margin-top:10px"><b style="font-size:14px">👀 這一次給誰看</b>${seeChipRow('ess:' + d, cur.to || [])}
+      <div class="muted" style="font-size:12px;margin-top:4px">選了的人看得到題目、開頭、你勾了的項目和這一句；素材不會給。</div>${seeByText('ess:' + d)}</div>` : ''}
+    <div class="muted" style="font-size:12px;margin-top:6px">沒選人的話，這些在 App 裡只有你自己看得到。</div>
+    <div class="row" style="margin-top:10px"><button class="grow" onclick="esKeep()">存起來</button></div></div>`; }
+  if (e.step === 'mat') { const ml = esMat(), op = e.matOpen;
+    return head + `<div class="card"><h3 style="margin:0">📒 素材本</h3><div class="muted" style="font-size:12px">列素材時寫的「那一次」會自動收進來；也可以自己加，打一行就好。</div>
+    <div class="row" style="margin-top:8px;gap:6px"><input id="esNewMat" class="esbox grow" maxlength="20" placeholder="想到哪一次就記一條" style="margin-top:0"><button onclick="esAddMat()">加</button></div>
+    ${ml.map((m, i) => `<div class="esmat"><button aria-expanded="${op === i}" onclick="draft.es.matOpen=${op === i ? 'null' : i};render()"><span class="grow">${esc(esMatTitle(m))}</span><span aria-hidden="true">${op === i ? '▴' : '▾'}</span></button>
+      ${op === i ? `<div class="esgrid" style="padding-bottom:8px;font-size:13px">${ES_F.map(([k, l]) => `<div><span class="muted">${l}</span><br>${esc(m[k] || '—')}</div>`).join('')}</div>` : ''}</div>`).join('') || '<div class="muted" style="margin-top:8px;font-size:13px">還沒有記下任何一次。</div>'}
+    <div class="muted" style="font-size:12px;margin-top:8px">素材本在 App 裡只有你自己看得到。</div></div>` + esBack(); }
+  if (e.step === 'list') { const ks = esKeys(), ds = ks.map(k => k.slice(4));
+    return head + `<div class="card"><h3 style="margin:0">📓 寫過的</h3>${ds.length ? ds.slice().reverse().map(d => esRow(d, false)).join('') : '<div class="muted" style="margin-top:8px;font-size:13px">還沒有寫過。</div>'}
+    ${ds.length >= 4 ? `<div style="margin-top:10px"><b>第一次和最近一次</b></div><div class="esside" style="margin-top:6px">${esSide(ds[0])}${esSide(ds[ds.length - 1])}</div><div class="muted" style="font-size:12px;margin-top:6px">只是放在一起看看。</div>` : ''}</div>` + esBack(); }
+  return '';
+}
+const esHut0 = viewWisdomHut;
+viewWisdomHut = function () {
+  if (wisdomHut !== 'zw') return esHut0();
+  if (draft.es && draft.es.step && seeMine()) return esView();
+  return esHut0().replace('<!-- ESSAY_B_SLOT -->', esDesk());
 };
 viewWisdomLesson = function () { const w = draft.wl; return w && w.book === 'zw' ? zwHome(zwLesson0()) : zwLesson0(); };
 wisdomNoteHtml = function (L, t, rec) {
