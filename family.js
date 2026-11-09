@@ -340,7 +340,7 @@
     }
     if (t === 'home') app.querySelectorAll('.district .grade').forEach(g => { const box = g.closest('.district'); rm(g); if (box && box.lastElementChild && /Boss|試煉/.test(box.lastElementChild.textContent)) rm(box.lastElementChild); });
     // 2c-1：還沒同意交給 AI，寫一句的地方上面先放說明和同意按鈕；不同意也可以交，老師用內建句子回
-    if (t === 'wlesson' && !S.save.aiOk) {
+    if (t === 'wlesson' && !S.save.aiOk && !(draft.wl && draft.wl.book === 'zw')) {   // ESSAY_A_v1：作文助教不叫 AI
       const go = document.getElementById('wGo');
       if (go) go.insertAdjacentHTML('beforebegin', `<div class="card" id="famAiOk" style="margin:8px 0;background:#f6f1e6"><div class="muted" style="line-height:1.7">${AI_OK}</div>
         <button class="ghost" style="width:100%;margin-top:8px" onclick="famAgreeAi()">我看過了，同意</button>

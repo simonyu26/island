@@ -364,11 +364,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.5.1';
+const APP_VERSION = '2.50.5.1.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.5.1.1', date: '2026-11-09', items: ['✍️ 國文街多了一塊『巷口・作文值班室』的牌子：作文助教鳳梨刀開了一門《文學的力量》，一共 12 講，一週可以上一講。這門課看完不用寫一句，按『📌 我記下了』就蓋章。'] },
   { v: '2.50.5.1', date: '2026-11-09', minor: true, fam: true, items: ['📖 智慧島的第二門課：四位老師的上冊 13 講上完，就會接著上下冊，孔明的下冊是《三十六計》。下冊蓋滿 13 個章，老師也會再送一件畢業禮物。', '⛴️ 智慧島改成一天最多上兩講，同一位老師還是每週一講。'] },
   { v: '2.50.5.0.2', date: '2026-11-08', minor: true, fam: true, items: ['🔤 家人島的外語街多了「去練單字」：點外語街（清單或 3D 都可以）就能直接到單字卡練習。'] },
   { v: '2.50.5.0.1', date: '2026-11-08', items: ['🌙 航路多了『出航前夜』：模考前一天晚上，首頁會出現一張小卡，想的話寫兩句給明天的自己；一模的港也可以補寫歸港三句。寫的內容在 App 裡只有你自己看得到。'] },
@@ -1279,7 +1280,7 @@ function viewHomeBody() {
       <div class="resident"><span class="avatar">${r.pic}</span>
         <div><b>${esc(r.name)}</b><div class="muted">${SUBJ_IC[s]} ${SUBJECT_NAME[s]}街${kzBadge(s)}</div></div>
         <span class="grade ${gr ? '' : 'none'}" title="${gr ? esc(gr.source + ' ' + gr.date) : '還沒有試煉紀錄'}">${gr ? esc(gr.level) : '?'}</span></div>
-      ${streets(s)}
+      ${streets(s)}${s === '國' ? zwSign() : ''}
       <div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div>
     </div>`;
   }).join('');
@@ -1448,6 +1449,17 @@ const WISDOM_T = {
     after: '今天就到這裡。累了就休息，哪裡痛別硬撐。' }
 };
 const WISDOM_ORDER = ['kongming', 'xiaomiao', 'alu', 'einstein', 'yirong', 'mi', 'guo'];
+// ===== ESSAY_A_v1 作文助教（國文街巷口牌；不進智慧島碼頭、小屋、集章冊、導覽地圖）=====
+WISDOM_T.zw = { name: '鳳梨刀', ic: '🍍', place: '作文值班室', color: '#8f6214', where: '國',
+  intro: '國文街巷口的值班室。鳳梨刀穿著白袍，口袋裡有一本邊角捲起來的小筆記本。鳳梨刀不教範文，只教動筆前後的小動作，一週一招。',
+  first: '你來啦，坐。這裡是值班室，不用緊張。我一週教一招，一招只講一件事，讀完就去寫寫看。',
+  hello: ['來，坐這邊。今天這一招不長。', '稿紙我先攤好了。', '小筆記本帶了嗎？沒帶也沒關係，記在手機也行。'],
+  today: '今天的課已經上滿了，明天會恢復。把今天這一招放在心上就好。',
+  week: '這週這一招教過了。週日動筆的時候用用看；下一招下週一會開。',
+  wait: '下一招我還在整理。',
+  after: '今天就到這裡。週日動筆的時候，把這一招拿出來用。',
+  end: '十二招都教完了。之後動筆前，翻一翻你的小筆記本就好。' };
+const ZW_N = 12;   // 《文學的力量》只有 12 講（其他老師一本 13 講）
 const wisdomFull = {};   // wisdom/<書>.json 的完整內容（書架的 wisdomJson 只留書名、顏色、章名）
 function wisdomLoad(key) {
   if (wisdomFull[key]) return wisdomFull[key].then ? wisdomFull[key] : Promise.resolve(wisdomFull[key]);
@@ -1481,6 +1493,45 @@ function wisdomAdultMerge(j, a) {
   }) });
   if (Array.isArray(j.chapters)) out.chapters = j.chapters.map((c, i) => { const o = a.lessons[String(i + 1)]; return o && typeof o.title === 'string' ? o.title : c; });
   return out;
+}
+/** ESSAY_A_v1：國文街巷口牌（2D，不加 3D 物件） */
+function zwFace(px) {   // 畫像（美術 11/2 定稿 E）：圓底 #eaf2f0、圖佔 92%、貼底；載不到就顯示 🍍
+  return `<span class="zwface" style="display:inline-flex;align-items:flex-end;justify-content:center;flex:none;width:${px + 8}px;height:${px + 8}px;border-radius:50%;background:#eaf2f0;overflow:hidden"><img src="wisdom/img/aide_pineapple@1x.webp" srcset="wisdom/img/aide_pineapple@2x.webp 2x" alt="鳳梨刀" style="width:92%;height:auto;display:block" onerror="this.parentNode.textContent='🍍'"></span>`;
+}
+function zwSign() {   // 美術 11/3：一列 56px 的連結，不搶島民的位置；不放「可以上第幾講」，不催
+  if (ownMode()) return '';   // 家人島的街是家人自己訂的方向，第一條不是國文街；家人入口另議
+  const n = Object.keys(wisdomDone('zw')).length;
+  return `<div class="zwsign" role="button" onclick="openWisdomHut('zw')" style="display:flex;align-items:center;gap:8px;margin-top:8px;min-height:56px;box-sizing:border-box;padding:6px 10px;border-radius:10px;background:#f7f1e5;border:1px solid #d8d4ce;cursor:pointer">
+    ${zwFace(24)}<div class="grow" style="min-width:0"><b style="font-size:14px">巷口・作文值班室</b><div class="muted" style="font-size:12px">鳳梨刀《文學的力量》${n}／${ZW_N} 講</div></div><span class="muted" aria-hidden="true">›</span></div>`;
+}
+function zwEnd() { return Object.keys(wisdomDone('zw')).length >= ZW_N; }
+const zwStatus0 = wisdomStatus, zwSay0 = wisdomSay, zwHut0 = viewWisdomHut, zwLesson0 = viewWisdomLesson, zwNote0 = wisdomNoteHtml;
+wisdomStatus = function (k) { return k === 'zw' && zwEnd() ? '🎓 十二講都上完了' : zwStatus0(k); };
+wisdomSay = function (k) { return k === 'zw' && zwEnd() ? WISDOM_T.zw.end : zwSay0(k); };
+const zwHome = h => h.replace(/<button class="ghost grow" onclick="go\('wisdom'\)">[^<]*<\/button>/g, `<button class="ghost grow" onclick="go('home')">回到國文街 🏝️</button>`)
+  .replace(/<span style="font-size:(\d+)px;?">🍍<\/span>/g, (m, px) => zwFace(+px));   // 老師說話那一列換成畫像（有沒有 TPIC_v1 的 tFace 都認得）；標題前面照舊 🍍
+viewWisdomHut = function () {
+  if (wisdomHut !== 'zw') return zwHut0();
+  const h = zwHome(zwHut0());
+  const j = h.lastIndexOf('<div class="row"><button class="ghost grow"');
+  return h.slice(0, j) + '<!-- ESSAY_B_SLOT -->' + h.slice(j);   // ESSAY_B（12/7）的「寫一段」「素材本」插在這裡
+};
+viewWisdomLesson = function () { const w = draft.wl; return w && w.book === 'zw' ? zwHome(zwLesson0()) : zwLesson0(); };
+wisdomNoteHtml = function (L, t, rec) {
+  const h = zwNote0(L, t, rec), w = draft.wl;
+  if (!w || w.book !== 'zw') return h;
+  if (rec) return h.replace(/<div class="wnote"><b>你寫的：<\/b>[\s\S]*?<\/div>/, `<div class="wnote">📌 這一招記下了（${String(rec.at || '').slice(5).split('-').map(Number).join('/')}）</div>`)
+    .replace(/集章冊蓋好第 (\d+) 個章了/, `《文學的力量》第 $1 講上完了`);   // 作文助教不在智慧島的集章冊裡
+  return h.replace(/<textarea id="wNote"[\s\S]*?id="wGo"[\s\S]*?<\/button>/, `<button id="wGo" style="width:100%;margin-top:10px;background:${t.color}" onclick="zwSubmit()">📌 我記下了</button>`);
+};
+/** 「我記下了」：不寫字、不送 AI，直接蓋章（後端 takeLesson 對 zw 收空白、不叫 AI） */
+async function zwSubmit() {
+  const w = draft.wl, L = wisdomLessonNow(), btn = document.getElementById('wGo');
+  if (btn) { btn.disabled = true; btn.textContent = '蓋章中…'; }
+  const choice = ((w.pick[1] || [])[0]);
+  try { await flush(); S = await call('takeLesson', 'zw', w.n, choice == null ? -1 : choice, '', { title: L.title }); D = derive(S); }
+  catch (e) { if (btn) { btn.disabled = false; btn.textContent = '📌 我記下了'; } return toast(String(e.message || e)); }
+  w.review = false; toast('📜 蓋好章了！'); render();
 }
 function wisdomBook(key) { const j = wisdomFull[key]; return j && !j.then ? j : null; }
 function wisdomLessons() { return (S.save.wisdom && S.save.wisdom.lessons) || {}; }
@@ -5592,6 +5643,7 @@ function showInfo3D(s) {
     <div class="muted" style="margin-top:10px">最近四週完成次數</div>
     <div class="row" style="justify-content:space-around;margin-top:4px">${recent}</div>
     ${(lm => lm.length ? `<div class="muted" style="margin-top:10px">讀完書長出的地標</div>${lm.map(m => `<div class="item" style="cursor:pointer" onclick="openBook('${m.key}')"><span>🏞️</span><div class="name grow">${esc(m.name)}<div class="muted" style="font-size:12px">${esc(m.title)}${m.from ? '・' + esc(m.from) + '送' : ''}・${esc(short(m.at))} 讀完${(mi => m.id in mi ? '・' + (mi[m.id] ? '長在' + esc(isletName(mi[m.id])) + '上' : '街上放滿了') : '')(markIsles())}</div></div><span>›</span></div>`).join('')}` : '')(landmarkList().filter(m => m.s === s))}
+    ${s === '國' ? zwSign() : ''}
     <button class="ghost" style="width:100%;margin-top:10px" onclick="openHouse('${s}')">🏠 去${esc(r.name)}家作客</button>`;
 }
 
@@ -6366,7 +6418,8 @@ function zoneTimer(zoneOf, get, save, busy) {   // TM_RULES_v2：busy() 為真�
 const TM_STUDY_TABS = ['plan', 'confirm', 'scan', 'pick', 'light', 'lamp', 'log', 'bottle', 'wrongScan', 'exam', 'words', 'printWrong', 'focus', 'lightword', 'paper', 'story'];
 const TM_EXT_TABS = ['book'];   // TM_RULES_v2：書店店面改算其他；音樂廳是藝文計時頁，三區都不算
 const TM_OFF_TABS = ['walk', 'moveStop', 'hall', 'hand'];   // HANDLOG_v1 補登表單也不算   // 運動、藝文計時頁：離開螢幕的好事，不算進任何一區
-const TM_WISDOM_STUDY = ['einstein', 'yirong', 'mi', 'alu'];   // 自然、社會（歷史）、國文、社會（公民：看新聞）
+const TM_WISDOM_STUDY = ['einstein', 'yirong', 'mi', 'alu'];
+TM_WISDOM_STUDY.push('zw');   // ESSAY_A_v1：作文算國文，讀書區   // 自然、社會（歷史）、國文、社會（公民：看新聞）
 const TM_BOARD_STUDY = ['plan', 'xq', 'light'];   // 首頁今日板展開讀書計畫、挑戰任務、漂流瓶
 function tmZone() {
   if (!S || !S.save || !D || !D.cfg || isFamily() || ownMode()) return -1;   // 家人島的版本還沒做
@@ -7037,6 +7090,7 @@ const WISDOM_BOOKS = [
   { key: 'einstein2', title: '愛因斯坦的科學筆記・下冊', color: '#2E3A59' },
   { key: 'yirong', title: '課本沒寫的那一題', color: '#9A5B3C' }, { key: 'mi', title: '一首詩的時間', color: '#B23A3A' }, { key: 'guo', title: '身體使用說明書', color: '#3E8A8C' }];
 const wisdomJson = {};
+WISDOM_BOOKS.push({ key: 'zw', title: '文學的力量', color: '#8f6214' });   // ESSAY_A_v1：書店書架、家人碼看得到
 // 店名：她自己取（存在 keeper:bookname 的 name，沿用 saveKeeper，後端不用改）
 const BOOK_NAMES = ['巷口書店', '小島書房', '海風書屋', '午後書店', '月見書房', '晴耕雨讀', '貓與書', '燈下書房'];
 function bookName() { const k = S.save['keeper:bookname']; return (k && k.name) || ''; }
