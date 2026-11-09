@@ -57,10 +57,10 @@
   // 衛星小島（isletCard）2b-1 起開放：商店照她的畫
   // ---------- 智慧島（2c-1 最小版）：FAM_WISDOM 開了才有；成人版課文由 Index.html 的 wisdomAdult() 載入 ----------
   window.wisdomOn = () => !!(S && S.wisdomOk);
-  WISDOM_RULE = '每天可以上一講，同一位老師每週一講。上過的課可以回小屋回看。';   // 一天一講、一週一講照她的 wisdomTodayDone、wisdomWeekDone（爸爸 10/28）
+  WISDOM_RULE = '每天最多上兩講，同一位老師每週一講。上過的課可以回小屋回看。';   // 一天最多兩講（爸爸 11/2）、一週一講照她的 wisdomTodayDone、wisdomWeekDone（爸爸 10/28）
   WISDOM_SHELF = '';   // 家人島沒有書店，上過的書不擺書架
   PLACES.wisdom.lead = '去智慧島的渡船由你請一位主人來開：取名字、選樣子、寫個性。';
-  PLACES.wisdom.about = ['從這裡開船去智慧島，四位老師的課照順序上，每天可以上一講，同一位老師每週一講', '每一講最後寫一句交給老師，老師會回你一句', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你島上的家'];
+  PLACES.wisdom.about = ['從這裡開船去智慧島，四位老師的課照順序上，一天最多上兩講，同一位老師每週一講', '每一講最後寫一句交給老師，老師會回你一句', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你島上的家'];
   const AI_OK = '你在智慧島寫給老師的那一句，會交給 AI，讓老師回你一句。這個 AI 用的是 Google Gemini 的付費版，你寫的字不會被拿去訓練 AI。你寫的和老師的回話，在 App 裡只有你自己看得到，其他家人都看不到；資料存在 App 管理員的 Google 試算表裡，管理員答應過不會去讀。';   // 文案審查 25
   const ensureDaily0 = window.ensureDaily;   // FAM_COMMON2_v1
   window.ensureDaily = async () => {};
