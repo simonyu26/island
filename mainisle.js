@@ -45,7 +45,14 @@
     firstHer: '喵呱來啦！阿嬤的交易所開張了。以前在銀行看了很多帳，現在把幾個重要的道理寫成帳本，放在下面，慢慢看。',
     firstGrand: '喵呱來啦！阿嬤的交易所開張了。以前在銀行看了很多帳，現在把幾個重要的道理寫成帳本，放在下面，慢慢看。',
     hello: ['算盤先幫你擦亮了。', '今天的數獨解完了，換你來考考我。', '帳記清楚，事情就順。', '今天想看哪一頁？阿嬤講給你聽。'] };
-  KEEPER.temple.face = '👵'; KEEPER.church.face = '🧑'; KEEPER.temple.ic = KEEPER.church.ic = '';   // 兩位的頭像都用人，對等（美術 10/30）；地方的圖示 ic 照舊   // notes：聚會所裡的山海筆記
+  KEEPER.temple.face = '👵'; KEEPER.church.face = '🧑'; KEEPER.temple.ic = KEEPER.church.ic = '';
+  // KEEPER_FACE_v1 五位的插畫頭像（美術 11/1 定案、爸爸 11/1 選定）：圓底淡色是代表色混 82% 白；圖載不到退回 emoji
+  const KEEPER_IMG = { port: '#dee7f1', hall: '#dfe7dc', temple: '#f5ddd9', church: '#e9e5ef', exchange: '#f8eddb' };
+  function kpFace(kp) {
+    const k = Object.keys(KEEPER).find(x => KEEPER[x] === kp || (kp && KEEPER[x].name === kp.name)), fb = kp.face || kp.ic || '';
+    if (!k || !KEEPER_IMG[k]) return fb;
+    return `<span class="kface" style="background:${KEEPER_IMG[k]}"><img loading="lazy" src="keeper/${k}.webp" alt="${esc(fb)}" onerror="this.parentNode.replaceWith(document.createTextNode(this.alt))"></span>`;
+  }   // 兩位的頭像都用人，對等（美術 10/30）；地方的圖示 ic 照舊   // notes：聚會所裡的山海筆記
   // 玉山山頂的節氣小卡（爸爸 10/28）：阿台婆婆說今天的節氣，配一則跟會考自然、社會有關的小知識；只在點聚會所時顯示，不推、不給獎勵
   const SUMMIT_FACT = {
     立春: '節氣是照太陽在天上走的位置訂的，每走 15 度換一個，所以國曆日期每年都差不多。',
@@ -129,6 +136,36 @@
     if (!f) return '';
     return `<div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#f3f7fb"><b>${typeof termIcon === 'function' ? termIcon(t) : '🏔️'} 山頂的節氣・${esc(t)}</b>
       <div style="margin-top:4px">${esc(f)}</div></div>`;
+  }
+  // ---------- 家族航海圖 VOYAGE_v1（爸爸 11/1）：聚會所節氣卡下面，六個港一列，日期到了港口的燈就亮 ----------
+  // 只看日期，不讀 port:、沒有成績和計數、不能點；讀 index.html 的 PORTS、PORT_PIN、PORT_RING，任一個沒有就整塊不畫
+  // 美術 11/1 02:46：老紙底＋格線、1.5px hinoki 框、高 84、港在 y22、PIN／RING 0.85 倍、走過實線、沒走點線、一道波紋（320 寬時離點線太近，美術 03:11 下移到 top 36）
+  function voyageHtml() {
+    if (typeof PORTS === 'undefined' || typeof PORT_PIN === 'undefined' || typeof PORT_RING === 'undefined') return '';
+    if (!Array.isArray(PORTS) || !PORTS.length || !S || !S.today) return '';
+    const today = S.today, n = PORTS.length, X = i => n > 1 ? i * 100 / (n - 1) : 50, Y = 22, past = P => today >= P.days[0];
+    const md = d => { const p = String(d).split('-'); return Number(p[1]) + '/' + Number(p[2]); };
+    const B = typeof PORT_BEND !== 'undefined' && Array.isArray(PORT_BEND) ? PORT_BEND : [];
+    const at = x => `left:calc(18px + (100% - 36px) * ${x / 100})`;
+    const seg = PORTS.slice(1).map((P, k) => {
+      const b = B[k] || [.5, 0, .5, 0], x1 = X(k), x2 = X(k + 1);
+      const look = past(P) ? 'stroke="#2b4a6f" stroke-width="2"' : 'stroke="#8a8580" stroke-width="2" stroke-dasharray="1 5" stroke-linecap="round"';
+      return `<path fill="none" vector-effect="non-scaling-stroke" ${look} d="M${x1} ${Y} C${x1 + (x2 - x1) * b[0]} ${Y + b[1] * .5} ${x2 - (x2 - x1) * b[2]} ${Y + b[3] * .5} ${x2} ${Y}"/>`;
+    }).join('');
+    const w = PORTS.findIndex((P, i) => i && !past(P));
+    const wave = w > 0 && typeof PORT_WAVE !== 'undefined' ? `<span style="position:absolute;top:36px;${at((X(w - 1) + X(w)) / 2)};transform:translateX(-50%);line-height:0">${PORT_WAVE}</span>` : '';
+    const pin = sv => String(sv).replace('width="16" height="16"', 'width="13.6" height="13.6"');
+    const ports = PORTS.map((P, i) => `<span style="position:absolute;top:0;${at(X(i))};width:44px;margin-left:-22px;padding-top:46px;display:flex;flex-direction:column;align-items:center">`
+      + `<span style="position:absolute;top:15.2px;left:15.2px;line-height:0">${pin(past(P) ? PORT_PIN : PORT_RING)}</span>`
+      + `<b style="font-size:12px;line-height:1.3;white-space:nowrap">${esc(P.name)}</b><small style="font-size:12px;line-height:1.3;color:#5f5a55;white-space:nowrap">${md(P.days[0])}</small></span>`).join('');
+    const line = a => `<div style="margin-top:4px;font-size:12px;color:#5f5a55">${a.map(x => `<span style="white-space:nowrap">${x}</span>`).join('')}</div>`;
+    return `<div style="margin-top:16px"><b>⚓ 今年的航程</b>`
+      + `<div aria-hidden="true" style="position:relative;height:84px;margin-top:6px;border-radius:12px;overflow:hidden;border:1.5px solid #c9a273;background-color:#f6efe0;background-image:linear-gradient(#e3d7bf 1px,transparent 1px),linear-gradient(90deg,#e3d7bf 1px,transparent 1px);background-size:100% 36px,36px 100%">`
+      + `<svg viewBox="0 0 100 44" preserveAspectRatio="none" style="position:absolute;top:0;left:18px;width:calc(100% - 36px);height:44px;overflow:visible">${seg}</svg>${wave}${ports}</div>`
+      + `<span style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">${PORTS.map(P => esc(P.name) + ' ' + md(P.days[0]) + (past(P) ? '，已到' : '，還沒到')).join('；')}</span>`   // 圖是 aria-hidden：給螢幕閱讀器的港名和日期（工程顧問 11/1 03:11）
+      + line(['從一模到會考，', '日子到了，', '港口的燈就亮起來。', '這裡只有日期，', '沒有成績。'])
+      + (her() ? line(['家人也看得到這張圖，', '只有日期，', '看不到你寫的。']) : '')
+      + `</div>`;
   }
   // ---------- 山海筆記（工程待辦 149，爸爸 10/30 動工）：聚會所節氣卡下面，點「打開」才下載 notes/shanhai.json ----------
   // 不記錄、不加島幣、不推送，她和家人看同一份；今天的推薦只是排在最前面，不跳出來
@@ -367,7 +404,7 @@
     const kp = OPEN[k] && KEEPER[k].open ? Object.assign({}, KEEPER[k], KEEPER[k].open) : KEEPER[k]; if (first === undefined) first = !met(k);   // 開門以後換開門的台詞
     const grand = kp.firstGrand && isFamily() && S.who && S.who.name === '姐姐';
     const line = first || !kp.hello ? (kp.firstHer && !canPost() ? kp.firstHer : grand ? kp.firstGrand : kp.first) : kp.hello[daySeed() % kp.hello.length];
-    return `<div class="resident"><span class="avatar">${kp.face || kp.ic}</span><div><b>${esc(kp.name)}</b><div class="muted">${esc(kp.role)}・${esc(kp.intro)}</div></div></div>
+    return `<div class="resident"><span class="avatar">${kpFace(kp)}</span><div><b>${esc(kp.name)}</b><div class="muted">${esc(kp.intro.indexOf(kp.role) >= 0 ? kp.intro : kp.role + '・' + kp.intro)}</div></div></div>
       <div class="speech" style="margin-top:8px">${esc(line)}</div>`;
   }
   function ferryRows() {   // 爸爸 10/28：自己的島、主島、智慧島、其他家人的島（她是家人之一）
@@ -390,7 +427,7 @@
     if (!info) return '<div class="muted">👆 點飛船碼頭搭飛船；點其他建物看看它們什麼時候開門。用手指拖曳可以轉動，兩指可以縮放。</div>';
     if (info.kind === 'place') {
       const k = info.key;
-      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') + (k === 'exchange' ? coinBtn() : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
+      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + voyageHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') + (k === 'exchange' ? coinBtn() : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
     }
     const x = isleList().find(i => i.key === info.key); if (!x) return '';
     if (x.mine) return `<b>🏝️ ${esc(x.name)}</b><div class="muted">這是你的島。</div>${x.open !== false ? `<button style="margin-top:8px" onclick="mainSail('${x.key}')">🎈 ${isFamily() ? '去我的島' : '回到我的島'}</button>` : ''}`;
