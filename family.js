@@ -544,7 +544,9 @@
     box.querySelectorAll('.card div').forEach(d => { if (!d.children.length && /^(🍶 新漂來|⛵ 放了|Boss 項目達成|故事任務：)/.test(d.textContent.trim())) d.remove(); });   // 月末繪卷：合計和一路走來只留家人有的（瓶子、紙船、Boss、故事任務是她的）
     box.querySelectorAll('.card div').forEach(d => { const t = d.textContent.trim(); if (d.children.length) return;
       if (/^每累積 \d+ 週紀錄/.test(t)) d.remove(); else if (/^有紀錄的週數：/.test(t)) d.textContent = t.split(/\s*最長連續/)[0]; });   // 不用連續週數當指標（文案審查 65 補）
-    return box.innerHTML;
+    box.querySelectorAll('button[disabled]').forEach(b => { if (/上一週|下一週/.test(b.textContent)) b.classList.add('floff'); });   // FAM_LIGHT2F_v1：不能按的用 .floff，不用透明度（美術 11/1）
+    const wb = box.querySelector('b.grow'); if (wb && wb.firstChild && wb.firstChild.nodeType === 3) { const sp = document.createElement('span'); sp.style.whiteSpace = 'nowrap'; sp.textContent = wb.firstChild.textContent; wb.replaceChild(sp, wb.firstChild); }   // 週次不斷行
+    return (draft.logMode === 'month' ? '' : famFloors('log')) + box.innerHTML;   // FAM_LIGHT2F_v1：2F 頁首放樓層列（和她的燈塔一樣；月末繪卷頁不放）
   };
   // 讓島順起來：同一個分頁，轉交的人是管理員；只看得到自己寫的（後端只給自己的列）
   const viewWish0 = window.viewWish;
@@ -638,10 +640,15 @@
   }
   const famDir = code => ((isle() && isle().dirs) || []).find(d => SLOT[d.slot] === code);
   const dirPill = code => { const d = famDir(code); return `<span class="pill">${d ? esc(d.ic) + ' ' + esc(d.name) : '🌾'}</span>`; };
+  // FAM_LIGHT2F_v1：樓層列四格，2F 航海日誌（爸爸 11/1「燈塔預設存在」：建物、守燈人、1F、碼頭、2F 每座島都有；3F 燈室、錯題跟學習類模組走，先「整理中」）
+  // 美術 11/1：≤360 寬拿掉 emoji 只留兩行字；樓層編號 12px；「整理中」那格不用透明度（washi 底、1px 虛線、#5f5a55、12px）；所在樓層梅紅實心；數字標籤和週次不換行
+  const FLOOR_CSS = '.floors button small{font-size:12px;opacity:1}.floors button:disabled:not(.on),button.floff:disabled{opacity:1;background:#fffdf8;border:1px dashed #5f5a55;color:#5f5a55}.floors button:disabled:not(.on) small{color:#5f5a55}.floors button.on:disabled{opacity:1}.hud .muted{white-space:nowrap}@media (max-width:360px){.floors .fi{display:none}}';
   function famFloors(cur) {
-    const f = [['light', '1F', '🌊 海灘'], ['lamp', '3F', '🔭 燈室'], ['paper', '岬角下', '⛵ 碼頭']];
-    return `<div class="floors">${f.map(([t, n, name]) => t === 'lamp' ? `<button disabled><small>${n}</small>${name}<small>整理中</small></button>`
-      : `<button class="${cur === t ? 'on' : ''}" ${cur === t ? 'disabled' : `onclick="go('${t}');window.scrollTo(0,0)"`}><small>${n}</small>${name}</button>`).join('')}</div>`;
+    if (!document.getElementById('famFloorsCss')) document.head.insertAdjacentHTML('beforeend', '<style id="famFloorsCss">' + FLOOR_CSS + '</style>');
+    const f = [['light', '1F', '🌊', '海灘'], ['log', '2F', '📖', '航海日誌'], ['lamp', '3F', '🔭', '燈室'], ['paper', '岬角下', '⛵', '碼頭']];
+    const f2 = f.filter(([t]) => t === 'lamp' || t === cur || OWN_TABS.includes(t));   // 11/9：家人島還沒開那個分頁（例如 FAM_B1 關著時的 1F、碼頭）就不畫那格，免得按了被擋回島上（own_buttons）
+    return `<div class="floors">${f2.map(([t, n, ic, name]) => t === 'lamp' ? `<button disabled><small>${n}</small><span class="fi">${ic} </span>${name}<small>整理中</small></button>`
+      : `<button class="${cur === t ? 'on' : ''}" ${cur === t ? 'disabled' : `onclick="go('${t}');window.scrollTo(0,0)"`}><small>${n}</small><span class="fi">${ic} </span>${name}</button>`).join('')}</div>`;
   }
   // 這週（週一到今天）完成幾次、碼頭上放了幾艘船：只算這位家人自己的存檔
   function famLightWeek() {
