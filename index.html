@@ -121,6 +121,9 @@
   .diary .diaryText { margin-top: 10px; font-size: 17px; text-align: left; white-space: pre-wrap; min-height: 1.4em; }
   .pic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; vertical-align: middle; background: #fff; }
   .avatar .pic { width: 52px; height: 52px; }
+  .kface { display: inline-block; position: relative; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; vertical-align: middle; } /* KEEPER_FACE_v1 主島五位插畫頭像：圓底、圖佔 92% 貼底、不加框（和智慧島老師一樣） */
+  .kface img { position: absolute; left: 4%; bottom: 0; width: 92%; height: 92%; object-fit: contain; object-position: bottom; }
+  #miInfo .muted { text-wrap: pretty; } /* KEEPER_FACE_v1 美術 11/1：主島卡片說明不要最後剩一個字（舊瀏覽器忽略） */
   .ipic { width: 1.4em; height: 1.4em; border-radius: 50%; object-fit: cover; vertical-align: -0.35em; background: #fff; }
   .upl { margin-top: 6px; }
   .upl label.btn { display: inline-block; margin: 0; font-size: 14px; background: var(--plum-light); color: var(--plum); padding: 6px 12px; border-radius: 10px; cursor: pointer; }
@@ -364,11 +367,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.5.1.1';
+const APP_VERSION = '2.50.5.2';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.5.2', date: '2026-11-10', fam: true, items: ['⚓ 主島的聚會所多了「今年的航程」：從一模到會考，幾場大考排成一條航線，日子到了，港口的燈就亮起來。只有日期，沒有成績；家人也看得到，訪客看不到。', '🖼️ 主島的五位島民有了自己的畫像，點島民卡就看得到。'] },
   { v: '2.50.5.1.1', date: '2026-11-09', items: ['✍️ 國文街多了一塊『巷口・作文值班室』的牌子：作文助教鳳梨刀開了一門《文學的力量》，一共 12 講，一週可以上一講。這門課看完不用寫一句，按『📌 我記下了』就蓋章。'] },
   { v: '2.50.5.1', date: '2026-11-09', minor: true, fam: true, items: ['📖 智慧島的第二門課：四位老師的上冊 13 講上完，就會接著上下冊，孔明的下冊是《三十六計》。下冊蓋滿 13 個章，老師也會再送一件畢業禮物。', '⛴️ 智慧島改成一天最多上兩講，同一位老師還是每週一講。'] },
   { v: '2.50.5.0.2', date: '2026-11-08', minor: true, fam: true, items: ['🔤 家人島的外語街多了「去練單字」：點外語街（清單或 3D 都可以）就能直接到單字卡練習。'] },
