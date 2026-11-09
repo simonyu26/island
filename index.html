@@ -392,11 +392,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.5.2.1';
+const APP_VERSION = '2.50.8.2.3';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.8.2.3', date: '2026-11-09', items: ['🏫 讀書計時多了「記一次上課」：數理課、英文課、日文課上完，可以把時間記進讀書時間，也會集砂時計。記下的會標「🏫 上課」，家人看得到的時間紀錄也會這樣標；想改誰看得到，在「更多 → 誰看得到什麼」。'] },
   { v: '2.50.5.2.1', date: '2026-11-10', fam: [1], items: ['✍️ 作文值班室多了『週日寫一段』：挑一個題目，先看材料、列素材，再到紙上寫一段，App 幫你計時；寫好了勾一勾自我檢查、留一句話。素材本在 App 裡只有你自己看得到。每次寫的紀錄，想給家人看的話，可以一則一則選要給誰；家人只看得到日期、題目、開頭的寫法、你勾的項目和留的那一句，看不到素材。', '🗼 家人自己的島：燈塔開了 2F「航海日誌」，原本在「更多 → 其他」的入口也還在。'] },
   { v: '2.50.5.2', date: '2026-11-10', fam: true, items: ['⚓ 主島的聚會所多了「今年的航程」：從一模到會考，幾場大考排成一條航線，日子到了，港口的燈就亮起來。只有日期，沒有成績；家人也看得到，訪客看不到。', '🖼️ 主島的五位島民有了自己的畫像，點島民卡就看得到。'] },
   { v: '2.50.5.1.1', date: '2026-11-09', items: ['✍️ 國文街多了一塊『巷口・作文值班室』的牌子：作文助教鳳梨刀開了一門《文學的力量》，一共 12 講，一週可以上一講。這門課看完不用寫一句，按『📌 我記下了』就蓋章。'] },
@@ -961,8 +962,9 @@ function derive(S) {
   const focusDays = {}; let focusGlass = 0, focusGlassOld = 0;   // DAYSUM_v1：一天的讀書計時合起來算；舊算法是每一次計時（s）各自算
   Object.keys(save).filter(k => k.startsWith('focus:') && save[k]).forEach(k => {
     const per = {}, d = { min: 0, glass: 0 };
-    (save[k].list || []).forEach(x => { per[x.s] = (per[x.s] || 0) + (x.min || 0); d.min += x.min || 0; });
-    d.glass = Math.floor(d.min / FOCUS_GLASS);
+    let noG = 0;   // CLASS_v1：往回追補的上課（back）不給綠點時，分鐘照算、砂時計不算
+    (save[k].list || []).forEach(x => { per[x.s] = (per[x.s] || 0) + (x.min || 0); d.min += x.min || 0; if (x.back && !CLASS_BACK_GREEN) { noG += x.min || 0; per[x.s] -= x.min || 0; } });
+    d.glass = Math.floor((d.min - noG) / FOCUS_GLASS);
     focusDays[k.slice(6)] = d;
     focusGlass += d.glass; focusGlassOld += Object.values(per).reduce((a, m) => a + Math.floor(m / FOCUS_GLASS), 0);
   });
@@ -1127,7 +1129,7 @@ function render() {
   const navOn = { lightword: 'home', story: 'home', moveStop: 'home', hand: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (TAB_HELP[tab]) app.insertAdjacentHTML('afterbegin', helpChip());
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
@@ -6016,7 +6018,7 @@ function focusBlock() {
   if (isFamily()) return '';
   const f = focusActive();
   if (!f) return `<div class="focus"><div class="muted">要開始讀了嗎？按項目旁的 ⏳，或在這裡選一項開始計時。每專心 ${FOCUS_GLASS} 分鐘集一顆砂時計，🌱 +${FOCUS_GREEN} 綠點。</div>
-      <div class="row" style="margin-top:6px"><select id="fStart">${focusOptions(-1)}</select><button class="tbtn" onclick="focusStart(Number(document.getElementById('fStart').value))">⏳ 開始</button></div>${handLink('focus')}</div>`;
+      <div class="row" style="margin-top:6px"><select id="fStart">${focusOptions(-1)}</select><button class="tbtn" onclick="focusStart(Number(document.getElementById('fStart').value))">⏳ 開始</button></div>${handLink('focus')}${classLink()}</div>`;
   const cur = f.segs[f.segs.length - 1], w = focusWho(cur.row), min = Math.floor(focusMs(f) / 60000);
   const lines = ['我陪你一起讀，加油！', '專心一下下，等等再休息。', '你已經開始了，最難的一步做完了。'];   // 用開始時間挑一句，同一次計時不會一直換
   return `<div class="focus" id="focusBox"><div class="row"><span class="grow"><b>${esc(itemLabel(cur.row))}</b>${f.date !== S.today ? '（' + short(f.date) + ' 開始的）' : ''}</span><span class="muted">${f.pausedAt ? '☕ 休息中' : '⏳ 計時中'}</span></div>
@@ -6287,6 +6289,96 @@ function moveDiscard() {
   if (!confirm('這次的' + mk(moveActive()).did + '計時不記下來，確定嗎？')) return;
   movePut(null); draft = {}; moveBack(k);
 }
+/* ===== CLASS_v1 記一次上課（爸爸 11/9 定樣）：數理課、英文課、日文課上完，把時間記進讀書計時。
+   寫進同一個 focus:日期，每一科一列 { row, s, start, end, min, src:'class', cs }；後端 classCheck_ 再擋一次。
+   規則：今天和前兩天；同一堂課一天一次；一天最多 CLASS_MAX 分；不跨午夜；不和其他紀錄重疊。上課不佔補登的額度。 ===== */
+const CLASS_DAYS = 2, CLASS_MAX = 240, CLASS_BACK_GREEN = true;   // 往回追補的上課給不給綠點（爸爸回覆後只改這裡）
+const CLASS_T = { sci: { name: '數理課', sub: '數學＋理化', parts: [['數', 90], ['理化', 90]] }, eng: { name: '英文課', sub: '英文', parts: [['英', 60]] }, jpn: { name: '日文課', sub: '日文', parts: [['日', 60]] } };
+const CLASS_CS_NAME = { 數: '數學', 理化: '理化', 英: '英文', 日: '日文' }, CLASS_WEI = /\bwei\b(?!\s*h)/i;
+function classKindOf(cs) { return cs === '英' ? 'eng' : cs === '日' ? 'jpn' : 'sci'; }
+function classLink() { return (isFamily() || ownMode()) ? '' : `<div style="text-align:center;margin-top:-4px"><a href="#" onclick="classOpen();return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline">🏫 記一次上課</a></div>`; }
+function classOpen(k) {
+  if (isFamily() || ownMode()) return;
+  k = CLASS_T[k] ? k : 'sci';
+  const dur = CLASS_T[k].parts.reduce((a, p) => a + p[1], 0), end = Date.now(), b = hhmm(end), a0 = new Date(end - dur * 60000);
+  const a = a0.getDate() === new Date(end).getDate() ? hhmm(a0.getTime()) : '00:00';
+  draft = { cls: { k, day: 0, a, b, mins: CLASS_T[k].parts.map(p => p[1]), done: 1 } }; tab = 'cls'; render(); window.scrollTo(0, 0);
+}
+function classSet(f, v) {
+  const c = draft.cls; if (!c) return;
+  if (f === 'k') { const keep = c.day; classOpen(v); draft.cls.day = keep; return render(); }
+  if (f === 'a' || f === 'b') { c[f] = String(v); const r = classTimes(c); if (!r.wait && r.end > r.start && c.mins.length === 1) c.mins = [Math.floor((r.end - r.start) / 60000)]; }
+  else if (f.indexOf('m') === 0) c.mins[Number(f.slice(1))] = Math.max(0, Math.round(Number(v) || 0));
+  else c[f] = Number(v);
+  render();
+}
+function classTimes(c) {
+  const date = addD(S.today, -c.day), t = v => { const m = String(v || '').match(/^(\d{2}):(\d{2})$/); return m ? parseD(date).getTime() + (Number(m[1]) * 60 + Number(m[2])) * 60000 : null; };
+  const start = t(c.a), end = t(c.b); return { date, start, end, wait: start == null || end == null };
+}
+// 那天計畫裡的 wei 項目（名稱照她自己的計畫項目；Wei H 是作業，不算）：回傳 [{ row, name }]
+function classWeiRows(date) {
+  const p = S.save['plan:' + mondayOf(date)], i = (parseD(date).getDay() + 6) % 7, byRow = {}; (S.allItems || S.items || []).forEach(it => byRow[it.row] = it);
+  const rows = []; ((p && p.days && p.days[i]) || []).forEach(x => String(x).replace(/^\?/, '').split(',').forEach(r => { const it = byRow[Number(r)]; if (it && CLASS_WEI.test(it.name) && !rows.some(y => y.row === it.row)) rows.push({ row: it.row, name: it.name, subject: it.subject }); }));
+  return rows;
+}
+function classCalc(c) {
+  const r = Object.assign(classTimes(c), { min: 0, err: '', bad: false });
+  if (r.wait) return r;
+  if (r.end <= r.start) { r.err = '上課要記在同一天裡喔。過了半夜 12 點的部分，選隔天再記一次。'; r.bad = true; return r; }
+  if (r.end > Date.now() + 60000) { r.err = '這個時間還沒到喔，改一下結束的時間吧。'; r.bad = true; return r; }
+  r.min = Math.floor((r.end - r.start) / 60000);
+  if (r.min > CLASS_MAX) { r.err = '一堂課一天最多記 ' + CLASS_MAX + ' 分鐘喔。'; r.bad = true; return r; }
+  const fl = (S.save['focus:' + r.date] || {}).list || [], ml = (S.save['move:' + r.date] || {}).list || [];
+  if (fl.some(x => x.src === 'class' && classKindOf(x.cs) === c.k)) { r.err = '這天的' + CLASS_T[c.k].name + '已經記過了。'; return r; }
+  const sum = c.mins.reduce((a, m) => a + m, 0);
+  if (c.mins.length > 1 && sum !== r.min) { r.err = '兩格加起來要等於 ' + r.min + '，現在是 ' + sum + '。'; r.split = true; return r; }
+  if (c.mins.some(m => m < 1) && c.mins.length > 1) { r.err = '每一科至少記 1 分鐘；只上了一科的話，可以把另一格的分鐘加過去。'; r.split = true; return r; }
+  const live = [focusActive(), moveActive()].filter(x => x && x.date === r.date).map(x => ({ start: x.segs ? x.segs[0].start : x.start, end: Date.now() }));
+  const hit = fl.concat(ml, live).find(x => x.start < r.end && r.start < x.end);
+  if (hit) { r.err = handRange(Math.max(hit.start, r.start), Math.min(hit.end, r.end)) + ' 這段已經記過了，改一下開始或結束的時間吧。'; r.bad = true; }
+  return r;
+}
+function viewClass() {
+  const c = draft.cls; if (!c) { tab = 'home'; return viewHome(); }
+  const T = CLASS_T[c.k], r = classCalc(c), ok = !r.wait && !r.err, w = guide(), inv = r.bad ? ' aria-invalid="true"' : '', sinv = r.split ? ' aria-invalid="true"' : '';
+  const opt = (on, txt, js, sub) => `<button class="hl-opt" role="radio" aria-checked="${on}" onclick="${js}">${txt}${sub ? `<small>${sub}</small>` : ''}</button>`;
+  const dayMin = ((D.focusDays[r.date] || {}).min || 0), gain = ok ? Math.floor((dayMin + r.min) / FOCUS_GLASS) - Math.floor(dayMin / FOCUS_GLASS) : 0;
+  const wei = c.k === 'sci' && ok ? classWeiRows(r.date).filter(x => (logOf(r.date)[x.row] || 0) < 2) : [];
+  const parts = T.parts.map((p, i) => `<div><label for="clsM${i}">${CLASS_CS_NAME[p[0]]}（分鐘）</label><input id="clsM${i}" inputmode="numeric" value="${c.mins[i]}"${sinv} onchange="classSet('m${i}',this.value)"></div>`).join('');
+  const recent = []; for (let i = 0; i < 14 && recent.length < 6; i++) { const d = addD(S.today, -i), L = ((S.save['focus:' + d] || {}).list || []).filter(x => x.src === 'class'); if (L.length) recent.push(`<div class="row" style="font-size:14px"><span class="grow">${short(d)}</span><span class="muted">${L.map(x => `<span style="white-space:nowrap">${CLASS_CS_NAME[x.cs] || ''} ${x.min} 分</span>`).join('・')}・🏫 上課${L.some(x => x.back) ? '（補記）' : ''}</span></div>`); }
+  return HAND_CSS + `<div class="card" id="hlBox"><h2 style="margin:0">🏫 記一次上課</h2>
+    <div class="speech" style="margin-top:8px">${w.emoji} ${esc(w.name)}：「上完課了，辛苦了。記下來的話，這段時間也算進你的讀書時間。」</div>
+    <div class="hl-q" id="clsKQ">哪一堂</div><div class="hl-g3" role="radiogroup" aria-labelledby="clsKQ">${Object.keys(CLASS_T).map(k => opt(c.k === k, CLASS_T[k].name, `classSet('k','${k}')`, CLASS_T[k].sub + '<br>' + (k === 'sci' ? '3 小時' : '1 小時'))).join('')}</div>
+    <div class="hl-q" id="clsDayQ">哪一天</div><div class="hl-g3" role="radiogroup" aria-labelledby="clsDayQ">${['今天', '昨天', '前天'].slice(0, CLASS_DAYS + 1).map((t, i) => opt(c.day === i, t, `classSet('day',${i})`, short(addD(S.today, -i)))).join('')}</div>
+    <div class="row" style="margin-top:12px"><label class="grow" style="margin:0" for="clsA">開始</label><input type="time" lang="zh-TW" id="clsA" value="${c.a}"${inv} style="width:auto" onchange="classSet('a',this.value)"></div>
+    <div class="row" style="margin-top:8px"><label class="grow" style="margin:0" for="clsB">結束</label><input type="time" lang="zh-TW" id="clsB" value="${c.b}"${inv} style="width:auto" onchange="classSet('b',this.value)"></div>
+    ${T.parts.length > 1 && !r.wait && r.min > 0 && r.min <= CLASS_MAX ? `<div class="hl-q">${r.min} 分鐘怎麼分</div><div class="hl-g2">${parts}</div><div class="muted" style="margin-top:4px">兩格加起來要等於 ${r.min}。</div>` : ''}
+    ${r.wait ? `<div class="muted" id="clsWhy" style="margin-top:10px">填好開始和結束的時間，就會算出幾分鐘。</div>`
+      : r.err ? `<div class="speech" id="clsWhy" style="margin-top:12px">${w.emoji} ${esc(w.name)}：「${r.err}」</div>`
+      : `<div class="focus" style="margin-top:12px"><b>${T.parts.length > 1 ? '' : CLASS_CS_NAME[T.parts[0][0]] + ' '}${r.min} 分鐘</b>${gain ? '・⏳ ×' + gain + '・+' + gain * FOCUS_GREEN + ' 綠點' : ''}</div>`}
+    ${wei.length ? `<div class="hl-q" id="clsDoneQ">計畫表上的${wei.map(x => '「' + esc(x.name) + '」').join('')}</div><div class="hl-g2" role="radiogroup" aria-labelledby="clsDoneQ">${opt(c.done === 1, '記成完成', `classSet('done',1)`, wei.length > 1 ? '各 +25 經驗值' : '+25 經驗值')}${opt(c.done === 0, '先不要', `classSet('done',0)`)}</div>` : ''}
+    <div class="row" style="margin-top:12px">${ok ? '<button class="grow" onclick="classSave()">存起來 ✨</button>' : '<button class="grow hl-off" aria-disabled="true" aria-describedby="clsWhy">存起來 ✨</button>'}<button class="ghost" onclick="classBack()">不記了</button></div>
+    <div class="muted" style="margin-top:8px">可以記今天和前兩天；同一堂課一天記一次，一天最多 ${CLASS_MAX} 分鐘。記下的會標「🏫 上課」，家人看得到的時間紀錄也會這樣標。</div>
+    ${recent.length ? `<div class="hl-q">最近記的</div><div style="margin-top:4px">${recent.join('')}</div>` : ''}</div>`;
+}
+function classBack() { draft = {}; focusOpen(); }
+function classSave() {
+  const c = draft.cls; if (!c) return;
+  const r = classCalc(c); if (r.wait || r.err) return;
+  const T = CLASS_T[c.k], date = r.date, wei = c.k === 'sci' ? classWeiRows(date) : [];
+  const xp0 = D.xp, g0 = D.focusGlass, m0 = Object.assign({}, D.mats.got);
+  let t = r.start; const rows = T.parts.map((p, i) => { const min = T.parts.length > 1 ? c.mins[i] : r.min, it = wei.find(x => /理化|自/.test(x.subject) === (p[0] === '理化')) || {};
+    const x = { row: it.row || 0, s: r.start, start: t, end: t + min * 60000, min, src: 'class', cs: p[0] }; t = x.end; return x; });
+  const all = ((S.save['focus:' + date] || {}).list || []).concat(rows);
+  S.save['focus:' + date] = { list: all }; queueSave('focus:' + date, 'saveFocus', date, all);
+  if (c.done === 1 && wei.length) { const rr = Object.assign({}, logOf(date)); wei.forEach(x => { rr[x.row] = 2; }); S.save['log:' + date] = { rows: rr }; queueSave('log:' + date, 'logDay', date, rr); }
+  D = derive(S); matToast(m0, 2200);
+  const green = (D.focusGlass - g0) * FOCUS_GREEN, xp = D.xp - xp0;
+  toast('記好了！' + (green ? '+' + green + ' 綠點 ⏳' : '') + (xp ? ' +' + xp + ' 經驗值' : ''));
+  classBack(); window.scrollTo(0, 0);
+}
+
 /* ===== HANDLOG_v1 計時補登（11/5）：忘了按計時，可以補今天和前兩天，填開始、結束時間；綠點換算和計時一樣。
    紀錄寫進同一個 focus:／move:日期，多一個 src:'hand'；後端（handCheck_）再擋一次天數、筆數、分鐘、重疊、跨午夜。 ===== */
 const HAND_DAYS = 2, HAND_N = 2, HAND_MAX = 120;
@@ -6616,7 +6708,7 @@ function zoneTimer(zoneOf, get, save, busy) {   // TM_RULES_v2：busy() 為真�
 // 她的三區對照（學習策略顧問 10/30 定）。智慧島照老師分：會考學科類算讀書，其餘算延伸
 const TM_STUDY_TABS = ['plan', 'confirm', 'scan', 'pick', 'light', 'lamp', 'log', 'bottle', 'wrongScan', 'exam', 'words', 'printWrong', 'focus', 'lightword', 'paper', 'story'];
 const TM_EXT_TABS = ['book'];   // TM_RULES_v2：書店店面改算其他；音樂廳是藝文計時頁，三區都不算
-const TM_OFF_TABS = ['walk', 'moveStop', 'hall', 'hand'];   // HANDLOG_v1 補登表單也不算   // 運動、藝文計時頁：離開螢幕的好事，不算進任何一區
+const TM_OFF_TABS = ['walk', 'moveStop', 'hall', 'hand', 'cls'];   // CLASS_v1 上課表單也不算   // HANDLOG_v1 補登表單也不算   // 運動、藝文計時頁：離開螢幕的好事，不算進任何一區
 const TM_WISDOM_STUDY = ['einstein', 'yirong', 'mi', 'alu'];
 TM_WISDOM_STUDY.push('zw');   // ESSAY_A_v1：作文算國文，讀書區   // 自然、社會（歷史）、國文、社會（公民：看新聞）
 const TM_BOARD_STUDY = ['plan', 'xq', 'light'];   // 首頁今日板展開讀書計畫、挑戰任務、漂流瓶
@@ -8020,7 +8112,7 @@ function viewMore() {
 }
 // v2.31 隱私（爸爸 2026-10-26）：「誰看得到什麼」表＋登出這支手機
 const WHO_SEES = [
-  ['島的樣子、計畫和讀書紀錄、題目和燈室、大考成績、下週的航線、吃藥紀錄', '✅', '你選的人', '—'],
+  ['島的樣子、計畫和讀書紀錄（含記下的上課時間）、題目和燈室、大考成績、下週的航線、吃藥紀錄', '✅', '你選的人', '—'],
   ['漂流瓶上寫的原因和那一句話、日めくり', '✅', '每一個自己選', '乘船券另外問'],
   ['燈塔的話、喝水紀錄', '✅', '—', '—'],
   ['你寫的字和收到的回覆：智慧島的心得和老師的回覆、紙船的一句、這週一句話、跨科連結的一句', '✅', '—', '—'],
