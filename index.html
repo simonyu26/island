@@ -169,7 +169,7 @@
   .slot span { font-size: 34px; line-height: 1.1; } .slot small { font-size: 10px; color: var(--muted); }
   .furn { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 8px; }
   .furn button { background: #fff; color: var(--ink); border: 1.5px solid var(--plum-light); padding: 8px 4px; font-size: 13px; }
-  .furn button span { display: block; font-size: 26px; } .furn button small { display: block; color: var(--muted); font-size: 11px; }
+  .furn button span { display: block; font-size: 26px; } .furn button em.nw { font-style: normal; white-space: nowrap; display: inline-block; } .furn button small { display: block; color: var(--muted); font-size: 11px; }
   /* 四港航路 PORTS_v1：一條海路串起六個港 */
   .seg3 button { flex: 1 1 auto !important; white-space: nowrap; padding: 6px 4px; }
   .ports { position: relative; height: 150px; margin-top: 12px; border-radius: 12px; overflow: hidden; border: 1.5px solid #c9a273; background-color: #f6efe0;
@@ -364,11 +364,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.5.0.2';
+const APP_VERSION = '2.50.5.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.5.1', date: '2026-11-09', minor: true, fam: true, items: ['📖 智慧島的第二門課：四位老師的上冊 13 講上完，就會接著上下冊，孔明的下冊是《三十六計》。下冊蓋滿 13 個章，老師也會再送一件畢業禮物。', '⛴️ 智慧島改成一天最多上兩講，同一位老師還是每週一講。'] },
   { v: '2.50.5.0.2', date: '2026-11-08', minor: true, fam: true, items: ['🔤 家人島的外語街多了「去練單字」：點外語街（清單或 3D 都可以）就能直接到單字卡練習。'] },
   { v: '2.50.5.0.1', date: '2026-11-08', items: ['🌙 航路多了『出航前夜』：模考前一天晚上，首頁會出現一張小卡，想的話寫兩句給明天的自己；一模的港也可以補寫歸港三句。寫的內容在 App 裡只有你自己看得到。'] },
   { v: '2.50.5', date: '2026-11-08', minor: true, fam: true, items: ['🗼 家人自己的島：岬角上多了一座燈塔，可以取名字、請一位守燈人。燈塔下面有紙船碼頭，做完一件事想記一句心得，就放一艘船；確認這週時，也可以記一句：兩個方向之間，你發現了什麼關係。', '🔤 家人自己的島：多了單字卡。拍一張講義、字幕或書頁，就能把生字存成一組；想練的時候按「出題」，會出一組選擇題，也可以按 🔊 聽發音。照片和出題都會交給 AI，每天的次數和智慧島共用，畫面上會寫。'] },
@@ -1386,7 +1387,7 @@ function wisdomOn() {
 }
 // 2c-1：家人自己的島上課才用成人版課文（智慧島工作串的 wisdomAdultMerge）；她一律原版
 function wisdomAdult() { return typeof ownMode === 'function' && ownMode(); }
-let WISDOM_RULE = '每天可以上一講，同一位老師每週一講。', WISDOM_SHELF = '上過的書也會擺在書店的「你的書架」上。';   // 2c-1：家人島由 family.js 換掉
+let WISDOM_RULE = '每天最多上兩講，同一位老師每週一講。', WISDOM_SHELF = '上過的書也會擺在書店的「你的書架」上。';   // 2c-1：家人島由 family.js 換掉
 const WISDOM_T = {
   kongming: { name: '孔明', ic: '🪶', place: '隆中草廬', color: '#8C2F2B',
     intro: '住在山邊茅廬的天才軍師。說話文白夾雜，溫暖但一針見血；會坦白講自己打過的敗仗和算錯的事。總是先請你坐下喝茶，最後一句「今日到此」。',
@@ -1485,7 +1486,9 @@ function wisdomBook(key) { const j = wisdomFull[key]; return j && !j.then ? j : 
 function wisdomLessons() { return (S.save.wisdom && S.save.wisdom.lessons) || {}; }
 function wisdomDone(book) { return wisdomLessons()[book] || {}; }
 function wisdomCount(teacher) { return [teacher, teacher + '2'].reduce((n, b) => n + Object.keys(wisdomDone(b)).length, 0); }
-function wisdomTodayDone() { const ls = wisdomLessons(); return Object.keys(ls).some(b => Object.values(ls[b] || {}).some(x => x && x.at === S.today)); }
+function wisdomTodayN() { const ls = wisdomLessons(); return Object.keys(ls).reduce((c, b) => c + Object.values(ls[b] || {}).filter(x => x && x.at === S.today).length, 0); }
+const WISDOM_DAY_MAX = 2;   // 一天最多幾講（所有老師合計；和後端 Wisdom.gs 的 WISDOM_DAY_MAX 一樣，魏老 sx、lh 共用）
+function wisdomTodayDone() { return wisdomTodayN() >= WISDOM_DAY_MAX; }   // 一天最多兩講（爸爸 11/2）
 function wisdomWeekDone(teacher) { const ls = wisdomLessons(), mon = mondayOf(S.today); return [teacher, teacher + '2'].some(b => Object.values(ls[b] || {}).some(x => x && x.at >= mon)); }
 /** 這位導師下一講的狀態：book 第幾本、n 第幾講、L 教案（還沒載入是 undefined、沒寫好是 null）、why 不能上的原因 */
 function wisdomNext(teacher) {
@@ -1498,7 +1501,7 @@ function wisdomNext(teacher) {
 function wisdomStatus(teacher) {
   const x = wisdomNext(teacher), t = WISDOM_T[teacher];
   if (x.why === 'closed') return '🌫️ ' + wisdomOpenDay(teacher) + ' 開門';
-  return { end: '🎓 兩本書都上完了', wait: '⏳ 下一講準備中', today: '🌙 今天上過課了', week: '📅 本週已上課，下週見', load: '…', '': '✨ 可以上第 ' + x.n + ' 講' }[x.why] || t.name;
+  return { end: '🎓 兩本書都上完了', wait: '⏳ 下一講準備中', today: '🌙 今天上過兩講了', week: '📅 本週已上課，下週見', load: '…', '': '✨ 可以上第 ' + x.n + ' 講' }[x.why] || t.name;
 }
 function wisdomSay(teacher) {
   const t = WISDOM_T[teacher], x = wisdomNext(teacher);
@@ -1623,9 +1626,9 @@ function viewWisdom() {
   if (!wisdomOn()) return `<div class="card">智慧島還在霧裡，等開島那天再來吧。</div><div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
   WISDOM_ORDER.forEach(k => [...new Set([k, wisdomNext(k).book])].forEach(b => {   // 第二本書等第一本上完才載入
     if (!wisdomFull[b]) wisdomLoad(b).then(() => { if (tab === 'wisdom' || tab === 'whut') render(); }); }));
-  const today = wisdomTodayDone();
+  const today = wisdomTodayDone(), one = wisdomTodayN() === 1;
   return `<div class="card"><h2>⛴️ 智慧島</h2>${wisdomView3D()}
-      <div class="speech" style="margin-top:8px">${today ? '🌙 今天的課上完了。渡船照樣開，想回看筆記可以進小屋坐坐，明天再來上下一講。' : '⛴️ 小船靠岸了。霧散開，小屋的燈都亮著。今天想去哪一間上課？'}</div>
+      <div class="speech" style="margin-top:8px">${today ? '🌙 今天的兩講上完了。渡船照樣開，想回看筆記可以進小屋坐坐。新的課明天會恢復。' : one ? '🌙 今天上過一講了。想的話，還可以找另一位老師再上一講；不上也沒關係。' : '⛴️ 小船靠岸了。霧散開，小屋的燈都亮著。今天想去哪一間上課？'}</div>
       <div class="muted" style="margin-top:6px;font-size:13px">點小屋就能進去。${WISDOM_RULE}</div>${ferryKeeper(today)}</div>
     ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k);
       return `<div class="card whcard" style="border-left:5px solid ${t.color}" onclick="openWisdomHut('${k}')"><div class="row" style="flex-wrap:nowrap">
@@ -1711,15 +1714,16 @@ let wisdomHut = 'kongming';
 function openWisdomHut(k) { wisdomHut = k; draft = {}; tab = 'whut'; render(); window.scrollTo(0, 0); }
 function viewWisdomHut() {
   const k = wisdomHut, t = WISDOM_T[k], x = wisdomNext(k);
-  if (!wisdomFull[x.book]) wisdomLoad(x.book).then(() => { if (tab === 'whut') render(); });
+  [k, k + '2'].filter(b => b === x.book || Object.keys(wisdomDone(b)).length).forEach(b => { if (!wisdomFull[b]) wisdomLoad(b).then(() => { if (tab === 'whut') render(); }); });   // 下冊：上過的上冊講名也要載入
   const j = wisdomBook(x.book) || {}, past = [k, k + '2'].flatMap(b => Object.keys(wisdomDone(b)).map(Number).sort((p, q) => p - q).map(n => ({ b, n })));
   const titleOf = (b, n) => { const L = ((wisdomBook(b) || {}).lessons || []).find(y => y.n === n); return L ? L.title : ''; };
+  const bookOf = b => (WISDOM_BOOKS.find(w => w.key === b) || {}).title || '', two = past.some(p => p.b !== k);   // 上過下冊才分上下冊列
   return `<div class="card"><h2>${t.ic} ${esc(t.place)}</h2>
       ${t.intro ? `<div class="muted" style="margin:-4px 0 10px;font-size:14px">${esc(t.intro)}</div>` : ''}
       <div class="row" style="flex-wrap:nowrap"><span style="font-size:34px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(wisdomSay(k))}</div></div>
       ${x.why ? `<div class="muted" style="margin-top:10px">${wisdomStatus(k)}</div>`
-        : `<button style="width:100%;margin-top:12px;background:${t.color}" onclick="openWisdomLesson('${x.book}',${x.n})">📖 上第 ${x.n} 講：${esc(x.L.title)}</button>`}</div>
-    ${past.length ? `<div class="card"><h3 style="margin-top:0">📚 上過的課</h3>${past.map(p => `<button class="opt" style="width:100%;margin-top:6px" onclick="openWisdomLesson('${p.b}',${p.n})">第 ${p.n} 講　${esc(titleOf(p.b, p.n))}<span class="muted" style="float:right;font-size:12px">${short(wisdomDone(p.b)[p.n].at)}</span></button>`).join('')}</div>` : ''}
+        : `<button style="width:100%;margin-top:12px;background:${t.color}" onclick="openWisdomLesson('${x.book}',${x.n})">📖 ${x.book !== k ? '《' + esc(bookOf(x.book)) + '》' : '上'}第 ${x.n} 講：${esc(x.L.title)}</button>`}</div>
+    ${past.length ? `<div class="card"><h3 style="margin-top:0">📚 上過的課</h3>${past.map((p, i) => `${two && (!i || past[i - 1].b !== p.b) ? `<div class="muted" style="margin-top:8px">《${esc(bookOf(p.b))}》</div>` : ''}<button class="opt" style="width:100%;margin-top:6px" onclick="openWisdomLesson('${p.b}',${p.n})">第 ${p.n} 講　${esc(titleOf(p.b, p.n))}<span class="muted" style="float:right;font-size:12px">${short(wisdomDone(p.b)[p.n].at)}</span></button>`).join('')}</div>` : ''}
     <div class="row"><button class="ghost grow" onclick="go('wisdom')">回到碼頭 ⛴️</button></div>`;
 }
 
@@ -2201,7 +2205,7 @@ function dailyCtx() {
       return { key: s, name: r.name, personality: r.personality, speech: r.speech, relation: r.relation, kizuna: { level: kz.name, missing: kz.missing, back: kz.back }, subject: SUBJECT_NAME[s], daysAway: daysAway(s), grade: D.grades[s] ? D.grades[s].level : null,
         gifts: gifts.length, lastGift: f ? f.name : null }; }),
     guide: { name: g.name, tone: TONES[g.tone] || g.tone },
-    keepers: Object.keys(PLACES).filter(k => k !== 'home' && k !== 'bookcat' && k !== 'advisor' && keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : k === 'bookstore' ? { note: bookNote() } : k === 'yatai' ? { note: yataiNote() } : k === 'hall' ? { note: hallNote() } : k === 'wisdom' ? { note: wisdomTodayDone() ? '她今天上過智慧島的課了' : '她今天還沒去智慧島上課' } : {})),
+    keepers: Object.keys(PLACES).filter(k => k !== 'home' && k !== 'bookcat' && k !== 'advisor' && keeperOf(k)).map(k => Object.assign({ key: k, place: PLACES[k].name }, keeperOf(k), k === 'walk' ? { note: '她這週運動了 ' + (D.exWeeks[mondayOf(S.today)] || 0) + ' 天' } : k === 'lighthouse' ? lightNote() : k === 'garden' ? { note: gardenNote() } : k === 'bookstore' ? { note: bookNote() } : k === 'yatai' ? { note: yataiNote() } : k === 'hall' ? { note: hallNote() } : k === 'wisdom' ? { note: wisdomTodayN() > 0 ? '她今天上過智慧島的課了' : '她今天還沒去智慧島上課' } : {})),
     weather: '現在 ' + env.hhmm + (env.temp != null ? '，' + WEATHER_NAME[env.weather] + ' ' + env.temp + '°C' : '') + '；今天的節氣是' + solarTerm(S.today) + '（' + TERM_NOTE[solarTerm(S.today)] + '）'
   };
 }
@@ -2572,19 +2576,21 @@ function furnShop(who) {
         return `<details class="fold" style="margin-top:10px" ${open ? 'open' : ''}><summary><b>${title}</b><span class="muted">${list.length} 件・有 ${list.filter(f => own.includes(f.id)).length} 件</span></summary><div class="furn">${list.map(btn).join('')}</div></details>`; }).join(''); })()}</div>`;
 }
 // 自己家的獎勵家具（不用島幣）：運動、燈塔、智慧島；放在我的家的「收藏」分頁
+// 收藏格名稱：在第一個「的」或「＋」後面分兩段，各段不斷行（「小苗的／睡蓮水缽」，不會變成「小苗的睡蓮水／缽」）
+function furnName(n) { const m = /^(.+?[的＋])(.+)$/.exec(n); return m ? `<em class="nw">${esc(m[1])}</em><em class="nw">${esc(m[2])}</em>` : esc(n); }
 function furnRewards() {
   const who = 'me', own = ownedFor(who), shown = shownAnyRoom();
   return `<div class="card">${who === 'me' ? `<h3 style="margin-top:0">🏐 運動獎勵</h3><div class="muted">每週運動 3 天、連續達標就會解鎖，不用島幣。</div>
     <div class="furn">${EX_REWARDS.concat([EX_MEDAL]).map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
-        <span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : (f.lock || '連續 ' + f.weeks + ' 週')}</small></button>`; }).join('')}</div>
+        <span>${has ? f.ic : '🔒'}</span>${furnName(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : (f.lock || '連續 ' + f.weeks + ' 週')}</small></button>`; }).join('')}</div>
     ${LANTERN_REWARDS.some(f => own.includes(f.id)) ? `<h3 style="margin-top:14px">🏮 燈塔送來的家具</h3>
     <div class="furn">${LANTERN_REWARDS.filter(f => own.includes(f.id)).map(f => { const on = shown.includes(f.id);
-      return `<button class="${on ? 'on' : 'has'}" onclick="toggleFurniture('me','${f.id}')"><span>${f.ic}</span>${esc(f.name)}<small>${on ? '擺出來了' : '收起來了'}</small></button>`; }).join('')}</div>` : ''}
+      return `<button class="${on ? 'on' : 'has'}" onclick="toggleFurniture('me','${f.id}')"><span>${f.ic}</span>${furnName(f.name)}<small>${on ? '擺出來了' : '收起來了'}</small></button>`; }).join('')}</div>` : ''}
     ${wisdomOn() ? `<h3 style="margin-top:14px">⛴️ 智慧島的畢業禮物</h3><div class="muted">一本書蓋滿 13 個章，老師會送一件來。</div>
     <div class="furn">${WISDOM_GRADS.map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
-        <span>${has ? f.ic : '🔒'}</span>${esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '《' + esc((WISDOM_BOOKS.find(b => b.key === f.book) || {}).title || '') + '》蓋滿'}</small></button>`; }).join('')}</div>` : ''}` : ''}
+        <span>${has ? f.ic : '🔒'}</span>${furnName(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '《' + esc((WISDOM_BOOKS.find(b => b.key === f.book) || {}).title || '') + '》蓋滿'}</small></button>`; }).join('')}</div>` : ''}` : ''}
     <div class="muted" style="margin-top:8px">拿到的家具點一下可以擺出來或收起來，房間的空位和家具店的家具共用。</div></div>`;
 }
 function visitRow(except) {
@@ -2804,7 +2810,12 @@ const WISDOM_GRADS = [
   { book: 'einstein', id: 'wd-scope', z: 'out', ic: '🔭', name: '愛因斯坦的航海望遠鏡' },
   { book: 'yirong', id: 'wd-lectern', ic: '🪑', name: '怡容的木頭講桌' },
   { book: 'mi', id: 'wd-safelight', z: 'wall', ic: '🔴', name: '瞇的紅色安全燈' },
-  { book: 'guo', id: 'wd-mat', ic: '🧘', name: '郭哥的瑜珈墊' }];
+  { book: 'guo', id: 'wd-mat', ic: '🧘', name: '郭哥的瑜珈墊' },
+  // 第二門課下冊（v2.50.5.1）：emoji 看板，和上冊同做法
+  { book: 'kongming2', id: 'wd-chess', ic: '♟️', name: '孔明的棋盤' },
+  { book: 'xiaomiao2', id: 'wd-lily', z: 'out', ic: '🪷', name: '小苗的睡蓮水缽' },
+  { book: 'alu2', id: 'wd-ballot', z: 'wall', ic: '🗳️', name: '阿律的投書箱' },
+  { book: 'einstein2', id: 'wd-tubes', ic: '🧪', name: '愛因斯坦的試管架' }];
 function wisdomGrads() { return WISDOM_GRADS.filter(g => Object.keys(wisdomDone(g.book)).length >= 13).map(g => g.id); }
 function lanternCount() { try { return lightStats().lanterns; } catch (e) { return 0; } }
 function exUnlocked() { const n = lanternCount();
@@ -2859,7 +2870,7 @@ PLACES.hall = { name: '音樂廳', ic: '🎼', tab: 'hall',
   roles: ['調音師', '指揮家', '領位的阿姨', '劇場的貓', '街頭藝人', '練習室的學姊'], emojis: ['🎻', '🎹', '🎺', '🎷', '🥁', '🧑‍🎤', '🧑‍🎨', '👩‍🎨', '👵', '🧔', '🐈', '🦉'] };
 PLACES.wisdom = { name: '渡船屋', ic: '⛴️', tab: 'wisdom', title: '⛴️ 渡船屋的主人', who: '渡船屋主人',
   lead: '去智慧島的渡船由你請一位主人來開：取名字、選樣子、寫個性。他每天會用自己的個性跟你說話。',
-  about: ['每天從這裡開船去智慧島，一天可以上一講，同一位老師每週一講', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你家', '上過的課都收在書店的書架上，想回看筆記隨時可以去翻'],
+  about: ['每天從這裡開船去智慧島，一天最多上兩講，同一位老師每週一講', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你家', '上過的課都收在書店的書架上，想回看筆記隨時可以去翻'],
   roles: ['渡船的船長', '碼頭的售票員', '愛釣魚的老船夫', '會划船的水獺'], emojis: ['🧑‍✈️', '👨‍✈️', '👩‍✈️', '👴', '👵', '🧔', '🦦', '🐧', '🐳', '🦭', '🐱', '🦆'] };
 // 燈室的學習顧問（AI）：存在 keeper:advisor，但不算島民也不算管理員——不進交情、送禮、每日訊息，也不列在管理員名單。名字後面一律加「（AI）」
 PLACES.advisor = { name: '燈室', ic: '🧭', tab: 'lamp', title: '🧭 燈室的學習顧問（AI）', who: '學習顧問（AI）',
@@ -7976,7 +7987,7 @@ function viewGuide() {
   ${wisdomOn() ? sec('⛴️', '智慧島', p('海邊有一座渡船碼頭，坐船就能到智慧島。島上住著七位老師：') + `<ul style="margin:2px 0 8px;padding-left:22px;line-height:1.8">${['隆中草廬的孔明：《孫子兵法》', '湯屋的小苗：放鬆和好好記住東西的方法', '巷口柑仔店的阿律：讀新聞', 'NASA 分站的愛因斯坦：數學和科學家的故事', '老教室的怡容：用一張老照片講一段歷史', '暗房小屋的瞇：慢慢讀一首詩', '海邊物理治療所的郭哥：吃、動、休息背後的道理'].map(x => '<li>' + x + '</li>').join('')}</ul>` +
     p('每一講都是四步：聽故事、你來選、搬到你的生活、寫一句。最後寫的那一句交給老師，老師會回你一句話，集章冊就蓋一個章。') +
     p('🔐 寫給老師的那一句會交給 AI，讓老師回你一句話；在 App 裡只有你自己看得到。如果寫到讓人擔心的話，回應會附上可以求助的地方，也會寄一封信請' + GUARDIAN_ + '關心你（信裡沒有你寫的字）。') +  /* GUIDE_PRIV_v1 */
-    p('<b>每天可以上一講</b>，同一位老師<b>每週一講</b>（週一重新算），想上幾位老師都可以，不用急。上過的課可以在小屋或集章冊回看，也會擺到書店的「你的書架」上。') +
+    p('<b>每天最多上兩講</b>，同一位老師<b>每週一講</b>（週一重新算），想上幾位老師都可以，不用急。上過的課可以在小屋或集章冊回看，也會擺到書店的「你的書架」上。') +
     p('智慧島上有一張碼頭導覽地圖，從上面看整座島；上過課的小屋會亮燈，點小屋就能進去。') +  /* GUIDE_MAP_v1 */
     p('渡船屋可以請一位主人：名字、樣子、個性都由你決定，他會幫你開船，每天跟你說一句話。') +
     p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木湯桶、阿律的打字機、愛因斯坦的航海望遠鏡、怡容的木頭講桌、瞇的紅色安全燈、郭哥的瑜珈墊。不用島幣，在我的家的家具店最下面可以擺出來。')) : ''}
