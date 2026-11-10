@@ -34,6 +34,7 @@
   function apply() {
     b1Open();   // B1
     wordsOpen();   // 單字出題
+    langOpen();   // FAM_LANG_A 語言先行
     if (!OWN_TABS.includes(tab)) { tab = 'home'; draft = {}; }
     const all = (isle() && isle().dirs) || [], live = liveDirs();
     // 項目的科目換成方向的名字（計畫、確認頁的小標題用），GROUP 也加上方向名字 → 位置，經驗值和房子照位置算
@@ -564,7 +565,7 @@
     return `<div class="card" id="famCommonCard"><h3>🧰 其他</h3>
       <div class="row" style="gap:6px"><button class="ghost grow" onclick="draft={}; go('log')">📖 航海日誌</button><button class="ghost grow" onclick="draft={}; go('wish')">💡 讓島順起來</button></div>
       <div class="row" style="flex-wrap:nowrap;margin-top:10px"><div class="grow"><b>💊 吃藥提醒</b><div class="muted">打開以後，首頁的おつとめ板會在你設的時段問一聲；紀錄在 App 裡只有你自己看得到，其他家人都看不到。</div></div>
-        <button class="ghost" onclick="famMedSet(${medOn() ? 'false' : 'true'})">${medOn() ? '✅ 開著' : '⬜ 關著'}</button></div>${dailyRow()}</div>`;
+        <button class="ghost" onclick="famMedSet(${medOn() ? 'false' : 'true'})">${medOn() ? '✅ 開著' : '⬜ 關著'}</button></div>${dailyRow()}${langCanOn() ? famLangRow() : ''}</div>`;
   }
   function commonAfter() {   // 吃藥卡片：家人島沒有「讓爸爸也看得到」；共讀／閱讀計時卡片的字換成家人版
     const app = document.getElementById('app');
@@ -684,6 +685,7 @@
           <div class="muted">做完一件事，想記一句心得，就去碼頭放一艘船。</div></div>
         <button onclick="go('paper');window.scrollTo(0,0)">去碼頭</button></div></div>
       ${wordsOn() ? famWordCard() : ''}
+      ${langActive() ? famBottleCards() : ''}
       <div class="row"><button class="ghost" onclick="renameLighthouse()">✏️ 改燈塔的名字</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
   };
   // 紙船碼頭：做完一件事、想記一句心得就放一艘；沒有錯幾題、錯因、親子船。島幣照她的規則（一天第一艘 🪙2～4、+20 經驗值）
@@ -746,6 +748,93 @@
     catch (e) { $('famAddLink').disabled = false; return toast('沒有存到：' + (e.message || e)); }
     toast(resident(a).name + ' 和 ' + resident(b).name + ' 的好感度上升了！'); render();
   };
+  // ---------- FAM_LANG_A 語言先行：答錯的單字變瓶子（模組規格串，11/19）；P3 時整段登記進 lang／review，只搬家不改資料 ----------
+  const LANG_DAY = 10;   // 一天最多漂回幾個（後端 FamLang.gs 的 FAM_LANG_DAY）
+  const langCanOn = () => !!(S && S.langOk) && wordsOn();
+  const langActive = () => langCanOn() && !!(S.save.lang_on && S.save.lang_on.on === true);
+  let langReady = false, langAuto = false;
+  function langOpen() {
+    if (!langCanOn()) return;
+    ['setLangOn', 'reviewLangBottle'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    // 預設開（爸爸 11/4：功能隨包上線就預設開放）：還沒設過的人，第一次進家人島自動打開一次（順便補瓶子）。工程顧問 11/4 五個條件：
+    // 只在自己的島（ownMode）且 FAM_LANG 開著（langCanOn 已含 S.langOk）；狀態拿到了、lang_on 確定是 undefined 才叫；一次開 App 只叫一次；
+    // 失敗不跳 toast、不擋畫面、這次開 App 不重試（下次開再試）；存成 on:false 的人永遠不會被改回開
+    if (!langAuto && typeof ownMode === 'function' && ownMode() && S.save && S.save.lang_on === undefined) { langAuto = true;
+      call('setLangOn', true).then(st => { S = st; D = derive(S); render(); }).catch(() => {}); }
+    if (langReady || !langActive()) return; langReady = true;
+    PLACES.lighthouse = Object.assign({}, PLACES.lighthouse, { about: PLACES.lighthouse.about.concat(['單字練習答錯的字會變成瓶子，漂到海灘；過幾天漂回來再練一次，答對三次就變成一盞燈籠']) });
+    VISIT_NO.push('瓶子和燈籠');
+  }
+  // 自己的語言瓶子：pq: 裡 src 是 word、有四個選項的（她的島不會跑到這裡：family.js 只在家人島載入）
+  function langBottles() {
+    return Object.keys(S.save).filter(k => /^pq:\d+$/.test(k) && S.save[k] && S.save[k].src === 'word' && Array.isArray(S.save[k].o) && S.save[k].o.length === 4).sort()
+      .map(k => { const b = S.save[k], rv = S.save['rv:' + k] || {};
+        return { id: k, b, rv, lantern: rv.lantern || null, due: reviewDue(rv, b.at || b.date), today: (rv.tries || []).some(t => t.at === S.today) }; });
+  }
+  function langToday() {
+    const all = langBottles(), done = all.filter(x => x.today).length;
+    const due = all.filter(x => !x.today && x.due && x.due <= S.today).sort((a, b) => (!!a.lantern - !!b.lantern) || a.due.localeCompare(b.due) || a.id.localeCompare(b.id));
+    return { all, done, list: due.slice(0, Math.max(0, LANG_DAY - done)) };
+  }
+  // 常卡住的字：單字卡裡答錯兩次以上的字，只列字（不列錯幾次，工程顧問 11/2 條件 3）
+  function langStuck() {
+    const out = [];
+    Object.keys(S.save).filter(k => /^vw:\d+$/.test(k)).sort().forEach(k => ((S.save[k] && S.save[k].words) || []).forEach(w => { if ((w.n || 0) - (w.ok || 0) >= 2 && out.indexOf(w.w) < 0) out.push(w.w); }));
+    return out.slice(0, 20);
+  }
+  const langMark = l => l === 'ja' ? '<span class="lmk" style="background:#9a3567">あ</span>' : '<span class="lmk" style="background:#3d6694">A</span>';
+  window.famBottleCards = function () {
+    const t = langToday(), st = langStuck(), lan = t.all.filter(x => x.lantern).length;
+    const step = x => x.lantern ? '老朋友回來打招呼' : '第 ' + ((x.rv.tries || []).filter(y => !y.friend).length + 1) + ' 次漂回' + (reviewStreak(x.rv) === LANTERN_AT - 1 ? '・答對就變燈籠' : '');
+    return `<style>.lmk{display:inline-flex;width:18px;height:18px;border-radius:5px;color:#fff;font-weight:700;font-size:11px;align-items:center;justify-content:center;vertical-align:-3px;margin-right:4px}</style>
+      <div class="card" id="langBottles"><h3>🍶 今天漂回來的瓶子</h3>
+      ${t.list.length ? t.list.map((x, n) => `<div class="row" style="flex-wrap:nowrap;padding:8px 0;border-bottom:1px dashed var(--plum-light)"><div class="grow"><div style="font-size:16px">${esc(x.b.word)}</div>
+          <div class="muted">${langMark(x.b.lang)}${step(x)}</div></div><button${n ? ' class="ghost"' : ''} onclick="langGo('${x.id}')">練一下</button></div>`).join('')
+        : `<div class="muted">${t.done ? '今天漂回來的都練完了，明天再來看看海灘。' : '今天沒有瓶子漂回來。單字練習答錯的字，過一天會漂回這裡。'}</div>`}
+      <div class="muted" style="margin-top:6px">一天最多漂回 ${LANG_DAY} 個，其他的會在海上慢慢漂，不會不見。${lan ? '已經有 ' + lan + ' 盞燈籠了。' : ''}</div></div>
+      ${st.length ? `<div class="card"><h3>常卡住的字</h3><div class="muted">答錯兩次以上的字。多看幾眼就好，不用一次記住。</div>
+        <div class="row" style="gap:6px;margin-top:6px">${st.map(w => `<span class="pill">${esc(w)}</span>`).join('')}</div></div>` : ''}`;
+  };
+  window.langGo = function (id) { draft = { lb: id, lbOrder: [0, 1, 2, 3].sort(() => Math.random() - 0.5) }; render(); window.scrollTo(0, 0); };
+  const viewLightLang0 = window.viewLight;
+  window.viewLight = function () {
+    if (langActive() && draft && draft.lb) return viewLangBottle();
+    const h = viewLightLang0();   // 有瓶子要練時，一頁只留一顆實心（美術 11/2）：去碼頭改淡底
+    return langActive() && langToday().list.length ? h.replace(`<button onclick="go('paper');window.scrollTo(0,0)">去碼頭</button>`, `<button class="ghost" onclick="go('paper');window.scrollTo(0,0)">去碼頭</button>`) : h;
+  };
+  window.viewLangBottle = function () {
+    const id = draft.lb, b = id && S.save[id];
+    if (!langActive() || !b) return `<div class="card"><div class="muted">這個瓶子不在海灘上了。</div></div><div class="row"><button class="ghost grow" onclick="draft={};render()">回到海灘 🌊</button></div>`;
+    const ord = draft.lbOrder || [0, 1, 2, 3], r = draft.lbRes;
+    return `<div class="card"><h2>🍶 ${esc(b.word)}</h2><div style="margin:8px 0 12px">${esc(b.q)}</div>
+      ${ord.map(i => { const mine = r && r.choice === i, right = r && i === r.a, base = 'display:block;width:100%;text-align:left;margin-bottom:8px';
+        if (!r) return `<button class="ghost" style="${base}" onclick="langAnswer(${i})">${esc(b.o[i])}</button>`;
+        // 答完（美術 11/2）：不用 disabled 淡化；正確＝完成色＋2px 框＋✓，選錯的＝生成り底鼠色字＋「你選的」，其他同底不加框；不用紅色
+        const st = right ? 'background:#e5efe0;color:#2f5a3a;border:2px solid #2f5a3a' : 'background:#f7f1e5;color:#5f5a55;border:2px solid transparent';
+        return `<button aria-disabled="true" tabindex="-1" style="${base};pointer-events:none;${st}">${right ? '✓ ' : ''}${esc(b.o[i])}${mine && !right ? ' <small style="font-size:12px">你選的</small>' : ''}</button>`; }).join('')}
+      ${r ? `<div class="speech" style="margin-top:8px">${r.ok ? (r.lantern ? '答對三次，這個字變成一盞燈籠了。過一陣子它會以老朋友的身分回來打招呼。' : '答對了！過幾天它會再漂回來一次。') : '這次沒想起來也沒關係，明天它會再漂回來。'}</div>
+        ${b.ex ? `<div class="muted" style="margin-top:8px">${esc(b.ex)}</div>` : ''}` : ''}</div>
+      <div class="row"><button class="ghost grow" onclick="draft={};render();window.scrollTo(0,0)">回到海灘 🌊</button></div>`;
+  };
+  window.langAnswer = function (i) {
+    const id = draft.lb;
+    call('reviewLangBottle', id, i).then(res => {
+      const rv = Object.assign({ tries: [] }, S.save['rv:' + id] || {}); rv.tries = (rv.tries || []).concat([Object.assign({ at: S.today, ok: res.ok }, rv.lantern ? { friend: true } : {})]);
+      if (res.lantern) rv.lantern = S.today;
+      S.save['rv:' + id] = rv; draft.lbRes = { choice: i, a: res.a, ok: res.ok, lantern: res.lantern }; render();
+    }).catch(e => toast(e.message || String(e)));
+  };
+  window.famLangRow = function () {
+    const on = langActive();
+    return `<div class="row" style="flex-wrap:nowrap;margin-top:10px"><div class="grow"><b>🍶 答錯的字變成瓶子</b><div class="muted">打開以後，單字練習答錯的字會漂到燈塔海灘，過幾天漂回來再練一次。在 App 裡只有你自己看得到，其他家人都看不到。關掉時瓶子和燈籠都留著。</div></div>
+      <button class="ghost" onclick="famLangSet(${on ? 'false' : 'true'})">${on ? '✅ 開著' : '⬜ 關著'}</button></div>`;
+  };
+  window.famLangSet = async function (on) {
+    if (on && !(S.save.lang_on && S.save.lang_on.bf)) toast('整理中…');   // 第一次打開要補瓶子，會等幾秒（工程顧問 11/2）
+    try { await flush(); S = await call('setLangOn', on); D = derive(S); } catch (e) { return toast('沒有存到：' + (e.message || e)); }   // 回來的是整份狀態（第一次打開會補瓶子）
+    const n = langBottles().length;
+    toast(on ? (n ? '🍶 打開了，之前答錯的字也變成瓶子了，會陸續漂回海灘' : '🍶 打開了，答錯的字之後會漂到燈塔海灘') : '關掉了，瓶子和燈籠都留著'); render();
+  };
   // ---------- 單字出題（11/13 簡化版）：FAM_WORDS 開了、燈塔也有了才出現；她的 viewWords 一字不動 ----------
   const wordsOn = () => !!(S && S.wordsOk) && b1On();
   let wordsReady = false;
@@ -762,7 +851,8 @@
   const lvJa = lv => /^ja-/.test(String(lv));
   const famAiDay = () => (S && Number(S.wordsAiDay)) || 5;   // 家人 AI 每人每天幾次（後端 FAM_AI_DAY，和其他 AI 功能共用；「怎麼玩？」的說明在載入時算，用預設的 5）
   const famWordAi = () => Math.max(0, Number(S.wordsAi) || 0);   // 今天還能叫幾次 AI（後端算，和智慧島共用）
-  const FAM_WORD_HOW = '拍課本、講義、單字表或書上<b>印刷</b>的英文或日文單字，或直接打字，存成單字卡；每組自己選程度（英文：一般、學測、多益；日文：N5～N1）。按「出 5 題」，AI 照這個程度出題，之前沒答對、還沒練過的字會先出。一天最多 ' + WORD_Q_DAILY + ' 題，答一題 +2 經驗值（一天最多 ' + WORD_XP_DAILY + '），不換島幣。AI 次數和其他 AI 功能（智慧島老師的回話、拍手寫計畫、島民的信）共用，一天 ' + famAiDay() + ' 次：拍一張算 1 次，出一組算 1 次。App 不留照片；單字卡和練習的結果在島上只有你看得到。請不要拍有個人資料或公司資料的東西。';
+  // FAMWORDS_COPY_191：文案審查 191 改字（明天會恢復、資料存在哪裡）
+  const FAM_WORD_HOW = '拍課本、講義、單字表或書上<b>印刷</b>的英文或日文單字，或直接打字，存成單字卡；每組自己選程度（英文：一般、學測、多益；日文：N5～N1）。按「出 5 題」，AI 照這個程度出題，之前沒答對、還沒練過的字會先出。一天最多 ' + WORD_Q_DAILY + ' 題，答一題 +2 經驗值（一天最多 ' + WORD_XP_DAILY + '），不換島幣。AI 次數和其他 AI 功能（智慧島老師的回話、拍手寫計畫、島民的信）共用，一天 ' + famAiDay() + ' 次：拍一張算 1 次，出一組算 1 次。App 不留照片；單字卡和練習的結果存在 App 管理員的試算表，管理員技術上打得開；其他家人都看不到。請不要拍有個人資料或公司資料的東西。';
   function famWordToday() {
     const all = wordQuizzes();
     return { made: all.filter(q => q.date === S.today).reduce((a, q) => a + (q.items || []).length, 0),
@@ -771,8 +861,8 @@
   }
   // 擋下的原因（工程顧問 10/29 條件 6：每一種都要在畫面上說明）
   function famWordBlocked(t) {
-    return t.open ? '上一組還沒答完，答完再出新的一組。' : t.made >= WORD_Q_DAILY ? `今天的 ${WORD_Q_DAILY} 題練完了，休息一下，明天再來。`
-      : t.ai < 1 ? `今天的 AI 次數用完了（和其他 AI 功能共用，一天 ${famAiDay()} 次），明天再來。打字存單字卡不用 AI，現在就可以先存。` : '';
+    return t.open ? '上一組還沒答完，答完再出新的一組。' : t.made >= WORD_Q_DAILY ? `今天的 ${WORD_Q_DAILY} 題練完了，明天會再開放。`
+      : t.ai < 1 ? `今天的 AI 次數用完了（和其他 AI 功能共用，一天 ${famAiDay()} 次），明天會恢復。打字存單字卡不用 AI，現在就可以先存。` : '';
   }
   window.famWordCard = function () {
     const t = famWordToday();
@@ -781,7 +871,7 @@
       <button class="ghost" style="white-space:nowrap" onclick="go('words');window.scrollTo(0,0)">${t.open ? '繼續練' : '去練'}</button></div></div>`;
   };
   const consentCard = () => `<div class="card" id="fwConsent"><h3>🔒 開始之前</h3>
-      <div>你拍的照片和單字卡上的字，會送到 Google 的 AI（Gemini）讀字和出題，不會被拿去訓練 AI；App 不留照片。單字卡和練習的結果放在你自己的島上，在島上其他家人都看不到；資料存在試算表裡，管理 App 的人技術上打得開。請不要拍有個人資料或公司資料的東西。</div>
+      <div>你拍的照片和單字卡上的字，會送到 Google 的 AI（Gemini）讀字和出題，不會被拿去訓練 AI；App 不留照片。單字卡和練習的結果存在 App 管理員的試算表，管理員技術上打得開；其他家人都看不到。請不要拍有個人資料或公司資料的東西。</div>
       <div class="muted" style="margin-top:6px">打字存單字卡不用 AI，不同意也可以先存。</div>
       <button style="width:100%;margin-top:10px" id="fwAgree" onclick="famAgreeWords()">我知道了，同意</button></div>`;
   window.famAgreeWords = async function () {
