@@ -392,11 +392,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.8.2.3';
+const APP_VERSION = '2.50.8.2';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.8.2', date: '2026-11-11', items: ['✍️ 智慧島「寫一句」下面多了一行小字：說明這句誰看得到，以及寫到讓人擔心的話會怎麼處理。'] },
   { v: '2.50.8.2.3', date: '2026-11-09', items: ['🏫 讀書計時多了「記一次上課」：數理課、英文課、日文課上完，可以把時間記進讀書時間，也會集砂時計。記下的會標「🏫 上課」，家人看得到的時間紀錄也會這樣標；想改誰看得到，在「更多 → 誰看得到什麼」。'] },
   { v: '2.50.5.2.1', date: '2026-11-10', fam: [1], items: ['✍️ 作文值班室多了『週日寫一段』：挑一個題目，先看材料、列素材，再到紙上寫一段，App 幫你計時；寫好了勾一勾自我檢查、留一句話。素材本在 App 裡只有你自己看得到。每次寫的紀錄，想給家人看的話，可以一則一則選要給誰；家人只看得到日期、題目、開頭的寫法、你勾的項目和留的那一句，看不到素材。', '🗼 家人自己的島：燈塔開了 2F「航海日誌」，原本在「更多 → 其他」的入口也還在。'] },
   { v: '2.50.5.2', date: '2026-11-10', fam: true, items: ['⚓ 主島的聚會所多了「今年的航程」：從一模到會考，幾場大考排成一條航線，日子到了，港口的燈就亮起來。只有日期，沒有成績；家人也看得到，訪客看不到。', '🖼️ 主島的五位島民有了自己的畫像，點島民卡就看得到。'] },
@@ -1743,11 +1744,14 @@ const WISDOM_DAY_MAX = 2;   // 一天最多幾講（所有老師合計；和後�
 function wisdomTodayDone() { return wisdomTodayN() >= WISDOM_DAY_MAX; }   // 一天最多兩講（爸爸 11/2）
 function wisdomWeekDone(teacher) { const ls = wisdomLessons(), mon = mondayOf(S.today); return [teacher, teacher + '2'].some(b => Object.values(ls[b] || {}).some(x => x && x.at >= mon)); }
 /** 這位導師下一講的狀態：book 第幾本、n 第幾講、L 教案（還沒載入是 undefined、沒寫好是 null）、why 不能上的原因 */
+// BOOK2B_v1：第二包三本下冊 12/25 才開課（後端 WISDOM_OPEN2_ 同一天）；之前一律當「下一講準備中」，不發提醒、不出紅點
+const WISDOM_OPEN2 = '2026-12-25', WISDOM_BOOK2B = ['yirong2', 'mi2', 'guo2'];
+function wisdomLocked2(book) { return WISDOM_BOOK2B.includes(book) && S.today < WISDOM_OPEN2; }
 function wisdomNext(teacher) {
   const one = Object.keys(wisdomDone(teacher)).length, book = one >= 13 ? teacher + '2' : teacher;
   const n = Object.keys(wisdomDone(book)).length + 1, j = wisdomBook(book);
   const L = j ? (j.lessons || []).find(x => x.n === n && x.reviewed) || null : undefined;
-  const why = wisdomClosed(teacher) ? 'closed' : n > 13 ? 'end' : L === null ? 'wait' : wisdomTodayDone() ? 'today' : wisdomWeekDone(teacher) ? 'week' : L === undefined ? 'load' : '';
+  const why = wisdomClosed(teacher) ? 'closed' : n > 13 ? 'end' : L === null || wisdomLocked2(book) ? 'wait' : wisdomTodayDone() ? 'today' : wisdomWeekDone(teacher) ? 'week' : L === undefined ? 'load' : '';
   return { book, n, L, why };
 }
 function wisdomStatus(teacher) {
@@ -2093,6 +2097,7 @@ function wisdomNoteHtml(L, t, rec) {
   if (done) return `<div class="wnote"><b>你寫的：</b>${esc(done.note)}</div>
     ${done.reply ? `<div class="row" style="flex-wrap:nowrap;margin-top:8px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(done.reply)}</div></div>` : ''}${wisdomTalkHtml(done, t)}${tail}`;
   return `<textarea id="wNote" rows="3" maxlength="200" placeholder="寫一句就好" style="width:100%;margin-top:8px" oninput="draft.wl.note=this.value">${esc(w.note)}</textarea>
+    ${ownMode() ? '' : `<div class="muted wtell" style="font-size:12px;line-height:1.5;margin:6px 0 2px">🔒 這句在 App 裡只有你自己看得到。如果寫到讓人擔心的話，${esc(GUARDIAN_)}會收到一則提醒（提醒裡沒有你寫的字），請他找時間關心你。</div>`}<!-- WNOTE_TELL_v1 -->
     <button id="wGo" style="width:100%;margin-top:8px;background:${t.color}" onclick="wisdomSubmit()">交給${esc(t.name)} ✉️</button>`;
 }
 /** 再回老師一句（爸爸 10/30）：老師回了以後，上課當天可以再回一句，每講一次，老師回完就收尾；回看時兩段都看得到。家人看不到，家人自己的島這版不開 */
@@ -7379,7 +7384,8 @@ const WISDOM_BOOKS = [
   { key: 'alu', title: '巷口小報', color: '#3B5B8C' }, { key: 'einstein', title: '愛因斯坦的科學筆記', color: '#2E3A59' },
   { key: 'kongming2', title: '三十六計', color: '#8C2F2B' }, { key: 'xiaomiao2', title: '湯屋的放鬆筆記・下冊', color: '#7FA88A' }, { key: 'alu2', title: '巷口小報・下冊', color: '#3B5B8C' },
   { key: 'einstein2', title: '愛因斯坦的科學筆記・下冊', color: '#2E3A59' },
-  { key: 'yirong', title: '課本沒寫的那一題', color: '#9A5B3C' }, { key: 'mi', title: '一首詩的時間', color: '#B23A3A' }, { key: 'guo', title: '身體使用說明書', color: '#3E8A8C' }];
+  { key: 'yirong', title: '課本沒寫的那一題', color: '#9A5B3C' }, { key: 'mi', title: '一首詩的時間', color: '#B23A3A' }, { key: 'guo', title: '身體使用說明書', color: '#3E8A8C' },
+  { key: 'yirong2', title: '地圖沒畫的那一角', color: '#9A5B3C' }, { key: 'mi2', title: '一篇文章的溫度', color: '#B23A3A' }, { key: 'guo2', title: '身體使用說明書・下冊', color: '#3E8A8C' }];   // BOOK2B_v1
 const wisdomJson = {};
 WISDOM_BOOKS.push({ key: 'zw', title: '文學的力量', color: '#8f6214' });   // ESSAY_A_v1：書店書架、家人碼看得到
 // 店名：她自己取（存在 keeper:bookname 的 name，沿用 saveKeeper，後端不用改）
