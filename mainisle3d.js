@@ -125,16 +125,18 @@
     const font = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
     g.font = `700 44px ${font}`; const w1 = g.measureText(text).width;
     g.font = `500 32px ${font}`; const w2 = sub ? g.measureText(sub).width : 0;
-    const W = Math.ceil(Math.max(w1, w2) + 48), H = sub ? 120 : 76;
-    cv.width = W; cv.height = H;
+    const H = sub ? 120 : 76, eb = opts.badge ? Math.round(H * 1.15) : 0, pad = eb ? Math.round(eb * 0.4) + 6 : 0, W = Math.ceil(Math.max(w1, w2) + 48) + pad, rx = eb ? Math.round(eb * 0.6) : 0, top = eb ? Math.round(eb * 0.35) : 0;   // ISLE_QUEST_v1 信封像郵票貼在名牌右上角（爸爸 11/8 選；美術 11/8）：約名牌高 1.15 倍，橫向約四成壓進名牌框內、縱向約一半；名牌右邊多留 pad（壓進去的寬度＋約 2px），文字往左排、名牌加寬，郵票不蓋字；貼圖左右各多 rx、上面多 top，名牌中心位置不動
+    cv.width = W + rx * 2; cv.height = H + top;
+    if (eb) g.translate(rx, top);
     g.fillStyle = opts.bg || 'rgba(255,255,255,0.92)';
     g.beginPath(); const r = 22; g.moveTo(2 + r, 2); g.arcTo(W - 2, 2, W - 2, H - 2, r); g.arcTo(W - 2, H - 2, 2, H - 2, r); g.arcTo(2, H - 2, 2, 2, r); g.arcTo(2, 2, W - 2, 2, r); g.fill();
     g.fillStyle = opts.color || '#741b47'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = `700 44px ${font}`; g.fillText(text, W / 2, sub ? 40 : H / 2);
-    if (sub) { g.font = `500 32px ${font}`; g.fillStyle = '#8a6a7a'; g.fillText(sub, W / 2, 88); }
+    g.font = `700 44px ${font}`; g.fillText(text, (W - pad) / 2, sub ? 40 : H / 2);
+    if (sub) { g.font = `500 32px ${font}`; g.fillStyle = '#8a6a7a'; g.fillText(sub, (W - pad) / 2, 88); }
+    if (eb) { g.setTransform(1, 0, 0, 1, 0, 0); const b = opts.badge, sw = b.img.width / 2; g.drawImage(b.img, b.open ? sw : 0, 0, sw, b.img.height, rx + W - eb * 0.4, 0, eb, eb); }   // ISLE_QUEST_v1：名牌畫完再貼信封，蓋過外框；左半封著、右半打開
     const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, toneMapped: false }));
-    const k = (opts.scale || 1) * 0.012; sp.scale.set(W * k, H * k, 1); sp.renderOrder = 10;
+    const k = (opts.scale || 1) * 0.012; sp.scale.set((W + rx * 2) * k, (H + top) * k, 1); sp.renderOrder = top ? 11 : 10; if (top) { sp.userData.lift = top / 2 * k; sp.userData.badge = opts.badge.open ? 'seen' : 'new'; }   // ISLE_QUEST_v1：有徽章時貼圖變高，中心要抬高 lift 名牌底邊才不動
     return sp;
   }
 
@@ -363,9 +365,9 @@
     const P = ctx.places || {};
     Object.keys(PLACE).forEach(k => {
       const p = P[k]; if (!p) return;
-      const sp = labelSprite((PLACE[k].ic ? PLACE[k].ic + ' ' : '') + p.name, p.sub || null, { scale: 1.5, color: p.closed ? '#6a6a6a' : '#741b47' });
+      const sp = labelSprite((PLACE[k].ic ? PLACE[k].ic + ' ' : '') + p.name, p.sub || null, { scale: 1.5, color: p.closed ? '#6a6a6a' : '#741b47', badge: p.quest && ctx.badge ? { img: ctx.badge, open: p.quest === 'seen' } : null });   // ISLE_QUEST_v1：今天輪到的島民，名牌上方畫信封
       // 教會名牌底邊在十字架頂（2.96）上面，不蓋住十字架（CHURCH_BACK_v1）
-      sp.position.set(PLACE[k].x, (k === 'church' ? 3.25 + sp.scale.y / 2 : 2.6) + (PLACE[k].top || 0), PLACE[k].z); sp.userData.place = k; labelLayer.add(sp);
+      sp.position.set(PLACE[k].x, (k === 'church' ? 3.25 + sp.scale.y / 2 : 2.6 + (sp.userData.lift || 0)) + (PLACE[k].top || 0), PLACE[k].z); sp.userData.place = k; labelLayer.add(sp);
     });
     const sig = JSON.stringify(ctx.isles || []);
     if (sig === sigIsles) return;
@@ -544,5 +546,5 @@
     resize();
     if (!running) { running = true; loop(); }
   }
-  window.MainIsle3D = { mount, focus, setEnvironment: e => scene && setEnvironment(e), triangles: () => renderer ? renderer.info.render.triangles : 0, layout: () => ({ spare: SPARE, trees: TREES.slice(), ridge: RIDGE.map(([lon, lat, h]) => Object.assign(xz(lon, lat), { r: 0.9 + h * 0.18 })), place: PLACE }) };
+  window.MainIsle3D = { mount, focus, setPlaces: p => { if (!scene || !ctx) return; ctx.places = p || {}; buildDynamic(); } /* ISLE_QUEST_v1：只重畫名牌層 */, setEnvironment: e => scene && setEnvironment(e), triangles: () => renderer ? renderer.info.render.triangles : 0, layout: () => ({ spare: SPARE, trees: TREES.slice(), ridge: RIDGE.map(([lon, lat, h]) => Object.assign(xz(lon, lat), { r: 0.9 + h * 0.18 })), place: PLACE }) };
 })();

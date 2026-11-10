@@ -337,9 +337,107 @@
     });
     return out;
   }
+  // ---------- 島民輪流出任務 ISLE_QUEST_v1（爸爸 11/1；學習策略、美術、文案 102、工程顧問 11/1 審過） ----------
+  // 一週輪值：一 阿台婆婆國文、二 阿黛阿嬤數學、三 Solomon 外文、四 阿黛阿嬤自然／社會（隔週）、五 高姨媽閱讀／家務（隔週）、六 阿台婆婆和家人一起動、日 Elisha 牧師音樂
+  // 接了才算；學科、家務自己按「做了」；一起動（move 沒有 k、或 ex: 集章變多）、閱讀（k:'read'）、音樂（k:'art'）接了以後有紀錄就自動完成，後端會再驗一次
+  // 完成送 1 個素材（matsOf 來源 'iq'，一天一次），事先不講謝禮；她寫的那句 ≤60 字，只有她自己看得到，經本機擔心過濾、不送 AI
+  // 存檔 iq:日期 = { who, cat, took, base, done, note, src, c, help, at }；「看過」只記本機；家人島第一版只開週五～日；家人碼、訪客沒有
+  const IQ_ROTA = [['church', 'music'], ['hall', 'chi'], ['exchange', 'math'], ['port', 'eng'], ['exchange', ['sci', 'soc']], ['temple', ['read', 'chore']], ['hall', 'fam']];   // 索引是星期：0 週日
+  const IQ_FAM = ['read', 'chore', 'fam', 'music'];   // 家人島第一版只有這四類（工程顧問 11/1：家人版不能出現讀書、科）
+  const IQ_LINES = {   // 任務句輪替（任務句_草稿.md，學習策略、文案 102 審過）：學科是換一種讀法、講給島民聽，不是多讀多少
+    chi: ['讀一段文言文，用白話講成一個小故事給婆婆聽。', '找一句古人寫得好的句子，說說好在哪裡。', '挑一個成語，把它背後的故事講給婆婆聽。', '讀一篇課文裡的一小段，換成你自己的話說一遍。', '找一個常寫錯的字，說說你怎麼分清楚。', '讀一首短詩，跟婆婆說它讓你想到什麼。', '讀兩段短文，先各用一句話說說在講什麼，再跟婆婆說它們哪裡不一樣。'],   // 最後一句：爸爸 11/1 說雙文本比對題組還卡，國文串 11/1 12:57 擬、文案 13:08 潤
+    math: ['挑一題錯過的題目，把你現在的解法講給阿嬤聽。', '找一題你會的，換一種方法再算一次。', '一題算完，回頭檢查一個最容易算錯的地方。', '把一個公式用自己的話說出它在算什麼。', '畫一張圖，把一題應用題的關係畫出來。', '挑一題，只說第一步要做什麼就好。'],
+    sci: ['找一個課本裡的現象，用生活裡的例子說給阿嬤聽。', '挑一個實驗，說說每一步為什麼要這樣做。', '畫一張小圖，把一個循環或流程畫出來。'],
+    soc: ['用一條時間線，整理一段歷史的先後。', '找一張地圖，說說兩個地方的差別在哪裡。', '把一個名詞，用一句白話解釋給阿嬤聽。'],
+    eng: ['聽一首英文歌，挑一句你喜歡的唱給我聽。', '看一段短片，學一個片裡用到的說法。', '找一個英文單字，說說它和中文哪裡不一樣。', '用英文寫一句今天發生的事。', '念一小段英文，錄給自己聽聽看。', '把一個常用的英文句子，換三種說法。'],
+    read: ['讀完一篇，用一句話告訴高姨媽在講什麼。', '找一段你喜歡的，念給家人聽。', '讀一段，說說裡面你最在意的那個人。', '讀完一篇，想一個你想問作者的問題。'],
+    chore: ['幫忙收一次碗筷。', '把自己的桌面整理乾淨。', '幫家人摺一次衣服。', '倒一次垃圾，順便把能回收的分出來。'],
+    fam: ['找一位家人或朋友，一起出去散步一圈。', '和家人一起騎一段腳踏車。', '和家人打一場球，誰贏都可以。', '和家人一起做一套伸展操。', '和家人去爬一段樓梯或小山坡。', '和家人一起去買個東西，走路去。'],
+    music: ['練一小段你正在學的曲子。', '聽一首沒聽過的曲子，說說它像什麼天氣。', '哼一段旋律，想想它是快還是慢。', '找一首你小時候喜歡的歌，再聽一次。', '跟著一首歌打拍子，數數看是幾拍。', '選一首歌，送給今天的心情。'] };
+  const IQ_ASK = { chi: '婆婆在聽喔，你是怎麼讀懂的？', math: '阿嬤想聽，你是怎麼想的？', sci: '說給阿嬤聽聽，你是怎麼整理的？', soc: '說給阿嬤聽聽，你是怎麼整理的？', eng: 'Tell me！你學到了什麼？', read: '跟高姨媽說說，做起來怎麼樣？', chore: '跟高姨媽說說，做起來怎麼樣？', fam: '今天和誰一起動的呀？', music: '願意跟我說說，聽起來怎麼樣嗎？' };
+  const IQ_TOOK = { hall: '好，有空再說給婆婆聽。', exchange: '好，什麼時候做都可以。', port: 'OK！Take your time.', temple: '好，不急，慢慢來。', church: '好，做完想說的話，再跟我說。' };   // 接了以後（文案 102，11/1 03:24）
+  const IQ_REPLY = { chi: ['謝謝你講給婆婆聽。', '好聽，婆婆記住了。'], math: ['謝謝你說給阿嬤聽。', '嗯，你這樣一講，阿嬤也跟上了。'], sci: ['謝謝你，阿嬤又多知道一件事。', '原來如此，阿嬤又學到了。'], soc: ['謝謝你，阿嬤又多知道一件事。', '原來如此，阿嬤又學到了。'],
+    eng: ['Thanks！今天也學了一點。', 'Nice！這個我也要學起來。'], read: ['辛苦了，謝謝你。', '謝謝你跟我說。'], chore: ['辛苦了，謝謝你。', '真好，家裡因為你更舒服了。'], fam: ['一起動最開心。', '有家人陪，路都變短了。'], music: ['謝謝你分享。', '音樂讓今天溫柔了一點。'] };   // [沒寫時, 有寫時]
+  const IQ_SAY = { hall: '跟婆婆說一句', exchange: '跟阿嬤說一句', port: '跟 Solomon 說一句', temple: '跟高姨媽說一句', church: '跟牧師說一句' };   // 自動完成後補一句
+  const IQ_AUTO_ONLY = { music: '接了以後，到「音樂廳」開始計時（練琴、上課、聽音樂會、排練都算），這裡就會自己完成。', read: '接了以後，用「⏱️ 閱讀計時」計時，這裡就會自己完成。' };   // 文案 102（11/1 04:39）；音樂那句照 App 實際：音樂廳四張卡都記 k:'art'，不是只有畫畫那張。閱讀那句的卡名靠 App 主工作串的「讀書計時→閱讀計時」改名先上
+  // 隱私小字：字詞比對那條路寄不寄信看後端 getState.concernMail（CONCERN_LOCAL_MAIL，工程顧問 11/3）；開＝文案 102 短版，關／舊後端沒給＝文案 151（和 PORT_NOTE 關版同一句）
+  const IQ_HINT_ON = '在 App 裡只有你自己看得到；寫到讓人擔心的話，' + (typeof GUARDIAN_ !== 'undefined' ? GUARDIAN_ : '家人') + '會收到提醒（不含你寫的字）。';   // 稱謂用 index.html 的 GUARDIAN_，沒有就寫家人（美術 11/8）
+  const IQ_HINT_OFF = '在 App 裡只有你自己看得到；寫到讓人擔心的話，畫面上會出現輔導室、1925 安心專線這些可以找人聊聊的方式，不會通知任何人。';
+  const iqHint = () => (S && S.concernMail === true ? IQ_HINT_ON : IQ_HINT_OFF);
+  let iqUi = null;   // 'skip' 這次先不要｜'write' 輸入框打開｜'say' 自動完成後補一句（只放記憶體，不存）
+  function iqIsoWeek(s) { const p = s.split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2])); d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7)); const y1 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4)); return 1 + Math.round(((d - y1) / 864e5 - 3 + ((y1.getUTCDay() + 6) % 7)) / 7); }   // ISO 週數，和 Code.gs 的 isoWeek_ 一樣
+  function iqOn() { return !!(S && S.iqOk && S.today && S.save) && !isFamily() && (ownMode() || her()); }   // 舊後端沒有 iqOk 就整個不出現；家人碼看她的島不出現
+  function iqRota(date) {   // 當天輪到誰、哪一類（和 Code.gs 的 iqRota_ 一樣算）
+    const p = date.split('-').map(Number), r = IQ_ROTA[new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay()], w = iqIsoWeek(date), alt = Array.isArray(r[1]);
+    return { who: r[0], cat: alt ? r[1][w % 2] : r[1], n: alt ? Math.floor(w / 2) : w };
+  }
+  function iqToday() {
+    if (!iqOn()) return null;
+    const r = iqRota(S.today); if (ownMode() && IQ_FAM.indexOf(r.cat) < 0) return null;
+    if (r.who === 'exchange' && !OPEN.exchange) { r.who = 'hall'; r.sub = 1; }   // 交易所還沒開（和名牌畫灰色「準備中」同一個條件）：週二、週四改由婆婆出，科目照排；開張那天起自動換回阿嬤（工程顧問 11/8）
+    const L = IQ_LINES[r.cat]; return { who: r.who, cat: r.cat, sub: r.sub, line: iqT(r, L[r.n % L.length]) };
+  }
+  const iqT = (q, t) => (q && q.sub ? String(t).replace(/阿嬤/g, '婆婆') : t);   // 婆婆代班時，句子裡的「阿嬤」改叫「婆婆」
+  const iqRec = () => S.save['iq:' + S.today] || null;
+  function iqBadge(k) { const q = iqToday(); if (!q || q.who !== k) return null; const r = iqRec(); if (r && r.done) return null; return (r && r.took) || local.get('iqSeen:' + S.today) === '1' ? 'seen' : 'new'; }
+  function iqSync() { if (window.MainIsle3D && MainIsle3D.setPlaces) MainIsle3D.setPlaces(places()); }
+  function iqSave(part, data) { const key = 'iq:' + S.today; S.save[key] = Object.assign({}, S.save[key] || {}, data); queueSave(key, 'saveIq', S.today, part, data); flush().then(() => { if (info && info.kind === 'place') paintInfo(); }).catch(() => {}); D = derive(S); }   // 馬上送，接了和做了不會互相蓋掉；送完重畫一次（後端可能補上 help）
+  function iqAuto(r, cat) {   // 接了以後的紀錄才算：end 要在 took 之後；一起動也看 ex: 集章有沒有比接的時候多
+    const list = ((S.save['move:' + S.today] || {}).list || []).filter(m => (m.end || 0) > r.took);
+    if (cat === 'music') return list.some(m => m.k === 'art');
+    if (cat === 'read') return list.some(m => m.k === 'read');
+    if (cat === 'fam') return list.some(m => !m.k) || (S.save['ex:' + S.today] ? 1 : 0) > (r.base || 0);
+    return false;
+  }
+  // 信封小圖（美術 11/1 02:06、03:25、04:01）：256×128 一張（2 倍解析度），左半封著（washi 底、sumi 框、hinoki 封口、山吹封蠟），右半打開（封口翻上、沒封蠟、框 nezumi）；2D 泡泡和 3D 名牌共用
+  let iqEnv = null;   // 11/8：任務泡泡前面的信封小圖拿掉（美術 11/3），信封只畫在 3D 名牌上
+  function iqEnvCanvas() {
+    if (iqEnv) return iqEnv;
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d'); g.scale(2, 2);
+    // 美術 11/1 04:25：sumi 外框 4px（畫面）→ 2 倍 canvas 上 6.4；外框外面再一圈 washi #fffdf8 外暈（約 2px），白天晚上同一張，夜色裡輪廓才撐得出來
+    const LW = 3.2, HALO = LW * 2;
+    const bodyPath = ox => { g.beginPath(); if (g.roundRect) g.roundRect(ox + 8, 20, 48, 34, 4); else g.rect(ox + 8, 20, 48, 34); };
+    const flapPath = (ox, up) => { g.beginPath(); g.moveTo(ox + 8, 22); g.lineTo(ox + 32, up ? 6 : 40); g.lineTo(ox + 56, 22); g.closePath(); };
+    const halo = (ox, up) => { g.strokeStyle = '#fffdf8'; g.lineWidth = HALO; g.lineJoin = 'round'; bodyPath(ox); g.stroke(); flapPath(ox, up); g.stroke(); };
+    const body = (ox, line) => { g.fillStyle = '#fffdf8'; g.strokeStyle = line; g.lineWidth = LW; g.lineJoin = 'round'; bodyPath(ox); g.fill(); g.stroke(); };
+    halo(0, false); body(0, '#2f2a26'); g.fillStyle = '#c9a273'; g.strokeStyle = '#2f2a26'; flapPath(0, false); g.fill(); g.stroke();
+    g.fillStyle = '#f0a830'; g.beginPath(); g.arc(32, 38, 5, 0, Math.PI * 2); g.fill();
+    halo(64, true); body(64, '#5f5a55'); g.fillStyle = '#c9a273'; g.strokeStyle = '#5f5a55'; flapPath(64, true); g.fill(); g.stroke();
+    g.lineWidth = 2.4; g.beginPath(); g.moveTo(74, 24); g.lineTo(96, 40); g.lineTo(118, 24); g.stroke();
+    return (iqEnv = c);
+  }
+  function iqWrap(t) { return (String(t == null ? '' : t).match(/[^，、。・！？]*[，、。・！？]?/g) || []).filter(Boolean).map(x => x.length <= 15 ? `<span style="display:inline-block;max-width:100%">${esc(x)}</span>` : esc(x)).join(''); }   // 只在標點後面換行（美術 11/1 03:25）：短段用 inline-block，放得下就整段一起換行，放不下（美術 04:25：320 寬 15 字會超出泡泡）就在段內折，不溢出；超過 15 字的一段照常折
+  function iqHtml(k) {   // null：今天沒有這位島民的任務（或她按了下次吧），照常打招呼
+    const q = iqToday(); if (!q || q.who !== k) return null;
+    const r = iqRec(), bub = (ic, t) => `<div class="speech" style="margin-top:8px;text-wrap:balance">${ic ? ic + ' ' : ''}${t}</div>`;   // text-wrap:balance：折兩行時長度接近，不會剩一個字（美術 11/1 04:39；舊瀏覽器自動忽略）
+    const btn = (t, fn, ghost) => `<button${ghost ? ' class="ghost"' : ''} style="min-height:44px;margin:8px 8px 0 0" onclick="${fn}">${t}</button>`;
+    const box = (fn, label) => `<textarea id="iqNote" maxlength="60" rows="2" style="width:100%;box-sizing:border-box;margin-top:8px"></textarea><div class="muted" style="font-size:12px;margin-top:4px">${iqWrap(iqHint())}</div><div>${btn(label, fn)}</div>`;
+    if (r && r.done) {
+      const mat = typeof iqMat === 'function' ? iqMat(S.today) : null, m = mat && typeof MATS !== 'undefined' ? MATS[mat] : null, rep = iqT(q, IQ_REPLY[q.cat][r.note ? 1 : 0]);
+      return bub('', (r.note ? `「${iqWrap(r.note)}」<br>` : '') + iqWrap(rep))
+        + (r.help ? `<div class="muted" style="margin-top:6px">${esc(r.help)}</div>` : '')
+        + (m ? `<div style="font-size:12px;color:#5f5a55;margin-top:4px">（收到 1 個 ${m.ic} ${esc(m.n)}）</div>` : '')
+        + (r.note || r.src !== 'auto' ? '' : iqUi === 'say' ? bub('', iqWrap(iqT(q, IQ_ASK[q.cat]))) + box('iqNoteSave()', '做了') : `<div>${btn(IQ_SAY[k], "iqOpen('say')", 1)}</div>`);
+    }
+    if (r && r.took) {
+      if (iqAuto(r, q.cat)) { iqSave('done', { done: Date.now(), src: 'auto' }); setTimeout(iqSync, 0); return iqHtml(k); }   // 接了以後有紀錄：自動完成
+      if (iqUi === 'write') return bub('', iqWrap(iqT(q, IQ_ASK[q.cat]))) + box('iqDone()', '做了');
+      if (IQ_AUTO_ONLY[q.cat]) return bub('', iqWrap(IQ_TOOK[k])) + `<div style="font-size:12px;color:#5f5a55;margin-top:6px">${iqWrap(IQ_AUTO_ONLY[q.cat])}</div>`;   // 音樂、閱讀只能自動完成，不給「做了」（工程顧問 11/1 04:26；後端同樣擋）
+      return bub('', iqWrap(IQ_TOOK[k])) + `<div>${btn('做了', "iqOpen('write')")}</div>`;
+    }
+    if (iqUi === 'skip') return null;
+    if (local.get('iqSeen:' + S.today) !== '1') { local.set('iqSeen:' + S.today, '1'); setTimeout(iqSync, 0); }   // 看過了：3D 的信封換成打開的
+    return bub('', iqWrap(q.line)) + `<div>${btn('好，我來', 'iqTake()')}${btn('下次吧', 'iqSkip()', 1)}</div>`;
+  }
+  const iqText = () => { const el = document.getElementById('iqNote'); return el ? el.value.replace(/\s+/g, ' ').trim().slice(0, 60) : ''; };
+  window.iqTake = function () { const q = iqToday(), r = iqRec(); if (!q || (r && r.took)) return; iqSave('take', { who: q.who, cat: q.cat, took: Date.now(), base: S.save['ex:' + S.today] ? 1 : 0 }); iqUi = null; iqSync(); paintInfo(); };
+  window.iqSkip = function () { iqUi = 'skip'; paintInfo(); };
+  window.iqOpen = function (m) { iqUi = m; paintInfo(); const el = document.getElementById('iqNote'); if (el) el.focus(); };
+  window.iqDone = function () { const r = iqRec(); if (!r || !r.took || r.done) return; const note = iqText(); iqSave('done', Object.assign({ done: Date.now(), src: 'press' }, note ? { note } : {})); iqUi = null; iqSync(); paintInfo(); };
+  window.iqNoteSave = function () { const r = iqRec(); if (!r || !r.took) return; const note = iqText(); if (note) iqSave('note', { note }); iqUi = null; paintInfo(); };
   function places() {
     const o = {};
-    Object.keys(KEEPER).forEach(k => { const kp = KEEPER[k]; o[k] = OPEN[k] ? { name: kp.place, sub: (kp.ic ? kp.ic + ' ' : '') + kp.name } : { name: kp.place, sub: '準備中', closed: 1 }; });
+    Object.keys(KEEPER).forEach(k => { const kp = KEEPER[k]; o[k] = OPEN[k] ? { name: kp.place, sub: (kp.ic ? kp.ic + ' ' : '') + kp.name } : { name: kp.place, sub: '準備中', closed: 1 }; const q = iqBadge(k); if (q) o[k].quest = q; });   // ISLE_QUEST_v1：今天輪到的島民名牌上有信封
     return o;
   }
   function sail(fn) {   // 搭飛船：轉場一兩秒（工程顧問建議）
@@ -359,6 +457,7 @@
   };
   window.mainFocus = function (key) { if (window.MainIsle3D && MainIsle3D.focus) MainIsle3D.focus(key); mainInfo('isle', key); };   // 點下面的島名：鏡頭轉過去（工程顧問 10/27）
   window.mainInfo = function (kind, key, greeted) {
+    iqUi = null;   // ISLE_QUEST_v1：換一個地方看（或再點一次島民），下次吧、打開的輸入框都重來
     info = { kind, key, first: kind === 'place' && !met(key) && !greeted };   // greeted：港口的招呼卡已經說過第一次的台詞   // 第一次見面要在 meet() 之前記下來，才會說第一次的台詞
     if (info.first) meet(key);
     if (kind === 'place' && key === 'hall') loadBoard();
@@ -404,8 +503,9 @@
     const kp = OPEN[k] && KEEPER[k].open ? Object.assign({}, KEEPER[k], KEEPER[k].open) : KEEPER[k]; if (first === undefined) first = !met(k);   // 開門以後換開門的台詞
     const grand = kp.firstGrand && isFamily() && S.who && S.who.name === '姐姐';
     const line = first || !kp.hello ? (kp.firstHer && !canPost() ? kp.firstHer : grand ? kp.firstGrand : kp.first) : kp.hello[daySeed() % kp.hello.length];
-    return `<div class="resident"><span class="avatar">${kpFace(kp)}</span><div><b>${esc(kp.name)}</b><div class="muted">${esc(kp.intro.indexOf(kp.role) >= 0 ? kp.intro : kp.role + '・' + kp.intro)}</div></div></div>
-      <div class="speech" style="margin-top:8px">${esc(line)}</div>`;
+    const iq = iqHtml(k);   // ISLE_QUEST_v1：今天輪到這位島民出任務時，招呼換成任務（null 就照常打招呼）
+    return `<div class="resident"><span class="avatar">${kpFace(kp)}</span><div><b>${esc(kp.name)}</b><div class="muted">${iqWrap(kp.intro.indexOf(kp.role) >= 0 ? kp.intro : kp.role + '・' + kp.intro)}</div></div></div>
+      ${iq != null ? iq : `<div class="speech" style="margin-top:8px">${esc(line)}</div>`}`;
   }
   function ferryRows() {   // 爸爸 10/28：自己的島、主島、智慧島、其他家人的島（她是家人之一）
     const L = isleList(), btn = (key, label) => `<button class="ghost" style="margin:4px 4px 0 0" onclick="mainSail('${key}')">🎈 ${esc(label)}</button>`;
@@ -465,7 +565,7 @@
       if (!window.MainIsle3D) await loadScript('mainisle3d.js');
       if (!document.getElementById('mi3d')) return;
       el.innerHTML = '';
-      MainIsle3D.mount(el, { env: { phase: env.phase, weather: env.weather }, season: typeof solarTerm === 'function' ? solarTerm(S.today) : null, places: places(), isles: isleList(),   // 時間、台北天氣、節氣都跟她的島一樣
+      MainIsle3D.mount(el, { env: { phase: env.phase, weather: env.weather }, season: typeof solarTerm === 'function' ? solarTerm(S.today) : null, places: places(), isles: isleList(), badge: iqEnvCanvas(),   // 時間、台北天氣、節氣都跟她的島一樣
         onPlace: k => mainInfo('place', k), onIsle: k => mainInfo('isle', k) });
     } catch (e) { local.set('islandView', 'list'); toast('這支手機開不了 3D，先用清單模式'); render(); }
   }
