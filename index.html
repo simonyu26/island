@@ -392,11 +392,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.8.2.1';
+const APP_VERSION = '2.50.8.2.2';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.8.2.2', date: '2026-11-11', items: ['✉️ 主島的島民會輪流請你幫一個小忙：名牌上有信封的那位島民，今天有事想拜託你。點那位島民就看得到，接了、做完寫一句，會收到 1 個素材。', '📝 寫的那一句在 App 裡只有你自己看得到；不想接也沒關係，按『下次吧』就好。'] },
   { v: '2.50.8.2.1', date: '2026-11-11', minor: true, fam: true, items: ['🍶 家人自己的島：答錯的單字可以變成瓶子，漂回燈塔海灘再練一次。想用的話，到「更多 → 🧰 其他」打開「答錯的字變成瓶子」。'] },
   { v: '2.50.8.2', date: '2026-11-11', items: ['✍️ 智慧島「寫一句」下面多了一行小字：說明這句誰看得到，以及寫到讓人擔心的話會怎麼處理。'] },
   { v: '2.50.8.2.3', date: '2026-11-09', items: ['🏫 讀書計時多了「記一次上課」：數理課、英文課、日文課上完，可以把時間記進讀書時間，也會集砂時計。記下的會標「🏫 上課」，家人看得到的時間紀錄也會這樣標；想改誰看得到，在「更多 → 誰看得到什麼」。'] },
@@ -595,7 +596,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 const FAMILY_FNS = ['getState', 'getImages', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks', 'answerBack', 'postAdvice', 'getIsles', 'getBoard', 'postBoard', 'delBoard', 'famSnap', 'askSee', 'markSeen'];   // askSee／markSeen：請她分享、回報看過（See.gs）；postAdvice：後端只收爸爸的家人碼（Advisor.gs）
 function isFamily() { return !!(S && S.who && S.who.role === 'family'); }
 /* ===== 家人島（列島，做法 B）：家人按「🏝️ 我的島」，畫面和她一樣，但讀寫的是自己的島；畫面的差別都在 family.js，只有家人島才載入 ===== */
-const OWN_FNS = ['saveLifeTags', 'saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard'];
+const OWN_FNS = ['saveLifeTags', 'saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard', 'saveIq' /* ISLE_QUEST_v1 */];
 if (OWN_FNS.indexOf('saveCoinGoal') < 0) OWN_FNS.push('saveCoinGoal');   // COINBOOK_v1 存錢目標
 function ownOn() { return local.get('famOwn') === '1'; }
 function ownMode() { return !!(S && S.who && S.who.role === 'own'); }
@@ -3442,6 +3443,8 @@ const TEA_START = '2026-11-01', TEA_LIVE = '2026-11-04';   // 茶園採茶：11/
 function teaToday() { return D.mats.by.some(x => x.why === 'islet' && x.m === 'tea' && x.date === S.today); }
 function teaBack() { return S.today < addD(TEA_LIVE, 3) ? D.mats.by.filter(x => x.why === 'islet' && x.m === 'tea' && x.date < TEA_LIVE).length : 0; }   // 上線前幾天補的，上線後 3 天內說一聲
 function matHash(str) { let h = 7; for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) % 1000003; return h; }
+// ISLE_QUEST_v1 島民任務的謝禮：完成那天 1 個，從五條街的一般素材（不含稀有、不含智慧島）照日期挑，全家同一天同一種
+function iqMat(date) { const L = Object.keys(MATS).filter(m => !MATS[m].rare && MATS[m].s !== '智'); return L[matHash(date + ':iq') % L.length]; }
 function matsOf(save, itemsByRow, today) {
   const got = {}, by = [], add = (m, date, why) => { got[m] = (got[m] || 0) + 1; by.push({ m, date, why }); };
   Object.keys(save).filter(k => k.startsWith('log:') && k.slice(4) >= MAT_START && k.slice(4) <= today).sort().forEach(k => {
@@ -3469,6 +3472,7 @@ function matsOf(save, itemsByRow, today) {
   if (teaAt && !ownMode()) Object.keys(save).filter(k => k.startsWith('log:')).map(k => k.slice(4)).filter(d => d >= TEA_START && d >= teaAt && d <= today).sort().forEach(d => {
     const rows = (save['log:' + d] && save['log:' + d].rows) || {};
     if (Object.keys(rows).some(r => rows[r] === 2 && itemsByRow[r] && (GROUP[itemsByRow[r].subject] || itemsByRow[r].subject) === '國')) add('tea', d, 'islet'); });
+  Object.keys(save).filter(k => k.startsWith('iq:') && save[k] && save[k].done && k.slice(3) >= MAT_START && k.slice(3) <= today).sort().forEach(k => add(iqMat(k.slice(3)), k.slice(3), 'iq'));   // ISLE_QUEST_v1 島民任務：完成那天 1 個，一天最多一次（後端保證）
   const used = {}, cooked = {}, cooks = [], bought = {}, sold = {}, gifted = {}, gifts = [];   // GIFT_v1：送給島民的料理
   const seenId = {}, fixed = {}, fixes = [];   // MILK_FIX_v1：同一個 id 只算一次；fix 是一次性補發
   Object.keys(save).filter(k => k.startsWith('craft:')).sort().forEach(k => ((save[k] && save[k].log) || []).forEach(e => {
