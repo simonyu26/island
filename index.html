@@ -341,6 +341,12 @@
   .esside{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .esside > div{background:var(--sand);border-radius:10px;padding:8px;font-size:13px;line-height:1.6}
   @media (max-width:400px){.esside{grid-template-columns:1fr}}
+  .hopt{display:flex;gap:10px;align-items:center;width:100%;min-height:64px;padding:6px 8px;margin-bottom:6px;border:1px solid var(--plum-light);border-radius:10px;background:#fff;color:var(--ink);text-align:left}
+  .hopt img{width:76px;height:62px;object-fit:cover;flex:none}.hopt b{font-size:15px}.hopt small{display:block;font-size:12px;color:var(--muted);line-height:1.4;font-weight:400}
+  .hopt.on{background:var(--plum-light);border:2px solid var(--plum)}.hopt.on b::before{content:"✓ ";color:var(--plum)}
+  .hcur{display:flex;gap:10px;align-items:center;background:#f7f1e5;border-radius:10px;padding:8px}.hcur img{width:84px}.hcur b{display:block}.hstage{display:block;font-size:14px;color:var(--muted);white-space:nowrap}.hcur{flex-wrap:wrap}.hcur .ghost{white-space:nowrap;margin-left:auto}
+  .hg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.hg2 .hopt{flex-direction:column;text-align:center;min-height:auto}.hg2 .hopt img{width:100%;height:auto}
+  .hsw button.on{border:2px solid var(--plum);color:var(--plum);font-size:20px;font-weight:700;line-height:1}.hsw button.on::after{content:"✓"}
 </style>
 </head>
 <body>
@@ -397,11 +403,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.8.2.2.1';
+const APP_VERSION = '2.50.8.2.4';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.8.2.4', date: '2026-11-11', items: ['🏠 我的家可以選一種風格改建了：和風、台灣鄉村、台灣城市、海邊（沖繩）、西洋，在我的家按「🎨 改外觀」選。家具都會留著，風格之後也能換，房子會跟著島嶼等級慢慢長大。'] },
   { v: '2.50.8.2.2.1', date: '2026-11-11', fam: [1], items: ['⚔️ Boss 戰紀錄：五科都可以填錯幾題（選填），各科等級和錯幾題排在同一列。歷次試煉多了『總分』，照會考積分算（滿分 36），手機上不用左右滑就看得到。你在『誰看得到什麼』打開『大考成績』的家人，也看得到總分和錯幾題；不想的話，可以到那裡改。', '📊 家人自己的島：看島主的大考成績時，歷次試煉多了『總分』，也看得到各科錯幾題。'] },
   { v: '2.50.8.2.2', date: '2026-11-11', items: ['✉️ 主島的島民會輪流請你幫一個小忙：名牌上有信封的那位島民，今天有事想拜託你。點那位島民就看得到，接了、做完寫一句，會收到 1 個素材。', '📝 寫的那一句在 App 裡只有你自己看得到；不想接也沒關係，按『下次吧』就好。'] },
   { v: '2.50.8.2.1', date: '2026-11-11', minor: true, fam: true, items: ['🍶 家人自己的島：答錯的單字可以變成瓶子，漂回燈塔海灘再練一次。想用的話，到「更多 → 🧰 其他」打開「答錯的字變成瓶子」。'] },
@@ -1294,7 +1301,7 @@ function hud() {
   return `<div class="card" id="hudCard">
     <div class="row"><h2 class="grow">${esc(D.cfg.islandName || '我的島')}</h2><span class="muted">島嶼 Lv.${famNum('xp', D.level)}</span>
       ${isFamily() ? '' : `<button class="ghost mailbtn" onclick="go('mail')" aria-label="郵便受け">📮${mailCount() ? `<span class="dot">${mailCount()}</span>` : ''}</button>`}
-      <button class="ghost" style="padding:4px 10px" onclick="openHouse('me')" aria-label="我的家">${houseTier().ic}</button>
+      <button class="ghost" style="padding:4px 10px" onclick="openHouse('me')" aria-label="我的家">${houseIc()}</button>
       ${isFamily() ? '' : `<button class="ghost" style="padding:4px 10px" onclick="openYatai()" aria-label="島の屋台">🏮</button>`}
       <button class="ghost" style="padding:4px 10px" onclick="go('guide')" aria-label="玩法說明">❓</button></div>
     <div class="hud">
@@ -2613,8 +2620,24 @@ const HOUSE_TIERS = [
   { lv: 7, key: 'twostory', name: '兩層樓小屋', ic: '🏡', slots: 12 },
   { lv: 10, key: 'manor', name: '海邊洋館', ic: '🏰', slots: 20 }
 ];
-const ROOF_COLORS = ['#c0504d', '#741b47', '#3f7fb8', '#3f9a55', '#d08a1e', '#7a55b8', '#5b5b5b', '#e98fb3'];
-const WALL_COLORS = ['#fdf6ec', '#ead1dc', '#dfeefa', '#e3f3dc', '#fff1c9', '#ece3fa', '#f4e1d2', '#ffffff'];
+const ROOF_COLORS = ['#c0504d', '#741b47', '#3f7fb8', '#3f9a55', '#d08a1e', '#7a55b8', '#5b5b5b', '#e98fb3', '#4a5568'];   // HOUSE3_v1：最後加西洋石板
+const WALL_COLORS = ['#fdf6ec', '#ead1dc', '#dfeefa', '#e3f3dc', '#fff1c9', '#ece3fa', '#f4e1d2', '#ffffff', '#f3ead9'];   // HOUSE3_v1：最後加和風灰泥
+// HOUSE3_v1 我的家外觀第三期（爸爸 11/9 定案）：Lv.10 起選一種風格改建；主屋 Lv.10／17／24／31／38 長五階，旁邊的小店 Lv.20／27／34 三步。
+// 看「歷來最高等級」home.peak（經驗值變少也不會變回去）。畫面不顯示下一階的等級、進度條或倒數（學習策略護欄）；沒選風格 = classic，照舊。
+const HOUSE3 = { main: [10, 17, 24, 31, 38], annex: [20, 27, 34] };
+const HOME_STYLES = [   // def：這條線可以換色的部位和預設色（美術 11/2 零件色彩角色）；沒有的部位是這條線的識別色，不能換
+  { id: 'wa', name: '和風', sub: '木造、灰瓦、緣側', shops: { a: '茶室', b: '錢湯' }, def: { wall: '#f3ead9' } },
+  { id: 'twr', name: '台灣鄉村', sub: '紅磚、紅瓦、燕尾屋脊', shops: { a: '柑仔店', b: '茶行' }, def: { roof: '#c0504d' } },
+  { id: 'twc', name: '台灣城市', sub: '街屋、店面、騎樓', shops: { a: '柑仔店', b: '茶行' }, def: { wall: '#ffffff', roof: '#c0504d' } },
+  { id: 'ryu', name: '海邊（沖繩）', sub: '赤瓦、シーサー、石牆', shops: { a: '剉冰店', b: '潛水小舖' }, def: { wall: '#ffffff' } },
+  { id: 'wst', name: '西洋', sub: '石牆、石板瓦、煙囪', shops: { a: '麵包店', b: '花店' }, def: { wall: '#ffffff', roof: '#4a5568' } }];
+// 各階段名稱（美術 11/9 階段名稱_25.md）：畫面只顯示現在這一階，不顯示下一階
+const HOME3_STAGE = {
+  wa: ['木造平房', '平房＋前庭', '二階町家', '町家＋偏屋', '大屋敷'],
+  twr: ['一條龍', '一條龍＋稻埕', '單伸手', '單伸手＋磚牆', '三合院'],
+  twc: ['小街屋', '街屋＋攤車', '騎樓街屋', '騎樓＋頂樓', '洋樓街屋'],
+  ryu: ['赤瓦平屋', '平屋＋石門', '赤瓦屋＋離れ', '赤瓦屋＋水井', '赤瓦大宅'],
+  wst: ['石造小屋', '小屋＋白籬笆', '二層洋館', '洋館＋溫室', '塔樓洋館'] };
 const FURNITURE = [
   { id: 'desk', ic: '🪑', name: '書桌', price: 6 }, { id: 'lamp', ic: '💡', name: '檯燈', price: 3 },
   { id: 'plant', ic: '🪴', name: '盆栽', price: 3 }, { id: 'bed', ic: '🛏️', name: '軟軟的床', price: 8 },
@@ -2655,6 +2678,26 @@ let houseTab = 'room';   // 我的家的分頁：room 房間、shop 家具店、
 function openHouse(who) { houseWho = who || 'me'; houseTab = 'room'; if (SUBJECTS.includes(houseWho) && !kzLike(houseWho).visit) kzSave(houseWho, { visit: true }); go('house'); }
 function houseTier() { let t = HOUSE_TIERS[0]; HOUSE_TIERS.forEach(x => { if (D.level >= x.lv) t = x; }); return t; }
 function homeOf() { return S.save.home || null; }
+function houseLv() { const p = Number((homeOf() || {}).peak) || 0; return Math.max(D.level, p); }
+function home3Step() { const lv = houseLv(); return { main: HOUSE3.main.filter(x => lv >= x).length, annex: HOUSE3.annex.filter(x => lv >= x).length }; }
+function homeStyle() { const h = homeOf(); return (h && h.style && HOME_STYLES.find(s => s.id === h.style)) || null; }
+function home3Name() { const st = homeStyle(), m = home3Step().main; return st && m ? st.name + ' ' + HOME3_STAGE[st.id][Math.min(m, 5) - 1] : ''; }   // 例：和風 平房＋前庭
+function houseIc() { return homeStyle() && home3Step().main ? '🏠' : houseTier().ic; }   // 選了風格一律 🏠（美術 11/9）；classic 照舊
+let home3Rebuild = false;   // 第一次選風格：回到島上演一次改建（鷹架、布幕約 2 秒）
+function home3Ctx(live) {
+  if (live) homePeakSync();
+  const st = homeStyle(), s = home3Step(); if (!st || !s.main) return {};
+  const o = { style: st.id, main: s.main, annex: s.annex, first: ((homeOf().annexBy || {})[st.id]) === 'b' ? 'b' : 'a' };
+  if (live && home3Rebuild) { home3Rebuild = false; o.rebuild = 1;
+    setTimeout(() => toast('改建成' + st.name + '了。家具都搬過來了' + (s.main < HOUSE3.main.length ? '，之後還會慢慢長大。' : '。')), 2300); }
+  return o;
+}
+// 等級第一次到新高就記下來（後端取最大值、自己蓋日期，前端送的日期不算）；家人看她的島時不寫
+function homePeakSync() {
+  const h = homeOf(); if (!h || (isFamily() && !ownOn())) return;
+  if ((Number(h.peak) || 0) >= D.level) return;
+  S.save.home = Object.assign({}, h, { peak: D.level }); queueSave('home', 'saveHome', S.save.home);
+}
 // v2.50 分房間（ROOMS_v1）：客廳 'me' 就是原本的房間；和室 'me:wa'（Lv.4）、二樓臥室 'me:bed'（Lv.7）存在 home.rooms.wa／bed，各 8 格。
 // 一件家具同時只在一間，客廳優先、再來和室（後端 saveHome 同一套去重）
 const ROOMS = [{ k: '', key: 'me', ic: '🛋️', name: '客廳' }, { k: 'wa', key: 'me:wa', ic: '🍵', name: '和室', lv: 4 }, { k: 'bed', key: 'me:bed', ic: '🛏️', name: '二樓臥室', lv: 7 }];
@@ -2865,14 +2908,15 @@ function visitRow(except) {
 }
 function viewHouse() {
   if (houseWho !== 'me' && RES_FURNITURE[houseWho]) return viewResHouse(houseWho);
+  homePeakSync();   // HOUSE3_v1：沒經過 3D 小島也記下歷來最高等級
   const h = homeOf(), tier = houseTier();
   if (!h || draft.editHome) return viewHouseSetup();
   const next = HOUSE_TIERS.find(x => x.lv > D.level);
   const vs = visitor(), vr = resident(vs), daily = S.save['daily:' + S.today];
   const vline = daily && daily.messages && daily.messages[vs] ? daily.messages[vs] : '我來找你玩了，順便看看你的新家具。';
   return `${norenBar(h)}<div class="card" style="background:${esc(h.wall)};border:3px solid ${esc(h.roof)};border-top-left-radius:0;border-top-right-radius:0">
-      <div class="row"><span style="font-size:44px">${tier.ic}</span><div class="grow"><h2 style="margin:0"><span class="namePlate">${esc(h.name || '我的家')}</span></h2>
-        <div class="muted">${tier.name}・島嶼 Lv.${D.level}${next ? `・Lv.${next.lv} 會擴建成${next.name}${next.lv === 4 ? '，多一間和室' : next.lv === 7 ? '，多一間二樓臥室' : ''}` : '・已經是最大的房子了'}</div></div>
+      <div class="row"><span style="font-size:44px">${houseIc()}</span><div class="grow"><h2 style="margin:0"><span class="namePlate">${esc(h.name || '我的家')}</span></h2>
+        <div class="muted">${home3Head(tier, next)}</div></div>
         ${isFamily() ? '' : '<button class="ghost" style="padding:6px 10px" onclick="draft.editHome=true;render()">🎨 改外觀</button>'}</div></div>
     <div class="htabs">${[['room', '🛋️ 房間'], ['shop', '🛒 家具店'], ['keep', '🏅 收藏']].map(([k, n]) =>
       `<button class="${houseTab === k ? '' : 'ghost'}" onclick="houseTab='${k}';draft.arrange=false;render()">${n}</button>`).join('')}</div>
@@ -2998,24 +3042,52 @@ function shareDiaryPage(date) {
   queueSave('diary:' + date, 'saveDiary', date, d.text, d.shared, d.emoji || '');
   toast(d.shared ? '這一頁會放進乘船券' : '乘船券不放這一頁了'); render();
 }
+function home3Head(tier, next) {   // HOUSE3_v1：選了風格以後只說「之後還會慢慢長大」，不說哪一級（學習策略護欄）
+  const st = homeStyle(), s = home3Step(), h = homeOf() || {};
+  if (!s.main) return `${tier.name}・島嶼 Lv.${D.level}${next ? `・Lv.${next.lv} 會擴建成${next.name}${next.lv === 4 ? '，多一間和室' : next.lv === 7 ? '，多一間二樓臥室' : ''}` : ''}`;
+  if (!st) return `${tier.name}・島嶼 Lv.${D.level}${isFamily() ? '' : '・可以選一種風格改建了（按「🎨 改外觀」）'}`;
+  return `${esc(home3Name())}・島嶼 Lv.${D.level}${s.annex && !(h.annexBy || {})[st.id] && !isFamily() ? '・旁邊可以蓋一間小店了' : s.main < HOUSE3.main.length ? '・之後還會慢慢長大' : ''}`;
+}
 function viewHouseSetup() {
   const h = draft.home || (draft.home = Object.assign({ name: '', roof: ROOF_COLORS[0], wall: WALL_COLORS[0], noren: NOREN[0].id }, homeOf() || {}));
-  const sw = (list, key) => `<div class="emojis">${list.map(c => `<button type="button" class="${h[key] === c ? 'on' : ''}" style="width:40px;height:40px;background:${c}" onclick="draft.home.${key}='${c}';render()" aria-label="${c}"></button>`).join('')}</div>`;
-  return `<div class="card"><div class="big">${houseTier().ic}</div><h2 style="text-align:center">${homeOf() ? '改造我的家' : '在島上蓋你的家'}</h2>
-      <div class="muted" style="text-align:center">家蓋在島中央的碼頭。島嶼升級時房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓（Lv.7）→ 海邊洋館（Lv.10）。</div>
+  const sw = (list, key) => `<div class="emojis hsw">${list.map(c => `<button type="button" class="${h[key] === c ? 'on' : ''}" style="width:40px;height:40px;background:${c}" onclick="draft.home.${key}='${c}';render()" aria-label="${c}"></button>`).join('')}</div>`;
+  const s3 = homeOf() ? home3Step() : { main: 0, annex: 0 }, st = HOME_STYLES.find(x => x.id === h.style) || null;
+  return `<div class="card"><div class="big">${houseIc()}</div><h2 style="text-align:center">${homeOf() ? '改造我的家' : '在島上蓋你的家'}</h2>
+      ${s3.main ? home3Setup(h, st, s3) : '<div class="muted" style="text-align:center">家蓋在島中央的碼頭。島嶼升級時房子會跟著擴建：帳篷 → 小木屋（Lv.4）→ 兩層樓（Lv.7）→ 海邊洋館（Lv.10）。</div>'}
       <label>家的名字</label><input id="hmName" value="${esc(h.name)}" placeholder="例如：呱呱小屋" oninput="draft.home.name=this.value">
-      <label>屋頂顏色</label>${sw(ROOF_COLORS, 'roof')}
-      <label>牆壁顏色</label>${sw(WALL_COLORS, 'wall')}
-      <label>暖簾</label><div class="row" style="gap:6px">${NOREN.map(n => `<button type="button" class="${(h.noren || NOREN[0].id) === n.id ? 'on' : ''}" style="background:${n.bg};color:${n.fg};padding:8px 10px;border:${(h.noren || NOREN[0].id) === n.id ? '3px solid var(--plum)' : '1px solid #ccc'}" onclick="draft.home.name=document.getElementById('hmName').value;draft.home.noren='${n.id}';render()">${n.name}</button>`).join('')}</div>
+      ${!st || st.def.roof ? `<label>屋頂顏色</label>${sw(ROOF_COLORS, 'roof')}` : ''}
+      ${!st || st.def.wall ? `<label>牆壁顏色</label>${sw(WALL_COLORS, 'wall')}` : ''}
+      ${st ? '<div class="muted">每種風格都有幾塊自己的顏色（像紅磚、灰瓦），不能換；其他照你選的顏色。</div>' : ''}
+      <label>暖簾</label><div class="row" style="gap:6px">${NOREN.map(n => `<button type="button" class="${(h.noren || NOREN[0].id) === n.id ? 'on' : ''}" style="background:${n.bg};color:${n.fg};padding:8px 10px;border:${(h.noren || NOREN[0].id) === n.id ? '2px solid var(--plum)' : '1px solid #ccc'}" aria-pressed="${(h.noren || NOREN[0].id) === n.id}" onclick="draft.home.name=document.getElementById('hmName').value;draft.home.noren='${n.id}';render()">${(h.noren || NOREN[0].id) === n.id ? '✓ ' : ''}${n.name}</button>`).join('')}</div>
       <div class="muted" style="margin-top:4px">家的名字會寫在門口的木門牌上。</div>
-      <div class="row" style="margin-top:14px"><button class="grow" onclick="saveHouse()">${homeOf() ? '儲存' : '蓋好了！'}</button>
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="saveHouse()">${st && !(homeOf() || {}).style ? '改建成' + st.name : homeOf() ? '儲存' : '蓋好了！'}</button>
         ${homeOf() ? '<button class="ghost" onclick="draft={};render()">取消</button>' : ''}</div></div>`;
 }
+function home3Setup(h, st, s3) {   // 美術 11/9 設定頁樣稿 A（選風格）、B（可以蓋小店以後）
+  const cur = (homeOf() || {}).style, open = !st || draft.home3List;
+  const opt = (on, img, b, small, js) => `<button type="button" class="hopt${on ? ' on' : ''}" aria-pressed="${on}" onclick="${js}"><img src="${img}" alt="" loading="lazy"><span><b>${b}</b>${small ? `<small>${small}</small>` : ''}</span></button>`;
+  const list = HOME_STYLES.map(x => opt(st && st.id === x.id, 'home/home_' + x.id + '.png', esc(x.name), esc(x.sub), `home3Pick('${x.id}')`)).join('');
+  const by = h.annexBy || {}, pick = st ? (by[st.id] || 'a') : 'a';
+  return `${cur ? '' : `<div class="muted" style="text-align:center">選一種風格，家會改建成那個樣子${s3.main < HOUSE3.main.length ? '，之後還會慢慢長大' : ''}。</div>`}
+    <label>家的風格</label>
+    ${open ? list : `<div class="hcur"><img src="home/home_${st.id}.png" alt=""><span class="grow"><b>${esc(st.name)}</b>${cur === st.id ? `<span class="hstage">${esc(HOME3_STAGE[st.id][Math.min(s3.main, 5) - 1])}</span>` : ''}</span><button type="button" class="ghost" onclick="draft.home.name=document.getElementById('hmName').value;draft.home3List=true;render()">換一種風格</button></div>`}
+    <div class="muted">風格之後還能換，家具都會留著。</div>
+    ${st && s3.annex ? `<label>旁邊的小店：先蓋哪一間？</label><div class="hg2">${['a', 'b'].map(k => opt(pick === k, 'home/home_' + st.id + '_' + k + '.png', esc(st.shops[k]), '', `home3Shop('${k}')`)).join('')}</div>
+      ${s3.annex < HOUSE3.annex.length ? '<div class="muted">之後還會有新的變化。</div>' : ''}` : ''}`;
+}
+function home3Pick(id) {   // 選線：這條線能換色的部位先換成線的樣稿色（她可以再改），不能換的部位不動
+  const d = draft.home, st = HOME_STYLES.find(x => x.id === id); if (!st) return;
+  d.name = document.getElementById('hmName').value; d.style = id; draft.home3List = false;
+  Object.keys(st.def).forEach(k => { d[k] = st.def[k]; }); render();
+}
+function home3Shop(k) { const d = draft.home; d.name = document.getElementById('hmName').value; d.annexBy = Object.assign({}, d.annexBy || {}); d.annexBy[d.style] = k; render(); }
 async function saveHouse() {
   const h = draft.home; if (!h.name.trim()) return toast('幫你的家取個名字吧');
-  const first = !homeOf();
+  const first = !homeOf(), prevHome = homeOf();
   try { await flush(); S = await call('saveHome', Object.assign({}, h, { shown: (homeOf() && homeOf().shown) || ownedFurniture() })); D = derive(S); }
   catch (e) { return toast('儲存失敗：' + (e.message || e)); }
+  const firstStyle = !!h.style && !(prevHome || {}).style;
+  if (firstStyle) { draft = {}; home3Rebuild = true; go('home'); return; }   // HOUSE3_v1：回島上演改建，字幕在 home3Ctx
   draft = {}; toast(first ? '🏠 ' + h.name + ' 蓋好了！' : '外觀改好了'); render();
 }
 async function buyFurniture(who, id) {
@@ -3321,7 +3393,7 @@ function gardenMap() {
   const slots = Array.from({ length: 40 }, (_, i) => slotDot(i, gardenSlot(i), used[i], picking, i >= n)).join('');
   return `<svg class="gmap" viewBox="-14.6 -14.6 29.2 29.2" role="img" aria-label="小島的空地地圖">
     <circle r="14.4" fill="#e6c98e"/><circle r="13" fill="#9bc87a"/>${streets}
-    <circle r="1.6" fill="#ead1dc"/><text y=".5" font-size="1.4" text-anchor="middle">${houseTier().ic}</text>
+    <circle r="1.6" fill="#ead1dc"/><text y=".5" font-size="1.4" text-anchor="middle">${houseIc()}</text>
     <text x="${hut.x}" y="${hut.z + 0.5}" font-size="1.4" text-anchor="middle">🛖</text>
     <text x="${Math.cos(-Math.PI * 0.62) * 13.6}" y="${Math.sin(-Math.PI * 0.62) * 13.6 + 0.5}" font-size="1.4" text-anchor="middle">🗼</text>
     ${slots}</svg>${isletGardenMap(used, picking)}`;
@@ -5813,7 +5885,7 @@ async function mount3D() {
     Island3D.mount(el, {
       S, bond: D.bond, resident, roommate, imgOf, subjectName: SUBJECT_NAME, subjIc: SUBJ_IC, pointsUntil: pointsUntil,
       sig: JSON.stringify(D.weekPts), season: solarTerm(S.today), walk: D.exDays.length,
-      home: homeOf() && { tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') },
+      home: homeOf() && Object.assign({ tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') }, home3Ctx(true)),
       onHome: () => openHouse('me'),
       light: (st => ({ name: lightTitle(), sea: st.sea, due: st.due, lanterns: st.lanterns, friends: st.friends }))(lightStats()), onLight: () => go('light'), onLamp: () => go('lamp'),
       garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),
@@ -7281,7 +7353,7 @@ function islandSnapshot(withStats) {
     guide: { name: g.name, emoji: g.emoji }, residents, roommates, pts: pointsUntil(null), bond: D.bond,
     mate: keeperOf('home') ? { name: keeperOf('home').name, emoji: keeperOf('home').emoji } : null,
     diary: diaryPages().filter(dt => S.save['diary:' + dt].shared).slice(-14).map(dt => ({ date: dt, text: S.save['diary:' + dt].text, emoji: S.save['diary:' + dt].emoji || '' })),
-    home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') } : null, rooms, garden: gardenCtx(), book: { name: bookTitle() }, yatai: keeperOf('yatai') ? { name: '島の屋台' } : null, marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s })) };
+    home: h ? Object.assign({ tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, noren: h.noren || 'ai', flowers: shownFurniture().includes('flower') }, home3Ctx(false)) : null, rooms, garden: gardenCtx(), book: { name: bookTitle() }, yatai: keeperOf('yatai') ? { name: '島の屋台' } : null, marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s })) };
   if (withStats) snap.stats = { streakWeeks: D.streak, weekDone: weekDoneCount() };
   return snap;
 }
