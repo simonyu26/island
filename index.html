@@ -101,6 +101,7 @@
 
   td:first-child { white-space: nowrap; }
   table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .exT th, .exT td { padding: 6px 3px; } .exT th:first-child, .exT td:first-child { padding-left: 0; } .exT small { font-size: 12px; white-space: nowrap; }   /* BOSS_WRONG5_v1 歷次試煉 */
   th, td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--plum-light); }
 
   /* 底部分頁 */
@@ -360,6 +361,10 @@ const GROUP = { 國: '國', 英: '英', 數: '數', 理化: '自', 生物: '自'
 // 自然、社會底下的分科，各自有一條小巷，房子分開蓋
 const SUBS = { 自: ['理化', '生物', '地科'], 社: ['歷史', '地理', '公民'] };
 const LEVELS = ['A++', 'A+', 'A', 'B++', 'B+', 'B', 'C'];
+// BOSS_WRONG5_v1：會考積分（五科 A++ 7～C 1、作文 6 級分 1～1 級分 0.1，滿分 36）；錯題數上限國英 60、數自社 70（社會一份 63 題）
+const EXAM_PT = { 'A++': 7, 'A+': 6, A: 5, 'B++': 4, 'B+': 3, B: 2, C: 1 }, ESSAY_PT = { 6: 1, 5: 0.8, 4: 0.6, 3: 0.4, 2: 0.2, 1: 0.1 }, WRONG_MAX = { 國: 60, 英: 60, 數: 70, 自: 70, 社: 70 };
+function examTotal(a) { const w = String(a['文'] || '').replace(/[^0-9]/g, ''); if (!SUBJECTS.every(s => EXAM_PT[a[s]]) || !ESSAY_PT[w]) return null; return Math.round((SUBJECTS.reduce((n, s) => n + EXAM_PT[a[s]], 0) + ESSAY_PT[w]) * 10) / 10; }
+function examDay(a) { const d = assessDate(a.date); if (isNaN(d)) return esc(a.date); const p = n => String(n).padStart(2, '0'), md = p(d.getMonth() + 1) + '/' + p(d.getDate()); return String(d.getFullYear()) === String(S.today).slice(0, 4) ? md : String(d.getFullYear()).slice(2) + '/' + md; }
 // 紫色的烏龜：畫面上出現的 🐢 一律包成 .purple-ic（CSS 轉成紫色）
 (function () {
   const SKIP = { OPTION: 1, TEXTAREA: 1, SCRIPT: 1, STYLE: 1, TITLE: 1 };
@@ -392,11 +397,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.8.2.2';
+const APP_VERSION = '2.50.8.2.2.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.8.2.2.1', date: '2026-11-11', fam: [1], items: ['⚔️ Boss 戰紀錄：五科都可以填錯幾題（選填），各科等級和錯幾題排在同一列。歷次試煉多了『總分』，照會考積分算（滿分 36），手機上不用左右滑就看得到。你在『誰看得到什麼』打開『大考成績』的家人，也看得到總分和錯幾題；不想的話，可以到那裡改。', '📊 家人自己的島：看島主的大考成績時，歷次試煉多了『總分』，也看得到各科錯幾題。'] },
   { v: '2.50.8.2.2', date: '2026-11-11', items: ['✉️ 主島的島民會輪流請你幫一個小忙：名牌上有信封的那位島民，今天有事想拜託你。點那位島民就看得到，接了、做完寫一句，會收到 1 個素材。', '📝 寫的那一句在 App 裡只有你自己看得到；不想接也沒關係，按『下次吧』就好。'] },
   { v: '2.50.8.2.1', date: '2026-11-11', minor: true, fam: true, items: ['🍶 家人自己的島：答錯的單字可以變成瓶子，漂回燈塔海灘再練一次。想用的話，到「更多 → 🧰 其他」打開「答錯的字變成瓶子」。'] },
   { v: '2.50.8.2', date: '2026-11-11', items: ['✍️ 智慧島「寫一句」下面多了一行小字：說明這句誰看得到，以及寫到讓人擔心的話會怎麼處理。'] },
@@ -6641,7 +6647,7 @@ function advSumText(mode) {
   const pq = Object.keys(S.save).filter(k => /^pq:/.test(k) && S.save[k] && inM(S.save[k].date) && S.save[k].src !== 'word').map(k => S.save[k]);
   out.push('', '【拍照收進來的題】' + (pq.length ? pq.length + ' 題：' + [['模考', q => q.mock || q.from === 'mock'], ['學校卷', q => !q.mock && q.from === 'school'], ['講義', q => !q.mock && q.from === 'handout'], ['會考考古題', q => !q.mock && q.from === 'past'], ['3688', q => !q.mock && q.from === '3688'], ['其他', q => !q.mock && q.from === 'other'], ['不標來源', q => !q.mock && !PQ_FROM[q.from]]].map(([n, f]) => n + ' ' + pq.filter(f).length + (n === '模考' && pq.some(q => !q.mock && q.from === 'mock') ? '（其中 ' + pq.filter(q => !q.mock && q.from === 'mock').length + ' 題還沒對上哪一次）' : '')).join('、')   /* PQSRC_v1 */ : '沒有'));
   out.push('', '【模考】' + (ex.length ? '' : '沒有紀錄'));
-  ex.forEach(a => { const d = assessDate(a.date); out.push((d.getMonth() + 1) + '/' + d.getDate() + '：' + SUBJECTS.filter(k => sc(a[k])).map(k => k + ' ' + sc(a[k]) + (/^\d{1,2}$/.test(a[k + '錯'] || '') ? '（沒答對 ' + a[k + '錯'] + '）' : '')).join('、') + (sc(a['文']) ? '、作文 ' + sc(a['文']).replace(/ ?級分/, ' 級分') : '') + (() => { const ids = Object.keys(S.save).filter(k => /^pq:/.test(k) && S.save[k] && S.save[k].mock === ymdOf(d)), lit = ids.filter(k => S.save['rv:' + k] && S.save['rv:' + k].lantern).length;
+  ex.forEach(a => { const d = assessDate(a.date); out.push((d.getMonth() + 1) + '/' + d.getDate() + '：' + SUBJECTS.filter(k => sc(a[k])).map(k => k + ' ' + sc(a[k]) + (/^\d{1,2}$/.test(a[k + '錯'] || '') ? '（錯 ' + a[k + '錯'] + '）' : '')).join('、') + (sc(a['文']) ? '、作文 ' + sc(a['文']).replace(/ ?級分/, ' 級分') : '') + (() => { const ids = Object.keys(S.save).filter(k => /^pq:/.test(k) && S.save[k] && S.save[k].mock === ymdOf(d)), lit = ids.filter(k => S.save['rv:' + k] && S.save['rv:' + k].lantern).length;
     return ids.length ? '；收進海灘 ' + ids.length + ' 題（變成燈籠 ' + lit + ' 題）' : ''; })()); });
   return out.join('\n');
 }
@@ -7150,8 +7156,8 @@ function viewExam() {
 }
 function viewExamBody() {
   const sel = s => `<select data-sub="${s}"><option value="">沒考</option>${LEVELS.map(l => `<option>${l}</option>`).join('')}</select>`;
-  const rows = S.assessments.slice().sort((a, b) => assessDate(b.date) - assessDate(a.date)).map(a =>
-    `<tr><td>${esc(a.date)}</td>${SUBJECTS.map(s => `<td>${esc(a[s])}${/^\d{1,2}$/.test(a[s + '錯'] || '') ? '<br><small class="muted">沒答對 ' + a[s + '錯'] + '</small>' : ''}</td>`).join('')}<td>${esc(String(a['文']).replace('級分', ''))}</td><td>${esc(a.source)}</td></tr>`).join('');
+  const dash = '<span class="muted">—</span>', rows = S.assessments.slice().sort((a, b) => assessDate(b.date) - assessDate(a.date)).map(a => { const t = examTotal(a), w = String(a['文'] || '').replace('級分', '');
+    return `<tr><td style="white-space:normal"><span style="white-space:nowrap">${examDay(a)}</span>${a.source ? '<br><small class="muted" style="white-space:normal">' + esc(a.source) + '</small>' : ''}</td><td>${t == null ? dash + '<br><small class="muted">不完整</small>' : '<b>' + t + '</b>'}</td>${SUBJECTS.map(s => `<td>${a[s] ? esc(a[s]) : dash}${/^\d{1,2}$/.test(a[s + '錯'] || '') ? '<br><small class="muted">錯' + a[s + '錯'] + '</small>' : ''}</td>`).join('')}<td>${w ? esc(w) : dash}</td></tr>`; }).join('');
   const ask = draft.bossWrong ? `<div class="card"><h3>📷 收這場的錯題</h3>
     <div class="muted">「${esc(draft.bossWrong)}」記好了。要把這場答錯的題拍照收進燈塔海灘嗎？挑幾題就好，不用全部拍。收進去的題會變成漂流瓶，之後漂回來出類題。</div>
     <div class="row" style="margin-top:10px"><button class="grow" onclick="openWrongScan(draft.bossDate)">📷 收這場的錯題</button><button class="ghost grow" onclick="go('home')">先不用</button></div></div>` : '';
@@ -7159,16 +7165,16 @@ function viewExamBody() {
     <div class="muted">模擬考或寫完一整份考古題後填這裡。只有試煉結果會更新島民等級，每場 +50 經驗值。</div>
     <label>日期</label><input type="date" id="exDate" value="${S.today}">
     <label>考卷來源</label><input id="exSrc" placeholder="例如：115北模#1、113考古題">
-    <div class="row" style="margin-top:4px">${SUBJECTS.map(s => `<div class="grow"><label>${SUBJ_IC[s]} ${resident(s).ipic} ${SUBJECT_NAME[s]}</label>${sel(s)}</div>`).join('')}</div>
-    <div class="row" style="margin-top:4px">${['國', '英'].map(s => `<div class="grow"><label>${SUBJECT_NAME[s]}沒答對幾題（選填）</label><input type="number" inputmode="numeric" min="0" max="60" step="1" data-wrong="${s}" placeholder="例如 2"></div>`).join('')}</div>
+    <label>各科等級，和錯幾題（選填）</label>${SUBJECTS.map(s => `<div class="row" style="flex-wrap:nowrap;align-items:center;gap:8px;margin-top:6px"><span style="width:76px;flex:none">${SUBJ_IC[s]} ${SUBJECT_NAME[s]}</span><div style="flex:1;min-width:0">${sel(s)}</div><input type="number" inputmode="numeric" min="0" max="${WRONG_MAX[s]}" step="1" data-wrong="${s}" placeholder="錯幾題" aria-label="${SUBJECT_NAME[s]}錯幾題" style="width:84px;flex:none"></div>`).join('')}
     <label>作文級分</label><select id="exW"><option value="">沒考</option>${[6, 5, 4, 3, 2, 1].map(n => `<option>${n}</option>`).join('')}</select>
     <div style="margin-top:12px"><button id="exGo" onclick="submitExam()">記錄這場 Boss 戰</button></div></div>
-    <div class="card"><h3>歷次試煉</h3><div style="overflow-x:auto"><table><tr><th>日期</th>${SUBJECTS.map(s => `<th>${SUBJ_IC[s]}${s}</th>`).join('')}<th>文</th><th>來源</th></tr>${rows}</table></div></div>`;
+    <div class="card"><h3>歷次試煉</h3><div style="overflow-x:auto"><table class="exT"><tr><th>日期</th><th>總分</th>${SUBJECTS.map(s => `<th>${s}</th>`).join('')}<th>文</th></tr>${rows}</table></div>
+    <div class="muted" style="font-size:12px;margin-top:6px">總分照會考積分算：五科 A++ 7 分到 C 1 分，加作文 6 級分 1 分到 1 級分 0.1 分，滿分 36。五科和作文沒有都考的場次不算總分，寫「不完整」。</div></div>`;
 }
 async function submitExam() {
   const levels = {}; document.querySelectorAll('[data-sub]').forEach(x => levels[x.dataset.sub] = x.value);
   const wrong = {}; document.querySelectorAll('[data-wrong]').forEach(x => { const v = x.value.trim(); if (v) wrong[x.dataset.wrong] = v; });
-  if (Object.values(wrong).some(v => !/^\d{1,2}$/.test(v) || Number(v) > 60)) return toast('題數要填 0～60 的整數，或空著');
+  if (Object.keys(wrong).some(s => !/^\d{1,2}$/.test(wrong[s]) || Number(wrong[s]) > WRONG_MAX[s])) return toast('錯幾題要填整數（國英 0～60、數自社 0～70），或空著');
   const rec = { date: document.getElementById('exDate').value, source: document.getElementById('exSrc').value.trim(), levels, writing: document.getElementById('exW').value, wrong };
   if (!Object.values(levels).some(Boolean) && !rec.writing) return toast('至少選一科的等級');
   if (!rec.source) return toast('寫一下考卷來源');
