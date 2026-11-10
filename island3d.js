@@ -1538,6 +1538,7 @@
     homeSig = sig;
     clearLayer(homeLayer);
     if (!h) return;
+    if (h.style && h.main >= 1 && buildHome3(h)) return;   // HOUSE3_v1：選了風格的家走五條線；沒選的照舊（classic，逐像素不變）
     const g = new THREE.Group(); g.userData.home = true;
     const wall = std(new THREE.Color(h.wall).getHex(), { emissive: 0x000000 }), roof = std(new THREE.Color(h.roof).getHex());
     const box = (w, hh, d, x, y, z, m) => { const b = new THREE.Mesh(bx(w, hh, d), m); b.position.set(x, y, z); g.add(b); return b; };
@@ -1571,6 +1572,61 @@
     const lb = labelSprite('🏠 ' + (h.name || '我的家'), null, { scale: 1.0, color: '#3a2a33' });
     lb.position.set(0, h.tier === 'tent' ? 2.1 : h.tier === 'cabin' ? 2.6 : 3.4, 0); lb.userData.home = true; homeLayer.add(lb);
     setEnvironment(envNow);
+  }
+
+  // HOUSE3_v1 我的家五條線（美術 11/9 定樣、工程顧問規格）：零件由 home3d.js 產生（用到才載入），
+  // 這裡按「一般／玻璃」併成 2 個 mesh（頂點色），dc 固定 2（＋名牌）；scale 1.3（classic 照舊 1.35）
+  let home3Loading = false, buildHome3Fail = false;
+  function buildHome3(h) {
+    if (buildHome3Fail) return false;
+    if (!window.Home3D) {
+      if (!home3Loading) {
+        home3Loading = true;
+        const s = document.createElement('script'); s.src = 'home3d.js';
+        s.onload = () => { homeSig = ''; buildHome(); shadowDirty = true; };
+        s.onerror = () => { home3Loading = false; homeSig = ''; buildHome3Fail = true; buildHome(); };
+        document.head.appendChild(s);
+      }
+      return !buildHome3Fail;   // 載入中先不畫；載不到就退回 classic
+    }
+    const src = Home3D.build(h.style, h.main, h.annex || 0, h.first, !!h.flowers);
+    if (!src) return false;
+    src.updateMatrixWorld(true);
+    const role = Home3D.ROLE[h.style] || {}, wallC = new THREE.Color(h.wall).getHex(), roofC = new THREE.Color(h.roof).getHex();
+    const acc = [[], []];   // 0 一般、1 玻璃
+    let top = 0;
+    src.traverse(o => {
+      if (!o.isMesh) return;
+      let c = o.userData.c;
+      if (!o.userData.fixed) { if ((role.wall || []).indexOf(c) >= 0) c = wallC; else if ((role.roof || []).indexOf(c) >= 0) c = roofC; }
+      const geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); geo.applyMatrix4(o.matrixWorld);
+      const a = geo.attributes.position.array; for (let i = 1; i < a.length; i += 3) top = Math.max(top, a[i]);
+      acc[o.userData.glass ? 1 : 0].push([a, lin(new THREE.Color(c))]); geo.dispose(); o.geometry.dispose();
+    });
+    const merge = list => { let n = 0; list.forEach(p => { n += p[0].length; });
+      const pos = new Float32Array(n), col = new Float32Array(n); let k = 0;
+      list.forEach(([a, c]) => { pos.set(a, k); for (let i = 0; i < a.length; i += 3) { col[k + i] = c.r; col[k + i + 1] = c.g; col[k + i + 2] = c.b; } k += a.length; });
+      const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.BufferAttribute(pos, 3)); ge.setAttribute('color', new THREE.BufferAttribute(col, 3)); ge.computeVertexNormals(); return ge; };
+    const g = new THREE.Group(); g.userData.home = true;
+    const body = std(0xffffff, { vertexColors: true, side: THREE.DoubleSide }), glass = std(0xffffff, { vertexColors: true, side: THREE.DoubleSide, emissive: 0xffb347, emissiveIntensity: 0 });
+    g.add(new THREE.Mesh(merge(acc[0]), body));
+    if (acc[1].length) g.add(new THREE.Mesh(merge(acc[1]), glass));
+    g.position.y = 0.05; g.scale.setScalar(1.3);
+    g.userData.glass = glass;
+    homeLayer.add(g);
+    const lb = labelSprite('🏠 ' + (h.name || '我的家'), null, { scale: 1.0, color: '#3a2a33' });
+    lb.position.set(0, top * 1.3 + 0.75, 0); lb.userData.home = true; homeLayer.add(lb);
+    if (h.rebuild) rebuildShow(g);   // 第一次選風格：鷹架和布幕圍 2 秒再拉開（只演一次，index.html 控制）
+    setEnvironment(envNow); shadowDirty = true;
+    return true;
+  }
+  function rebuildShow(g) {
+    g.visible = false;
+    const sc = new THREE.Group(), pole = std(0x8a5a3c), cloth = std(0xece4f0);
+    [[-1.1, -0.9], [1.1, -0.9], [-1.1, 0.9], [1.1, 0.9]].forEach(([x, z]) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.4, 5), pole); p.position.set(x, 1.2, z); sc.add(p); });
+    const c = new THREE.Mesh(bx(2.3, 1.9, 1.9), cloth); c.position.y = 1.0; sc.add(c);
+    sc.scale.setScalar(1.3); sc.userData.home = true; homeLayer.add(sc);
+    setTimeout(() => { if (sc.parent) { homeLayer.remove(sc); drop(sc); } g.visible = true; g.scale.setScalar(0.01); popping.push({ m: g, t: 0, to: 1.3 }); shadowDirty = true; }, 2000);
   }
 
   // 海邊步道：每蓋一個運動章鋪一段木棧道，每三章多一盞燈籠

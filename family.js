@@ -101,7 +101,7 @@
         S, bond: D.bond, resident, roommate, imgOf, subjectName: SUBJECT_NAME, subjIc: SUBJ_IC,
         pointsUntil: i => { const p = pointsUntil(i), o = {}; Object.keys(p).forEach(k => { const g = GROUP[k] || k; o[g] = (o[g] || 0) + p[k]; }); return o; },
         sig: JSON.stringify(D.weekPts), season: solarTerm(S.today), walk: D.exDays.length,
-        home: homeOf() && { tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') },
+        home: homeOf() && Object.assign({ tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') }, typeof home3Ctx === 'function' ? home3Ctx(true) : {}),
         onHome: () => openHouse('me'),
         layout: { lanes: false, light: b1On(), off: SLOT.filter(s => live.indexOf(s) < 0), bg: D.cfg && D.cfg.bg },   // 島的背景：海上／宇宙／天空
         light: b1On() ? { name: lightTitle() } : null, ferry: { open: true, label: '⛴️ 港口', sub: '去別的島', far: false }, onFerry: openPort, yatai: { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null }, onYatai: () => openYatai(), book: null, marks: b1On() ? landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })) : [],
@@ -432,7 +432,7 @@
     Object.keys(p).forEach(k => { const g2 = GROUP[k] || k; pts[g2] = (pts[g2] || 0) + p[k]; });
     return { v: 1, at: S.today, title: D.cfg.islandName || '我的島', level: D.level, season: solarTerm(S.today), bg: D.cfg.bg || 'sea', walk: D.exDays.length,
       guide: { name: g.name, emoji: g.emoji }, dirs: live.map(d => ({ slot: d.slot, name: d.name, ic: d.ic })), residents: res, pts, bond: D.bond,
-      home: h ? { tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, flowers: shownFurniture().includes('flower') } : null,
+      home: h ? Object.assign({ tier: houseTier().key, roof: h.roof, wall: h.wall, name: h.name, flowers: shownFurniture().includes('flower') }, typeof home3Ctx === 'function' ? home3Ctx(false) : {}) : null,
       garden: gardenCtx(), islets: islets().map(x => ({ key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: '' })) };
   }
   function visitOn() { return !!(S.save.visit && S.save.visit.on); }
