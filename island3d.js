@@ -92,6 +92,47 @@
     });
   }
   function clearLayer(L) { while (L.children.length) { const c = L.children[0]; L.remove(c); drop(c); } }
+  // MERGE_v1 網格合併（11/20，工程顧問 10/30）：group 裡的小 mesh 讀材質顏色烘成頂點色，材質屬性（roughness、metalness、emissive、flatShading、side、
+  // wireframe、陰影）和點擊用的 userData 都一樣的才合成一個 mesh，放回同一個 group。執行時會改的材質不合：group 的 userData.glass／door、
+  // grassMat、leafMats、wallMat、燈塔的 lamp；透明、有貼圖、已經是頂點色的也不合。keep：要留著不動的物件（會動的船、轉的風車）或材質
+  function bake(g, keep) {
+    keep = (keep || []).filter(Boolean);
+    const skip = new Set([g.userData.glass, g.userData.door, grassMat, wallMat, lamp].concat(leafMats || []).concat(keep.filter(k => k.isMaterial)).filter(Boolean));
+    const hold = new Set(keep.filter(k => k.isObject3D));
+    g.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(g.matrixWorld).invert(), sets = new Map(), mats = new Set(), out = [];
+    g.traverse(o => {
+      if (!o.isMesh || o.isSprite) return;
+      const ud = {}; let p = o;
+      for (; p && p !== g; p = p.parent) { if (hold.has(p)) return; Object.keys(p.userData).forEach(k => { if (!(k in ud) && typeof p.userData[k] !== 'object') ud[k] = p.userData[k]; }); }
+      if (p !== g) return;
+      const m = o.material;
+      if (!m || Array.isArray(m) || !m.isMeshStandardMaterial || m.transparent || m.map || m.vertexColors || skip.has(m) || !o.geometry.attributes.position) return;
+      const key = [m.roughness, m.metalness, m.emissive.getHexString(), m.emissiveIntensity, m.flatShading, m.side, m.wireframe, o.castShadow, o.receiveShadow, JSON.stringify(ud)].join('|');
+      if (!sets.has(key)) sets.set(key, { m, ud, list: [] });
+      sets.get(key).list.push(o);
+    });
+    sets.forEach(({ m, ud, list }) => {
+      if (list.length < 2) return;   // 只有一個：留著，合了也不會少畫一次
+      let n = 0; const parts = list.map(o => { const geo = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+        if (!geo.attributes.normal) geo.computeVertexNormals(); n += geo.attributes.position.count; return [geo, o.material.color]; });
+      const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3); let at = 0;
+      parts.forEach(([geo, c]) => { const k = geo.attributes.position.count; pos.set(geo.attributes.position.array, at * 3); nor.set(geo.attributes.normal.array, at * 3);
+        for (let i = 0; i < k; i++) { col[(at + i) * 3] = c.r; col[(at + i) * 3 + 1] = c.g; col[(at + i) * 3 + 2] = c.b; }
+        at += k; geo.dispose(); });
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, flatShading: m.flatShading, roughness: m.roughness, metalness: m.metalness,
+        emissive: m.emissive.clone(), emissiveIntensity: m.emissiveIntensity, side: m.side, wireframe: m.wireframe });
+      const one = new THREE.Mesh(geo, mat); Object.assign(one.userData, ud); one.castShadow = list[0].castShadow; one.receiveShadow = list[0].receiveShadow;
+      list.forEach(o => { o.parent.remove(o); if (!o.geometry.userData.keep) o.geometry.dispose(); mats.add(o.material); });
+      out.push(one);
+    });
+    out.forEach(one => g.add(one));
+    const used = new Set(); g.traverse(o => [].concat(o.material || []).forEach(x => used.add(x)));
+    mats.forEach(x => { if (!used.has(x) && !skip.has(x)) x.dispose(); });
+    return g;
+  }
   // 潮汐：用月齡推算月亮過中天的時間，一天漲退兩次（約 12 小時 25 分一輪），大潮小潮跟著月相；不是精確的潮汐表
   function tideNow() {
     const now = Date.now(), syn = 29.530589;
@@ -731,7 +772,7 @@
         break;
     }
     g.scale.setScalar([0.4, 0.7, 1][stage] || 1);
-    return g;
+    return bake(g);   // MERGE_v1
   }
   function buildGarden() {
     const G = ctx.garden || null, ti = Math.max(0, TERM_ORDER.indexOf(seasonNow || ctx.season));
@@ -751,7 +792,7 @@
         const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 0), std([0x6fae4a, 0xe98fb3, 0x7cb866][i])); l.position.set(x, 0.5, 0.45); hut.add(l); });
       hut.position.set(HUT.x, 0.05, HUT.z);
       hut.lookAt(new THREE.Vector3(HUT.x * 2, 0.05, HUT.z * 2 + 2));
-      gardenLayer.add(hut);
+      bake(hut); gardenLayer.add(hut);   // MERGE_v1
       const lb = labelSprite('🌱 ' + (G.name || '植木屋'), null, { scale: 0.75, color: '#3a2a33' });
       lb.position.set(HUT.x, 1.55, HUT.z); lb.userData.garden = true; gardenLayer.add(lb);
     }
@@ -790,6 +831,7 @@
     shop.position.set(BOOK.x, 0.05, BOOK.z);
     shop.lookAt(new THREE.Vector3(BOOK.x * 2, 0.05, BOOK.z * 2 + 2));
     shop.scale.setScalar(1.25); shop.userData.glass = glass;
+    bake(shop);   // MERGE_v1
     bookLayer.add(shop);
     const lb = labelSprite('📚 ' + (B.name || '獨立書店'), B.sub || null, { scale: 0.75, color: '#3a2a33' });
     lb.position.set(BOOK.x, 1.95, BOOK.z); lb.userData.book = true; bookLayer.add(lb);
@@ -828,6 +870,7 @@
     pier.position.set(FERRY.x, 0, FERRY.z);
     pier.rotation.y = -FERRY.a - Math.PI / 2;   // -z 朝外海
     pier.userData.glass = glass;
+    bake(boat, [glass]); bake(pier, [boat]);   // MERGE_v1
     ferryLayer.add(pier);
     const lb = labelSprite(F.label || '⛴️ 智慧島渡船', F.sub != null ? F.sub : F.open ? '今日開航' : '今天的課上完了', { scale: 0.75, color: '#3a2a33' });
     lb.position.set(FERRY.x, 2.2, FERRY.z); lb.userData.ferry = true; ferryLayer.add(lb);
@@ -838,7 +881,7 @@
     fa(new THREE.ConeGeometry(2.4, 1.6, 10), 0x9fd27e, 0, 1.4, 0);
     [[-2, 1.3, 0xb38a4f], [1.9, 1.1, 0x4a4f5a], [-1.2, -2, 0xc0392b], [1.4, -1.8, 0xdfe6ee]].forEach(([x, z, c]) => { fa(bx(0.9, 0.6, 0.8), 0xf3ead6, x, 1.1, z); fa(new THREE.ConeGeometry(0.75, 0.5, 4), c, x, 1.65, z).rotation.y = Math.PI / 4; });
     [[0, 2.6], [-0.8, 2.1], [0.9, 2.3]].forEach(([x, y]) => fa(new THREE.ConeGeometry(0.45, 1.3, 6), 0x3f7a45, x, y, -0.3));
-    far.position.set(Math.cos(FERRY.a) * 34, 0, Math.sin(FERRY.a) * 34); if (F.far !== false) ferryLayer.add(far);
+    far.position.set(Math.cos(FERRY.a) * 34, 0, Math.sin(FERRY.a) * 34); bake(far); if (F.far !== false) ferryLayer.add(far);
     setEnvironment(envNow);
   }
 
@@ -865,6 +908,7 @@
     const p = new THREE.Vector3(Math.cos(YATAI.a) * YATAI.r, 0.05, Math.sin(YATAI.a) * YATAI.r);
     cart.position.copy(p); cart.lookAt(new THREE.Vector3(p.x * 2, 0.05, p.z * 2));   // 正面朝海、朝鏡頭 cart.scale.setScalar(1.1);
     cart.userData.glass = glow;
+    bake(cart);   // MERGE_v1
     yataiLayer.add(cart);
     const lb = labelSprite('🏮 ' + (Y.name || '島の屋台'), Y.sub || null, { scale: 0.75, color: '#3a2a33' });
     lb.position.set(p.x, 2.35, p.z); lb.userData.yatai = true; yataiLayer.add(lb);
@@ -908,6 +952,7 @@
     g.position.copy(p); g.lookAt(new THREE.Vector3(p.x * 2, 0.05, p.z * 2));   // 正面朝海
     g.scale.setScalar(0.8);
     g.userData.glass = glass; g.userData.door = door; g.userData.lit = !!H.lit;
+    bake(g);   // MERGE_v1
     hallLayer.add(g);
     const lb = labelSprite('🎼 ' + (H.name || '音樂廳'), H.sub || null, { scale: 0.75, color: '#3a2a33' });
     lb.position.set(p.x, 2.0, p.z); lb.userData.hall = true; hallLayer.add(lb);
@@ -977,7 +1022,7 @@
       add(new THREE.ConeGeometry(0.85, 0.4, 4), 0x4a4f5a, 0, 1.75, 0).rotation.y = Math.PI / 4;
       g.add(teaRows());   // TEA_v1 採茶（v2.50.1）
     }
-    return g;
+    return bake(g, [g.userData.boat]);   // MERGE_v1
   }
   // 茶園採茶（v2.50.1）：面向本島那一側（小島本地 −z）在最下兩層梯田上各加一段弧形茶畦（和梯田同圓心、沿用梯田的綠 0x4f8f4a，美術 10/29），橋頭另一邊一個裝了茶葉的竹簍；全部合成一個網格（頂點色），只多 1 個 draw call
   function teaRows() {
@@ -1010,7 +1055,7 @@
       });
     }
     [0, 1].forEach(t => { const p = P(t); [-0.45, 0.45].forEach(s => { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.2, 6), red); leg.position.copy(p).add(new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)).multiplyScalar(s)); leg.position.y = -0.3; g.add(leg); }); });
-    return g;
+    return bake(g);   // MERGE_v1
   }
   function buildIslets() {
     const L = ctx.islets || [], sig = JSON.stringify(L);
@@ -1501,7 +1546,8 @@
       default: { cyl(0.04, 0.05, 0.6, WOOD, 0, 0.3, 0, 5); box(0.4, 0.25, 0.03, 0xe9dcc4, 0, 0.6, 0); }   // 沒有專屬模型的書：小木牌
     }
     g.traverse(o => { if (o.isMesh) o.userData.markPart = true; });
-    return g;
+    const spin = new Set(); g.traverse(o => spin.add(o));
+    return bake(g, spinners.filter(sp => spin.has(sp.m)).map(sp => sp.m));   // MERGE_v1
   }
   function buildMarks() {
     const end = weekIdx != null && ctx.S.weeks[weekIdx] ? ctx.S.weeks[weekIdx].end : null;
@@ -1568,6 +1614,7 @@
     box(0.05, 0.4, 0.05, 0.85, 0.47, 0.9, std(0x9a6b4a)); box(0.2, 0.14, 0.14, 0.85, 0.72, 0.9, std(0xc0504d));
     g.position.y = 0.05; g.scale.setScalar(1.35);
     g.userData.glass = glass;
+    bake(g);   // MERGE_v1
     homeLayer.add(g);
     const lb = labelSprite('🏠 ' + (h.name || '我的家'), null, { scale: 1.0, color: '#3a2a33' });
     lb.position.set(0, h.tier === 'tent' ? 2.1 : h.tier === 'cabin' ? 2.6 : 3.4, 0); lb.userData.home = true; homeLayer.add(lb);
@@ -1689,6 +1736,7 @@
     const tp = at(14.9), hp = at(13.7, -0.1);
     tower.position.set(tp.x, 0.05, tp.z); tower.rotation.y = -CAPE + Math.PI / 2; tower.scale.setScalar(1.1);
     hut.position.set(hp.x, 0.05, hp.z); hut.rotation.y = -CAPE - Math.PI / 2;
+    bake(tower); bake(hut);   // MERGE_v1
     lightLayer.add(tower, hut);
     if (L) {
       const lb = labelSprite('🗼 ' + (L.name || '燈塔'), L.due ? '🍶 今天漂回 ' + L.due + ' 個' + (L.friends ? '・🏮 老朋友 ' + L.friends : '') : null, { scale: 1.0, color: '#3a2a33' });
