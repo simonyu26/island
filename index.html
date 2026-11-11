@@ -403,11 +403,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.6';
+const APP_VERSION = '2.50.6.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.6.1', date: '2026-11-12', fam: [0], items: ['🌬️ 我的家多了冥想計時：開始前可以選時間到輕輕響一聲，每 25 分鐘一朵蓮花 🪷 +10 綠點，同一天分幾次也會加起來算；忘了按也可以補登。', '你在『誰看得到什麼』為哪位家人打開了『計畫和讀書紀錄』，那位家人也看得到冥想的分鐘數；不想的話，可以到那裡改。'] },   // MEDIT_v1
   { v: '2.50.6', date: '2026-11-12', minor: true, fam: true, items: ['⚡ 小島的 3D 換了畫法：樣子不變，手機畫起來比較省力。'] },
   { v: '2.50.8.2.4', date: '2026-11-11', items: ['🏠 我的家可以選一種風格改建了：和風、台灣鄉村、台灣城市、海邊（沖繩）、西洋，在我的家按「🎨 改外觀」選。家具都會留著，風格之後也能換，房子會跟著島嶼等級慢慢長大。'] },
   { v: '2.50.8.2.2.1', date: '2026-11-11', fam: [1], items: ['⚔️ Boss 戰紀錄：五科都可以填錯幾題（選填），各科等級和錯幾題排在同一列。歷次試煉多了『總分』，照會考積分算（滿分 36），手機上不用左右滑就看得到。你在『誰看得到什麼』打開『大考成績』的家人，也看得到總分和錯幾題；不想的話，可以到那裡改。', '📊 家人自己的島：看島主的大考成績時，歷次試煉多了『總分』，也看得到各科錯幾題。'] },
@@ -2927,6 +2928,7 @@ function viewHouse() {
     ${card('diary', diaryCard())}
     ${isFamily() ? '' : card('hallLink', `<button class="ghost" style="width:100%;margin-bottom:12px" onclick="openHall()">🎼 藝文計時搬到音樂廳了，去音樂廳 ›</button>`)}
     ${card('water', waterCard())}
+    ${card('medit', moveBlock('medit'))}
     <div class="card"><h3>🛋️ 房間</h3>${roomTabs()}${roomHtml(curRoom(), vs)}
       <div class="speech" style="margin-top:10px"><b>${esc(vr.name)}</b>來作客：${esc(vline)}</div>
       ${isFamily() ? '' : draft.arrange ? arrangeHtml() : `<button class="ghost" style="width:100%;margin-top:10px" onclick="draft.arrange=true;draft.pick=null;render()">🧩 自己擺家具</button>`}
@@ -6270,14 +6272,15 @@ const MOVE_STEP = 25, MOVE_GREEN = 10, MOVE_MAX = 120, MOVE_STAMP = 20, MOVE_MIN
 // 計時的種類：運動（步道）或藝文練習（我的家）；綠點算法一樣，只有藝文不會蓋運動章
 const MOVE_KIND = { move: { ic: '🏃', step: '👣', stepName: '足あと', doing: '運動中', did: '運動', end: '回來了', page: 'walk' },
   art: { ic: '🎻', step: '🎵', stepName: '音符', doing: '練習中', did: '練習', end: '練完了', page: 'hall' },
-  read: { ic: '📖', step: '🔖', stepName: '書籤', unit: '枚', doing: '閱讀中', did: '閱讀', end: '讀完了', page: 'bookstore' } };   // READ_v1 閱讀計時（v2.49 親子共讀；READ_NAME_v1 11/1 改名，自己讀也算）
+  read: { ic: '📖', step: '🔖', stepName: '書籤', unit: '枚', doing: '閱讀中', did: '閱讀', end: '讀完了', page: 'bookstore' },
+  medit: { ic: '🌬️', step: '🪷', stepName: '蓮花', unit: '朵', doing: '冥想中', did: '冥想', end: '結束了', page: 'house' } };   // MEDIT_v1 冥想計時（11/4）：放我的家，不蓋章   // READ_v1 閱讀計時（v2.49 親子共讀；READ_NAME_v1 11/1 改名，自己讀也算）
 // 音樂廳的三種藝文時間：只換文字和圖示，綠點算法一樣；種類只存在這支手機的計時中狀態，不存進紀錄
 const ART_T = { play: { ic: '🎻', name: '練習、上課', doing: '練習中', did: '練習', end: '練完了' },
   see: { ic: '🎫', name: '聽音樂會、看展演', doing: '欣賞中', did: '欣賞', end: '散場了' },
   band: { ic: '🥁', name: '樂團排練', doing: '排練中', did: '排練', end: '排練完了' },
   make: { ic: '🎨', name: '畫畫、書法、創作', doing: '創作中', did: '創作', end: '完成了' } };
-function mk(m) { return m && m.k === 'art' ? Object.assign({}, MOVE_KIND.art, ART_T[m.t] || ART_T.play) : m && m.k === 'read' ? MOVE_KIND.read : MOVE_KIND.move; }
-function moveBack(k) { if (k === 'art') openHall(); else if (k === 'read') go('bookstore'); else go('walk'); }
+function mk(m) { return m && m.k === 'art' ? Object.assign({}, MOVE_KIND.art, ART_T[m.t] || ART_T.play) : m && m.k === 'read' ? MOVE_KIND.read : m && m.k === 'medit' ? MOVE_KIND.medit : MOVE_KIND.move; }
+function moveBack(k) { if (k === 'art') openHall(); else if (k === 'read') go('bookstore'); else if (k === 'medit') openHouse('me'); else go('walk'); }
 function moveActive() { if (isFamily()) return null; try { return JSON.parse(local.get('moveActive') || 'null'); } catch (e) { return null; } }
 function movePut(m) { if (m) local.set('moveActive', JSON.stringify(m)); else local.del('moveActive'); }
 function moveMs(m, now) { now = now || Date.now(); return Math.max(0, now - m.start - (m.pause || 0) - (m.pausedAt ? now - m.pausedAt : 0)); }
@@ -6295,12 +6298,14 @@ function moveBlock(kind) {
   if (!m && kind === 'art') return `<div class="card"><h3 style="margin:0">⏱️ 藝文計時</h3>
       <div class="muted" style="margin-top:4px">開始前選一種，結束了再按一下。每 ${MOVE_STEP} 分鐘一個音符 🎵 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；不用拍照、不用證明。</div>
       ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<div style="display:grid;gap:8px;margin-top:10px">${Object.keys(ART_T).map(t => `<button onclick="moveStart('art','${t}')">${ART_T[t].ic} ${ART_T[t].name}</button>`).join('')}</div>`}${handLink('art')}</div>`;
+  if (!m && kind === 'medit') return mdtIdle();   // MEDIT_v1
   if (!m && kind === 'read') return `<div class="card"><h3 style="margin:0">⏱️ 閱讀計時</h3>
       <div class="muted" style="margin-top:4px">讀課外書的時候，自己讀或和家人一起讀都可以：開始時按<span style="white-space:nowrap">「開始閱讀」</span>，讀完再按一下。每 ${MOVE_STEP} 分鐘一枚書籤 🔖 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；不用證明，也不記書名。</div>
       ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<button style="width:100%;margin-top:10px" onclick="moveStart('read')">📖 開始閱讀</button>`}${handLink('read')}</div>`;
   if (!m) return `<div class="card"><h3 style="margin:0">⏱️ 運動計時</h3>
       <div class="muted" style="margin-top:4px">出門運動前按「出發」，回來按「回來了」。每運動 ${MOVE_STEP} 分鐘一個足あと 👣 +${MOVE_GREEN} 綠點，動多久都算；一次滿 ${MOVE_STAMP} 分鐘自動蓋今天的章。沒帶手機（體育課、校隊）就用下面的「今天運動了」蓋章，只是沒有綠點。</div>
       ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再出發。</div>' : `<button style="width:100%;margin-top:10px" onclick="moveStart()">🏃 出發！</button>`}${handLink('move')}</div>`;
+  if (m.k === 'medit') return mdtRun(m);
   const ms = moveMs(m), min = Math.floor(ms / 60000);
   const K = mk(m), art = m.k === 'art';
   return `<div class="card"><div class="focus" style="margin:0"><div class="row"><b class="grow">${K.ic} ${K.doing}${m.date !== S.today ? '（' + short(m.date) + ' 開始）' : ''}</b>${kp ? `<span>${kpPic(kp)} ${esc(kp.name)}陪你</span>` : ''}</div>
@@ -6313,8 +6318,8 @@ function moveRefresh() { D = derive(S); if (tab === 'home') softRender(); else r
 function moveStart(k, t) {
   if (moveActive()) return toast('已經有一個在計時了');
   if (focusActive()) return toast('讀書計時還在跑，先停下來再開始');
-  const m = { date: S.today, start: Date.now(), pause: 0, pausedAt: null }; if (k === 'art') { m.k = 'art'; m.t = ART_T[t] ? t : 'play'; } else if (k === 'read') m.k = 'read';
-  movePut(m); moveRefresh(); toast(k === 'read' ? '📖 開始閱讀，慢慢讀～' : k === 'art' ? mk(m).ic + ' ' + { play: '開始練習，加油！', see: '好好欣賞，結束了再按一下～', band: '排練開始，跟大家一起加油！', make: '開始創作，慢慢來！' }[m.t] : '🏃 出發！路上小心～');
+  const m = { date: S.today, start: Date.now(), pause: 0, pausedAt: null }; if (k === 'art') { m.k = 'art'; m.t = ART_T[t] ? t : 'play'; } else if (k === 'read') m.k = 'read'; else if (k === 'medit') { m.k = 'medit'; if ([5, 10, 15, 20].includes(Number(t))) m.r = Number(t); }   // t：開始前選的提醒分鐘
+  movePut(m); moveRefresh(); if (k === 'medit') mdtOn(); toast(k === 'medit' ? '🌬️ 開始冥想，慢慢呼吸～' : k === 'read' ? '📖 開始閱讀，慢慢讀～' : k === 'art' ? mk(m).ic + ' ' + { play: '開始練習，加油！', see: '好好欣賞，結束了再按一下～', band: '排練開始，跟大家一起加油！', make: '開始創作，慢慢來！' }[m.t] : '🏃 出發！路上小心～');
 }
 function movePause() {
   const m = moveActive(); if (!m) return; const now = Date.now();
@@ -6325,6 +6330,7 @@ function moveTick() {
   clearTimeout(moveTick.h);
   const m = moveActive(); if (!m) return;
   const ms = moveMs(m), t = moveClockText(ms);
+  if (m.k === 'medit') mdtCheck(m, ms);
   document.querySelectorAll('.moveClock').forEach(el => el.textContent = el.classList.contains('st') ? (m.pausedAt ? '☕ ' : mk(m).ic + ' ') + t : t);
   document.querySelectorAll('.moveSteps').forEach(el => el.textContent = stepText(Math.floor(ms / 60000), m.date, m.k));
   moveTick.h = setTimeout(moveTick, 1000);
@@ -6361,14 +6367,14 @@ function moveSave() {
   const st = draft.move; if (!st) return;
   const m = st.m, date = m.date, min = moveMinutes(st);
   if (min >= 1) {
-    const rec = { start: m.start, end: m.start + m.pause + min * 60000, min, pauses: Math.round(m.pause / 60000) }; if (m.k === 'art' || m.k === 'read') rec.k = m.k;
+    const rec = { start: m.start, end: m.start + m.pause + min * 60000, min, pauses: Math.round(m.pause / 60000) }; if (m.k === 'art' || m.k === 'read' || m.k === 'medit') rec.k = m.k;
     const all = ((S.save['move:' + date] || {}).list || []).concat([rec]);
     S.save['move:' + date] = { list: all };
     queueSave('move:' + date, 'saveMove', date, all);
   }
   const stamp = !m.k && min >= MOVE_STAMP && !S.save['ex:' + date];
   if (stamp) { S.save['ex:' + date] = { at: S.today, src: 'move' }; queueSave('ex:' + date, 'saveExercise', date, true, 'move'); }
-  const g0 = D.moveSteps; movePut(null); D = derive(S);
+  const g0 = D.moveSteps; if (m.k === 'medit') mdtOff(); movePut(null); D = derive(S);
   const green = (D.moveSteps - g0) * MOVE_GREEN;
   toast('存好了！' + (green ? '+' + green + ' 綠點 ' + mk(m).step : '') + (stamp ? ' 今天的章蓋好了 🏃' : ''));
   draft = {}; moveBack(m.k);
@@ -6376,7 +6382,7 @@ function moveSave() {
 function moveDiscard() {
   const k = (moveActive() || {}).k;
   if (!confirm('這次的' + mk(moveActive()).did + '計時不記下來，確定嗎？')) return;
-  movePut(null); draft = {}; moveBack(k);
+  if (k === 'medit') mdtOff(); movePut(null); draft = {}; moveBack(k);
 }
 /* ===== CLASS_v1 記一次上課（爸爸 11/9 定樣）：數理課、英文課、日文課上完，把時間記進讀書計時。
    寫進同一個 focus:日期，每一科一列 { row, s, start, end, min, src:'class', cs }；後端 classCheck_ 再擋一次。
@@ -6468,6 +6474,53 @@ function classSave() {
   classBack(); window.scrollTo(0, 0);
 }
 
+/* ===== MEDIT_v1 冥想計時（11/4 定樣）：放我的家，紀錄寫進 move:日期（k:'medit'），綠點跟運動一樣（同一天合併，每 25 分鐘一朵蓮花 🪷 +10），
+   不蓋章、不給經驗值和島幣；家人可見範圍跟閱讀一樣歸「計畫和讀書紀錄」。可選時間到輕響一聲（m.r 只存在這支手機的計時中狀態，不進紀錄）；
+   冥想中盡量讓畫面亮著（Wake Lock）。按開始那一下才拿鎖、建立聲音，結束時放掉；不支援就照常計時；回到前景時已經過了提醒時間就不補響。 ===== */
+const MDT_R = [5, 10, 15, 20];
+let mdtR = 0, mdtLock = null, mdtAc = null, mdtWant = false;
+function mdtIdle() {
+  const opt = n => `<button class="hl-opt" role="radio" aria-checked="${mdtR === n}" onclick="mdtR=${n};render()">${n || '不用'}</button>`;
+  return HAND_CSS + `<style>.mdt-g5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}.mdt-g5 .hl-opt{padding:8px 2px;white-space:nowrap}</style><div class="card"><h3 style="margin:0">⏱️ 冥想計時</h3>
+      <div class="muted" style="margin-top:4px">找個安靜的地方坐下，按「開始冥想」，結束了再按一下。每 ${MOVE_STEP} 分鐘一朵蓮花 🪷 +${MOVE_GREEN} 綠點，同一天分幾次也會加起來算；不用證明。${ownMode() ? '' : '你在『誰看得到什麼』為哪位家人打開了『計畫和讀書紀錄』，那位家人就看得到冥想的分鐘數。'}</div>
+      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<div class="hl-q" id="mdtQ">時間到輕輕響一聲（分鐘，可以不選）</div><div class="mdt-g5" role="radiogroup" aria-labelledby="mdtQ">${[0].concat(MDT_R).map(opt).join('')}</div>
+      <button style="width:100%;margin-top:10px" onclick="moveStart('medit',${mdtR})">🌬️ 開始冥想</button>`}${handLink('medit')}</div>`;
+}
+function mdtRun(m) {   // 冥想中要安靜：數字用 --ink 一般字重，不顯示還差幾分鐘換蓮花（美術、文案 11/4）
+  const ms = moveMs(m), min = Math.floor(ms / 60000), K = MOVE_KIND.medit;
+  return `<div class="card"><div class="focus" style="margin:0"><div class="row"><b class="grow">${K.ic} ${K.doing}${m.date !== S.today ? '（' + short(m.date) + ' 開始）' : ''}</b></div>
+      <div class="row"><span class="moveClock grow" style="font-size:34px;color:var(--ink);font-weight:400;font-variant-numeric:tabular-nums">${moveClockText(ms)}</span></div>
+      ${m.r ? `<div class="muted">${m.r} 分鐘時會輕輕響一聲，計時會繼續。會盡量讓畫面保持亮著；畫面暗掉的話，可能不會響。</div>` : ''}
+      ${min >= MOVE_MAX ? `<div class="speech" style="margin:6px 0">已經 ${MOVE_MAX} 分鐘了，還在${K.did}嗎？如果早就結束了，按「${K.end}」，可以把結束時間改早一點。</div>` : ''}
+      <div class="row" style="margin-top:6px"><button class="ghost" onclick="movePause()">${m.pausedAt ? '▶ 繼續' : '⏸ 暫停一下'}</button>
+        <button class="grow" onclick="moveStopOpen()">🏁 ${K.end}</button></div></div></div>`;
+}
+function mdtLockGet() {
+  try { if (navigator.wakeLock && document.visibilityState === 'visible' && !mdtLock) navigator.wakeLock.request('screen').then(l => { mdtLock = l; l.addEventListener('release', () => { mdtLock = null; }); }).catch(() => {}); } catch (e) {}
+}
+function mdtOn() {   // 一定要在按「開始冥想」那一下呼叫（手機要使用者按過才給聲音）
+  mdtWant = true; mdtLockGet();
+  try { const AC = window.AudioContext || window.webkitAudioContext; if (!mdtAc && AC) mdtAc = new AC(); if (mdtAc && mdtAc.state === 'suspended') mdtAc.resume(); } catch (e) { mdtAc = null; }
+}
+function mdtOff() {
+  mdtWant = false;
+  try { if (mdtLock) mdtLock.release(); } catch (e) {} mdtLock = null;
+  try { if (mdtAc) mdtAc.close(); } catch (e) {} mdtAc = null;
+}
+function mdtBell() {
+  try { if (navigator.vibrate) navigator.vibrate(200); } catch (e) {}
+  if (!mdtAc) return;
+  try { const t = mdtAc.currentTime, o = mdtAc.createOscillator(), g = mdtAc.createGain(); o.type = 'sine'; o.frequency.value = 528;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.5);
+    o.connect(g); g.connect(mdtAc.destination); o.start(t); o.stop(t + 2.6); } catch (e) {}
+}
+function mdtCheck(m, ms) {   // moveTick 每秒叫一次；過了提醒時間 3 秒以上（畫面暗掉、切到背景）就只記「響過了」，不補響
+  if (!m.r || m.rung || m.pausedAt) return;
+  const over = ms - m.r * 60000; if (over < 0) return;
+  m.rung = 1; movePut(m);
+  if (over <= 3000 && document.visibilityState === 'visible') mdtBell();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && mdtWant && (moveActive() || {}).k === 'medit') mdtLockGet(); });
 /* ===== HANDLOG_v1 計時補登（11/5）：忘了按計時，可以補今天和前兩天，填開始、結束時間；綠點換算和計時一樣。
    紀錄寫進同一個 focus:／move:日期，多一個 src:'hand'；後端（handCheck_）再擋一次天數、筆數、分鐘、重疊、跨午夜。 ===== */
 const HAND_DAYS = 2, HAND_N = 2, HAND_MAX = 120;
@@ -6475,7 +6528,7 @@ const HAND_CSS = `<style>.hl-opt{background:#fff;color:var(--ink);border:1px sol
 .hl-opt small{display:block;font-size:11px;color:var(--muted)}.hl-opt[aria-checked="true"]{background:var(--plum-light);border:2px solid var(--plum);color:var(--plum);font-weight:700}
 .hl-opt[aria-checked="true"]::before{content:"✓ "}.hl-off{background:#f7f1e5!important;color:#5f5a55!important;border:1px dashed #d8d4ce!important}
 #hlBox input[aria-invalid="true"]{border:2px solid #a33a2a}.hl-g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.hl-g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.hl-q{margin-top:12px;font-weight:700}</style>`;
-function handName(k) { return k === 'focus' ? (ownMode() ? '專心' : '讀書') : mk(k === 'move' ? null : { k }).did === '練習' ? '藝文' : k === 'read' ? '閱讀' : '運動'; }
+function handName(k) { return k === 'focus' ? (ownMode() ? '專心' : '讀書') : mk(k === 'move' ? null : { k }).did === '練習' ? '藝文' : k === 'read' ? '閱讀' : k === 'medit' ? '冥想' : '運動'; }
 function handLink(k) { return (isFamily() || (ownMode() && !(S && S.b1Ok))) ? '' :   /* HANDLOG_FAM_v1：家人島島主 B1 開了也能補登（反套 HANDLINK_OWN） */ `<div style="text-align:center;margin-top:4px"><a href="#" onclick="handOpen('${k}');return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline;text-underline-offset:3px">🕘 忘了計時？補登一筆</a></div>`; }
 function handOpen(k) {
   if (isFamily()) return;
@@ -6804,6 +6857,7 @@ const TM_BOARD_STUDY = ['plan', 'xq', 'light'];   // 首頁今日板展開讀書
 function tmZone() {
   if (!S || !S.save || !D || !D.cfg || isFamily() || ownMode()) return -1;   // 家人島的版本還沒做
   if (TM_OFF_TABS.includes(tab)) return -1;
+  if ((moveActive() || {}).k === 'medit') return -1;   // MEDIT_v1 冥想中畫面亮著，不算螢幕時間
   if (tab === 'home') return TM_BOARD_STUDY.includes(boardOpen) ? 0 : 2;
   if (tab === 'wlesson' || tab === 'whut') { const t = tab === 'wlesson' ? String((draft.wl || {}).book || '').replace(/2$/, '') : wisdomHut; return TM_WISDOM_STUDY.includes(t) ? 0 : 1; }
   return TM_STUDY_TABS.includes(tab) ? 0 : TM_EXT_TABS.includes(tab) ? 1 : 2;
