@@ -30,7 +30,7 @@
   const OWN_TABS = ['home', 'mail', 'house', 'walk', 'moveStop', 'focus', 'plan', 'pick', 'confirm', 'shop', 'coins', 'more', 'guide', 'setup', 'keeper', 'kizuna', 'mainisle', 'garden', 'isle', 'isleNew', 'wisdom', 'whut', 'wlesson', 'famvisit'];   // famvisit：互訪   // wisdom、whut、wlesson：2c-1   // garden、isle、isleNew：2b-1
   // 家人島畫得出來的卡片（白名單）：Index.html 用 card('key', html) 包起來的卡片，key 不在這裡就不畫；要開放新卡片時把 key 加進來，後端 OWN_API 也要有對應的函式
   //   不在這裡、家人島看不到的：diaryShare（日めくり的分享按鈕，等拜訪家人島那一版）、link（跨科連結）、lightWord（燈塔的話）、adv（學習顧問）、keeperImg（管理員上傳圖片）、hallLink（v2.44 我的家去音樂廳的按鈕，家人島沒有音樂廳）
-  const OWN_CARDS = ['diaryShare', 'kairan', 'timeline', 'homeMate', 'moveArt', 'habit', 'move', 'islet', 'xpEx', 'water', 'diary', 'news', 'version'];   // water、diary：2b-1   // news、version：版本說明的兩張卡（FAM_NEWSCARDS_v1）
+  const OWN_CARDS = ['diaryShare', 'kairan', 'timeline', 'homeMate', 'moveArt', 'habit', 'move', 'islet', 'xpEx', 'water', 'medit', 'diary', 'news', 'version'];   // water、diary：2b-1   // medit：冥想計時（MEDIT_v1）   // news、version：版本說明的兩張卡（FAM_NEWSCARDS_v1）
   function apply() {
     b1Open();   // B1
     wordsOpen();   // 單字出題
