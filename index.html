@@ -403,11 +403,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.6.1';
+const APP_VERSION = '2.50.7';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.7', date: '2026-11-12', fam: [0], items: ['🧹 幾個頁面變短了：智慧島的集章冊收成一行，植木屋現在買不到的苗先收起來，音樂廳的按鈕排成兩排。', '🧹 屋台還沒學會的食譜先收起來了。', '⏳ 首頁的讀書計畫下面多了一顆按鈕，寫著接下來要讀的那一項，按一下就開始計時。'] },
   { v: '2.50.6.1', date: '2026-11-12', fam: [0], items: ['🌬️ 我的家多了冥想計時：開始前可以選時間到輕輕響一聲，每 25 分鐘一朵蓮花 🪷 +10 綠點，同一天分幾次也會加起來算；忘了按也可以補登。', '你在『誰看得到什麼』為哪位家人打開了『計畫和讀書紀錄』，那位家人也看得到冥想的分鐘數；不想的話，可以到那裡改。'] },   // MEDIT_v1
   { v: '2.50.6', date: '2026-11-12', minor: true, fam: true, items: ['⚡ 小島的 3D 換了畫法：樣子不變，手機畫起來比較省力。'] },
   { v: '2.50.8.2.4', date: '2026-11-11', items: ['🏠 我的家可以選一種風格改建了：和風、台灣鄉村、台灣城市、海邊（沖繩）、西洋，在我的家按「🎨 改外觀」選。家具都會留著，風格之後也能換，房子會跟著島嶼等級慢慢長大。'] },
@@ -1976,12 +1977,12 @@ function wisdomMap(list = WISDOM_ORDER) {
     <div class="muted" style="font-size:13px">亮著燈的，是你上過課的小屋。每一間都可以點進去。</div></details>`;
 }
 /** 集章冊：四位導師各 13 格，上完一講蓋一個章；上完的書也會擺到書店的書架 */
-function wisdomStampBook() {
-  return `<div class="card"><h3 style="margin-top:0">📜 集章冊</h3>
+function wisdomStampBook() {   // UI_TRIM_v1：整張收成一行，進度看上面的老師卡
+  return `<details class="card"><summary style="padding:10px 0"><b>📜 集章冊</b><span class="muted">・點開看每一本蓋了哪些章</span></summary>
     ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], book = wisdomCount(k) >= 13 ? k + '2' : k, d = wisdomDone(book);
       return `<details class="fold" style="margin-top:8px"><summary><b style="color:${t.color}">${t.ic} ${esc((wisdomBook(book) || {}).title || t.name)}</b><span class="muted">${Object.keys(d).filter(n => d[n]).length}／13</span></summary>
         <div class="wstamps">${Array.from({ length: 13 }, (_, i) => d[i + 1] ? `<button class="wstamp on" style="border-color:${t.color};color:${t.color}" onclick="openWisdomLesson('${book}',${i + 1})">${i + 1}</button>` : `<span class="wstamp">${i + 1}</span>`).join('')}</div></details>`; }).join('')}
-    <div class="muted" style="margin-top:8px;font-size:13px">點書名打開這本的章；點蓋好的章可以回看那一講。${WISDOM_SHELF}</div></div>`;
+    <div class="muted" style="margin-top:8px;font-size:13px">點書名打開這本的章；點蓋好的章可以回看那一講。${WISDOM_SHELF}</div></details>`;
 }
 let wisdomHut = 'kongming';
 function openWisdomHut(k) { wisdomHut = k; draft = {}; tab = 'whut'; render(); window.scrollTo(0, 0); }
@@ -2175,7 +2176,12 @@ function boardCard() {
     ${todo.length ? '' : '<div class="speech" style="margin-top:8px">🎉 今天的おつとめ都完成了！去島上逛逛吧～</div>'}
     <div style="margin-top:4px">${BOARD.filter(b => !b.on || b.on()).map(b => { const st = b.st(), on = !b.go && open === b.key;
       return `<button class="brow" onclick="boardTap('${b.key}')" aria-expanded="${on}"><span class="ic">${b.ic}</span><span class="nm">${b.name}</span><span class="st ${st.c}${st.clock ? (st.clock === 'move' ? ' moveClock' : ' focusClock') : ''}">${esc(st.t)}</span><span class="chev">${b.go ? '›' : on ? '▴' : '▾'}</span></button>`
-        + (on ? `<div class="bbody">${b.body()}</div>` : ''); }).join('')}</div></div>`;
+        + (on ? `<div class="bbody">${b.body()}</div>` : b.key === 'plan' ? homeFocusBtn() : ''); }).join('')}</div></div>`;
+}
+function homeFocusBtn() {   // HOME_FOCUS_v1：今天第一個還沒讀完的格子直接開始計時（方案 B 首頁也呼叫這個）
+  if (isFamily() || focusActive() || moveActive()) return '';
+  const p = todayPlan(), lg = logOf(S.today), r = p.rows.find(x => !lg[x]), it = r == null ? null : D.itemsByRow[r];
+  return it ? `<button class="ghost" style="width:100%;margin:0 0 8px;min-height:44px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="focusStart(${r})">⏳ 開始讀：${esc(it.subject)}・${esc(it.name)}</button>` : '';
 }
 // 地方捷徑（v2.33）：清單模式沒有 3D 小島可以點，這一列直接進每個地方；只列已經開過的地方
 const PLACE_LINKS = [
@@ -2546,7 +2552,7 @@ function kairanCard() {
   return `<div class="card" id="kairanCard">${guideCard()}${featured}
     <details style="margin-top:10px" ${kairanOpen ? 'open' : ''} ontoggle="kairanOpen=this.open"><summary><b>📰 回覧板</b><span class="muted">・${what}${dailyState === 'loading' ? '（寫信中…）' : ''}</span></summary>
       ${guideNews()}${dailyCard()}</details>
-    <button class="ghost" style="width:100%;margin-top:10px" onclick="go('wish')">💡 讓島順起來${wishNews() ? `<span class="pill" style="margin-left:6px">爸爸回覆了 ${wishNews()} 則</span>` : ''}</button></div>`;
+    ${wishNews() ? `<button class="ghost" style="width:100%;margin-top:10px" onclick="go('wish')">💡 讓島順起來<span class="pill" style="margin-left:6px">爸爸回覆了 ${wishNews()} 則</span></button>` : ''}</div>`;
 }
 function guideCard() {
   const g = guide();
@@ -2924,9 +2930,7 @@ function viewHouse() {
       `<button class="${houseTab === k ? '' : 'ghost'}" onclick="houseTab='${k}';draft.arrange=false;render()">${n}</button>`).join('')}</div>
     ${houseTab === 'room' ? `
     ${card('homeMate', homeMateCard())}
-    <button class="ghost" style="width:100%;margin-bottom:12px" onclick="draft={};tab='kizuna';render();window.scrollTo(0,0)">📔 絆の手帖：你和島民、老師的交情</button>
     ${card('diary', diaryCard())}
-    ${isFamily() ? '' : card('hallLink', `<button class="ghost" style="width:100%;margin-bottom:12px" onclick="openHall()">🎼 藝文計時搬到音樂廳了，去音樂廳 ›</button>`)}
     ${card('water', waterCard())}
     ${card('medit', moveBlock('medit'))}
     <div class="card"><h3>🛋️ 房間</h3>${roomTabs()}${roomHtml(curRoom(), vs)}
@@ -3441,9 +3445,12 @@ function viewGarden() {
     : pick ? (draft.gSlot == null ? `點地圖上白色的空地格，把${pick.name}種下去。<a href="#" onclick="draft={};render();return false">取消</a>` : '')
     : fam ? '這是她種的植物，點一下可以看小木牌。' : '先在下面選一種植物，再點地圖上的空地格。';
   const lv = D.level;
-  const catalog = fam ? '' : `<div class="card"><h3 style="margin:0">🪴 今天的苗</h3><div class="plants">${PLANTS.map(p => { const lock = lv < p.lv, poor = D.green < p.price;
+  const pBtn = p => { const lock = lv < p.lv, poor = D.green < p.price;
       return `<button class="plant ${draft.gPick === p.id ? 'on' : ''}" ${lock || poor ? 'disabled' : ''} onclick="draft={gPick:'${p.id}'};render()">
-        <span class="pe">${p.ic}</span><b>${p.name}</b> ${inSeason(p) && p.id !== 'bamboo' ? '<span class="now">當季</span>' : ''}<br>${p.kind}・🌱 ${p.price}${lock ? `・Lv.${p.lv} 開放` : ''}<br><span class="muted">${p.when}</span></button>`; }).join('')}</div>
+        <span class="pe">${p.ic}</span><b>${p.name}</b> ${inSeason(p) && p.id !== 'bamboo' ? '<span class="now">當季</span>' : ''}<br>${p.kind}・🌱 ${p.price}${lock ? `・Lv.${p.lv} 開放` : ''}<br><span class="muted">${p.when}</span></button>`; };
+  const pTop = PLANTS.filter(p => (inSeason(p) && p.id !== 'bamboo') || (lv >= p.lv && D.green >= p.price)), pRest = PLANTS.filter(p => !pTop.includes(p));   // UI_TRIM_v1
+  const catalog = fam ? '' : `<div class="card"><h3 style="margin:0">🪴 今天的苗</h3><div class="plants">${pTop.map(pBtn).join('')}</div>
+    ${pRest.length ? `<details style="margin-top:8px" ${pRest.some(p => p.id === draft.gPick) || !pTop.length ? 'open' : ''}><summary style="padding:10px 0"><b>其他的苗</b><span class="muted" style="font-size:13px">・還沒到季節、綠點不夠或還沒開放</span></summary><div class="plants">${pRest.map(pBtn).join('')}</div></details>` : ''}
     ${free <= 0 ? `<div class="muted" style="margin-top:8px">空地都種滿了！${lv < 8 ? '島嶼升到 Lv.' + (lv < 5 ? 5 : 8) + ' 會開放更多空地。' : ''}</div>` : ''}</div>`;
   return head + (view && !moving ? plantCard(view) : '') + confirmBox +
     `<div class="card"><div class="row"><h3 class="grow" style="margin:0">🗺️ 島上的空地</h3><span class="muted">${g.list.length} 株・空地 ${Math.max(0, free)} 格</span></div>
@@ -3656,7 +3663,7 @@ function viewYatai() {
       .concat(KZ_TUTORS.filter(t => D.kizuna.tutor[t].lv >= 2 && FOOD_TUTOR[t] === d.id).map(t => WISDOM_T[t].name));
     return who.length ? `<div class="muted" style="font-size:12px">💕 ${who.map(esc).join('、')}最喜歡</div>` : ''; };
   const menu = DISHES.map(d => { const know = knowDish(d), ok = canCook(d), n = M.cooked[d.id] || 0;
-    if (!know) return `<div class="item" style="opacity:.55"><span class="avatar" style="filter:grayscale(1)">❔</span><div class="name"><b>？？？</b><div class="muted">拿到其中一種素材，店主就會教你</div></div></div>`;
+    if (!know) return '';   // UI_TRIM_v1：沒學會的收成下面一行
     return `<div class="item"><span class="avatar">${d.ic}</span><div class="name"><b>${d.n}</b>${d.rare ? ' <span class="pill" style="font-size:11px">稀有</span>' : ''}${n ? `<span class="muted">・做過 ${n} 次</span>` : ''}
         <div class="muted" style="font-size:13px">${Object.keys(d.use).map(m => `<span style="${(M.have[m] || 0) >= d.use[m] ? '' : 'opacity:.45'}">${matText(m)}</span>`).join('＋')}</div>${fans(d)}</div>
       ${fam ? '' : `<button class="${ok ? '' : 'ghost'}" style="padding:6px 12px" ${ok ? `onclick="cookDish('${d.id}')"` : 'disabled'}>做</button>`}</div>`; }).join('');
@@ -3667,7 +3674,7 @@ function viewYatai() {
     <div class="card"><h3>🧺 你的竹籃</h3>${basket || '<div class="muted">還空空的。在首頁把今天的計畫格勾「完成」，那條街的島民就會塞素材給你（每條街一天最多 3 個）。</div>'}
       <div class="muted" style="margin-top:8px;font-size:13px">Boss 項目（歷屆、模卷）或某一科這週全部做完，會拿到稀有素材；智慧島每上完一講，老師會送一樣珍品。${islets().some(x => x.style === 'tea') ? '茶園小島：那天讀完一格國文計畫，會多採 1 份茶葉。' : ''}</div>
       ${teaBack() ? `<div style="margin-top:6px;font-size:13px">🍵 茶園這幾天幫你留了 ${teaBack()} 份茶葉，已經放進竹籃了。</div>` : ''}</div>
-    <div class="card"><h3>📜 食譜</h3>${menu}</div>
+    <div class="card"><h3>📜 食譜</h3>${menu}${(u => u ? `<div class="item" style="opacity:.55"><span class="avatar" style="filter:grayscale(1)">❔</span><div class="name"><b>還有幾道料理沒學會</b><div class="muted">拿到其中一種素材，店主就會教你</div></div></div>` : '')(DISHES.filter(d => !knowDish(d)).length)}</div>
     ${done.length || draft.thanks ? `<div class="card"><h3>🍱 做好的料理</h3>${giftHtml(done, !fam && !ownMode())}</div>` : ''}
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button>${kp && !fam ? `<button class="ghost" onclick="openKeeper('yatai')">${kpPic(kp)} 店主設定</button>` : ''}</div>`;
 }
@@ -4652,8 +4659,7 @@ function advisorCard() {
   const blocks = adviceBlock(next, '下週的航線') + adviceBlock(mon, '這週的航線');
   const body = blocks ? blocks + `<div class="muted" style="font-size:12px;margin-top:8px">只是參考，由${fam ? '她' : '你'}決定。</div>`
     : fam ? '<div class="muted" style="margin-top:8px">這兩週還沒有貼建議。</div>'
-    : `<div class="muted" style="margin-top:8px">想讓學習顧問（AI）一起看看下週怎麼排的時候，到計畫頁按「給學習顧問（AI）看」就好。</div>
-      <button class="ghost" style="width:100%;margin-top:6px" onclick="go('plan')">📅 去計畫頁</button>`;
+    : '';   // UI_TRIM_v1：給學習顧問看的按鈕只在計畫頁
   const rest = !fam && (kp || blocks) ? `<button class="ghost" style="width:100%;margin-top:10px;font-size:13px" onclick="restAdvisor(true)">😴 請學習顧問先休息</button>` : '';
   return `<div class="card"><h3>🧭 下週的航線</h3>${head}${greet}${body}${isDad() ? adviceForm(mon, next) : ''}${rest}</div>`;
 }
@@ -6297,7 +6303,7 @@ function moveBlock(kind) {
   if (m && (m.k || 'move') !== (kind || 'move')) return `<div class="card muted">${mk(m).ic} ${mk(m).did}計時還在跑，<a href="#" onclick="moveBack('${m.k || 'move'}');return false">去那邊看 ›</a></div>`;
   if (!m && kind === 'art') return `<div class="card"><h3 style="margin:0">⏱️ 藝文計時</h3>
       <div class="muted" style="margin-top:4px">開始前選一種，結束了再按一下。每 ${MOVE_STEP} 分鐘一個音符 🎵 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；不用拍照、不用證明。</div>
-      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<div style="display:grid;gap:8px;margin-top:10px">${Object.keys(ART_T).map(t => `<button onclick="moveStart('art','${t}')">${ART_T[t].ic} ${ART_T[t].name}</button>`).join('')}</div>`}${handLink('art')}</div>`;
+      ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">${Object.keys(ART_T).map(t => `<button style="min-height:44px" onclick="moveStart('art','${t}')">${ART_T[t].ic} ${ART_T[t].name.split('、').map((x, i, A) => `<span style="white-space:nowrap;display:inline-block;text-decoration:none">${x}${i < A.length - 1 ? '、' : ''}</span>`).join('')}</button>`).join('')}</div>`}${handLink('art')}</div>`;
   if (!m && kind === 'medit') return mdtIdle();   // MEDIT_v1
   if (!m && kind === 'read') return `<div class="card"><h3 style="margin:0">⏱️ 閱讀計時</h3>
       <div class="muted" style="margin-top:4px">讀課外書的時候，自己讀或和家人一起讀都可以：開始時按<span style="white-space:nowrap">「開始閱讀」</span>，讀完再按一下。每 ${MOVE_STEP} 分鐘一枚書籤 🔖 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；不用證明，也不記書名。</div>
@@ -8398,7 +8404,7 @@ function viewGuide() {
   ${sec('🤝', '和島民的絆', p('你和每位島民之間都有一段交情，從「はじめまして」開始，慢慢變成「顔見知り」「聊得來」「好朋友」「好夥伴」，最後是「一生的朋友」。讀他那一科的計畫、做他那條街的故事任務、挑戰任務答對、請他講解、把他那一科的瓶子變成燈籠、送他家具、送他料理、去他家作客、回他的信（每天一個表情），交情都會慢慢變深，每位一天最多前進一點點。') +
     p('好幾天沒去找他，他會說有點想你；回來找他就好。交情的等級只升不降。這週計畫沒排到的科目，島民會乖乖等你；會考前一個月開始，大家都只會替你加油。交情只寫等級，不算分數、也不排名次。交情越深，島民寫信和故事的語氣就越親近。') +
     p('島民之間也有交情：你同一天讀了兩科、寫了跨科連結、AI 發現跨科題，或故事裡兩位一起出場，他們就會越來越熟，3D 小島上的連線也會變粗。') +
-    p('想看大家的交情，到「我的家」翻開📔 絆の手帖：第一頁是五位島民，第二頁是智慧島的老師（上一講、寫心得會變熟，7 天沒去才變淡）和各地方的管理員，第三頁是島民之間的關係圖。手帖只寫關係和回憶，不寫分數。'))}
+    p('想看大家的交情，到「更多」翻開📔 絆の手帖：第一頁是五位島民，第二頁是智慧島的老師（上一講、寫心得會變熟，7 天沒去才變淡）和各地方的管理員，第三頁是島民之間的關係圖。手帖只寫關係和回憶，不寫分數。'))}
   ${sec('🏝️', '衛星小島', p('在商店的兌換卡下面，可以用經驗值換一座衛星小島：挑一種樣子（沙洲小島、松樹岩島、漁港小島、茶園小島）、一個方向，也可以幫它取名字。小島會出現在本島旁邊的海上，用紅色太鼓橋接回來，在 3D 小島上點小島或橋就能過去。') +
     p('第一座 300 點，之後 500、800、1200、1600、2000 點，最多六座。換小島和換島幣用的是同一包「可換的經驗值」：換了之後經驗值總數和島嶼等級都不會變，房子也不會變小，只是用掉的那些點數不能再換島幣。') +
     p('每座小島可以請一位你自己設定的主人（名字、樣子、個性）。第一次去的時候，主人會先打招呼，之後也會寫話給你。') +
@@ -8458,7 +8464,7 @@ function viewGuide() {
     p('🧭 <b>燈室的學習顧問（AI）</b>：燈室可以請一位學習顧問（AI），名字、樣子、個性由你決定，名字後面一律加「（AI）」。學習顧問看得到你在計畫頁按「給學習顧問（AI）看」交出去的計畫，還有爸爸給的每週檢討和大考成績；日めくり、瓶子上寫的話看不到。爸爸跟學習顧問討論完，會把下週的建議貼在燈室的「下週的航線」，「學習顧問（AI）的建議」和「爸爸的話」分開放。只是建議，不打勾、不算分數，要不要照做由你決定。這些建議預設只有你看得到；你在「誰看得到什麼」選了誰，誰才看得到。爸爸沒被選也能把建議貼給你，只是看不到你的航線。不想要的時候，按「請學習顧問先休息」就會收起來，想再聽的時候再請回來。') +
     p('🏷️ <b>解說的來源標籤</b>：📜 心測中心＝官方的題目、答案和全國答對率；📘 課本觀念＝AI 指出這題用到的觀念；📖 島上題庫＝故事任務寫好的題目；🤖 AI 推論＝AI 自己推的解題步驟，可能會錯，覺得怪怪的就跟爸爸說。'))}
   ${sec('🍁', '二十四節氣', p('整座島會跟著節氣換季：立春到清明櫻花慢慢開、花瓣飄落；芒種到小暑的夜晚有螢火蟲；寒露到立冬楓葉轉紅、紅葉飄下；冬天換上深綠的冬裝。右上角會顯示今天的節氣，嚮導打招呼時也可能聊到。'))}
-  ${sec('💡', '讓島順起來', p('這座島你也是設計師！在首頁回覧板（嚮導那張卡）下面按「💡 讓島順起來」，選一種類型（新玩法、卡卡的、想要的東西、其他），寫下你的想法，也可以附一張截圖。') +
+  ${sec('💡', '讓島順起來', p('這座島你也是設計師！到「更多」按「💡 讓島順起來」，選一種類型（新玩法、卡卡的、想要的東西、其他），寫下你的想法，也可以附一張截圖。') +
     p('送出後爸爸會收到。他會把狀態改成「討論中」「做好了」或「先不做」，也可能寫一句回覆給你；有新回覆時，右上角的 📮 郵便受け會亮紅點，嚮導卡上的按鈕也會提醒你。做好的點子會出現在之後的小島更新裡。'))}
   ${sec('🎟️', '邀請朋友來島上', p('在「📚 獨立書店」按「🎟️ 邀請朋友」。第一次要先寫一句歡迎詞，嚮導會在碼頭唸給每位訪客聽，之後隨時可以改。') +
     p('按「發一張乘船券」會產生一個連結和 QR code，用 LINE 傳給朋友就好。朋友打開後可以轉動你的 3D 小島、點街道看島民、走進你和島民的家，逛完每個地方還能集章、下載一張登島紀念明信片。') +
