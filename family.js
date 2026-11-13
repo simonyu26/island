@@ -788,7 +788,7 @@
     const step = x => x.lantern ? '老朋友回來打招呼' : '第 ' + ((x.rv.tries || []).filter(y => !y.friend).length + 1) + ' 次漂回' + (reviewStreak(x.rv) === LANTERN_AT - 1 ? '・答對就變燈籠' : '');
     return `<style>.lmk{display:inline-flex;width:18px;height:18px;border-radius:5px;color:#fff;font-weight:700;font-size:11px;align-items:center;justify-content:center;vertical-align:-3px;margin-right:4px}</style>
       <div class="card" id="langBottles"><h3>🍶 今天漂回來的瓶子</h3>
-      ${t.list.length ? t.list.map((x, n) => `<div class="row" style="flex-wrap:nowrap;padding:8px 0;border-bottom:1px dashed var(--plum-light)"><div class="grow"><div style="font-size:16px">${esc(x.b.word)}</div>
+      ${t.list.length ? t.list.map((x, n) => `<div class="row" style="flex-wrap:nowrap;padding:8px 0;border-bottom:1px dashed var(--plum-light)"><div class="grow"><div style="font-size:16px"${x.b.lang === 'ja' ? ' lang="ja"' : ''}>${esc(x.b.word)}</div>
           <div class="muted">${langMark(x.b.lang)}${step(x)}</div></div><button${n ? ' class="ghost"' : ''} onclick="langGo('${x.id}')">練一下</button></div>`).join('')
         : `<div class="muted">${t.done ? '今天漂回來的都練完了，明天再來看看海灘。' : '今天沒有瓶子漂回來。單字練習答錯的字，過一天會漂回這裡。'}</div>`}
       <div class="muted" style="margin-top:6px">一天最多漂回 ${LANG_DAY} 個，其他的會在海上慢慢漂，不會不見。${lan ? '已經有 ' + lan + ' 盞燈籠了。' : ''}</div></div>
@@ -805,13 +805,14 @@
   window.viewLangBottle = function () {
     const id = draft.lb, b = id && S.save[id];
     if (!langActive() || !b) return `<div class="card"><div class="muted">這個瓶子不在海灘上了。</div></div><div class="row"><button class="ghost grow" onclick="draft={};render()">回到海灘 🌊</button></div>`;
-    const ord = draft.lbOrder || [0, 1, 2, 3], r = draft.lbRes;
-    return `<div class="card"><h2>🍶 ${esc(b.word)}</h2><div style="margin:8px 0 12px">${esc(b.q)}</div>
+    const ord = draft.lbOrder || [0, 1, 2, 3], r = draft.lbRes, bl = b.lang === 'ja' ? ' lang="ja"' : '';
+    const bq = String(b.q || '').trim() === String(b.word || '').trim() ? '哪一句的『' + b.word + '』用得對？' : b.q;   // WORDQ_v2 用法題（美術 11/6、文案審查 185 追記）
+    return `<div class="card"><h2>🍶 <span${bl}>${esc(b.word)}</span></h2><div style="margin:8px 0 12px"${bl}>${esc(bq)}</div>
       ${ord.map(i => { const mine = r && r.choice === i, right = r && i === r.a, base = 'display:block;width:100%;text-align:left;margin-bottom:8px';
-        if (!r) return `<button class="ghost" style="${base}" onclick="langAnswer(${i})">${esc(b.o[i])}</button>`;
+        if (!r) return `<button class="ghost" style="${base}" onclick="langAnswer(${i})"><span${bl}>${esc(b.o[i])}</span></button>`;
         // 答完（美術 11/2）：不用 disabled 淡化；正確＝完成色＋2px 框＋✓，選錯的＝生成り底鼠色字＋「你選的」，其他同底不加框；不用紅色
         const st = right ? 'background:#e5efe0;color:#2f5a3a;border:2px solid #2f5a3a' : 'background:#f7f1e5;color:#5f5a55;border:2px solid transparent';
-        return `<button aria-disabled="true" tabindex="-1" style="${base};pointer-events:none;${st}">${right ? '✓ ' : ''}${esc(b.o[i])}${mine && !right ? ' <small style="font-size:12px">你選的</small>' : ''}</button>`; }).join('')}
+        return `<button aria-disabled="true" tabindex="-1" style="${base};pointer-events:none;${st}">${right ? '✓ ' : ''}<span${bl}>${esc(b.o[i])}</span>${mine && !right ? ' <small style="font-size:12px">你選的</small>' : ''}</button>`; }).join('')}
       ${r ? `<div class="speech" style="margin-top:8px">${r.ok ? (r.lantern ? '答對三次，這個字變成一盞燈籠了。過一陣子它會以老朋友的身分回來打招呼。' : '答對了！過幾天它會再漂回來一次。') : '這次沒想起來也沒關係，明天它會再漂回來。'}</div>
         ${b.ex ? `<div class="muted" style="margin-top:8px">${esc(b.ex)}</div>` : ''}` : ''}</div>
       <div class="row"><button class="ghost grow" onclick="draft={};render();window.scrollTo(0,0)">回到海灘 🌊</button></div>`;
@@ -892,7 +893,7 @@
           <div class="bar" style="margin-top:4px"><i style="width:${Math.round(good / Math.max(1, x.words.length) * 100)}%"></i></div></div>
         ${t.open && t.open.set === x.id ? '<span class="muted" style="padding:6px 4px">練習中…</span>' : agreed ? `<button style="padding:6px 12px" onclick="wordQuestQ('${x.id}')" ${wordBusy || block ? 'disabled' : ''}>出 ${Math.min(5, x.words.length, WORD_Q_DAILY - t.made) || 5} 題</button>` : ''}
         <button class="ghost" style="padding:6px 10px" onclick="draft.wsOpen=draft.wsOpen==='${x.id}'?null:'${x.id}';render()">${open ? '收起' : '看字'}</button>
-        ${open ? `<div style="width:100%;margin-top:6px">${x.words.map(w => `<div class="row" style="gap:6px;font-size:14px;padding:3px 0;border-bottom:1px solid #eee"><b class="grow">${esc(w.w)}</b>${sayBtn(w.w, x.lv)}<span class="muted">${esc(w.pos)} ${esc(w.zh)}</span><span class="muted" style="min-width:52px;text-align:right">${w.n ? (wordGood(w) ? '✅ ' : '') + w.ok + '／' + w.n : '還沒練'}</span></div>`).join('')}
+        ${open ? `<div style="width:100%;margin-top:6px">${x.words.map(w => `<div class="row" style="gap:6px;font-size:14px;padding:3px 0;border-bottom:1px solid #eee"><b class="grow"${lvJa(x.lv) ? ' lang="ja"' : ''}>${esc(w.w)}</b>${sayBtn(w.w, x.lv)}<span class="muted">${esc(w.pos)} ${esc(w.zh)}</span><span class="muted" style="min-width:52px;text-align:right">${w.n ? (wordGood(w) ? '✅ ' : '') + w.ok + '／' + w.n : '還沒練'}</span></div>`).join('')}
           <div class="row" style="margin-top:6px"><button class="ghost" onclick="famEditWords('${x.id}')">✏️ 修改</button><button class="ghost" onclick="famDelWords('${x.id}')">🗑️ 刪掉這組</button></div></div>` : ''}</div>`;
     };
     return `${famFloors('light')}<div class="card"><h2>🔤 拍單字出題</h2>
@@ -905,25 +906,63 @@
       <div class="card"><h3>📚 我的單字卡</h3>
         ${agreed && block && !t.open ? `<div style="margin-bottom:6px;color:var(--plum)">⏳ ${block}</div>` : ''}
         ${sets.length ? sets.map(setRow).join('') : '<div class="muted">還沒有單字卡。拍一張單字表，或直接打字，做第一組吧！</div>'}
-        <button class="${agreed ? '' : 'ghost'}" style="width:100%;margin-top:10px" onclick="famWordStart()">＋ 新的一組單字卡</button></div>
+        <button class="${agreed && !(show && !show.done) ? '' : 'ghost'}" style="width:100%;margin-top:10px" onclick="famWordStart()">＋ 新的一組單字卡</button></div>
       <div class="row"><button class="x grow" onclick="go('light')">回燈塔 🗼</button></div>`;
   };
-  // 一組題：和她的一樣，只是沒有漂流瓶、題型多一個讀音題
+  // ---------- WORDQ_v2 大人單字新題型（爸爸 11/6 定樣）：例句挖空、用法、四選一三種題卡；答完一題先看解說，按「下一題」再往下 ----------
+  const WQ_CSS = `<style>#wqCard .wqk{display:inline-block;font-size:12px;border-radius:6px;padding:2px 8px;background:#f7f1e5;color:#5f5a55;margin:10px 0 6px}
+    #wqCard .wqq{font-size:17px;font-weight:700;margin:4px 0 12px;line-height:1.6;white-space:pre-wrap}
+    #wqCard .wqq .blank{display:inline-block;min-width:64px;border-bottom:2px solid var(--plum);margin:0 4px}
+    #wqCard .wqq .ul{text-decoration:underline;text-decoration-color:var(--plum);text-decoration-thickness:2px;text-underline-offset:5px}
+    #wqCard .wqq .fill{color:#2f5a3a;font-weight:700;border-bottom:2px solid #2f5a3a;padding:0 4px;margin:0 2px}
+    #wqCard .wqw{font-size:24px;font-weight:700;color:var(--plum);margin:2px 0 12px}
+    #wqCard .wqo{display:block;width:100%;text-align:left;font-size:15px;padding:11px 14px;margin:0 0 8px;border-radius:12px;border:1.5px solid var(--plum-light);background:#fff;color:var(--ink);line-height:1.5}
+    #wqCard .usage .wqo{font-size:16px;line-height:1.65;margin-bottom:10px}
+    #wqCard .wqo.right{background:#e5efe0;color:#2f5a3a;border:2px solid #2f5a3a}
+    #wqCard .wqo.mine,#wqCard .wqo.rest{background:#f7f1e5;color:#5f5a55;border:1.5px solid transparent}
+    #wqCard .wqo.mine{border:1.5px dashed #5f5a55}
+    #wqCard .wqo[aria-disabled]{pointer-events:none;opacity:1;cursor:default}
+    #wqCard .wqo .wqwho{display:block;font-size:12px;font-weight:700;margin-bottom:2px}
+    #wqCard .wqex{background:var(--sand);border-radius:12px;padding:10px 12px;font-size:14px;margin-top:4px;line-height:1.6}</style>`;
+  const wqType = x => x && (x.type === 'cloze' || x.type === 'usage' || x.type === 'para') ? x.type : 'mc';
   function famWordQuiz(q) {
     const ABCD = 'ABCD', items = q.items || [], cur = items.findIndex(x => x.choice == null);
     const set = S.save[q.set], right = items.filter(x => x.correct).length, wrong = items.filter(x => x.choice != null && !x.correct).length;
-    const lastDone = cur < 0 ? items.length - 1 : cur - 1, ja = lvJa(set && set.lv);
-    const kindName = k => ja ? (k === '讀音' ? '漢字読み' : '文脈規定') : k === '片語' ? '片語題' : '字彙題';   // 日文照 JLPT 的題型名稱（文案審查 42）
-    const done = (x, i) => `<details class="item" style="display:block" ${i === lastDone ? 'open' : ''}><summary><b>${x.correct ? '⭕' : '❌'} ${esc(x.w)}</b> <span class="pill" style="font-size:12px;${x.correct ? 'background:var(--grass);color:#2e6b34' : 'background:#fbe3dc;color:#b5452b'}">${x.correct ? '答對' : '再練'}</span><span class="muted">・${kindName(x.kind)}</span></summary>
-        <div style="margin:6px 0;white-space:pre-wrap">${esc(x.q)}</div>
-        <div class="opts">${x.o.map((o, j) => `<button class="opt ${j === x.a ? 'right' : j === x.choice ? 'wrong' : ''}" disabled>(${ABCD.charAt(j)}) ${esc(o)}</button>`).join('')}</div>
-        <div class="speech" style="margin-top:6px">${esc(x.ex)}</div>${saySentence(x, set && set.lv)}
-        <div class="muted" style="font-size:12px;margin-top:4px">🤖 題目和解說是 AI 照你的單字卡出的，可能會錯；覺得怪怪的就查字典。</div></details>`;
-    return `<div class="card" id="wqCard"><h3>🔤 ${esc(set ? set.name : '單字題')}</h3>
-        <div class="muted">${q.done ? `這組答完了：答對 ${right}／${items.length} 題。${wrong ? '沒答對的 ' + wrong + ' 個字，下次出題會先出。' : '全部答對！'}` : `第 ${cur + 1}／${items.length} 題・答一題 +2 經驗值`}</div>
-        ${items.map((x, i) => x.choice != null ? done(x, i) : i === cur ? `<div style="margin:12px 0 8px;font-weight:700;white-space:pre-wrap">${esc(x.q)}</div>
-          <div class="opts">${x.o.map((o, j) => `<button class="opt" onclick="answerWordQ('${q.id}',${i},${j})">(${ABCD.charAt(j)}) ${esc(o)}</button>`).join('')}</div>` : '').join('')}</div>`;
+    const ja = lvJa(set && set.lv), L = ja ? ' lang="ja"' : '';
+    const just = cur < 0 ? items.length - 1 : cur - 1;
+    const hold = just >= 0 && draft.wqGo !== q.id + ':' + cur;   // 剛答完的那題先留著看解說，按「下一題」才換
+    const at = hold ? just : cur;
+    // 題型名稱：日文照 JLPT 的叫法（文案審查 42）
+    const kindName = (x, short) => { const t = wqType(x);
+      if (t === 'cloze') return '例句挖空';
+      if (t === 'usage' || x.kind === '用法') return short ? '用法' : '用法：哪一句用得對？';
+      if (t === 'para' || x.kind === '言い換え') return short ? (ja ? '言い換え類義' : '意思最接近') : (ja ? '言い換え類義：意思最接近的是？' : '意思最接近的是？');   // 標籤要說要做什麼（美術 11/6）
+      return ja ? (x.kind === '讀音' ? '漢字読み' : '文脈規定') : x.kind === '片語' ? '片語題' : '字彙題'; };
+    const stem = x => { const t = wqType(x), answered = x.choice != null;
+      if (t === 'usage') return `<div class="wqw"${L}>${esc(x.q)}</div>`;
+      const h = t === 'cloze' ? esc(x.q).replace(/_{2,}/, answered ? `<span class="fill">${esc(x.o[x.a])}</span>` : '<span class="blank"></span>')
+        : t === 'para' ? esc(x.q).replace(/「([^」]+)」/, '<span class="ul">$1</span>') : esc(x.q);   // 言い換え：「」標的字改畫底線（照 JLPT）
+      return `<div class="wqq"${L}>${h}</div>`; };
+    const opts = (x, i) => x.o.map((o, j) => {
+      const t = `(${ABCD.charAt(j)}) <span${L}>${esc(o)}</span>`;
+      if (x.choice == null) return `<button class="opt wqo" onclick="answerWordQ('${q.id}',${i},${j})">${t}</button>`;
+      const c = j === x.a ? 'right' : j === x.choice ? 'mine' : 'rest';
+      return `<button class="wqo ${c}" aria-disabled="true" tabindex="-1">${c === 'mine' ? '<span class="wqwho">你選的</span>' : ''}${c === 'right' ? '✓ ' : ''}${t}</button>`; }).join('');
+    const body = (x, i) => `<div class="wqk">${kindName(x)}</div>${stem(x)}<div class="${wqType(x) === 'usage' ? 'usage' : ''}">${opts(x, i)}</div>
+      ${x.choice != null ? `<div class="wqex">${x.correct ? '答對了！' : ''}${esc(x.ex)}</div>${saySentence(wqType(x) === 'usage' ? { q: x.o[x.a], o: x.o, a: x.a } : x, set && set.lv)}
+        <div class="muted" style="font-size:12px;margin-top:4px">🤖 題目和解說是 AI 照你的單字卡出的，可能會錯；覺得怪怪的就查字典。</div>` : ''}`;
+    const done = (x, i) => `<details class="item" style="display:block"><summary><b>${x.correct ? '✓ ' : ''}<span${L}>${esc(x.w)}</span></b> <span class="pill" style="font-size:12px;${x.correct ? 'background:#e5efe0;color:#2f5a3a' : 'background:#f7f1e5;color:#5f5a55'}">${x.correct ? '答對' : '再練'}</span><span class="muted">・${kindName(x, true)}</span></summary>${body(x, i)}</details>`;
+    const head = q.done ? `這組答完了：答對 ${right}／${items.length} 題。${wrong ? '沒答對的 ' + wrong + ' 個字，下次出題會先出。' : '全部答對！'}` : `第 ${at + 1}／${items.length} 題・答一題 +2 經驗值`;
+    return `${WQ_CSS}<div class="card" id="wqCard"><h3>🔤 ${esc(set ? set.name : '單字題')}</h3><div class="muted">${head}</div>
+        ${items.slice(0, Math.max(0, at)).map(done).join('')}${at >= 0 && items[at] ? body(items[at], at) : ''}
+        ${hold && cur >= 0 ? `<button style="display:block;width:100%;margin-top:10px" onclick="famWqNext('${q.id}',${cur})">下一題</button>` : ''}</div>`;
   }
+  window.famWqNext = function (id, cur) {
+    draft.wqGo = id + ':' + cur; render();
+    const el = document.getElementById('wqCard'); if (el) el.scrollIntoView({ block: 'start' });
+  };
+  // 日文的字型（美術 11/6）：只套在標了 lang="ja" 的字上，沒有日文的畫面一個像素都不變
+  if (typeof document !== 'undefined' && document.head && !document.getElementById('wqJaFont')) document.head.insertAdjacentHTML('beforeend', '<style id="wqJaFont">:lang(ja){font-family:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans CJK JP","Yu Gothic",sans-serif}</style>');
   window.famWordStart = function () {
     const last = wordSets()[0];
     draft.wv = { step: 'pick', name: '', items: [], text: '', lv: (last && last.lv) || 'en-gen' }; render(); window.scrollTo(0, 0);
