@@ -417,11 +417,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.7.0.3';
+const APP_VERSION = '2.50.7.0.4';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.7.0.4', date: '2026-11-13', fam: [1], items: ['數學街巷口開了『數學研究室』：魏老的《再探數學的奧祕》，11/18（三）開第一講，之後大多是週三開一講，停課的週研究室裡會先寫。每講最後有一題挑戰題，提示和解答自己決定要不要看，看了也不會被記下來；家人看得到你上過哪幾講的課頁，看不到挑戰題。', '家人自己的島：去島主的島時，數學街巷口多了『數學研究室』：魏老的《再探數學的奧祕》，大多是週三開一講。島主上過的課可以在書架回看，每講最後的挑戰題不會顯示。'] },
   { v: '2.50.7.0.3', date: '2026-11-13', fam: true, items: ['🔤 家人自己的島：單字卡按「出題」會出新的題型：例句挖空、用法（哪一句用得對）、意思最接近；有漢字的日文單字還有「漢字読み」（漢字怎麼唸）。題目和解說是 AI 照你的單字卡出的，可能會錯；覺得怪怪的，可以查字典確認。'] },
   { v: '2.50.7.0.2', date: '2026-11-13', items: ['📨 題目底下的「🚩 這題怪怪的」改成「📨 跟爸爸說這題」：可以回報題目好像有錯，也可以選「🙋 一起檢討」，把想問的題排進下次跟爸爸一起看。等一起檢討的題，會列在燈塔一樓。'] },
   { v: '2.50.7.0.1', date: '2026-11-12', items: ['🎋 屋台多了兩道用竹葉的料理：竹葉魚壽司、竹葉茶，一年四季都能做。', '🔀 屋台可以換素材了：同一種常見素材 2 個，換 1 個同一個街區的另一種常見素材，一天 2 次，不花島幣。', '🔐 「誰看得到什麼」多了「📊 統計數字」：爸爸有一個讀數工具，看得到每週完成幾格、各科讀了幾分鐘這類數字，也看得到最近 14 天你在各個畫面待了幾分鐘。以前的說明寫「停留時間要不要給爸爸由你決定」，那句寫錯了，現在改正。只有數字，看不到你寫的字。'] },
@@ -1348,7 +1349,7 @@ function viewHomeBody() {
       <div class="resident"><span class="avatar">${r.pic}</span>
         <div><b>${esc(r.name)}</b><div class="muted">${SUBJ_IC[s]} ${SUBJECT_NAME[s]}街${kzBadge(s)}</div></div>
         <span class="grade ${gr ? '' : 'none'}" title="${gr ? esc(gr.source + ' ' + gr.date) : '還沒有試煉紀錄'}">${gr ? esc(gr.level) : '?'}</span></div>
-      ${streets(s)}${s === '國' ? zwSign() : ''}
+      ${streets(s)}${s === '國' ? zwSign() : ''}${s === '數' ? sxSign() : ''}
       <div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div>
     </div>`;
   }).join('');
@@ -1770,6 +1771,144 @@ async function zwSubmit() {
   catch (e) { if (btn) { btn.disabled = false; btn.textContent = '📌 我記下了'; } return toast(String(e.message || e)); }
   w.review = false; toast('📜 蓋好章了！'); render();
 }
+// ===== SX_v1 數學助教魏老《再探數學的奧祕》（數學那條街的巷口牌；不進智慧島碼頭、小屋、集章冊、導覽地圖）=====
+const SX_STREET = '數學街';   // 12/6 STREET_v1 改成「數學街區」：只改這一行
+WISDOM_T.sx = { name: '魏老', ic: '➗', place: '數學研究室', color: '#1f6f8b', where: '數',
+  intro: SX_STREET + '巷口的研究室。牆角靠著一支羽球拍，桌上攤著一本方格筆記本。魏老教了很多年數理家教，不出作業，一週帶你往前走一步。',
+  first: '來啦？坐。先說好，我這裡不考試，不過我挑的題不會太客氣。你學過的數學裡藏著好幾扇門，我們一週開一扇。',
+  hello: ['今天這一步有點陡，鞋帶綁好。', '剛打完球，手還熱，正好算題。', '先看這張圖，看完再說話。'],
+  today: '今天的課已經上滿了，明天會恢復。剛剛那一步，留在腦袋裡轉一轉。',
+  week: '這週這一步走過了。下一扇門，{d} 打開。',
+  skip: '這週停一次，下一扇門 {d} 打開。',
+  soon: '下一扇門 {d} 打開。',
+  wait: '下一步我還在算。',
+  after: '今天就到這裡。以後在題目裡遇到它，就認得出來了。',
+  open: '十二扇門都開了。想繼續的話，從下一扇接著走就好。',
+  end: '門都開過了。以後看到新的數學，先問一句：這跟我學過的哪一個是同一件事？' };
+/** 開講表（和後端 Wisdom.gs 的 sxDates_ 同一套算法，測試逐日比對）：從 SX_START 每週三一講，停課週跳過，共 SX_N 講
+ *  爸爸 11/6 日期卡：第 1 講 11/18（三），九下四講排 2/1 以後，最後一講 3/3 */
+const SX_N = 12, SX_START = '2026-11-18', SX_SKIP = ['2026-12-16', '2026-12-23', '2027-01-27', '2027-02-17'];
+function sxDates() { const out = []; for (let d = SX_START; out.length < SX_N; d = addD(d, 7)) if (!SX_SKIP.includes(d)) out.push(d); return out; }
+function sxOpenN(today) { return sxDates().filter(d => d <= today).length; }   // 本週開到第幾講（純函式，不存檔）
+function sxOver(today) { return today > sxDates()[SX_N - 1]; }   // 日程結束（3/18 起）：不再一週一講
+function sxSkipWeek(today) { const m = mondayOf(today); return SX_SKIP.some(d => mondayOf(d) === m); }
+function sxWhen(x) {   // 下一講哪天可以上：開講日；這週上過了就再晚到下週一
+  let at = sxDates()[x.n - 1]; if (!at) return '';
+  if (x.why === 'week') { const nm = addD(mondayOf(S.today), 7); if (nm > at) at = nm; }
+  return short(at);
+}
+function sxFace(px) {   // 畫像（爸爸 11/3 第三輪 B）：圓底 #d6e5ea、圖佔 92%、貼底；載不到就顯示 ➗
+  return `<span class="sxface" style="display:inline-flex;align-items:flex-end;justify-content:center;flex:none;width:${px + 8}px;height:${px + 8}px;border-radius:50%;background:#d6e5ea;overflow:hidden"><img src="wisdom/img/aide_wei@1x.webp" srcset="wisdom/img/aide_wei@2x.webp 2x" alt="魏老" style="width:92%;height:auto;display:block" onerror="this.parentNode.textContent='➗'"></span>`;
+}
+function sxSign() {   // 和鳳梨刀同一種 56px 一列，底色換藍（美術 11/3）
+  if (ownMode()) return '';
+  const n = Object.keys(wisdomDone('sx')).length;
+  return `<div class="sxsign" role="button" onclick="openWisdomHut('sx')" style="display:flex;align-items:center;gap:8px;margin-top:8px;min-height:56px;box-sizing:border-box;padding:6px 10px;border-radius:10px;background:#eef5f8;border:1px solid #cfdde4;cursor:pointer">
+    ${sxFace(24)}<div class="grow" style="min-width:0"><b style="font-size:14px">巷口・數學研究室</b><div class="muted" style="font-size:12px">魏老《再探數學的奧祕》${n}／${SX_N} 講</div></div><span class="muted" aria-hidden="true">›</span></div>`;
+}
+const sxNext0 = wisdomNext, sxStatus0 = wisdomStatus, sxSay0 = wisdomSay, sxHut0 = viewWisdomHut, sxLesson0 = viewWisdomLesson, sxNote0 = wisdomNoteHtml, sxSections0 = lifeSections, sxOpen0 = openWisdomLesson, sxBooks0 = myBooks;
+wisdomNext = function (k) {
+  if (k !== 'sx') return sxNext0(k);
+  const n = Object.keys(wisdomDone('sx')).length + 1, j = wisdomBook('sx');   // 只有一本，不接 sx2
+  const L = j ? (j.lessons || []).find(y => y.n === n && y.reviewed) || null : undefined;
+  const why = n > SX_N ? 'end' : wisdomTodayDone() ? 'today' : wisdomWeekDone('sx') && !sxOver(S.today) ? 'week'
+    : n > sxOpenN(S.today) ? 'sxwait' : L === null ? 'wait' : L === undefined ? 'load' : '';
+  return { book: 'sx', n, L, why };
+};
+wisdomStatus = function (k) {
+  if (k !== 'sx') return sxStatus0(k);
+  const x = wisdomNext('sx');
+  if (x.why === 'end') return '🎓 十二講都上完了';
+  if (x.why === 'week') return '📅 這週上過了';   // 文案 188：日期寫在魏老那句裡
+  if (x.why === 'sxwait') return '🌫️ ' + sxWhen(x) + ' 開門';
+  return sxStatus0(k);
+};
+wisdomSay = function (k) {
+  if (k !== 'sx') return sxSay0(k);
+  const t = WISDOM_T.sx, x = wisdomNext('sx'), d = s => s.replace('{d}', sxWhen(x));
+  if (x.why === 'end') return t.end;
+  if (!wisdomCount('sx')) return t.first;
+  if (x.why === 'today') return t.today;
+  if (x.why === 'week') return d(t.week);
+  if (x.why === 'sxwait') return d(sxSkipWeek(S.today) ? t.skip : t.soon);
+  if (x.why === 'wait') return t.wait;
+  if (sxOver(S.today)) return t.open;
+  return t.hello[(dayIdx(S.today) + 2) % t.hello.length];
+};
+openWisdomLesson = async function (book, n) {   // 未開的講：連標題都不給看
+  if (book === 'sx' && !wisdomDone('sx')[n] && n > sxOpenN(S.today)) return toast('這一講還沒開');
+  return sxOpen0(book, n);
+};
+myBooks = function () {   // 書架目錄：還沒開的講不顯示講名
+  return sxBooks0().map(b => b.key === 'sx' && Array.isArray(b.chapters) ? Object.assign({}, b, { chapters: b.chapters.slice(0, sxOpenN(S.today)) }) : b);
+};
+lifeSections = function (L, w) {   // 家人看她上過的課：挑戰題不給看（文案審查 156 追記三）
+  const secs = sxSections0(L, w);
+  if (!w || w.book !== 'sx' || !isFamily()) return secs;
+  return secs.map((x, i) => i === secs.length - 1 ? { h: '收尾', q: [], opts: [], after: [] } : x);
+};
+const sxHome = h => h.replace('<h3 style="margin-top:0">📚 上過的課</h3>', '<h3 style="margin-top:0">🎓 上過的課</h3>').replace(/<button class="ghost grow" onclick="go\('wisdom'\)">[^<]*<\/button>/g, `<button class="ghost grow" onclick="go('home')">回到${SX_STREET} 🏝️</button>`)
+  .replace(/<span style="font-size:(\d+)px;?">➗<\/span>/g, (m, px) => sxFace(+px));
+viewWisdomHut = function () { return wisdomHut === 'sx' ? sxHome(sxHut0()) : sxHut0(); };
+viewWisdomLesson = function () {
+  const w = draft.wl;
+  if (!w || w.book !== 'sx') return sxLesson0();
+  const h = sxHome(sxLesson0()).replace(/(<button class="opt[^"]*"[^>]*>)[A-E]\. (\([A-E]\) )/g, '$1$2')   // 原題選項本來就有 (A)，不再加 A.
+    .replace(/(<button class="opt right"[^>]*>)([\s\S]*?)(<\/button>)/g, '$1<span class="sxok">正確答案</span>$2 ✓$3');   // 美術 11/7：照 WORDQ_v2 標「正確答案」＋✓
+  return SX_CSS + '<div class="sxl">' + h + '</div>';
+};
+/** 美術 11/7：答完的選項不淡化（kinari 底、nezumi 字）、正確答案完成色 2px 框；挑戰題按鈕是 ghost（白底、梅色框字、44px 高）；小字至少 12px */
+const SX_CSS = `<style>.sxl .opt:disabled{opacity:1;background:#f7f1e5;color:#5f5a55;border-color:#d8d4ce}.sxl .opt.right:disabled{background:#dff3e3;border:2px solid #3f9a55;color:#1f5a2e}.sxl .opt.wrong:disabled{background:#fbe0e0;border-color:#c0392b;color:#7a1f1f}.sxl .sxok{display:block;font-size:12px;font-weight:700;margin-bottom:2px}.sxpeek{width:100%;margin-top:8px;min-height:44px;background:#fff;border:1.5px solid var(--plum);color:var(--plum);text-align:center;opacity:1}</style>`;
+/** 挑戰題三層：一層一個按鈕，按了只把下一層的 hidden 拿掉（不 render、不存檔、不送後端） */
+function sxLayers(L) {
+  const s = L.sections[L.sections.length - 1];
+  if (!s || !Array.isArray(s.layers) || isFamily()) return '';
+  const lay = s.layers.filter(x => x && typeof x.h === 'string' && Array.isArray(x.p));
+  let h = '';
+  for (let i = lay.length - 1; i >= 0; i--) {
+    const x = lay[i];
+    h = `<button class="sxpeek" onclick="sxPeek(this)">${i === lay.length - 1 ? '🔑 看' : '🪜 看'}${esc(x.h)}</button><div hidden><div class="wnote" style="margin-top:8px"><b>${esc(x.h)}</b>${x.p.map(t => `<p style="margin:6px 0;line-height:1.8">${esc(t)}</p>`).join('')}</div>${h}</div>`;
+  }
+  return h;
+}
+function sxPeek(b) { const d = b.nextElementSibling; if (d) d.hidden = false; b.remove(); }
+wisdomNoteHtml = function (L, t, rec) {
+  const w = draft.wl;
+  if (!w || w.book !== 'sx') return sxNote0(L, t, rec);
+  const h = sxNote0(L, t, rec);
+  if (rec) return sxLayers(L) + h.replace(/<div class="wnote"><b>你寫的：<\/b>[\s\S]*?<\/div>/, `<div class="wnote">📌 這一講記下了（${short(String(rec.at || ''))}）</div>`)
+    .replace(/集章冊蓋好第 (\d+) 個章了/, `《再探數學的奧祕》第 $1 講上完了`);   // 魏老不在智慧島的集章冊裡
+  return sxLayers(L) + h.replace(/<textarea id="wNote"[\s\S]*?id="wGo"[\s\S]*?<\/button>/, `<button id="wGo" style="width:100%;margin-top:10px;background:${t.color}" onclick="sxSubmit()">📌 我記下了</button>`)
+    .replace(/<div class="muted wtell"[\s\S]*?<\/div>/, '');   // 不寫字，就不需要「這句只有你看得到」
+};
+/** 「我記下了」：不寫字、不送 AI，直接蓋章（後端 takeLesson 對 sx 收空白、不叫 AI，開講表同一份） */
+async function sxSubmit() {
+  const w = draft.wl, L = wisdomLessonNow(), btn = document.getElementById('wGo');
+  if (btn) { btn.disabled = true; btn.textContent = '蓋章中…'; }
+  try { await flush(); S = await call('takeLesson', 'sx', w.n, -1, '', { title: L.title }); D = derive(S); }
+  catch (e) { if (btn) { btn.disabled = false; btn.textContent = '📌 我記下了'; } return toast(String(e.message || e)); }
+  w.review = false; toast('📜 蓋好章了！'); render();
+}
+/** 原題圖（exam/ 的考古題圖，點了放大）：只收 exam/<檔名>.webp，畫在該段文字前面 */
+function wisdomImgHtml(s) {
+  if (!s || typeof s.img !== 'string' || !/^exam\/[\w.-]+\.webp$/.test(s.img) || /\.\./.test(s.img)) return '';
+  return `<figure class="wphoto"><img src="${s.img}" alt="原題圖：${esc(s.src || '')}" loading="lazy" onclick="zoomPhoto(this)" onerror="this.parentNode.remove()"><figcaption>${esc(s.src || '')}</figcaption></figure>`;
+}
+/** 講義圖 fig／figAlt（說明.md，工程顧問 11/3）：wisdom/img/<老師>/<檔名>，檔名只收 [\w.-]、數量要和 figAlt 一致，不合就不畫；
+ *  沒有原題圖但有出處（文字照錄的原題）時，出處寫在段落後面 */
+const WISDOM_FIG_W = 240;   // 講義圖顯示寬度（美術 11/8 規範 v1.1）；數學、理化共用，LH 那包不要再寫一次
+function wisdomFigHtml(s, book) {
+  if (!s) return '';
+  const f = [].concat(s.fig || []), a = [].concat(s.figAlt || []), dir = String(book || '').replace(/2$/, '');
+  // figCap（選填，工程顧問 11/8）：有、數量對、都是非空字串時取代圖說文字（alt 照舊是 figAlt）；對不上就不用，不報錯
+  const c = Array.isArray(s.figCap) ? s.figCap : [], useCap = c.length === f.length && c.every(x => typeof x === 'string' && x.trim());
+  let h = '';
+  if (f.length && f.length === a.length && /^\w+$/.test(dir))
+    h = f.map((x, i) => typeof x === 'string' && typeof a[i] === 'string' && /^[\w.-]+$/.test(x) && !/\.\./.test(x)
+      ? `<figure style="margin:10px 0"><img class="wfig" src="wisdom/img/${dir}/${x}" alt="${esc(a[i])}" loading="lazy" style="display:block;width:100%;max-width:${WISDOM_FIG_W}px;margin:0 auto;background:#fff" onerror="this.parentNode.remove()"><figcaption class="muted" style="font-size:12px;text-align:center;margin-top:4px">${esc(useCap ? c[i] : a[i])}</figcaption></figure>` : '').join('');
+  if (!s.img && typeof s.src === 'string' && s.src) h += `<div class="muted" style="margin-top:6px;font-size:12px">${esc(s.src)}</div>`;
+  return h;
+}
 function wisdomBook(key) { const j = wisdomFull[key]; return j && !j.then ? j : null; }
 function wisdomLessons() { return (S.save.wisdom && S.save.wisdom.lessons) || {}; }
 function wisdomDone(book) { return wisdomLessons()[book] || {}; }
@@ -2054,7 +2193,7 @@ function viewWisdomLesson() {
     const widget = i === 2 && L.widget ? wisdomWidget(L.widget) : '';
     const photo = i === 0 && L.photo ? `<figure class="wphoto"><img src="${esc(L.photo.src)}" alt="${esc(L.photo.cap)}" loading="lazy" onclick="zoomPhoto(this)"><figcaption>${esc(L.photo.cap)}${L.photo.credit ? '<span>' + esc(L.photo.credit) + '</span>' : ''}</figcaption></figure>` : '';
     const next = i === w.step && i < last ? `<button style="width:100%;margin-top:10px;background:${t.color}" ${needShow && !shown && !s.steps ? 'disabled' : ''} onclick="draft.wl.step++;render();setTimeout(()=>{const e=document.getElementById('wsec${i + 1}');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},30)">繼續 →</button>` : '';
-    return `<div class="card" id="wsec${i}"><h3 style="margin-top:0;color:${t.color}">${esc(s.h)}</h3>${photo}${s.q.map(p).join('')}${widget}${opts}${reveal}${after}${i === 2 ? lifeExtra(s, shown) : ''}${i === last ? wisdomNoteHtml(L, t, rec) : next}</div>`;
+    return `<div class="card" id="wsec${i}"><h3 style="margin-top:0;color:${t.color}">${esc(s.h)}</h3>${photo}${wisdomImgHtml(s)}${s.q.map(p).join('')}${wisdomFigHtml(s, w.book)}${widget}${opts}${reveal}${after}${i === 2 ? lifeExtra(s, shown) : ''}${i === last ? wisdomNoteHtml(L, t, rec) : next}</div>`;
   };
   return `<div class="card" style="border-top:5px solid ${t.color}"><div class="muted" style="font-size:13px">${t.ic} ${esc(t.place)}・《${esc(j.title)}》</div>
       <h2 style="margin:4px 0">第 ${w.n} 講　${esc(L.title)}</h2><div class="muted" style="font-size:13px">${esc(L.stamp)}</div>
@@ -6040,7 +6179,7 @@ function showInfo3D(s) {
     <div class="muted" style="margin-top:10px">最近四週完成次數</div>
     <div class="row" style="justify-content:space-around;margin-top:4px">${recent}</div>
     ${(lm => lm.length ? `<div class="muted" style="margin-top:10px">讀完書長出的地標</div>${lm.map(m => `<div class="item" style="cursor:pointer" onclick="openBook('${m.key}')"><span>🏞️</span><div class="name grow">${esc(m.name)}<div class="muted" style="font-size:12px">${esc(m.title)}${m.from ? '・' + esc(m.from) + '送' : ''}・${esc(short(m.at))} 讀完${(mi => m.id in mi ? '・' + (mi[m.id] ? '長在' + esc(isletName(mi[m.id])) + '上' : '街上放滿了') : '')(markIsles())}</div></div><span>›</span></div>`).join('')}` : '')(landmarkList().filter(m => m.s === s))}
-    ${s === '國' ? zwSign() : ''}
+    ${s === '國' ? zwSign() : ''}${s === '數' ? sxSign() : ''}
     <button class="ghost" style="width:100%;margin-top:10px" onclick="openHouse('${s}')">🏠 去${esc(r.name)}家作客</button>`;
 }
 
@@ -6957,7 +7096,8 @@ const TM_STUDY_TABS = ['plan', 'confirm', 'scan', 'pick', 'light', 'lamp', 'log'
 const TM_EXT_TABS = ['book'];   // TM_RULES_v2：書店店面改算其他；音樂廳是藝文計時頁，三區都不算
 const TM_OFF_TABS = ['walk', 'moveStop', 'hall', 'hand', 'cls'];   // CLASS_v1 上課表單也不算   // HANDLOG_v1 補登表單也不算   // 運動、藝文計時頁：離開螢幕的好事，不算進任何一區
 const TM_WISDOM_STUDY = ['einstein', 'yirong', 'mi', 'alu'];
-TM_WISDOM_STUDY.push('zw');   // ESSAY_A_v1：作文算國文，讀書區   // 自然、社會（歷史）、國文、社會（公民：看新聞）
+TM_WISDOM_STUDY.push('zw');
+TM_WISDOM_STUDY.push('sx');   // SX_v1：數學助教算數學，讀書區   // ESSAY_A_v1：作文算國文，讀書區   // 自然、社會（歷史）、國文、社會（公民：看新聞）
 const TM_BOARD_STUDY = ['plan', 'xq', 'light'];   // 首頁今日板展開讀書計畫、挑戰任務、漂流瓶
 function tmZone() {
   if (!S || !S.save || !D || !D.cfg || isFamily() || ownMode()) return -1;   // 家人島的版本還沒做
@@ -7630,7 +7770,9 @@ const WISDOM_BOOKS = [
   { key: 'yirong', title: '課本沒寫的那一題', color: '#9A5B3C' }, { key: 'mi', title: '一首詩的時間', color: '#B23A3A' }, { key: 'guo', title: '身體使用說明書', color: '#3E8A8C' },
   { key: 'yirong2', title: '地圖沒畫的那一角', color: '#9A5B3C' }, { key: 'mi2', title: '一篇文章的溫度', color: '#B23A3A' }, { key: 'guo2', title: '身體使用說明書・下冊', color: '#3E8A8C' }];   // BOOK2B_v1
 const wisdomJson = {};
+const WISDOM_N = { zw: ZW_N, sx: SX_N };   // SX_v1：講數不是 13 的書，書架書頁照這個畫（其他書照舊 13）
 WISDOM_BOOKS.push({ key: 'zw', title: '文學的力量', color: '#8f6214' });   // ESSAY_A_v1：書店書架、家人碼看得到
+WISDOM_BOOKS.push({ key: 'sx', title: '再探數學的奧祕', color: '#1f6f8b' });   // SX_v1
 // 店名：她自己取（存在 keeper:bookname 的 name，沿用 saveKeeper，後端不用改）
 const BOOK_NAMES = ['巷口書店', '小島書房', '海風書屋', '午後書店', '月見書房', '晴耕雨讀', '貓與書', '燈下書房'];
 function bookName() { const k = S.save['keeper:bookname']; return (k && k.name) || ''; }
@@ -7676,6 +7818,7 @@ const BOOK_CATALOG = [{"id": "ginga","title": "銀河鐵道之夜","author": "�
    書單 BOOK_CATALOG 由 make_catalog.py 從 bookstore/家人送書書單.md 產生；每位家人每週送一本、每天一張鼓勵卡；不給經驗值或島幣 */
 const BOOK_EMOJIS = ['😊', '🥹', '📖', '🙏', '⭐', '🐈'];
 const WISDOM_ICONS = { kongming: '🪶', xiaomiao: '♨️', alu: '📰', einstein: '🔭', yirong: '🔔', mi: '📷', guo: '🧘' };
+WISDOM_ICONS.sx = '➗';   // SX_v1
 const GIFT_WRAPS = ['kraft', '#e9d6c1', '#cfd9c7', 'kraft', '#d7cfe3', '#f0d9c4'];
 const BOOK_CATS = [['日本', '🗾 日本文學'], ['台灣', '🏝️ 台灣'], ['華文', '🏮 華文經典'], ['世界', '🌍 世界經典'], ['BL', '🌸 漫畫（請先自己看過）']];
 let bookKey = '', bookFreshKeys = [];
@@ -7878,12 +8021,12 @@ function viewBook() {
     if (!b) return `<div class="card">找不到這本書。</div><div class="row">${back}</div>`;
     const icon = WISDOM_ICONS[b.key.replace(/2$/, '')] || '📘', ns = Object.keys(b.done).map(Number).sort((p, q) => p - q);
     const dates = ns.map(n => String(b.done[n].at || '').slice(0, 10)).filter(Boolean).sort(), sel = draft.ch || ns[ns.length - 1];
-    const cur = b.done[sel], full = ns.length >= 13;
+    const cur = b.done[sel], bn = WISDOM_N[b.key] || 13, full = ns.length >= bn;
     return `<div class="bkdesk"><div class="bkbook">
       <div class="bkpage"><div class="bkwcover" style="background:linear-gradient(90deg,${b.color}cc,${b.color} 20%,${b.color} 80%,${b.color}cc)"><b>${esc(b.title)}</b><i>${icon} 智慧島</i></div>
-        <div class="row" style="margin-top:12px;justify-content:space-between"><span><b>蓋了 ${ns.length}／13 章</b>${dates.length ? ` <span class="muted">・${esc(dates[0].replace(/-/g, '/'))}～${esc(dates[dates.length - 1].slice(5).replace('-', '/'))}</span>` : ''}</span>${full ? '<span style="color:#c0392b">🎀 讀完了</span>' : ''}</div>${landLine(b.key, full, '13 章都蓋完章後')}</div>
+        <div class="row" style="margin-top:12px;justify-content:space-between"><span><b>蓋了 ${ns.length}／${bn} 章</b>${dates.length ? ` <span class="muted">・${esc(dates[0].replace(/-/g, '/'))}～${esc(dates[dates.length - 1].slice(5).replace('-', '/'))}</span>` : ''}</span>${full ? '<span style="color:#c0392b">🎀 讀完了</span>' : ''}</div>${landLine(b.key, full, '13 章都蓋完章後')}</div>
       <div class="bkpage"><div class="bksec">目錄</div>
-        ${Array.from({ length: 13 }, (_, i) => i + 1).map(n => { const d = b.done[n], ch = b.chapters && b.chapters[n - 1];
+        ${Array.from({ length: bn }, (_, i) => i + 1).map(n => { const d = b.done[n], ch = b.chapters && b.chapters[n - 1];
           return `<div class="bkch${d ? '' : ' off'}${d && n === sel ? ' on' : ''}" ${d ? `onclick="draft.ch=${n};render()"` : ''}>${d ? '<span class="hanko">印</span>' : '<span class="bkdot">・</span>'}<span class="n">第 ${n} 章</span><span class="grow">${ch ? esc(ch) : ''}</span><span class="d">${d && d.at ? short(String(d.at).slice(0, 10)) : ''}${d && n === sel ? ' ›' : ''}</span></div>`; }).join('')}</div>
       ${cur ? `<div class="bkpage"><div class="bksec">第 ${sel} 章的心得</div>
         <div class="bknote"><div class="tape"></div>${cur.note ? esc(cur.note) : '<span class="muted">這一章沒有寫心得。</span>'}<div class="who">—— ${esc(short(String(cur.at || '').slice(0, 10)))} 的${isFamily() ? '她' : '我'}</div></div>
