@@ -193,6 +193,8 @@
   /* 今日のおつとめ板 */
   .board .brow { display: flex; align-items: center; gap: 8px; width: 100%; background: none; color: var(--ink); padding: 10px 2px; border-radius: 0; border-top: 1px dashed var(--plum-light); text-align: left; }
   .board .brow:first-of-type { border-top: 0; }
+  /* BOARD_FOLD_v1 */ .board .bmore { min-height: 44px; } .board .bmore .ic, .board .bmore .nm { color: var(--muted); } .board .bmic { margin-left: auto; font-size: 18px; } .board .bmic small { font-size: 12px; color: var(--muted); }
+  .board .bmorebox { background: #f7f1e5; border-radius: 12px; margin-top: 4px; padding: 0 8px; } .board .bmorebox .brow:first-child { border-top: 0; }
   .board .brow .ic { font-size: 20px; width: 26px; text-align: center; }
   .board .brow .nm { flex: 1; font-weight: 700; }
   .board .brow .chev { color: var(--muted); font-size: 13px; width: 14px; text-align: center; }
@@ -417,11 +419,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.7.0.4';
+const APP_VERSION = '2.50.7.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.7.1', date: '2026-11-14', fam: [1], items: ['🎼 音樂廳多了藝文家具：一週藝文計時滿 25 分鐘就算一週，累積 2 週拿到譜架，之後還有手風琴、老收音機、直立鋼琴、小號和手鼓，不用島幣。以前的紀錄也算。', '🎼 家人自己的島：我的家「收藏」多了藝文家具。一週藝文計時滿 25 分鐘就算一週，累積幾週就會拿到譜架、手風琴、老收音機這些家具，不用島幣。以前的紀錄也算。', '📋 今日のおつとめ變短了：每天固定要做的幾項一直都在；其他今天做完或還不用做的，收進最下面的「其他」，點一下就打開。'] },
   { v: '2.50.7.0.4', date: '2026-11-13', fam: [1], items: ['數學街巷口開了『數學研究室』：魏老的《再探數學的奧祕》，11/18（三）開第一講，之後大多是週三開一講，停課的週研究室裡會先寫。每講最後有一題挑戰題，提示和解答自己決定要不要看，看了也不會被記下來；家人看得到你上過哪幾講的課頁，看不到挑戰題。', '家人自己的島：去島主的島時，數學街巷口多了『數學研究室』：魏老的《再探數學的奧祕》，大多是週三開一講。島主上過的課可以在書架回看，每講最後的挑戰題不會顯示。'] },
   { v: '2.50.7.0.3', date: '2026-11-13', fam: true, items: ['🔤 家人自己的島：單字卡按「出題」會出新的題型：例句挖空、用法（哪一句用得對）、意思最接近；有漢字的日文單字還有「漢字読み」（漢字怎麼唸）。題目和解說是 AI 照你的單字卡出的，可能會錯；覺得怪怪的，可以查字典確認。'] },
   { v: '2.50.7.0.2', date: '2026-11-13', items: ['📨 題目底下的「🚩 這題怪怪的」改成「📨 跟爸爸說這題」：可以回報題目好像有錯，也可以選「🙋 一起檢討」，把想問的題排進下次跟爸爸一起看。等一起檢討的題，會列在燈塔一樓。'] },
@@ -904,6 +907,16 @@ function planXp(u, boss, start) {
   const x = start >= PLAN_XP_FROM ? Math.floor(u) * 25 + Math.round((u % 1) * 24) : u * 10;
   return x * (boss ? 2 : 1);
 }
+// 連續達標週數（運動、藝文共用）：從 first 那週算到這週，這週還沒結束不算斷；best 是最長的一段，只升不降
+function weekStreak(first, curMon, ok) {
+  let streak = 0, best = 0;
+  if (first) for (let w = mondayOf(first); w <= curMon; w = addD(w, 7)) {
+    if (ok(w)) streak++;
+    else if (w !== curMon) streak = 0;
+    best = Math.max(best, streak);
+  }
+  return { streak, best };
+}
 function derive(S) {
   const save = S.save || {};
   const cfg = save.config || null;
@@ -1006,14 +1019,12 @@ function derive(S) {
     focusGlass += d.glass; focusGlassOld += Object.values(per).reduce((a, m) => a + Math.floor(m / FOCUS_GLASS), 0);
   });
   const exCoins = Object.values(exWeeks).filter(n => n >= EX_GOAL).length * 3;
-  let exStreak = 0, exBest = 0;
-  if (exDays.length) {
-    for (let w = mondayOf(exDays[0]); w <= curMon; w = addD(w, 7)) {
-      if ((exWeeks[w] || 0) >= EX_GOAL) exStreak++;
-      else if (w !== curMon) exStreak = 0;   // 這週還沒結束，不算斷
-      exBest = Math.max(exBest, exStreak);
-    }
-  }
+  const { streak: exStreak, best: exBest } = weekStreak(exDays[0], curMon, w => (exWeeks[w] || 0) >= EX_GOAL);
+  // 藝文家具（音樂廳第二期）：一週藝文計時（move: 裡 k:'art'）滿 25 分鐘就算一週，累積幾週，不用連續
+  const artWeeks = {};
+  Object.keys(save).filter(k => k.startsWith('move:') && save[k]).forEach(k => (save[k].list || []).forEach(m => {
+    if (m.k === 'art') { const w = mondayOf(k.slice(5)); artWeeks[w] = (artWeeks[w] || 0) + (m.min || 0); } }));
+  const artBest = Object.keys(artWeeks).filter(w => artWeeks[w] >= ART_WEEK_MIN).length;
   // 紙船（自己檢討）、親子船（爸爸一起）：第一科 2 枚＋20 經驗值，每多一科 +1 枚，一次最多 4 枚；兩種船各自每天算 1 次
   const papers = Object.keys(save).filter(k => k.startsWith('paper:') && save[k]).sort().map(k => Object.assign({ id: k }, save[k]));
   const sessions = []; papers.forEach(x => { let ss = sessions.find(y => y.session === x.session); if (!ss) sessions.push(ss = { session: x.session, kind: x.kind, date: x.at, note: x.note, lanes: [], rows: [] }); ss.lanes.push(x.lane); ss.rows.push(x); });
@@ -1070,7 +1081,7 @@ function derive(S) {
 
   return { cfg, xp, coins, planBonus: Math.round(planBonus), coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent, matSpent: shop.matSpent, sellEarned: shop.sellEarned }, shop, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
-           exDays, exWeeks, exStreak, exBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps, daySumAdd: (focusGlass - focusGlassOld) * FOCUS_GREEN + (moveSteps - moveStepsOld) * MOVE_GREEN, waterDays, waterGreen,
+           exDays, exWeeks, exStreak, exBest, artWeeks, artBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps, daySumAdd: (focusGlass - focusGlassOld) * FOCUS_GREEN + (moveSteps - moveStepsOld) * MOVE_GREEN, waterDays, waterGreen,
            // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計＋運動／練習＋喝水－種樹花掉的；不扣經驗值、不影響等級
            green: (save['keeper:garden'] ? GARDEN_GIFT : 0) + focusGlass * FOCUS_GREEN + moveSteps * MOVE_GREEN + waterGreen - ((save.garden && save.garden.spent) || 0) };
 }
@@ -2325,14 +2336,30 @@ function todayPlan() {
   const di = dayIdx(S.today), rows = planOf(mondayOf(S.today)).days[di], lg = logOf(S.today);
   return { rows, done: rows.filter(r => lg[r]).length, extra: Object.keys(lg).filter(r => !rows.includes(Number(r))).length };
 }
+// BOARD_FOLD_v1（爸爸 11/4，減法盤點）：吃藥、紙本檢討、拍錯題常駐；其他列今天沒事做（todo() 為假）、計時也沒在跑，就收進最下面「其他 n 項」
+const BOARD_KEEP = ['med', 'paper', 'pq'];
+let boardFoldOpen = false;
+function boardStay(b) { return BOARD_KEEP.includes(b.key) || b.todo() || (b.key === 'plan' && !!focusActive()) || (b.key === 'walk' && !!moveActive()); }
+function boardRows(open, row) {
+  const list = BOARD.filter(b => !b.on || b.on()), keep = list.filter(boardStay), more = list.filter(b => !boardStay(b));
+  if (!more.length) return keep.map(row).join('');
+  const show = boardFoldOpen || more.some(b => b.key === open), names = more.map(b => b.name.replace(/<small[^>]*>.*?<\/small>/g, '').replace(/<[^>]+>/g, '').trim());
+  return keep.map(row).join('') + `<button class="brow bmore" onclick="boardFoldTap(${show})" aria-expanded="${show}" aria-label="${show ? `其他 ${more.length} 項，點一下收起` : `其他 ${more.length} 項：${esc(names.join('、'))}，點一下展開`}"><span class="ic">⋯</span><span class="nm">其他 ${more.length} 項</span><span class="bmic" aria-hidden="true">${more.slice(0, 3).map(b => b.ic).join(' ')}${more.length > 3 ? `<small> +${more.length - 3}</small>` : ''}</span><span class="chev">${show ? '▴' : '▾'}</span></button>`
+    + (show ? `<div class="bmorebox">${more.map(row).join('')}</div>` : '');
+}
+function boardFoldTap(shown) {
+  boardFoldOpen = !shown;
+  if (shown && BOARD.some(b => b.key === boardOpen && !boardStay(b))) boardOpen = '';   // 收起時，裡面展開的那一列也收起
+  softRender();
+}
 function boardCard() {
   const di = dayIdx(S.today), todo = BOARD.filter(b => b.todo());
   const open = boardOpen;
   return `<div class="card board" id="boardCard"><div class="row"><h3 class="grow" style="margin:0">📋 今日のおつとめ</h3><span class="muted">週${DAYS[di]} ${short(S.today)}</span></div>
     ${todo.length ? '' : '<div class="speech" style="margin-top:8px">🎉 今天的おつとめ都完成了！去島上逛逛吧～</div>'}
-    <div style="margin-top:4px">${BOARD.filter(b => !b.on || b.on()).map(b => { const st = b.st(), on = !b.go && open === b.key;
+    <div style="margin-top:4px">${boardRows(open, b => { const st = b.st(), on = !b.go && open === b.key;
       return `<button class="brow" onclick="boardTap('${b.key}')" aria-expanded="${on}"><span class="ic">${b.ic}</span><span class="nm">${b.name}</span><span class="st ${st.c}${st.clock ? (st.clock === 'move' ? ' moveClock' : ' focusClock') : ''}">${esc(st.t)}</span><span class="chev">${b.go ? '›' : on ? '▴' : '▾'}</span></button>`
-        + (on ? `<div class="bbody">${b.body()}</div>` : b.key === 'plan' ? homeFocusBtn() : ''); }).join('')}</div></div>`;
+        + (on ? `<div class="bbody">${b.body()}</div>` : b.key === 'plan' ? homeFocusBtn() : ''); })}</div></div>`;
 }
 function homeFocusBtn() {   // HOME_FOCUS_v1：今天第一個還沒讀完的格子直接開始計時（方案 B 首頁也呼叫這個）
   if (isFamily() || focusActive() || moveActive()) return '';
@@ -2881,7 +2908,7 @@ function roomTabs() {
 // 家是休息的地方（爸爸，2026-10-25）：會考倒數鐘不再當家具，搬到燈塔；已經買的退還島幣
 const RETIRED_FURN = ['clock'];
 function catalogFor(who) { const live = FURNITURE.filter(f => !RETIRED_FURN.includes(f.id)); return who === 'me' ? live : RES_FURNITURE[who].concat(live.filter(f => f.z !== 'out')); }
-function furnOf(id) { return FURNITURE.find(f => f.id === id) || EX_REWARDS.concat([EX_MEDAL], LANTERN_REWARDS, WISDOM_GRADS).find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
+function furnOf(id) { return FURNITURE.find(f => f.id === id) || EX_REWARDS.concat([EX_MEDAL], ART_REWARDS, LANTERN_REWARDS, WISDOM_GRADS).find(f => f.id === id) || [].concat(...Object.values(RES_FURNITURE)).find(f => f.id === id); }
 function ownedFor(who) { if (isMe(who)) who = 'me'; return [...new Set((S.save.purchases || []).filter(p => p.furniture && !RETIRED_FURN.includes(p.furniture) && (p.for || 'me') === who).map(p => p.furniture).concat(who === 'me' ? exUnlocked() : []))]; }
 function ownedFurniture() { return ownedFor('me'); }
 function roomOf(who) { return who === 'me' ? homeOf() || {} : isMe(who) ? homeRoomOf(who) : ((S.save.decor || {})[who] || {}); }
@@ -3056,6 +3083,10 @@ function furnRewards() {
     <div class="furn">${EX_REWARDS.concat([EX_MEDAL]).map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
       return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
         <span>${has ? f.ic : '🔒'}</span>${furnName(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : (f.lock || '連續 ' + f.weeks + ' 週')}</small></button>`; }).join('')}</div>
+    <h3 style="margin-top:14px">🎙️ 藝文家具</h3><div class="muted">${['一週藝文計時滿 ' + ART_WEEK_MIN + ' 分鐘就算一週，', '累積幾週就會解鎖，', '不用島幣。'].map(t => `<span style="white-space:nowrap">${t}</span>`).join('')}</div>
+    <div class="furn">${ART_REWARDS.map(f => { const has = own.includes(f.id), on = shown.includes(f.id);
+      return `<button class="${has ? (on ? 'on' : 'has') : ''}" ${has ? `onclick="toggleFurniture('me','${f.id}')"` : 'disabled'}>
+        <span>${has ? f.ic : '🔒'}</span>${typeof furnName === 'function' ? furnName(f.name) : esc(f.name)}<small>${has ? (on ? '擺出來了' : '收起來了') : '累積 ' + f.weeks + ' 週'}</small></button>`; }).join('')}</div>
     ${LANTERN_REWARDS.some(f => own.includes(f.id)) ? `<h3 style="margin-top:14px">🏮 燈塔送來的家具</h3>
     <div class="furn">${LANTERN_REWARDS.filter(f => own.includes(f.id)).map(f => { const on = shown.includes(f.id);
       return `<button class="${on ? 'on' : 'has'}" onclick="toggleFurniture('me','${f.id}')"><span>${f.ic}</span>${furnName(f.name)}<small>${on ? '擺出來了' : '收起來了'}</small></button>`; }).join('')}</div>` : ''}
@@ -3297,6 +3328,14 @@ const EX_REWARDS = [
   { weeks: 16, id: 'ex-onsen', z: 'out', ic: '♨️', name: '小溫泉' }, { weeks: 20, id: 'ex-jersey', z: 'wall', ic: '🎽', name: '專屬排球隊服' },
   { weeks: 24, id: 'ex-sakura', z: 'out', ic: '🌸', name: '步道旁的櫻花樹' }
 ];
+// 藝文家具（音樂廳第二期，爸爸 2026-10-31）：累積幾週有藝文計時就解鎖，不用島幣，已經解鎖的不會收回
+const ART_WEEK_MIN = 25;   // 一週至少一個音符 🎵
+const ART_REWARDS = [
+  // 圖示和名稱對得上、不和音樂廳頁其他圖示撞，也不和家具店、島民家具、燈塔、智慧島重複（美術審查 10/31、11/1）
+  { weeks: 2, id: 'art-stand', ic: '🎼', name: '譜架' }, { weeks: 4, id: 'art-accordion', ic: '🪗', name: '手風琴' },
+  { weeks: 6, id: 'art-radio', ic: '📻', name: '老收音機' }, { weeks: 8, id: 'art-piano', ic: '🎹', name: '直立鋼琴' },
+  { weeks: 12, id: 'art-trumpet', z: 'wall', ic: '🎺', name: '牆上的小號' }, { weeks: 16, id: 'art-handdrum', z: 'wall', ic: '🪘', name: '牆上的手鼓' }
+];
 // 燈籠獎勵（v2.21）：放走的紙燈籠累積到 30／100／300 盞，解鎖燈塔風格的家具，不用島幣，已經解鎖的不會收回
 const LANTERN_REWARDS = [
   { lanterns: 30, id: 'lt-lamp', z: 'wall', ic: '🏮', name: '紙燈籠吊燈' },
@@ -3319,7 +3358,7 @@ const WISDOM_GRADS = [
 function wisdomGrads() { return WISDOM_GRADS.filter(g => Object.keys(wisdomDone(g.book)).length >= 13).map(g => g.id); }
 function lanternCount() { try { return lightStats().lanterns; } catch (e) { return 0; } }
 function exUnlocked() { const n = lanternCount();
-  return EX_REWARDS.filter(r => D.exBest >= r.weeks).map(r => r.id).concat(exMedal() ? [EX_MEDAL.id] : [], LANTERN_REWARDS.filter(r => n >= r.lanterns).map(r => r.id), wisdomGrads()); }
+  return EX_REWARDS.filter(r => D.exBest >= r.weeks).map(r => r.id).concat(exMedal() ? [EX_MEDAL.id] : [], ART_REWARDS.filter(r => D.artBest >= r.weeks).map(r => r.id), LANTERN_REWARDS.filter(r => n >= r.lanterns).map(r => r.id), wisdomGrads()); }
 function exToday() { return !!S.save['ex:' + S.today]; }
 function habitCard() {
   const wk = mondayOf(S.today), n = D.exWeeks[wk] || 0, on = exToday();
@@ -3365,7 +3404,7 @@ PLACES.yatai = { name: '島の屋台', ic: '🏮', tab: 'yatai',
   roles: ['屋台的老闆', '賣飯糰的阿姨', '夜市攤的大叔', '愛做菜的狸貓'], emojis: ['🧑‍🍳', '👩‍🍳', '👨‍🍳', '👵', '🧔', '🦝', '🐻', '🐼', '🦊', '🐧', '🐱', '🐸'] };
 // 音樂廳（爸爸 2026-10-27）：藝文活動比照運動計時換綠點；管理員由她自己設定，存在 keeper:hall
 PLACES.hall = { name: '音樂廳', ic: '🎼', tab: 'hall',
-  about: ['上音樂課、練樂器、樂團排練、去聽音樂會、看展覽和表演、畫畫寫書法，開始前在這裡按一下，結束再按一下', '每 25 分鐘一個音符 🎵 +10 綠點，多久都算；一次最多算 120 分鐘，忘了按可以把結束時間改早', '綠點可以去植木屋種樹。這裡不用拍照、不用證明，你自己按就好', '這週有來計時，晚上音樂廳的大玻璃就會亮起來，在 3D 小島碼頭廣場的正前方看得到', '讀書計時、運動計時和這裡，一次只能開一個'],
+  about: ['上音樂課、練樂器、樂團排練、去聽音樂會、看展覽和表演、畫畫寫書法，開始前在這裡按一下，結束再按一下', '每 25 分鐘一個音符 🎵 +10 綠點，多久都算；一次最多算 120 分鐘，忘了按可以把結束時間改早', '綠點可以去植木屋種樹。這裡不用拍照、不用證明，你自己按就好', '一週藝文計時滿 25 分鐘就算一週，累積幾週，就會解鎖譜架、直立鋼琴這些藝文家具，擺在你家', '這週有來計時，晚上音樂廳的大玻璃就會亮起來，在 3D 小島碼頭廣場的正前方看得到', '讀書計時、運動計時和這裡，一次只能開一個'],
   persHint: '例如：很安靜、耳朵很好，喜歡巴哈和老電影配樂',
   roles: ['調音師', '指揮家', '領位的阿姨', '劇場的貓', '街頭藝人', '練習室的學姊'], emojis: ['🎻', '🎹', '🎺', '🎷', '🥁', '🧑‍🎤', '🧑‍🎨', '👩‍🎨', '👵', '🧔', '🐈', '🦉'] };
 PLACES.wisdom = { name: '渡船屋', ic: '⛴️', tab: 'wisdom', title: '⛴️ 渡船屋的主人', who: '渡船屋主人',
@@ -3802,6 +3841,7 @@ function viewHall() {
       <div>${w.n ? `來了 ${w.n} 次、共 ${w.min} 分鐘${notes ? '・' + '🎵'.repeat(Math.min(notes, 20)) : ''}` : '這週還沒來過。'}</div>
       <div class="muted" style="margin-top:4px;font-size:13px">${w.n ? '這週有來，晚上音樂廳的大玻璃會亮著。' : '這週來計時一次，晚上音樂廳的大玻璃就會亮起來。'}</div>
       ${days.length ? `<div style="margin-top:8px">${days.map(x => `<div class="row" style="font-size:14px"><span class="grow">${short(x.d)}</span><span class="muted">${x.n} 次・${x.min} 分鐘${x.hand ? '・🕘 補登' : ''}</span></div>`).join('')}</div>` : ''}</div>
+    ${(n => `<div class="card"><h3 style="margin:0 0 6px">🎙️ 藝文家具</h3><div class="muted" style="font-size:13px">${D.artBest ? '已經累積 ' + D.artBest + ' 週' : '一週藝文計時 ' + ART_WEEK_MIN + ' 分鐘就算一週'}${n ? '・累積 ' + n.weeks + ' 週可以拿到 ' + n.ic + ' ' + n.name : '・所有藝文家具都拿到了！'}</div><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap" role="img" aria-label="已拿到 ${ART_REWARDS.filter(r => D.artBest >= r.weeks).length} 件，共 ${ART_REWARDS.length} 件">${ART_REWARDS.map(r => `<span title="${esc(r.name)}" style="font-size:22px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;${D.artBest >= r.weeks ? '' : 'background:var(--plum-light)'}"><span style="${D.artBest >= r.weeks ? '' : 'filter:grayscale(1) brightness(.7)'}">${r.ic}</span></span>`).join('')}</div></div>`)(ART_REWARDS.find(r => D.artBest < r.weeks))}
     <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button>${kp && !fam ? `<button class="ghost" onclick="openKeeper('hall')">${kpPic(kp)} 管理員設定</button>` : ''}</div>`;
 }
 function yataiNote() {
@@ -6540,7 +6580,7 @@ function moveBlock(kind) {
   const m = moveActive(), kp = keeperOf(MOVE_KIND[kind || 'move'].page);
   if (m && (m.k || 'move') !== (kind || 'move')) return `<div class="card muted">${mk(m).ic} ${mk(m).did}計時還在跑，<a href="#" onclick="moveBack('${m.k || 'move'}');return false">去那邊看 ›</a></div>`;
   if (!m && kind === 'art') return `<div class="card"><h3 style="margin:0">⏱️ 藝文計時</h3>
-      <div class="muted" style="margin-top:4px">開始前選一種，結束了再按一下。每 ${MOVE_STEP} 分鐘一個音符 🎵 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；不用拍照、不用證明。</div>
+      <div class="muted" style="margin-top:4px">開始前選一種，結束了再按一下。每 ${MOVE_STEP} 分鐘一個音符 🎵 +${MOVE_GREEN} 綠點，多久都算，跟運動一樣；<span style="white-space:nowrap">不用拍照、不用證明。</span></div>
       ${focusActive() ? '<div class="muted" style="margin-top:8px">⏳ 讀書計時還在跑，先停下來再開始。</div>' : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">${Object.keys(ART_T).map(t => `<button style="min-height:44px" onclick="moveStart('art','${t}')">${ART_T[t].ic} ${ART_T[t].name.split('、').map((x, i, A) => `<span style="white-space:nowrap;display:inline-block;text-decoration:none">${x}${i < A.length - 1 ? '、' : ''}</span>`).join('')}</button>`).join('')}</div>`}${handLink('art')}</div>`;
   if (!m && kind === 'medit') return mdtIdle();   // MEDIT_v1
   if (!m && kind === 'read') return `<div class="card"><h3 style="margin:0">⏱️ 閱讀計時</h3>
@@ -8677,7 +8717,8 @@ function viewGuide() {
     p('牆上的 📆 日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，大約 30 字，寫完同住夥伴會回你一個表情；按 ◀ ▶ 可以翻回去看。不寫也沒關係，不會提醒、也沒有獎勵。每一頁預設只有你自己看得到，想給家人看的那頁，在「這一頁給誰看」選人，隨時可以收回。') +
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
     p('家裡上面有三個分頁：🛋️ 房間（日めくり、喝水、3D 房間、去島民家作客）、🛒 家具店、🏅 收藏（運動獎勵、燈塔和智慧島送的家具、徽章）。'))}
-  ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎼 藝文活動也算：到「音樂廳」選「🎻 練習、上課」「🎫 聽音樂會、看展演」「🥁 樂團排練」或「🎨 畫畫、書法、創作」開始計時，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，多久都算，不用證明。藝文計時不會蓋運動的章，運動和藝文一次只能開一個計時。音樂廳在 3D 小島碼頭廣場的正前方，這週有來計時，晚上大玻璃會亮。'))}
+  ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎼 藝文活動也算：到「音樂廳」選「🎻 練習、上課」「🎫 聽音樂會、看展演」「🥁 樂團排練」或「🎨 畫畫、書法、創作」開始計時，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，多久都算，不用證明。藝文計時不會蓋運動的章，運動和藝文一次只能開一個計時。') + p('一週藝文計時滿 ' + ART_WEEK_MIN + ' 分鐘就算一週，累積幾週就解鎖藝文家具，不用島幣，拿到的也不會收回：') +
+    `<table><tr><th>累積週數</th><th>解鎖的家具</th></tr>${ART_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` + p('音樂廳在 3D 小島碼頭廣場的正前方，這週有來計時，晚上大玻璃會亮。'))}
   ${sec('💊', '吃藥', p('首頁「今日のおつとめ」有一行「💊 吃藥」。早上和晚上各有一段時間（一開始是早上 7～10 點、晚上 7～10 點，可以自己改），這段時間打開小島，它會問一聲；吃了就按一下。時間過了也可以補勾，按錯再按一次就取消。補勾只是補記錄；忘了吃要不要補吃，請照醫師或藥師說的做。') + p('這裡不給綠點、島幣或經驗值，也不算連續天數，只是幫你記得。小島沒打開不會叫你，要準時提醒，可以用手機鬧鐘，或在設定裡按「📅 加到 Google 日曆」。') + p('只記有沒有勾、幾點勾的，不記吃什麼藥，也不會送給 AI。預設只有你自己看得到；想讓爸爸看到，可以在設定裡打開，隨時可以關。'))}
   ${sec('🥤', '喝水', p('在「我的家」的喝水卡按 +100cc、+250cc 或 +500cc，喝了多少就記多少。每 ' + WATER_CUP + 'cc（大約一杯）+' + WATER_GREEN + ' 🌱 綠點。') + p('一天最多算 ' + WATER_CAP + 'cc 的綠點，再喝還是可以記，只是不加綠點，水不是喝越多越好。' + WATER_WIN + ' 分鐘內最多記 ' + WATER_MAX + 'cc，按錯了可以按 ✕ 刪掉今天的那筆。') + p('喝水的紀錄只有你自己看得到，家人和訪客都看不到。'))}
   ${sec('🏃', '運動集章卡', p('首頁「今日のおつとめ」的「🏃 運動」那一行，或海邊步道頁的集章卡，就像暑假的早操集章卡：今天有運動，就按「🏃 今天運動了！」蓋一章（一天一章，按錯了可以取消）。拍計畫本時，寫了「運動」又打勾的日子也會自動蓋章。') +
