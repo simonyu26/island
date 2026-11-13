@@ -157,6 +157,23 @@
   .famLock { text-align: center; padding: 22px 16px; }
   .reqst { font-size: 13px; margin: 4px 0; } .reqst::before { content: '・'; color: var(--plum); }
   .pill { display: inline-block; background: var(--plum-light); color: var(--plum); border-radius: 8px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 13px; }
+  .rc-slot { margin-top: 4px; } .rc-slot:empty { display: none; }
+  .rc-entry { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-height: 44px; box-sizing: border-box; padding: 8px 10px; border-radius: 12px; background: var(--plum-light); color: var(--plum); font-size: 14px; cursor: pointer; }
+  .rc-entry small { color: var(--muted); margin-left: auto; font-size: 12px; } .rc-entry .go { font-size: 16px; }
+  .rc-sec { font-size: 12px; color: var(--muted); }
+  .rc-tbar { height: 4px; background: #efe6d6; border-radius: 2px; overflow: hidden; margin: 6px 0 12px; }
+  .rc-tbar > i { display: block; height: 100%; background: #c9a273; transform-origin: left center; }
+  .rc-prog { height: 3px; background: var(--plum-light); border-radius: 2px; overflow: hidden; margin-top: 6px; } .rc-prog > i { display: block; height: 100%; background: var(--plum); }
+  .rc-opt { display: block; width: 100%; text-align: left; margin: 6px 0; background: #fff; color: var(--ink); border: 1.5px solid #e4d3dc; padding: 12px 14px; }
+  .rc-opt.ok { border: 2px solid #2f6b3a; background: #eef7f0; } .rc-opt.ng { border: 2px solid #a33a2a; background: #fbefef; }
+  .rc-opt .rc-qtag { display: block; font-size: 12px; font-weight: 700; margin-bottom: 2px; } .rc-opt.ok .rc-qtag { color: #2f6b3a; } .rc-opt.ng .rc-qtag { color: #a33a2a; }
+  .rc-qhead { display: flex; align-items: center; gap: 8px; } .rc-qhead .grow { font-size: 13px; color: var(--muted); }
+  .rc-cmp { border-left: 3px solid var(--plum-mid); padding: 6px 10px; background: #fff; border-radius: 6px; font-size: 14px; margin-top: 8px; }
+  .rc-grp { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #fff; border-radius: 12px; margin: 6px 0; border: 1.5px solid #e4d3dc; min-height: 44px; box-sizing: border-box; cursor: pointer; }
+  .rc-grp.rec { border: 2px solid var(--plum); background: var(--plum-light); } .rc-grp.off { background: #f6f1e4; color: #8a7a6a; border: 1px dashed #d9c7a8; cursor: default; }
+  .rc-grp .n { margin-left: auto; font-size: 12px; color: var(--muted); }
+  button.rc-wait { background: #f6f1e4; border: 1px solid #d9c7a8; color: #8a7a6a; opacity: 1; }
+  button.rc-outline { background: #fff; color: var(--plum); border: 1.5px solid var(--plum); }
   .step { display: flex; align-items: center; gap: 4px; }
   .step button { padding: 4px 10px; } .step b { min-width: 26px; text-align: center; }
   /* 故事任務 */
@@ -419,11 +436,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.7.1';
+const APP_VERSION = '2.50.7.1.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.7.1.1', date: '2026-11-14', items: ['⚡ 國文多了「快問快答」：字音、字形的四選一小題，一輪最多 20 題，該複習的卡先出，答錯的明天會再出現。一天最多練兩組，字音、字形會輪流出。', '⭐ 練完一輪 +2 經驗值（和拍照單字共用每天 10 點），也會和國文的島民更熟。21:30 以後、模考前一週不倒數計時，可以慢慢想。'] },
   { v: '2.50.7.1', date: '2026-11-14', fam: [1], items: ['🎼 音樂廳多了藝文家具：一週藝文計時滿 25 分鐘就算一週，累積 2 週拿到譜架，之後還有手風琴、老收音機、直立鋼琴、小號和手鼓，不用島幣。以前的紀錄也算。', '🎼 家人自己的島：我的家「收藏」多了藝文家具。一週藝文計時滿 25 分鐘就算一週，累積幾週就會拿到譜架、手風琴、老收音機這些家具，不用島幣。以前的紀錄也算。', '📋 今日のおつとめ變短了：每天固定要做的幾項一直都在；其他今天做完或還不用做的，收進最下面的「其他」，點一下就打開。'] },
   { v: '2.50.7.0.4', date: '2026-11-13', fam: [1], items: ['數學街巷口開了『數學研究室』：魏老的《再探數學的奧祕》，11/18（三）開第一講，之後大多是週三開一講，停課的週研究室裡會先寫。每講最後有一題挑戰題，提示和解答自己決定要不要看，看了也不會被記下來；家人看得到你上過哪幾講的課頁，看不到挑戰題。', '家人自己的島：去島主的島時，數學街巷口多了『數學研究室』：魏老的《再探數學的奧祕》，大多是週三開一講。島主上過的課可以在書架回看，每講最後的挑戰題不會顯示。'] },
   { v: '2.50.7.0.3', date: '2026-11-13', fam: true, items: ['🔤 家人自己的島：單字卡按「出題」會出新的題型：例句挖空、用法（哪一句用得對）、意思最接近；有漢字的日文單字還有「漢字読み」（漢字怎麼唸）。題目和解說是 AI 照你的單字卡出的，可能會錯；覺得怪怪的，可以查字典確認。'] },
@@ -812,6 +830,8 @@ function kizunaOf(save, itemsByRow, today) {
       (v.ch || []).forEach(c => SUBJECTS.forEach(o => { if (o !== s && names[o] && String(c.text || '').includes(names[o])) add(pk(s, o), c.at, 'story', 1, 1); })); }
   });
   (save.links || []).forEach(l => add(pk(l.a, l.b), l.date, 'link', 2));
+  const rkd = (save.rk && save.rk.d) || {};   // RECALL_v1 快問快答：Recall.gs 只在到期輪寫 d
+  Object.keys(rkd).forEach(d => Object.keys(rkd[d] || {}).forEach(x => { if (SUBJECTS.includes(x) && (rkd[d][x] || []).length) add(x, d, 'recall', 1, 1); }));
   // 導師（v2.28）：上一講 +2、寫心得 +0.5；第二本書（kongming2）算同一位老師
   const ls = (save.wisdom && save.wisdom.lessons) || {};
   Object.keys(ls).forEach(b => Object.keys(ls[b] || {}).forEach(n => { const L = ls[b][n]; if (!L || !L.at) return; const d = String(L.at).slice(0, 10), t = 't:' + b.replace(/2$/, ''); add(t, d, 'lesson', 2); if (L.note) add(t, d, 'note', 0.5); }));
@@ -985,6 +1005,8 @@ function derive(S) {
   xp += sumXp(Object.keys(save).filter(k => k.startsWith('pq:') && save[k]).map(k => save[k]));
   // v2.49 單字出題（vq:時間戳）：答一題 +2 經驗值、一天最多 10（後端決定，存在每題的 xp）；不換島幣，和挑戰任務的每天 10 題分開算
   xp += Object.keys(save).filter(k => k.startsWith('vq:') && save[k]).reduce((a, k) => a + sumXp(save[k].items || []), 0);
+  // RECALL_v1 快問快答（rk.x = { 日期: 經驗值 }，Recall.gs 算，和單字共用每天 10 點）：不換島幣
+  xp += Object.keys((save.rk && save.rk.x) || {}).reduce((a, d) => a + (Number(save.rk.x[d]) || 0), 0);
   coinXp += sumXp(questsDone) + sumXp(xqDone.filter(q => !q.tier));
 
   // 運動集章卡：一章 +5 經驗值；一週集滿 3 章 +3 枚島幣；每週 ≥ 3 章算連續達標
@@ -1177,7 +1199,7 @@ function render() {
   const navOn = { lightword: 'home', story: 'home', moveStop: 'home', hand: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, recall: viewRecall, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (TAB_HELP[tab]) app.insertAdjacentHTML('afterbegin', helpChip());
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
@@ -1193,10 +1215,11 @@ function render() {
   if (tab === 'pick') bindPicker();
   if (tab === 'confirm') bindConfirm();
   if (tab === 'focus') bindFocusStop();
+  if (tab === 'recall' && window.rcAfter) rcAfter();
   if (ownMode()) FamIsle.after(tab);
   focusTick(); moveTick();
 }
-function go(t) { if (t !== 'home' && replay.from) { if (replay.timer) { clearInterval(replay.timer); replay.timer = null; } replay.idx = null; replay.from = null; }
+function go(t) { rcStop(); if (t !== 'home' && replay.from) { if (replay.timer) { clearInterval(replay.timer); replay.timer = null; } replay.idx = null; replay.from = null; }
   if (t === 'plan') { planWeek = null; planDay = null; } tab = t; draft = {}; render(); window.scrollTo(0, 0); }
 
 // 兌換：只記「換過多少經驗值」，經驗值總數不變
@@ -1360,8 +1383,8 @@ function viewHomeBody() {
       <div class="resident"><span class="avatar">${r.pic}</span>
         <div><b>${esc(r.name)}</b><div class="muted">${SUBJ_IC[s]} ${SUBJECT_NAME[s]}街${kzBadge(s)}</div></div>
         <span class="grade ${gr ? '' : 'none'}" title="${gr ? esc(gr.source + ' ' + gr.date) : '還沒有試煉紀錄'}">${gr ? esc(gr.level) : '?'}</span></div>
-      ${streets(s)}${s === '國' ? zwSign() : ''}${s === '數' ? sxSign() : ''}
-      <div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div>
+      ${streets(s)}
+      <div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div><div class="rc-slot">${s === '國' ? zwSign() : ''}${s === '數' ? sxSign() : ''}${rcEntry(s)}</div>
     </div>`;
   }).join('');
   const toggle = BETA3D ? `<div class="row" style="margin-bottom:10px">
@@ -5472,12 +5495,57 @@ function sayNote(sets) {
   const miss = ['ja', 'en'].filter(l => (sets || []).some(x => sayLang(x.lv) === l) && !sayVoice(l)), n = miss.map(l => SAY_NAME[l]).join('、');
   return miss.length ? `<div class="muted" style="margin-top:6px;font-size:13px">🔇 這支手機沒有內建的${n}語音，所以沒有 🔊 發音。可以到手機的設定（語音朗讀或文字轉語音）下載${n}語音。</div>` : '';
 }
+/* ===== 快問快答 RECALL_v1（爸爸 11/3～11/6；設計 背誦快問快答_提案/提案.md，樣稿 v2 11/5 定樣）=====
+   題庫 recall/<組>.json 是事先寫好、文案審查過的固定牌組，App 不叫 AI；進這一頁才 fetch，各組只抓一次。
+   存檔：rc:<組> = { 卡 id: [格 1～5, 到期日, 上次秒數] }；rk = { d: { 日期: { 科: [組] } }, x: { 日期: 經驗值 }, c, last, cfg }（Recall.gs）。
+   規則：一科一天 1～2 組；上一次練習日做過的組這次不能選（全被擋就全開）；第一輪一定要含「最久沒練」的那組（區長推薦）。
+   一輪最多 20 張、到期的先出；到期超過 15 張就不出新卡；新卡一組一天最多 10 張，第一次出現不計時。
+   答對往後排 1／3／7／21／30 天，答錯回第 1 格明天再來；時間到不升格，排在這一輪最後再問一次。
+   答錯或時間到，答案至少停 3 秒才能按下一題。一輪暫停 2 次（題目不遮）；切到背景自動暫停，不算次數。
+   21:30 以後、模考和會考前一週（PORTS）不倒數。一輪做完才叫一次 saveRecall；「再來一輪練錯的」不送後端、不加經驗值。 */
+const RC_LIVE = { 國: ['zy', 'zx'] };   // 上線的牌組：字義 zi、成語 cy 審完（11/19～21）在這裡補上；英文 12 月
+const RC_GROUP = { zy: ['字音', '🔊'], zx: ['字形', '✒️'], zi: ['字義', '🧠'], cy: ['成語', '🀄'] };
+const RC_BOX = [1, 3, 7, 21, 30], RC_ROUND = 20, RC_NEW = 10, RC_NONEW = 15, RC_PAUSE = 2, RC_LOCK = 3;
+const RC_STREET_WORD = '街';   // 12/5 STREET_v1 改成「街區」：只改這一行（和 SX_STREET 同一路，工程顧問 11/8）
+const RC_STREET = s => SUBJECT_NAME[s] + RC_STREET_WORD;
+const rc = { s: null, step: 'pick', decks: {}, loading: false, fail: false, sel: [], q: [], i: 0, cur: null, res: {}, pauses: RC_PAUSE, again: false, t: {}, end: null };
+function rcT(name, fn, ms) { if (rc.t[name]) clearTimeout(rc.t[name]); rc.t[name] = fn ? setTimeout(() => { delete rc.t[name]; fn(); }, ms) : 0; if (!fn) delete rc.t[name]; }
+function rcClear() { Object.keys(rc.t).forEach(k => clearTimeout(rc.t[k])); rc.t = {}; }
+function rcStop() { rcClear(); rc.step = 'pick'; rc.q = []; rc.i = 0; rc.cur = null; rc.res = {}; rc.end = null; rc.again = false; }
+function rcRk() { return (S && S.save && S.save.rk) || { d: {}, x: {}, c: 0 }; }
+function rcCards(g) { return (S.save['rc:' + g]) || {}; }
+function rcPlan(s) {
+  const live = RC_LIVE[s] || [], d = rcRk().d || {}, today = S.today, done = ((d[today] || {})[s] || []).filter(g => live.includes(g));
+  const past = Object.keys(d).filter(x => x < today && ((d[x] || {})[s] || []).length).sort(), lastDay = past[past.length - 1];
+  let lock = lastDay ? d[lastDay][s].filter(g => live.includes(g) && !done.includes(g)) : [];
+  if (live.every(g => lock.includes(g) || done.includes(g))) lock = [];
+  const lastOf = g => { for (let i = past.length - 1; i >= 0; i--) if (d[past[i]][s].includes(g)) return past[i]; return ''; };
+  const full = done.length >= 2, can = g => done.includes(g) || (!full && !lock.includes(g));
+  const order = live.filter(g => !lock.includes(g)).sort((a, b) => lastOf(a) < lastOf(b) ? -1 : lastOf(a) > lastOf(b) ? 1 : live.indexOf(a) - live.indexOf(b));
+  return { live, done, lock, full, can, order };
+}
+/** 國文街區卡上的一列入口（家人碼、家人島不出現） */
+function rcEntry(s) {
+  if (!RC_LIVE[s] || isFamily() || !S || !S.save) return '';
+  const p = rcPlan(s), due = p.live.reduce((a, g) => a + Object.keys(rcCards(g)).filter(id => rcCards(g)[id][1] <= S.today).length, 0), rec = p.order[0];
+  const note = p.done.length ? (due && !p.full ? '今天練過' + p.done.map(g => RC_GROUP[g][0]).join('、') : '今天的份做完了 ✓') : rec ? '今天推薦：' + RC_GROUP[rec][0] : '';
+  return card('recall', `<div class="rc-entry" role="button" tabindex="0" onclick="rcOpen('${s}')" onkeydown="if(event.key==='Enter')rcOpen('${s}')">⚡ 快問快答<small>${esc(note)}</small><span class="go">›</span></div>`);
+}
+function rcOpen(s) { rc.s = s; rc.sel = []; go('recall'); }
+/** 頁面本身在 recall/recall.js（進這一頁才載入，index.html 只多入口和存檔規則；工程顧問 11/5 的 12～15 KB） */
+function viewRecall() {
+  if (window.rcView) return rcView();
+  if (!rc.js) { rc.js = 1; const el = document.createElement('script'); el.src = 'recall/recall.js?v=' + APP_VERSION;
+    el.onload = () => { if (tab === 'recall') render(); }; el.onerror = () => { rc.js = 0; rc.jsFail = 1; if (tab === 'recall') render(); }; document.head.appendChild(el); }
+  return `<div class="card">${rc.jsFail ? '現在連不上題庫，等一下再試。<div class="row" style="margin-top:8px"><button onclick="rc.jsFail=0;render()">再試一次</button></div>' : '我去拿題目，等我一下…'}</div><div class="row"><button class="x grow" onclick="go('home')">回${esc(RC_STREET(rc.s || '國'))}</button></div>`;
+}
+
 function wordSets() { return Object.keys(S.save).filter(k => k.startsWith('vw:') && S.save[k]).sort().reverse().map(k => Object.assign({ id: k }, S.save[k])); }
 function wordQuizzes() { return Object.keys(S.save).filter(k => k.startsWith('vq:') && S.save[k]).sort().map(k => Object.assign({ id: k }, S.save[k])); }
 function wordToday() {
   const all = wordQuizzes(), ai = S.save.vwai && S.save.vwai.date === S.today ? S.save.vwai.n || 0 : 0;
   return { made: all.filter(q => q.date === S.today).reduce((a, q) => a + (q.items || []).length, 0),
-    xp: all.reduce((a, q) => a + (q.items || []).filter(x => x.at === S.today).reduce((b, x) => b + (x.xp || 0), 0), 0),
+    xp: all.reduce((a, q) => a + (q.items || []).filter(x => x.at === S.today).reduce((b, x) => b + (x.xp || 0), 0), 0) + ((S.save.rk && S.save.rk.x && Number(S.save.rk.x[S.today])) || 0),   // RECALL_v1：和快問快答共用
     open: all.find(q => !q.done) || null, last: all[all.length - 1] || null, aiLeft: Math.max(0, WORD_AI_DAILY - ai) };
 }
 const wordGood = x => (x.ok || 0) >= 2 && (x.ok || 0) > (x.n || 0) - (x.ok || 0);   // 答對兩次以上、對的比錯的多，算練熟
@@ -7132,7 +7200,7 @@ function zoneTimer(zoneOf, get, save, busy) {   // TM_RULES_v2：busy() 為真�
   return { tick, push, val: d => sec[d] ? val(d) : null };
 }
 // 她的三區對照（學習策略顧問 10/30 定）。智慧島照老師分：會考學科類算讀書，其餘算延伸
-const TM_STUDY_TABS = ['plan', 'confirm', 'scan', 'pick', 'light', 'lamp', 'log', 'bottle', 'wrongScan', 'exam', 'words', 'printWrong', 'focus', 'lightword', 'paper', 'story'];
+const TM_STUDY_TABS = ['plan', 'confirm', 'scan', 'pick', 'light', 'lamp', 'log', 'bottle', 'wrongScan', 'exam', 'words', 'printWrong', 'focus', 'lightword', 'paper', 'story', 'recall'];
 const TM_EXT_TABS = ['book'];   // TM_RULES_v2：書店店面改算其他；音樂廳是藝文計時頁，三區都不算
 const TM_OFF_TABS = ['walk', 'moveStop', 'hall', 'hand', 'cls'];   // CLASS_v1 上課表單也不算   // HANDLOG_v1 補登表單也不算   // 運動、藝文計時頁：離開螢幕的好事，不算進任何一區
 const TM_WISDOM_STUDY = ['einstein', 'yirong', 'mi', 'alu'];
