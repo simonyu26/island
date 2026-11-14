@@ -452,7 +452,7 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.9';
+const APP_VERSION = '2.50.9.0.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
@@ -6307,7 +6307,7 @@ function showInfo3D(s) {
     <div class="muted" style="margin-top:10px">最近四週完成次數</div>
     <div class="row" style="justify-content:space-around;margin-top:4px">${recent}</div>
     ${(lm => lm.length ? `<div class="muted" style="margin-top:10px">讀完書長出的地標</div>${lm.map(m => `<div class="item" style="cursor:pointer" onclick="openBook('${m.key}')"><span>🏞️</span><div class="name grow">${esc(m.name)}<div class="muted" style="font-size:12px">${esc(m.title)}${m.from ? '・' + esc(m.from) + '送' : ''}・${esc(short(m.at))} 讀完${(mi => m.id in mi ? '・' + (mi[m.id] ? '長在' + esc(isletName(mi[m.id])) + '上' : '街上放滿了') : '')(markIsles())}</div></div><span>›</span></div>`).join('')}` : '')(landmarkList().filter(m => m.s === s))}
-    ${s === '國' ? zwSign() : ''}${s === '數' ? sxSign() : ''}
+    ${s === '國' ? zwSign() : ''}${s === '數' ? sxSign() : ''}<div class="rc-slot">${rcEntry(s)}</div>   <!-- RECALL_3D_v1 -->
     <button class="ghost" style="width:100%;margin-top:10px" onclick="openHouse('${s}')">🏠 去${esc(r.name)}家作客</button>`;
 }
 
