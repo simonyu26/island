@@ -328,6 +328,14 @@
   .bkwcover::before { top: 10px; } .bkwcover::after { bottom: 8px; }
   .bkmini { flex: 0 0 30px; width: 30px; height: 40px; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 1px 2px 3px rgba(0,0,0,.25); }
   .bkland { margin-top: 12px; background: #eef6e6; border: 1px dashed #8fbf6a; border-radius: 8px; padding: 8px 10px; font-size: 13.5px; color: #3f6e3a; cursor: pointer; }
+  .clubcard { border: 2px solid #e8cf8e; background: linear-gradient(180deg, #fffaf0, #fff); }
+  .clubdots { display: flex; gap: 5px; align-items: center; margin-top: 4px; } .clubdots span { width: 9px; height: 9px; border-radius: 50%; background: #e4dccb; } .clubdots span.open { background: #f0c66a; } .clubdots span.on { background: #9A5B3C; } .clubdots small { margin-left: 4px; color: #8a7a6a; font-size: 12px; }
+  .clubq { margin-top: 10px; padding: 10px 14px; background: #fbf4e4; border-left: 4px solid #c99a4a; border-radius: 6px; font-family: 'Noto Serif TC', serif; font-size: 15.5px; line-height: 1.6; }
+  .clubseg { white-space: nowrap; } .clubpretty { text-wrap: pretty; }
+  .clubnote { margin-top: 12px; font-size: 14px; line-height: 1.6; } .clubnote .tag { display: inline-block; font-size: 12px; background: #eef4ec; color: #4f7a55; border-radius: 10px; padding: 1px 8px; margin-right: 6px; }
+  .clubtabs { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; } .clubtabs button { padding: 4px 11px; font-size: 13px; background: #fff; color: #6b4a2b; border: 1px solid #d9c7a8; } .clubtabs button.on { background: #6b4a2b; color: #fff; } .clubtabs button.off { background: #f7f1e5; border: 1px dashed #5f5a55; color: #5f5a55; opacity: 1; }
+  .clubans { margin-top: 8px; padding: 8px 12px; background: #f6f3ee; border-radius: 10px; font-size: 14px; line-height: 1.55; text-wrap: pretty; } .clubans b { display: block; font-size: 12px; color: #9A5B3C; } .clubans.me { background: #fff6e0; }
+  .clubrec { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e4dccb; }
   .bkland.off { background: #f6f1e4; border-color: #d9c7a8; color: #8a7a6a; cursor: default; }
   .bookrow { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; padding: 8px 8px 0; background: linear-gradient(transparent calc(100% - 8px), #8a5a2c calc(100% - 8px)); border-radius: 6px; }
   .bookrow .spine { width: 34px; min-height: 120px; line-height: 1.15; border-radius: 3px 3px 0 0; color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 1px; display: flex; justify-content: center; padding: 6px 0; text-align: center; cursor: pointer; border: none; box-shadow: inset -3px 0 0 rgba(0,0,0,.18); margin-bottom: 8px; }
@@ -436,11 +444,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.8';
+const APP_VERSION = '2.50.8.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.8.1', date: '2026-11-14', fam: [2], items: ['📗 書店開讀書會了：店長每週帶你讀一段書，聊一個沒有標準答案的問題，大約十分鐘', '💬 家人也能回答同一題，你寫的和家人寫的都看得到', '📗 書店有讀書會了：用家人碼進書店，可以回答店長每週問的同一題（60 字內），寫的句子讀書會裡的大家都看得到'] },
   { v: '2.50.8', date: '2026-11-14', fam: [0, 1], items: ['🧩 媽祖廟和教會多了『排排看先後』：把卡片上的事照時間排排看，排好才看得到年份。兩邊的事也可以放在一起排。', '🧮 11/15（日）起，主島的交易所開門：阿黛阿嬤把在銀行看過的帳寫成「阿嬤的帳本」，有利息、存錢、風險這些理財觀念，還有一個小算盤可以自己算算看。', '🧮 週二、週四的島民任務改回阿黛阿嬤出。'] },
   { v: '2.50.7.1.1', date: '2026-11-14', items: ['⚡ 國文多了「快問快答」：字音、字形的四選一小題，一輪最多 20 題，該複習的卡先出，答錯的明天會再出現。一天最多練兩組，字音、字形會輪流出。', '⭐ 練完一輪 +2 經驗值（和拍照單字共用每天 10 點），也會和國文的島民更熟。21:30 以後、模考前一週不倒數計時，可以慢慢想。'] },
   { v: '2.50.7.1', date: '2026-11-14', fam: [1], items: ['🎼 音樂廳多了藝文家具：一週藝文計時滿 25 分鐘就算一週，累積 2 週拿到譜架，之後還有手風琴、老收音機、直立鋼琴、小號和手鼓，不用島幣。以前的紀錄也算。', '🎼 家人自己的島：我的家「收藏」多了藝文家具。一週藝文計時滿 25 分鐘就算一週，累積幾週就會拿到譜架、手風琴、老收音機這些家具，不用島幣。以前的紀錄也算。', '📋 今日のおつとめ變短了：每天固定要做的幾項一直都在；其他今天做完或還不用做的，收進最下面的「其他」，點一下就打開。'] },
@@ -649,7 +658,7 @@ function boot() {
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 /* ===== 家人碼（v2.6）：家人看到的畫面和她一樣，但只能做這幾件事；後端也會再擋一次 ===== */
-const FAMILY_FNS = ['getState', 'getImages', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks', 'answerBack', 'postAdvice', 'getIsles', 'getBoard', 'postBoard', 'delBoard', 'famSnap', 'askSee', 'markSeen'];   // askSee／markSeen：請她分享、回報看過（See.gs）；postAdvice：後端只收爸爸的家人碼（Advisor.gs）
+const FAMILY_FNS = ['getState', 'getImages', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks', 'answerBack', 'postAdvice', 'getIsles', 'getBoard', 'postBoard', 'delBoard', 'famSnap', 'askSee', 'markSeen', 'answerClub', 'clubAnswers'];   // askSee／markSeen：請她分享、回報看過（See.gs）；postAdvice：後端只收爸爸的家人碼（Advisor.gs）
 function isFamily() { return !!(S && S.who && S.who.role === 'family'); }
 /* ===== 家人島（列島，做法 B）：家人按「🏝️ 我的島」，畫面和她一樣，但讀寫的是自己的島；畫面的差別都在 family.js，只有家人島才載入 ===== */
 const OWN_FNS = ['saveLifeTags', 'saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard', 'saveIq' /* ISLE_QUEST_v1 */];
@@ -1197,10 +1206,10 @@ function render() {
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
   if (ownMode()) tabs.splice(2, 1);   // 家人島沒有大考
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', hand: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', hand: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', club: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, recall: viewRecall, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, club: viewClub, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, recall: viewRecall, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
   if (TAB_HELP[tab]) app.insertAdjacentHTML('afterbegin', helpChip());
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
@@ -8420,6 +8429,125 @@ function bookScene() {
     ${cat ? `<div class="cat" id="bcat" onclick="catTap()" title="${esc(cat.name)}"><span class="body">${kpPic(cat)}</span></div>` : ''}
   </div>`;
 }
+/* --- 讀書會（11/15）：店長主持，一期一本書、3 到 5 段、一週開一段；每段：導讀＋值得留意的地方＋一個沒有標準答案的問題 ---
+   存檔（後端 Bookstore.gs）：club:期 = { book, title, start, parts:[{ title, guide, note, q, says }], mine:{ 段: { text, at, say } }, endAt }
+   家人的回答存在家人自己的列，用 clubAnswers(期) 拿彙整 { fam: { 段: [{ name, text, at }] } }。
+   她的回答不送 AI：店長回應是開期時預先寫好的 says 挑一句。地標照原本的規則：家人送的這本按「讀過了」才長（家長 11/2 決定）。不給經驗值島幣 */
+const CLUB_WEEKS_MAX = 6;
+// 11/20 書籤信（patch_index_shiori）之前上線的備援：有 bkHelp／bkHer 就直接用；沒有才用同樣的原句（BK_HELP＝文案 107、BK_TELL＝文案 151，寄信開關 S.concernMail 關著就不接那句）。名稱不同，書籤信上線後不會重複宣告。
+const CLUB_HELP_ = '想找人說說的話，學校輔導室的老師會聽你說；也可以打 1925 安心專線（24 小時、免付費）。如果有立即的危險，請打 110 或 119。';
+const CLUB_TELL_ = () => '我也會請' + GUARDIAN_ + '找時間關心你；提醒信裡沒有你寫的字。如果我誤會了，就當作我多關心你一點。';
+function clubHelp_(key) {
+  if (typeof bkHelp === 'function') return bkHelp(key);
+  return !isFamily() && S.save['bc:' + String(key).split(':')[1]] ? `<div class="muted" style="font-size:12.5px;margin-top:8px;line-height:1.6">🫶 ${CLUB_HELP_}${S && S.concernMail ? ' ' + CLUB_TELL_() : ''}</div>` : '';
+}
+function clubHer_() { return typeof bkHer === 'function' ? bkHer() : (S && S.herCall) || herCall(); }
+function clubList() { return Object.keys(S.save).filter(k => /^club:\d+$/.test(k) && S.save[k] && Array.isArray(S.save[k].parts)).map(k => Object.assign({ n: Number(k.slice(5)) }, S.save[k])).sort((a, b) => b.n - a.n); }
+function clubWeek(c) { return Math.floor((new Date(S.today) - new Date(mondayOf(c.start))) / 6048e5); }
+function clubDone(c) { return !!c.endAt || clubWeek(c) >= CLUB_WEEKS_MAX; }
+function clubNow() { const c = clubList()[0]; return c && !clubDone(c) ? c : null; }
+function clubFull(c) { return c.parts.every((p, i) => (c.mine || {})[i + 1]); }
+function clubOpenParts(c) { return Math.max(1, Math.min(c.parts.length, clubWeek(c) + 1)); }
+function clubBook(c) { return catalogOf(c.book) || { id: c.book, title: c.title || '', author: '', color: '#8a6d4b', ic: '📗', about: '', value: '', hours: 4 }; }
+// 家人的回答：每期讀一次（寫完再重讀），讀不到就當沒有
+const clubFamCache = {};
+function clubFamLoad(n, force) {
+  if (!force && clubFamCache[n]) return;
+  clubFamCache[n] = clubFamCache[n] || { fam: {} };
+  call('clubAnswers', n).then(r => { clubFamCache[n] = { fam: (r && r.fam) || {} }; if (tab === 'club' || tab === 'bookstore') render(); }).catch(() => {});
+}
+function clubFam(c, i) { clubFamLoad(c.n); return (clubFamCache[c.n].fam || {})[i] || []; }
+// 固定文案只在「，」「、」後面斷（每個子句 15 字內就整段不斷開）
+function clubBreak(t) { return String(t || '').split(/(?<=[，、])/).map(x => [...x].length <= 15 ? `<span class="clubseg">${esc(x)}</span>` : `<span class="clubpretty">${esc(x)}</span>`).join(''); }
+function clubPick() {   // 店長推薦三本：還沒讀、家人送過的優先、讀得完的長度優先
+  const gifts = giftList(), read = new Set(gifts.filter(g => g.readAt).map(g => g.book)), sent = new Set(gifts.map(g => g.book)), done = new Set(clubList().map(c => c.book));
+  return shelfBooks().filter(b => !read.has(b.id) && !done.has(b.id)).sort((p, q) => (sent.has(q.id) - sent.has(p.id)) || (Math.abs(p.hours - 4) - Math.abs(q.hours - 4))).slice(0, 3);
+}
+// 寫到讓人擔心時會怎樣：看後端的 CONCERN_LOCAL_MAIL 開關（getState.concernMail；沒有這個欄位＝沒設＝不寄信）（工程顧問 11/3）
+function clubCareLine() { return S.concernMail === true ? '寫到讓人擔心的話，' + GUARDIAN_ + '會收到提醒。' : '寫到讓人擔心的話，畫面上會出現輔導室、1925 安心專線這些可以找人聊聊的方式，不會通知任何人。'; }
+function clubKpSay(t) { const kp = keeperOf('bookstore'); return kp ? `<div class="row" style="flex-wrap:nowrap;align-items:flex-start;margin-top:10px"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow"><b>${esc(kp.name)}</b>：${t}</div></div>` : ''; }
+// 書店頁的讀書會卡
+function clubCardHtml() {
+  const c = clubNow(), kp = keeperOf('bookstore'), fam = isFamily();
+  if (!c) return fam || !kp ? '' : `<div class="card clubcard"><h3>📗 讀書會</h3><div class="muted">${esc(kp.name)}每週帶你讀一段書，聊一個沒有標準答案的問題，大約十分鐘。</div>
+    <button style="width:100%;margin-top:10px" onclick="go('club')">${clubList().length ? '開下一期讀書會' : '開一期讀書會'}</button></div>`;
+  const bk = clubBook(c), open = clubOpenParts(c), p = c.parts[open - 1], mine = (c.mine || {})[open], fa = clubFam(c, open);
+  return `<div class="card clubcard" style="cursor:pointer" onclick="go('club')"><div class="row" style="flex-wrap:nowrap;gap:12px;align-items:center">
+      <span class="bkmini" style="background:${bk.color};width:40px;height:56px;font-size:20px">${bk.ic}</span>
+      <div class="grow"><div class="muted" style="font-size:12px">📗 讀書會・第 ${c.n} 期</div><b>${esc(bk.title)}</b>
+        <div class="clubdots">${c.parts.map((x, j) => `<span class="${(c.mine || {})[j + 1] ? 'on' : j < open ? 'open' : ''}"></span>`).join('')}<small>第 ${open} 段／共 ${c.parts.length} 段</small></div></div></div>
+    <div class="clubq">${clubBreak('「' + p.q + '」')}</div>
+    <div class="muted" style="font-size:12px;margin-top:6px">${fam ? (fa.some(a => a.name === S.who.name) ? '你回答過了・' : '你也可以回答這一題・') + (mine ? esc(clubHer_()) + '回答了' : '')
+      : mine ? '你回答了' + (fa.length ? '・' + fa.map(a => esc(a.name)).join('、') + '也回答了' : '') : '這週的一段開了，大約十分鐘'}</div></div>`;
+}
+// 一期讀完的紀錄卡：她每段的回答排在一起，店長留一段結語
+function clubGift(c) { return giftList().find(g => g.book === c.book) || null; }   // 家人送過這本：紀錄卡上可以按「讀過了」
+function clubRecordHtml(c) {
+  const bk = clubBook(c), full = clubFull(c), fam = isFamily(), g = clubGift(c), l = landmarkOf(c.book);
+  return `<div class="card clubcard"><div class="muted" style="font-size:12px">📗 讀書會・第 ${c.n} 期・${esc(short(c.start))} 開始</div><h2 class="bkh" style="margin:2px 0 6px">《${esc(bk.title)}》讀書會紀錄</h2>
+    ${clubKpSay(full ? (fam ? '這期讀完了，' + esc(clubHer_()) + '每一段都寫了一句，我都收在這裡。' : '這本讀完了。這幾週你寫的句子我都收在這裡。' + (g && !g.readAt && l ? '這本是' + esc(g.from) + '送的，按「讀過了」，島上會長出「' + esc(l.name) + '」。' : g && g.readAt && l ? '島上的「' + esc(l.name) + '」也長出來了。' : ''))
+      : '這期先到這裡，沒讀完也沒關係。寫過的句子我都收著。')}
+    ${c.parts.map((p, i) => { const m = (c.mine || {})[i + 1]; return `<div class="clubrec"><div class="muted" style="font-size:12px">第 ${i + 1} 段　${esc(p.title)}</div><div class="clubq" style="font-size:14px;padding:6px 12px;margin-top:4px">${clubBreak('「' + p.q + '」')}</div>${m ? `<div class="clubans me"><b>${fam ? esc(clubHer_()) : '你'}</b>${esc(m.text)}</div>` : fam ? '' : '<div class="muted" style="font-size:12px;margin-top:4px">這段沒寫</div>'}</div>`; }).filter((x, i) => !fam || (c.mine || {})[i + 1]).join('')}
+    ${!fam && g && !g.readAt ? `<button style="width:100%;margin-top:14px" onclick="answerBook('${g.key}', null, true)">📖 讀過了</button>` : ''}</div>`;
+}
+// 讀書會頁
+function viewClub() {
+  const fam = isFamily(), back = `<div class="row"><button class="ghost grow" onclick="go('bookstore')">回到書店 📚</button></div>`;
+  const pastN = draft.clubView, past = pastN && clubList().find(x => x.n === pastN);
+  if (past) return clubRecordHtml(past) + back;
+  const c = clubNow();
+  if (!c) {
+    if (fam) return `<div class="card">這期讀書會還沒開始。</div>${back}`;
+    if (draft.clubBusy) return `<div class="card"><h2>📗 開一期讀書會</h2>${clubKpSay('我把這本書切成幾段，寫好每週的導讀和問題，等我一下下……')}</div>`;
+    const last = clubList()[0];
+    if (last && !draft.clubNew) return clubRecordHtml(last) + `<div class="row"><button class="grow" onclick="draft.clubNew=true;render()">開下一期讀書會</button></div>${back}`;
+    const done = new Set(clubList().map(x => x.book)), item = b => `<div class="item" style="cursor:pointer" onclick="startClub('${b.id}')"><span class="bkmini" style="background:${b.color}">${b.ic}</span>
+        <div class="name grow"><b>${esc(b.title)}</b> <span class="muted">${esc(b.author)}</span><div class="muted" style="font-size:12px">約 ${b.hours} 小時・${esc(b.value.length > 34 ? b.value.slice(0, 32) + '…' : b.value)}</div></div></div>`;
+    if (draft.clubAll) return `<div class="card"><h2>📗 從整個書架挑</h2><div class="muted"><a href="javascript:void(0)" onclick="draft.clubAll=false;render()">回到店長推薦</a></div></div>
+      ${BOOK_CATS.map(([k, name]) => { const list = shelfBooks().filter(b => b.cat === k && !done.has(b.id)); return list.length ? `<div class="card"><h3>${name}</h3>${list.map(item).join('')}</div>` : ''; }).join('')}${back}`;
+    const picks = clubPick();
+    return `<div class="card"><h2>📗 開一期讀書會</h2>${clubKpSay('挑一本吧。我會把它切成幾段，每週帶你讀一段，聊一個問題就好，不考試。')}
+      <h3 style="margin-top:14px">店長推薦</h3>${picks.map(item).join('') || '<div class="muted">書架上的書都讀過了！</div>'}
+      <button class="ghost" style="width:100%;margin-top:10px" onclick="draft.clubAll=true;render()">從整個書架挑</button></div>${back}`;
+  }
+  const bk = clubBook(c), open = clubOpenParts(c), sel = Math.min(draft.clubPart || open, open), p = c.parts[sel - 1], mine = (c.mine || {})[sel], fa = clubFam(c, sel);
+  const meFam = fam && fa.find(a => a.name === S.who.name);
+  const answers = (fam ? (mine ? [{ name: clubHer_(), text: mine.text }] : []).concat(fa.filter(a => a.name !== S.who.name)) : fa)
+    .map(a => `<div class="clubans"><b>${esc(a.name)}</b>${esc(a.text)}</div>`).join('');
+  const box = (ph) => `<textarea id="clubTxt" maxlength="60" rows="3" placeholder="${ph}"></textarea><button id="clubGo" style="width:100%;margin-top:8px" onclick="answerClub(${c.n}, ${sel})">寫好了</button>`;
+  return `<div class="card"><div class="row" style="flex-wrap:nowrap;gap:12px;align-items:flex-start">
+      <div class="bkcv" style="background:${bk.color};transform:scale(.8);transform-origin:top left;margin:0 -16px -26px 0"><span>${bk.ic}</span><div class="a">${esc(bk.author)}</div><div class="t">${esc(bk.title.replace(/（.*）/, ''))}</div></div>
+      <div class="grow"><div class="muted" style="font-size:12px">📗 讀書會・第 ${c.n} 期</div><h2 class="bkh" style="margin:2px 0">${esc(bk.title)}</h2>
+        <div class="clubtabs">${c.parts.map((x, j) => j < open ? `<button class="${j + 1 === sel ? 'on' : ''}" onclick="draft.clubPart=${j + 1};render()">${(c.mine || {})[j + 1] ? '✓ ' : ''}${j + 1}</button>` : `<button class="off" disabled>🔒</button>`).join('')}</div></div></div></div>
+    <div class="card"><h3 style="margin:0 0 6px">第 ${sel} 段　${esc(p.title)}</h3>
+      ${clubKpSay(esc(p.guide))}
+      ${p.note ? `<div class="clubnote"><span class="tag">👀 留意一下</span>${clubBreak(p.note)}</div>` : ''}
+      <div class="clubq" style="margin-top:14px">${clubBreak('「' + p.q + '」')}</div>
+      ${fam ? (meFam ? `<div class="clubans me"><b>你</b>${esc(meFam.text)}</div>` : box('寫一句你的想法（60 字內）'))
+        : mine ? `<div class="clubans me"><b>你</b>${esc(mine.text)}</div>${clubKpSay(esc(mine.say))}${clubHelp_('x:club' + c.n + 'p' + sel)}`
+        : box('寫一句你的想法就好（60 字內），沒有對錯') + `<div class="muted" style="font-size:12px;margin-top:6px">這句家人也看得到，不會交給 AI。${clubCareLine()}</div>`}
+      ${answers ? `<div class="bksec" style="margin-top:16px">${fam ? '大家的回答' : '家人也回答了'}</div>${answers}` : ''}</div>
+    ${fam || !readOn() ? '' : `<div class="row"><button class="ghost grow" onclick="moveStart('read');go('bookstore')">⏱️ 開始閱讀計時</button></div>`}${back}`;
+}
+async function startClub(id) {
+  const b = catalogOf(id); if (!b) return;
+  draft.clubBusy = true; render();
+  try { await flush(); S = await call('startClub', id, { title: b.title, author: b.author, about: b.about, hours: b.hours }); D = derive(S); }
+  catch (e) { draft.clubBusy = false; render(); return toast(e.message || String(e)); }
+  draft = {}; toast('📗 店長把書切好了，第一段開了'); render(); window.scrollTo(0, 0);
+}
+async function answerClub(n, part) {
+  const el = document.getElementById('clubTxt'), t = (el ? el.value : '').trim();
+  if (!t) return toast('寫一句你的想法吧');
+  const btn = document.getElementById('clubGo'); if (btn) btn.disabled = true;
+  try { await flush(); S = await call('answerClub', n, part, t); D = derive(S); }
+  catch (e) { if (btn) btn.disabled = false; return toast(e.message || String(e)); }
+  if (isFamily()) clubFamLoad(n, true);
+  const c = clubList().find(x => x.n === n);
+  toast(isFamily() ? '寫好了，' + clubHer_() + '看得到' : c && c.endAt ? '📗 這本讀完了！' : '寫好了');
+  if (c && c.endAt && !isFamily()) { draft = { clubView: n }; } render();
+}
+
 function viewBookstore() {
   const kp = keeperOf('bookstore'), cat = keeperOf('bookcat'), fam = isFamily(), n = cardList().length, fresh = newCards().length;
   if (!fam && (!bookName() || draft.renameBook)) return viewBookName();
@@ -8440,6 +8568,7 @@ function viewBookstore() {
     ${fam ? `<div class="row" style="margin-bottom:10px"><button class="grow" onclick="go('giftPick')">📚 送她一本書${giftedThisWeek() ? '（這週送過了）' : ''}</button>
       <button class="grow" onclick="go('cheerWrite')">💌 寫鼓勵卡${cheeredToday() ? '（今天寫過了）' : ''}</button></div>` : kp ? `<div class="row" style="margin-bottom:10px"><button class="grow" onclick="go('giveBook')">🎁 送家人一本書</button></div>` : ''}
     ${fam ? backShelfHtml() : ''}
+    ${clubCardHtml()}
     ${kp || fam ? card('moveRead', readHtml()) : ''}
     <div class="row" style="margin-bottom:14px">
       <button class="ghost grow" onclick="go('cards')">📮 明信片冊${n ? '（' + n + '）' : ''}${fresh && !fam ? ' 🔴' : ''}</button>
@@ -8833,7 +8962,8 @@ function viewGuide() {
     p('你也可以送家人一本書：在書店按「🎁 送家人一本書」，選一位家人，從書單挑一本（讀過的書排在最前面），寫一句為什麼想送。店長會在他們下次來書店時轉交，他們讀完可以回你一個表情。每位家人每週可以送一本，送過的書收在「我送出的書」。') +
     p('讀完一本書，島上就會長出一個地標：每本書依內容對應國、英、數、自、社其中一條街，例如《銀河鐵道之夜》讀完，自然街靠海的草地會長出觀星丘。家人送的書按「📖 讀過了」、智慧島的書 13 章都蓋完章就會長出來。點地標可以打開那本書；點一條街，也看得到這條街長了哪些地標。打開還沒讀完的書，會告訴你讀完後會長出什麼。') +
     p('家人能挑的書單會自己補書：每次只剩十本還沒讀，就再上架三十本，都從國高中推薦閱讀清單挑，新上架的書會標「🆕」。') +
-    (readOn() ? p('📖 閱讀計時：讀課外書的時候，自己讀或和家人一起讀，都在書店按「📖 開始閱讀」，讀完再按「讀完了」，中途可以休息（休息的時間不算）。每 ' + MOVE_STEP + ' 分鐘一枚書籤 🔖 +' + MOVE_GREEN + ' 綠點，多久都算，跟運動一樣；不用證明，也不記書名。讀書計時（課本）、運動、藝文和閱讀（課外書），一次只能開一個。') : ''))}
+    (readOn() ? p('📖 閱讀計時：讀課外書的時候，自己讀或和家人一起讀，都在書店按「📖 開始閱讀」，讀完再按「讀完了」，中途可以休息（休息的時間不算）。每 ' + MOVE_STEP + ' 分鐘一枚書籤 🔖 +' + MOVE_GREEN + ' 綠點，多久都算，跟運動一樣；不用證明，也不記書名。讀書計時（課本）、運動、藝文和閱讀（課外書），一次只能開一個。') : '') +
+    p('📗 讀書會：店長每期帶你讀一本書，分成 3 到 5 段，每週開一段（大約十分鐘）。每段店長先導讀，再問一個沒有標準答案的問題，你寫一句就好。家人也能回答同一題，你們寫的彼此都看得到。你寫的句子不會交給 AI；' + clubCareLine() + '家人送的書讀完了，在讀書會紀錄卡按「讀過了」，島上一樣會長出這本書的地標。沒讀完也沒關係，六週後這期就結束，可以再開新的一期。'))}
   ${wisdomOn() ? sec('⛴️', '智慧島', p('海邊有一座渡船碼頭，坐船就能到智慧島。島上住著七位老師：') + `<ul style="margin:2px 0 8px;padding-left:22px;line-height:1.8">${['隆中草廬的孔明：《孫子兵法》', '湯屋的小苗：放鬆和好好記住東西的方法', '巷口柑仔店的阿律：讀新聞', 'NASA 分站的愛因斯坦：數學和科學家的故事', '老教室的怡容：用一張老照片講一段歷史', '暗房小屋的瞇：慢慢讀一首詩', '海邊物理治療所的郭哥：吃、動、休息背後的道理'].map(x => '<li>' + x + '</li>').join('')}</ul>` +
     p('每一講都是四步：聽故事、你來選、搬到你的生活、寫一句。最後寫的那一句交給老師，老師會回你一句話，集章冊就蓋一個章。') +
     p('🔐 寫給老師的那一句會交給 AI，讓老師回你一句話；在 App 裡只有你自己看得到。如果寫到讓人擔心的話，回應會附上可以求助的地方，也會寄一封信請' + GUARDIAN_ + '關心你（信裡沒有你寫的字）。') +  /* GUIDE_PRIV_v1 */
