@@ -35,7 +35,7 @@
   };
   const OPEN = { port: true, hall: true, notes: true };
   // OPENAT_v1：三本書照日期開門（爸爸 10/31），和智慧島一樣用 S.today 比；OPEN 已經寫死的鍵不覆蓋
-  const OPEN_AT = { temple: '2026-11-06', church: '2026-11-07' };   // EXCHANGE_PENDING_v1：交易所先 pending（爸爸 11/2），開張日定了再加回 exchange
+  const OPEN_AT = { temple: '2026-11-06', church: '2026-11-07', exchange: '2026-11-15' };   // EXCHANGE_OPEN_v1：交易所開門（爸爸 11/12「可以開了」）
   Object.keys(OPEN_AT).forEach(k => { if (!(k in OPEN)) Object.defineProperty(OPEN, k, { enumerable: true, get: () => typeof S !== 'undefined' && !!S && !!S.today && S.today >= OPEN_AT[k] }); });
   KEEPER.temple.open = { first: '哎唷，你來了！廟終於整理好了，姨媽泡了一壺茶。這間廟的故事、節慶和老街的由來，都寫在下面，慢慢看，看累了喝茶。',
     hello: ['廟埕剛掃好，坐一下。', '今天想聽哪一段？姨媽講給你聽。', '下次唱一段歌仔戲給你聽好不好？'] };
@@ -271,7 +271,7 @@
   window.mainBook = function (b, u, c) {
     const B = BOOK[b]; if (!B) return;
     if (b === 'exchange') calc = Object.assign({}, CALC0);   // 翻頁、收起：小算盤回到預設
-    quiz = null; mapSel = -1;   // 翻頁、收起：你來選和地圖的選擇都清掉
+    quiz = null; mapSel = -1; ord = null;   // 翻頁、收起：你來選、地圖的選擇、排排看（ORDER_v1）都清掉
     B.nb = u == null ? null : { u, c: c || 0 };
     if (B.nb && !B.data && !B.busy) {
       B.busy = true;
@@ -281,11 +281,68 @@
     paintInfo();
   };
   window.mainNotes = (u, c) => mainBook('shanhai', u, c);
+  // ---------- ORDER_v1 排排看先後：把卡片上的事排出先後。排之前不顯示時間，排完才揭曉（學習策略 10/31）；只放記憶體，不計分、不存 ----------
+  let ord = null, ordData = null, ordBusy = false;   // ord：{ b, set, pool: 打散後的順序, picked: [點過的] }
+  const ORD_BOOK = { temple: '媽祖廟', church: '教會' };
+  function ordShuffle(n) {   // 打散，但不會剛好是答案
+    let a; do { a = Array.from({ length: n }, (_, i) => i); for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } } while (n > 1 && a.every((x, i) => x === i));
+    return a;
+  }
+  window.mainOrder = function (b, set) {   // set 沒給就是收起
+    quiz = null; mapSel = -1; if (BOOK[b]) BOOK[b].nb = null;
+    ord = set ? { b, set, pool: null, picked: [] } : null;
+    if (ord && !ordData && !ordBusy) {
+      ordBusy = true;
+      fetch('notes/order.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { ordData = j && j.sets ? j : null; if (!ordData) throw 0; })
+        .catch(() => { ord = null; toast('排排看讀不到，等一下再試'); }).then(() => { ordBusy = false; paintInfo(); });
+    }
+    paintInfo();
+  };
+  window.mainOrderPick = function (i) {   // 點下面的事放到下一格；點上面排好的拿回來。只換掉排排看那一塊，不重畫
+    const Z = ord && ordData && ordData.sets[ord.set]; if (!Z || !ord.pool) return;
+    const k = ord.picked.indexOf(i);
+    if (k >= 0) ord.picked.splice(k, 1); else if (ord.picked.length < Z.items.length) ord.picked.push(i);
+    const el = document.getElementById('miOrder'); if (el) el.innerHTML = orderBody();
+  };
+  const ordBtn = 'display:block;width:100%;min-height:44px;text-align:left;margin-top:6px';
+  // 中文只在「，」後面換行（美術 10/31）：每段包 nowrap＋inline-block；太長的段（超過 11 字）照常換行，免得撐出按鈕，但專有名詞不拆開（美術 10/31：黑水溝）
+  const ORD_KEEP = ['黑水溝', '湄洲', '西來庵', '總督府', '皇民化', '馬雅各', '巴克禮', '台灣府城教會報', '淡水禮拜堂', '公東教堂'];
+  const ordTxt = e => String(e).split('，').map((t, i, a) => { const s = esc(t) + (i < a.length - 1 ? '，' : ''); return t.length <= 11 ? `<span style="white-space:nowrap;display:inline-block">${s}</span>` : ORD_KEEP.reduce((x, w) => x.split(w).join(`<span style="white-space:nowrap">${w}</span>`), s); }).join('');
+  function orderBody() {
+    const Z = ordData.sets[ord.set], n = Z.items.length, full = ord.picked.length === n, ok = full && ord.picked.every((x, i) => x === i);
+    if (ok) {
+      const row = x => `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed #d8d0c4">
+        <span style="flex:none;padding:2px 8px;border-radius:10px;background:#f3eadb;color:#5f5a55;font-size:13px;font-weight:700">${esc(x.p)}</span>
+        <div style="flex:1;min-width:0"><b>${esc(x.t)}</b><div>${ordTxt(x.e)}</div>${x.b === ord.b ? `<a class="tlink" href="javascript:void 0" onclick="mainBook('${x.b}',0,${x.c})">看第 ${x.c + 1} 張 →</a>` : `<div style="font-size:12px;color:#5f5a55">出自${ORD_BOOK[x.b]}第 ${x.c + 1} 張</div>`}</div></div>`;
+      const more = ord.set !== 'mix' && OPEN.temple && OPEN.church ? `<button class="ghost" style="${ordBtn}" onclick="mainOrder('${ord.b}','mix')">再排一組：廟和教會一起</button>` : '';
+      return `<div style="margin-top:6px"><b>排好了！</b>由早到晚是這樣：</div>${Z.items.map(row).join('')}
+        ${Z.note ? `<div style="margin-top:8px">${esc(Z.note)}</div>` : ''}${more}
+        <button class="ghost" style="${ordBtn}" onclick="mainOrder('${ord.b}','${ord.set}')">打散再排一次</button>`;
+    }
+    const slot = (k) => { const i = ord.picked[k]; return i == null ? `<div style="${ordBtn};box-sizing:border-box;padding:10px 12px;border:1.5px dashed #c9bfae;border-radius:12px;color:#8a8278">${k + 1}.</div>`
+      : `<button class="ghost" style="${ordBtn}" aria-label="第 ${k + 1} 個：${esc(Z.items[i].e)}，點了拿回來" onclick="mainOrderPick(${i})">${k + 1}. ${ordTxt(Z.items[i].e)}</button>`; };
+    const left = ord.pool.filter(i => ord.picked.indexOf(i) < 0);
+    return `<div style="margin-top:4px">${ord.set === 'mix' ? '廟和教會的事放在一起。' : ''}照發生的先後，從最早的開始點。</div>
+      <div class="muted" style="font-size:12px">想換的話，點上面排好的就能拿回來。</div>
+      ${Array.from({ length: n }, (_, k) => slot(k)).join('')}
+      ${left.length ? `<div class="muted" style="margin-top:10px">還沒排的</div>${left.map(i => `<button style="${ordBtn}" onclick="mainOrderPick(${i})">${ordTxt(Z.items[i].e)}</button>`).join('')}` : ''}
+      ${full ? '<div id="miOrderTry" role="status" style="margin-top:10px;padding:8px 10px;border-radius:12px;background:#f7f1e5;color:#3d3833"><b style="white-space:nowrap;display:inline-block">💭 再想想看。</b><span style="white-space:nowrap;display:inline-block">也可以回去翻翻卡片。</span></div>' : ''}`;
+  }
+  function orderHtml() {
+    const t = ord.set === 'mix' ? '🧩 排排看先後・廟和教會一起' : '🧩 排排看先後';
+    const head = `<div class="row" style="flex-wrap:nowrap"><b class="grow" style="flex:1 1 auto;min-width:0">${t}</b><button class="ghost" style="flex:none" onclick="mainOrder('${ord.b}')">收起</button></div>`;
+    if (!ordData) return head + '<div class="muted" style="margin-top:4px">讀題目中…</div>';
+    const Z = ordData.sets[ord.set]; if (!Z) return head;
+    if (!ord.pool) ord.pool = ordShuffle(Z.items.length);
+    return head + `<div id="miOrder">${orderBody()}</div>`;
+  }
   function bookHtml(b) {
     const B = BOOK[b]; if (!bookOn(b)) return '';
     const box = s => `<div id="${B.id}" style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#f3f7fb">${s}</div>`, one = b !== 'shanhai', nb = B.nb;
+    if (ord && ord.b === b && ORD_BOOK[b]) return box(orderHtml());   // ORDER_v1
     if (!nb) return box(`<div class="row"><b class="grow">${B.name}</b><button class="ghost" onclick="${one ? `mainBook('${b}',0,-1)` : 'mainNotes(-1)'}">打開</button></div>
-      <div class="muted" style="margin-top:2px">${B.lead}</div>`);
+      <div class="muted" style="margin-top:2px">${B.lead}</div>${ORD_BOOK[b] ? `<div class="row" style="margin-top:8px"><span class="grow">🧩 排排看先後</span><button class="ghost" onclick="mainOrder('${b}','${b}')">排排看</button></div>
+      <div class="muted" style="margin-top:2px">把卡片上的事照時間排排看。</div>` : ''}`);
     if (!B.data) return box(`<b>${B.name}</b><div class="muted" style="margin-top:4px">讀${one ? '故事' : '筆記'}中…</div>`);
     const U = B.data.units;
     if (one && nb.c < 0) nb.c = festPick(S && S.today, B.data);   // 廟、教會只有一個單元：打開就是卡片，節期前後從那一張開始
@@ -458,6 +515,7 @@
   window.mainFocus = function (key) { if (window.MainIsle3D && MainIsle3D.focus) MainIsle3D.focus(key); mainInfo('isle', key); };   // 點下面的島名：鏡頭轉過去（工程顧問 10/27）
   window.mainInfo = function (kind, key, greeted) {
     iqUi = null;   // ISLE_QUEST_v1：換一個地方看（或再點一次島民），下次吧、打開的輸入框都重來
+    ord = null;   // ORDER_v1：換地方就清掉
     info = { kind, key, first: kind === 'place' && !met(key) && !greeted };   // greeted：港口的招呼卡已經說過第一次的台詞   // 第一次見面要在 meet() 之前記下來，才會說第一次的台詞
     if (info.first) meet(key);
     if (kind === 'place' && key === 'hall') loadBoard();
