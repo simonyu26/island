@@ -388,6 +388,14 @@
   .asklist .it.open .t { white-space: normal; }
   .asklist .tag { font-size: 12px; color: #5f5a55; background: #f3e6ec; border-radius: 10px; padding: 0 8px; line-height: 20px; white-space: nowrap; align-self: center; }
   @media (max-width: 360px) { .askopt { flex-direction: column; } .askrow { flex-direction: column; align-items: stretch; } .askrow .b { text-align: right; } }
+  /* SAFETY_v1 想找人說說（美術 11/3） */
+  .hlinks{font-size:12px;display:flex;gap:16px;flex-wrap:wrap;margin-top:-4px}
+  .hlinks a{color:var(--muted);text-decoration:underline;min-height:44px;display:inline-flex;align-items:center;cursor:pointer}
+  .hrow{display:flex;align-items:center;gap:12px;min-height:56px;border-bottom:1px solid #d8d4ce;padding:6px 0}
+  .hrow:last-child{border-bottom:0}
+  .hrow .grow{min-width:0}
+  .hrow a.call{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:72px;min-height:44px;box-sizing:border-box;padding:0 14px;border-radius:22px;border:1px solid var(--plum);color:var(--plum);text-decoration:none;font-weight:700;font-size:15px}
+  .hrow a.call.n{min-width:56px;padding:0 10px}
 </style>
 </head>
 <body>
@@ -444,11 +452,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.8.3';
+const APP_VERSION = '2.50.9';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.9', date: '2026-11-15', items: ['🫶 「更多」裡多了「想找人說說」：想找人聊聊的時候，這裡有可以直接打的電話；也可以按「讓爸爸知道我想聊聊」，爸爸只會收到一句「想找你聊聊」。開這一頁不會被記下來。', '🫶 老師和燈塔的擔心提醒改成分兩級：如果 AI 覺得你只是心情低落，只會給你可以找人聊聊的地方，不會寄信；說到想傷害自己、活不下去或被傷害時，才會寄提醒信請爸爸關心你，信裡沒有你寫的字。', '🔒 「誰看得到什麼」最上面多了「你寫的字」：寫清楚你寫的字存在哪裡、誰看得到。'] },
   { v: '2.50.8.3', date: '2026-11-14', items: ['⚡ 國文的快問快答多了兩組：字義（會考考古題，還有比比看同一個字在前後兩個詞裡，意思一不一樣）和成語（會考考古題，還有看意思選成語）。', '🔄 現在國文有字音、字形、字義、成語四組，一天還是最多練兩組，上次練過的組下次換別組。'] },
   { v: '2.50.8.1', date: '2026-11-14', fam: [2], items: ['📗 書店開讀書會了：店長每週帶你讀一段書，聊一個沒有標準答案的問題，大約十分鐘', '💬 家人也能回答同一題，你寫的和家人寫的都看得到', '📗 書店有讀書會了：用家人碼進書店，可以回答店長每週問的同一題（60 字內），寫的句子讀書會裡的大家都看得到'] },
   { v: '2.50.8', date: '2026-11-14', fam: [0, 1], items: ['🧩 媽祖廟和教會多了『排排看先後』：把卡片上的事照時間排排看，排好才看得到年份。兩邊的事也可以放在一起排。', '🧮 11/15（日）起，主島的交易所開門：阿黛阿嬤把在銀行看過的帳寫成「阿嬤的帳本」，有利息、存錢、風險這些理財觀念，還有一個小算盤可以自己算算看。', '🧮 週二、週四的島民任務改回阿黛阿嬤出。'] },
@@ -1210,7 +1219,7 @@ function render() {
   const navOn = { lightword: 'home', story: 'home', moveStop: 'home', hand: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', club: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, club: viewClub, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, recall: viewRecall, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, club: viewClub, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, recall: viewRecall, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide, talk: viewTalk })[tab]();
   if (TAB_HELP[tab]) app.insertAdjacentHTML('afterbegin', helpChip());
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
@@ -2317,7 +2326,7 @@ function wisdomNoteHtml(L, t, rec) {
     ${done.reply ? `<div class="row" style="flex-wrap:nowrap;margin-top:8px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(done.reply)}</div></div>` : ''}${wisdomTalkHtml(done, t)}${tail}`;
   return `<textarea id="wNote" rows="3" maxlength="200" placeholder="寫一句就好" style="width:100%;margin-top:8px" oninput="draft.wl.note=this.value">${esc(w.note)}</textarea>
     ${ownMode() ? '' : `<div class="muted wtell" style="font-size:12px;line-height:1.5;margin:6px 0 2px">🔒 這句在 App 裡只有你自己看得到。如果寫到讓人擔心的話，${esc(GUARDIAN_)}會收到一則提醒（提醒裡沒有你寫的字），請他找時間關心你。</div>`}<!-- WNOTE_TELL_v1 -->
-    <button id="wGo" style="width:100%;margin-top:8px;background:${t.color}" onclick="wisdomSubmit()">交給${esc(t.name)}</button>`;
+    ${talkLinks()}<button id="wGo" style="width:100%;margin-top:8px;background:${t.color}" onclick="wisdomSubmit()">交給${esc(t.name)}</button>`;
 }
 /** 再回老師一句（爸爸 10/30）：老師回了以後，上課當天可以再回一句，每講一次，老師回完就收尾；回看時兩段都看得到。家人看不到，家人自己的島這版不開 */
 function wisdomTalkHtml(done, t) {
@@ -3242,7 +3251,7 @@ function diaryCard() {
   const editing = !fam && date === S.today && (!d.text || draft.dEdit);
   const body = editing
     ? `<textarea id="dText" maxlength="${DIARY_MAX}" rows="2" placeholder="今天的一句話或心情（不寫也沒關係）" style="margin-top:8px">${esc(draft.dText != null ? draft.dText : d.text || '')}</textarea>
-       <div class="row" style="margin-top:6px"><span class="muted grow">約 30 字・只有你自己看得到</span><button onclick="saveDiaryPage()">寫好了</button></div>`
+       <div class="row" style="margin-top:6px"><span class="muted grow">約 30 字・只有你自己看得到</span><button onclick="saveDiaryPage()">寫好了</button></div>${talkLinks()}`
     : `<div class="diaryText">${esc(d.text || '')}</div>
        ${d.emoji ? `<div class="row" style="justify-content:flex-end;gap:6px;align-items:center"><span class="muted">${k ? esc(k.name) : '家裡'}回你</span><span style="font-size:26px">${esc(d.emoji)}</span></div>` : ''}
        ${fam ? '' : `<div class="row" style="margin-top:6px">${date === S.today ? '<button class="ghost" onclick="draft.dEdit=true;render()">改一下</button>' : ''}
@@ -5129,7 +5138,7 @@ function viewBottle() {
       <div class="row" style="gap:6px${b.guess ? ';display:none' : ''}">${REASONS.map(r => `<button class="${f.why === r[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" ${fam ? 'disabled' : ''} onclick="bottleKeep();draft.rv.why=draft.rv.why==='${r[0]}'?null:'${r[0]}';render()">${r[1]}</button>`).join('')}</div>
       ${f.why === 'careless' && !b.guess ? `<label>下次要檢查什麼？</label><input id="rvCheck" maxlength="60" value="${esc(f.check)}" ${fam ? 'disabled' : ''} placeholder="例如：單位有沒有換算、正負號、題目問的是『不正確』的、英文的單複數" oninput="draft.rv.check=this.value">
       <div class="muted" style="font-size:12px;margin-top:2px">下次遇到同一個單元的題目，會先提醒你。</div>` : ''}
-      <label>想對自己說的一句話（選填）</label><input id="rvNote" maxlength="120" value="${esc(f.note)}" ${fam ? 'disabled' : ''} placeholder="例如：單位要先換成公尺" oninput="draft.rv.note=this.value">
+      <label>想對自己說的一句話（選填）</label><input id="rvNote" maxlength="120" value="${esc(f.note)}" ${fam ? 'disabled' : ''} placeholder="例如：單位要先換成公尺" oninput="draft.rv.note=this.value">${fam ? '' : talkLinks()}
       ${fam || !seeMine() ? '' : `<div style="margin-top:10px"><b style="font-size:14px">👀 想問誰這一題？</b><div class="muted" style="font-size:12px">選的人看得到你寫的原因和這句話，按一下就存好；已經被看過的收不回。</div>${seeChipRow('rv:' + b.id, (b.rv.to || []))}${seeByText('rv:' + b.id)}</div>
       <button style="width:100%;margin-top:10px" onclick="saveBottle('${b.id}')">記下來</button>`}</div>`}
     <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button></div>`;
@@ -7219,6 +7228,7 @@ TM_WISDOM_STUDY.push('zw');
 TM_WISDOM_STUDY.push('sx');   // SX_v1：數學助教算數學，讀書區   // ESSAY_A_v1：作文算國文，讀書區   // 自然、社會（歷史）、國文、社會（公民：看新聞）
 const TM_BOARD_STUDY = ['plan', 'xq', 'light'];   // 首頁今日板展開讀書計畫、挑戰任務、漂流瓶
 function tmZone() {
+  if (tab === 'talk') return -1;   // SAFETY_v1：想找人說說這一頁不算任何區、不記分鐘
   if (!S || !S.save || !D || !D.cfg || isFamily() || ownMode()) return -1;   // 家人島的版本還沒做
   if (TM_OFF_TABS.includes(tab)) return -1;
   if ((moveActive() || {}).k === 'medit') return -1;   // MEDIT_v1 冥想中畫面亮著，不算螢幕時間
@@ -7580,7 +7590,7 @@ function viewConfirm() {
       return blocks.length ? `<div class="card"><h3>❓ 還沒決定是哪一項</h3>${blocks.map(([i, d]) => `<div class="subj">${i === 7 ? '沒排天' : '週' + DAYS[i]}</div>` + pendingList(d, wk, i, false)).join('')}</div>` : ''; })()}
     <div class="card">${rows.length ? itemList(rows, r => (fmin[r] ? `<span class="muted">⏳ ${fmin[r]} 分</span>` : '') + `<div class="step" data-row="${r}"><button data-d="-1">－</button><b>${fmt(c[r] || 0)}</b><span class="muted">/${wd.planned[r] || '－'}</span><button data-d="1">＋</button><button data-d="half" class="ghost">½</button></div>`) : '<div class="muted">這週沒有計畫也沒有紀錄。按「顯示全部項目」補記，或直接確認，當作休息週。</div>'}
       <label>這週一句話（只會存在島上）</label><textarea id="note" placeholder="例如：數學卡在二次函數，但歷史影片看完了">${esc(draft.note != null ? draft.note : (wd.settled && wd.settled.note) || '')}</textarea>
-      <div class="row" style="margin-top:12px"><button id="doConfirm" class="grow">確認這週 ✨</button><button class="ghost" onclick="draft={};tab='plan';render()">返回</button></div></div>
+      ${talkLinks()}<div class="row" style="margin-top:12px"><button id="doConfirm" class="grow">確認這週 ✨</button><button class="ghost" onclick="draft={};tab='plan';render()">返回</button></div></div>
     ${card('link', viewLinkForm())}`;
 }
 function bindConfirm() {
@@ -8718,6 +8728,46 @@ async function familyAsk() {
 }
 
 /* --- 更多 --- */
+// ===== SAFETY_v1 常駐求助入口「想找人說說」（爸爸 11/3 定樣；文案 154、155）=====
+// 這一頁開過幾次不記：不呼叫後端、不寫 localStorage／sessionStorage／IndexedDB，tmZone 對 'talk' 回 -1。
+// 只有按「讓爸爸知道我想聊聊」才呼叫 askTalk（不帶任何參數；後端只寄一句「想找你聊聊」，一天一封，寄成功才算）。
+const TALK_LINES = [
+  ['1925 安心專線', '24 小時・免付費', ['1925']], ['1995 生命線', '24 小時', ['1995']], ['有人傷害你：113 保護專線', '24 小時・免付費', ['113']],
+  ['1980 張老師', '白天和晚上（不是 24 小時）', ['1980']], ['緊急：110、119', '', ['110', '119']]];
+const TALK_ARIA = { 1925: '撥打 1925 安心專線', 1995: '撥打 1995 生命線', 113: '撥打 113 保護專線', 1980: '撥打 1980 張老師', 110: '撥打 110 報警', 119: '撥打 119 救護' };
+let talkBack = 'more', talkState = '';   // 只放在記憶體：重新整理就沒了
+function openTalk() { talkBack = tab === 'talk' ? talkBack : tab; talkState = ''; tab = 'talk'; draft = {}; render(); window.scrollTo(0, 0); }
+function talkSee() { tab = 'more'; draft = {}; render(); const c = document.getElementById('sfWrite'); if (c) c.scrollIntoView(); else window.scrollTo(0, 0); }
+function talkLinks() { return seeMine() ? `<div class="hlinks"><a role="link" tabindex="0" onclick="talkSee()">誰看得到 ›</a><a role="link" tabindex="0" onclick="openTalk()">想找人說說 ›</a></div>` : ''; }
+function talkLink() { return seeMine() ? `<div class="hlinks"><a role="link" tabindex="0" onclick="openTalk()">想找人說說 ›</a></div>` : ''; }   // 字詞比對命中時接在回饋下面（不跳出、不變色）
+async function askTalkNow() {
+  if (talkState === 'busy') return;
+  if (!navigator.onLine) { talkState = 'fail'; return render(); }
+  talkState = 'busy'; render();
+  try { const r = await call('askTalk'); talkState = r && r.sent ? 'sent' : r && r.today ? 'today' : 'fail'; }
+  catch (e) { talkState = 'fail'; }
+  if (tab === 'talk') render();
+}
+function viewTalk() {
+  const G = esc(GUARDIAN_), st = talkState;
+  const tell = !seeMine() ? '' : st === 'sent' ? `<div class="card" role="status"><div style="text-align:center;font-size:16px;padding:8px 0">好，${G}會知道。</div><div class="muted" style="font-size:12px;text-align:center">${G}只會收到一句「想找你聊聊」。</div></div>`
+    : st === 'today' ? `<div class="card" role="status"><div class="muted" style="text-align:center;font-size:15px;padding:8px 0">今天已經跟${G}說了。想再說，也可以直接找${G}，或打上面的電話。</div></div>`
+    : `<div class="card"><button style="width:100%" onclick="askTalkNow()" ${st === 'busy' ? 'disabled' : ''}>讓${G}知道我想聊聊</button>
+      ${st === 'fail' ? `<div role="status" style="font-size:14px;margin-top:8px">沒送出去。可以直接找${G}，或打上面的電話。</div>` : ''}
+      <div class="muted" style="font-size:12px;margin-top:6px">按不按由你決定。${G}只會收到一句「想找你聊聊」，不會看到你在 App 裡寫的任何字。這一頁開過幾次不會記下來。</div></div>`;
+  return `<div class="card"><h2 style="margin:0">🫶 想找人說說</h2>
+    <div style="font-size:15px;margin-top:6px">不用說原因，想找人的時候就找。</div>
+    <div class="hrow"><div class="grow"><b>學校輔導室</b><div class="muted" style="font-size:13px">下課直接去，或請導師陪你去</div></div></div>
+    ${TALK_LINES.map(([t, sub, ns]) => `<div class="hrow"><div class="grow"><b>${t}</b>${sub ? `<div class="muted" style="font-size:13px">${sub}</div>` : ''}</div>${ns.map(n => `<a class="call${ns.length > 1 ? ' n' : ''}" href="tel:${n}" aria-label="${TALK_ARIA[n]}">${ns.length > 1 ? n : '撥打'}</a>`).join('')}</div>`).join('')}</div>
+    ${tell}
+    <div class="row"><button class="ghost grow" onclick="go(talkBack && talkBack !== 'talk' ? talkBack : 'more')">回去</button></div>`;
+}
+// 「誰看得到什麼」最上面：你寫的字（文案 154；爸爸 11/3 確認已當面說過承諾句）
+function talkWriteCard() {
+  if (!seeMine()) return '';
+  const G = esc(GUARDIAN_);
+  return `<div class="card" id="sfWrite"><b>🔒 你寫的字</b><div style="font-size:14px;line-height:1.7;margin-top:4px">App 不會把你寫的字給家人看，除非你自己選了人。這些字存在${G}的 Google 帳號裡；${G}技術上打得開，但答應過不去翻你沒分享的內容。寫給老師和燈塔的話會交給 AI 讀，讀到你可能有危險時，會請${G}關心你，但不會給${G}看你寫的字。</div></div>`;
+}
 function viewMore() {
   const pairs = Object.keys(D.kizuna.pair).filter(k => D.kizuna.pair[k].score > 0).map(k => [k, D.kizuna.pair[k]]);
   return `<div class="card"><h2>👥 島民關係</h2>${SUBJECTS.map(s => { const r = resident(s);
@@ -8730,7 +8780,7 @@ function viewMore() {
   </div>
   <div class="card"><h3>📖 航海日誌</h3><div class="muted">每週達成率、這週一句話、瓶子和紙船，還有一路走來的紀錄，都收進燈塔 2F 的航海日誌了。</div>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="tab='log';draft={logMode:'month'};render();window.scrollTo(0,0)">翻開航海日誌 ›</button></div>
-  <div class="card"><div class="row"><button class="ghost" onclick="go('guide')">❓ 玩法說明</button>
+  <div class="card"><div class="row">${seeMine() ? `<button class="ghost" onclick="openTalk()">🫶 想找人說說</button>` : ''}<button class="ghost" onclick="go('guide')">❓ 玩法說明</button>
     <button class="ghost" onclick="go('abbr')">📖 我的寫法</button>
     <button class="ghost" onclick="go('items')">📝 任務清單</button>
     <button class="ghost" onclick="go('wish')">💡 讓島順起來</button>
@@ -8755,7 +8805,7 @@ const WHO_SEES = [
   ['連續週數、這週完成幾項', '✅', '你選的人', '有勾的'],
   ['📊 統計數字：' + GUARDIAN_ + '有一個讀數工具，看得到這些數字：每週計畫完成幾格、各科讀了幾分鐘、上課和運動的次數、挑戰任務答了幾題和答對幾題、漂流瓶和燈籠的數量、紙船的數量、AI 用了幾次，還有大考成績，和最近 14 天你在讀書和其他畫面各待了幾分鐘。只有數字和日期，看不到你寫的字，也看不到是哪幾題。這個工具只有' + GUARDIAN_ + '在用。', '✅', GUARDIAN_ + '（讀數工具）', '—', 'me']];   /* PRIV_STATS_v1 */ // 只給她看；之後 xpDaily、國文錯因、保留率、交易所使用量上線時，各包把自己的項目加進這一列（文案 216 追記四）
 function privacyCard() {
-  return seeEditor() + `<div class="card"><details class="fold"><summary><h3>🔐 隱私說明</h3><span class="muted">點開看資料存在哪裡、訪客看得到哪些</span></summary>
+  return talkWriteCard() + seeEditor() + `<div class="card"><details class="fold"><summary><h3>🔐 隱私說明</h3><span class="muted">點開看資料存在哪裡、訪客看得到哪些</span></summary>
     <div style="overflow-x:auto;margin-top:8px"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人</th><th>訪客</th></tr>
       ${WHO_SEES.filter(r => r[4] !== 'me' || !(isFamily() || ownMode())).map(r => `<tr><td style="text-align:left;white-space:normal">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div>
     <div style="margin-top:8px;font-size:13px">家人在 App 裡只看得到你選了給他們看的。沒選的、燈塔的話，還有你在智慧島、紙船這些地方寫的字，家人都看不到。這些資料存在爸爸管理的試算表和雲端硬碟裡，所以爸爸技術上打得開；他答應過，不會去讀你沒分享的內容。有疑問，隨時可以直接問爸爸。</div>
