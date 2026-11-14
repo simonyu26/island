@@ -81,7 +81,10 @@ function rcMake(it) {
   const c = it.c, deck = rc.decks[it.g], T = deck.types[c.t] || {}, pool = deck.cards.filter(x => x.t === c.t && x.id !== c.id);
   const mark = (w, ch, txt) => { const i = w.indexOf(ch); return esc(w.slice(0, i)) + '「' + esc(txt) + '」' + esc(w.slice(i + 1)); };
   let stem = esc(T.stem || ''), opts;
-  if (c.t.slice(-1) === '1' && c.x) {   // zy1：例句＋讀音
+  if (c.o) {   // RECALL_B2_v1：字義、成語卡自帶四個選項（o[0] 是正解），題幹有 q 就用 q
+    if (c.q) stem = esc(c.q);
+    opts = c.o.map((h, k) => ({ h: esc(h), ok: k === 0, c }));
+  } else if (c.t.slice(-1) === '1' && c.x) {   // zy1：例句＋讀音
     const ds = rcShuffle(pool.filter(x => x.c !== c.c)).slice(0, 3);
     opts = [{ h: esc(c.s) + '：' + c.a, ok: true, c }].concat(ds.map(x => ({ h: esc(x.s) + '：' + x.x[Math.floor(Math.random() * 3)], ok: false, c: x })));
   } else if (c.t.slice(-1) === '1') {   // zx1：句子，干擾卡換成錯字
@@ -150,6 +153,7 @@ function rcNextQ() {
   rcFinish();
 }
 function rcExplain(c) {
+  if (c.o) return esc(c.n);
   if (c.t === 'zx1') return '<b>' + esc(c.w) + '</b>：' + esc(c.c) + '（不是' + esc(c.bad) + '）' + esc(c.n);
   if (c.x) return '<b>' + esc(c.c) + '</b> ' + esc(c.a) + '（' + esc(c.n) + '）';
   return c.p.map(p => esc(p.w) + (p.a ? ' ' + esc(p.a) : '（' + esc(p.c) + '）')).join('／') + '：' + esc(c.n);
@@ -171,7 +175,7 @@ function rcQView() {
   if (q.done && !(q.choice >= 0 && q.opts[q.choice].ok)) {
     const links = [q.c.link, q.c.link2].filter(Boolean).map((u, k) => `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--plum)">查辭典${q.c.link2 ? (k ? '（後）' : '（前）') : ''}</a>`).join('　');
     after = (q.fast ? '<p class="muted" style="margin:6px 0">慢一點也沒關係。</p>' : '') +
-      `<div class="rc-cmp">${q.opts.map(o => rcExplain(o.c)).join('<br>')}${q.c.src ? '<div class="rc-sec" style="margin-top:4px">' + esc(q.c.src) + '</div>' : ''}<div style="margin-top:4px;font-size:13px">${links}</div></div>
+      `<div class="rc-cmp">${q.c.o ? rcExplain(q.c) : q.opts.map(o => rcExplain(o.c)).join('<br>')}${q.c.src ? '<div class="rc-sec" style="margin-top:4px">' + esc(q.c.src) + '</div>' : ''}<div style="margin-top:4px;font-size:13px">${links}</div></div>
       <p class="rc-sec" style="margin-top:8px">${q.timeout ? (q.re ? '時間到了，這張明天再出現一次。' : '時間到了，這張等一下再問一次。') : '這張明天再出現一次。'}</p>
       <button id="rcNext" style="width:100%" onclick="rcNextQ()">下一題</button>`;
   } else if (q.done) after = `<p class="rc-sec" style="margin-top:8px;color:#2f6b3a">答對了 ✓</p>`;
@@ -207,7 +211,8 @@ async function rcSend() {
 function rcEndView() {
   const E = rc.end, nm = [...new Set(Object.keys(rc.res).map(id => rc.res[id].g))].map(g => RC_GROUP[g][0]).join('、');
   const p = rcPlan(rc.s), more = p.live.filter(g => p.can(g) && !p.done.includes(g) && rcCount(g).due + rcCount(g).fresh > 0);
-  const sure = Object.keys(rc.res).filter(id => rc.res[id].ok && rc.res[id].box0 >= 2).slice(0, 2).map(id => { const c = rc.q.find(x => x.c.id === id).c; return '「' + esc(c.x ? c.c : c.w || c.p[0].w) + '」'; });
+  const rcNm = id => { const c = rc.q.find(x => x.c.id === id).c; return c.x ? c.c : c.w || (c.p ? c.p[0].w : ''); };
+  const sure = Object.keys(rc.res).filter(id => rc.res[id].ok && rc.res[id].box0 >= 2 && rcNm(id)).slice(0, 2).map(id => '「' + esc(rcNm(id)) + '」');
   const say = E.err ? '這一輪的紀錄還沒送出去：' + esc(E.err) : E.again ? '再練一輪做完了，答錯的明天還會再出現。' : '今天的' + esc(nm) + '做完了。' + (sure.length ? sure.join('') + '你都穩了。' : '');
   return rcHead(say) + `<div class="card"><b>這一輪</b>
       <div class="row" style="margin-top:6px"><span class="pill">答對 ${E.ok}／${E.n}</span>${E.faster ? `<span class="pill">這 ${E.faster} 張比上次快</span>` : ''}</div>
