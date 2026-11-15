@@ -387,6 +387,17 @@
   .asklist .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .asklist .it.open .t { white-space: normal; }
   .asklist .tag { font-size: 12px; color: #5f5a55; background: #f3e6ec; border-radius: 10px; padding: 0 8px; line-height: 20px; white-space: nowrap; align-self: center; }
+  .askchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .askchips button { max-width: 100%; min-height: 44px; border: 1px solid #d8d4ce; border-radius: 16px; padding: 0 14px; background: #fffdf8; color: inherit; font-size: 14px; font-weight: 400; box-shadow: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .askchips button.on { border: 2px solid var(--plum); background: #fbeff4; }
+  .asklist .it.two { min-height: 56px; }
+  .asklist .t2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .asklist .t2 .t { display: block; }
+  .asklist .sub { font-size: 12px; color: var(--muted, #8a7f76); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .asklist.inbox .it { border-bottom-color: #d8d4ce; }   /* 美術 11/13：收件卡每列可以點進去，分隔線、右邊 › */
+  .asklist .chev { color: var(--muted, #8a7f76); font-size: 18px; line-height: 1; flex: none; align-self: center; transition: transform .15s; }
+  .asklist .it.open .chev { transform: rotate(90deg); }
+  .askfull { white-space: pre-wrap; background: #fff; border-radius: 12px; padding: 10px 12px; margin-top: 6px; line-height: 1.6; }
   @media (max-width: 360px) { .askopt { flex-direction: column; } .askrow { flex-direction: column; align-items: stretch; } .askrow .b { text-align: right; } }
   /* SAFETY_v1 想找人說說（美術 11/3） */
   .hlinks{font-size:12px;display:flex;gap:16px;flex-wrap:wrap;margin-top:-4px}
@@ -452,11 +463,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.9.0.1';
+const APP_VERSION = '2.50.9.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.50.9.1', date: '2026-11-15', fam: [1], items: ['🙋「一起檢討」可以選家人了：題目解析下面按『📨 跟家人說這題』，想跟誰一起看就選誰；家人送給你的題，會出現在燈塔一樓的『家人想跟你一起檢討』。', '🙋 家人自己的島：智慧島上過的課，可以按「📨 跟家人說這題」，送給一位家人一起檢討；家人送給你的題，會出現在「家人想跟你一起檢討」。'] },
   { v: '2.50.9', date: '2026-11-15', items: ['🫶 「更多」裡多了「想找人說說」：想找人聊聊的時候，這裡有可以直接打的電話；也可以按「讓爸爸知道我想聊聊」，爸爸只會收到一句「想找你聊聊」。開這一頁不會被記下來。', '🫶 老師和燈塔的擔心提醒改成分兩級：如果 AI 覺得你只是心情低落，只會給你可以找人聊聊的地方，不會寄信；說到想傷害自己、活不下去或被傷害時，才會寄提醒信請爸爸關心你，信裡沒有你寫的字。', '🔒 「誰看得到什麼」最上面多了「你寫的字」：寫清楚你寫的字存在哪裡、誰看得到。'] },
   { v: '2.50.8.3', date: '2026-11-14', items: ['⚡ 國文的快問快答多了兩組：字義（會考考古題，還有比比看同一個字在前後兩個詞裡，意思一不一樣）和成語（會考考古題，還有看意思選成語）。', '🔄 現在國文有字音、字形、字義、成語四組，一天還是最多練兩組，上次練過的組下次換別組。'] },
   { v: '2.50.8.1', date: '2026-11-14', fam: [2], items: ['📗 書店開讀書會了：店長每週帶你讀一段書，聊一個沒有標準答案的問題，大約十分鐘', '💬 家人也能回答同一題，你寫的和家人寫的都看得到', '📗 書店有讀書會了：用家人碼進書店，可以回答店長每週問的同一題（60 字內），寫的句子讀書會裡的大家都看得到'] },
@@ -671,7 +683,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 const FAMILY_FNS = ['getState', 'getImages', 'familyInvite', 'postcardCandidates', 'sendPostcard', 'giftBook', 'sendCheer', 'moreBooks', 'answerBack', 'postAdvice', 'getIsles', 'getBoard', 'postBoard', 'delBoard', 'famSnap', 'askSee', 'markSeen', 'answerClub', 'clubAnswers'];   // askSee／markSeen：請她分享、回報看過（See.gs）；postAdvice：後端只收爸爸的家人碼（Advisor.gs）
 function isFamily() { return !!(S && S.who && S.who.role === 'family'); }
 /* ===== 家人島（列島，做法 B）：家人按「🏝️ 我的島」，畫面和她一樣，但讀寫的是自己的島；畫面的差別都在 family.js，只有家人島才載入 ===== */
-const OWN_FNS = ['saveLifeTags', 'saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard', 'saveIq' /* ISLE_QUEST_v1 */];
+const OWN_FNS = ['addFamAsk', 'replyFamAsk', 'saveLifeTags', 'saveVisit', 'famSnap', 'takeLesson', 'agreeAi', 'getState', 'getImages', 'saveConfig', 'saveIsle', 'savePlan', 'logDay', 'confirmWeek', 'saveFocus', 'saveExercise', 'saveMove', 'saveHome', 'saveDecor', 'saveLike', 'buy', 'exchangeXp', 'saveKeeper', 'getIsles', 'saveWater', 'saveDiary', 'saveGarden', 'buyIslet', 'getBoard', 'postBoard', 'delBoard', 'saveIq' /* ISLE_QUEST_v1 */];
 if (OWN_FNS.indexOf('saveCoinGoal') < 0) OWN_FNS.push('saveCoinGoal');   // COINBOOK_v1 存錢目標
 function ownOn() { return local.get('famOwn') === '1'; }
 function ownMode() { return !!(S && S.who && S.who.role === 'own'); }
@@ -2323,7 +2335,7 @@ function wisdomNoteHtml(L, t, rec) {
     <div class="row" style="margin-top:10px;align-items:center"><span class="hanko" style="border-color:${t.color};color:${t.color}">${w.n}</span><span class="muted grow" style="font-size:13px">集章冊蓋好第 ${w.n} 個章了</span></div>
     ${L.source ? `<div class="muted" style="margin-top:8px;font-size:12px">出處：${esc(L.source)}</div>` : ''}`;
   if (done) return `<div class="wnote"><b>你寫的：</b>${esc(done.note)}</div>
-    ${done.reply ? `<div class="row" style="flex-wrap:nowrap;margin-top:8px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(done.reply)}</div></div>` : ''}${wisdomTalkHtml(done, t)}${tail}`;
+    ${done.reply ? `<div class="row" style="flex-wrap:nowrap;margin-top:8px"><span style="font-size:28px">${t.ic}</span><div class="speech grow"><b>${esc(t.name)}</b>：${esc(done.reply)}</div></div>` : ''}${ownMode() && done.reply ? flagBtn('fw:' + w.book + ':' + w.n, { subj: '🪶 智慧島', q: L.title + (L.sections && L.sections.length ? '：' + L.sections[L.sections.length - 1].q.join('') : ''), ex: '我寫的：' + done.note + '／' + t.name + '：' + done.reply }) : ''}${wisdomTalkHtml(done, t)}${tail}`;
   return `<textarea id="wNote" rows="3" maxlength="200" placeholder="寫一句就好" style="width:100%;margin-top:8px" oninput="draft.wl.note=this.value">${esc(w.note)}</textarea>
     ${ownMode() ? '' : `<div class="muted wtell" style="font-size:12px;line-height:1.5;margin:6px 0 2px">🔒 這句在 App 裡只有你自己看得到。如果寫到讓人擔心的話，${esc(GUARDIAN_)}會收到一則提醒（提醒裡沒有你寫的字），請他找時間關心你。</div>`}<!-- WNOTE_TELL_v1 -->
     ${talkLinks()}<button id="wGo" style="width:100%;margin-top:8px;background:${t.color}" onclick="wisdomSubmit()">交給${esc(t.name)}</button>`;
@@ -4449,6 +4461,7 @@ function viewLightBody() {
       <div class="hud" style="margin-top:10px"><div><b>${st.due}</b><span class="muted">🌊 今天漂回來</span></div><div><b>${st.lanterns}</b><span class="muted">🏮 放走的燈籠</span></div></div></div>
     ${(open && (open.review || open.practice)) || (!open && lastXq && (lastXq.review || lastXq.practice) && lastXq.at === S.today) ? xqCard(true) : ''}
     ${fam ? '' : askCard()}
+    ${fam ? '' : card('famask', famInbox())}
     ${fam ? '' : stkCard(st.all)}
     <div class="card"><h3>🌊 今天漂回來的瓶子</h3>
       <details class="muted" style="margin-bottom:6px;font-size:13px" ${lightDet('rules')}><summary>瓶子怎麼漂回來？</summary>撿起瓶子會出一題 AI 類題：考同一個觀念，但數字和情境都換過。答錯隔 1 天再漂回來；答對後隔 3 天、再答對隔 7 天，連續三次答對就變成紙燈籠放到海上。燈籠 3 週後會當「老朋友」漂回來一次，之後每個月一次，看看你還記不記得；答錯也不會變回瓶子。撿瓶子算在每天 ${XQ_DAILY} 題挑戰裡，一天最多撿 ${REVIEW_DAILY} 個。</details>
@@ -4996,24 +5009,50 @@ function askOf(src) { return (S.asks || []).find(a => a.src === src) || askDone[
 const ASK_DONE = '一起檢討過了';
 const askKinds = () => ({ ask: { t: '🙋 一起檢討', sub: '排進下次一起檢討', ph: '哪裡想問？（可以不寫）' },
   flag: { t: '🚩 題目好像有錯', sub: '請' + GUARDIAN_ + '查一查', ph: '哪裡怪怪的？（可以不寫）' } });
+/* --- ASK_FAM_v1：她也能把「🙋 一起檢討」送給 GUARDIAN_ 以外、在她 exam 名單裡的家人；家人島主送自己的題給家人（可以是她）。
+   開關 FAM_ASK 關著時後端不帶 famAskTo，famOn() 是 false，畫面和 ASK_v1 一樣。家人之間不寄信、不給獎勵、不加紅點 --- */
+const famDone = {};
+const famOn = () => !!(S && Array.isArray(S.famAskTo));
+const famMe = () => ownMode() ? S.who.name : 'her';
+const famName = n => n === 'her' ? herCall() : n;   // 家人島看到她時用稱呼；她看到的是家人的稱呼
+function famList() { const all = (S.famAsks || []).slice(); Object.keys(famDone).forEach(k => { const d = famDone[k]; if (!all.some(a => a.from === d.from && a.to === d.to && a.src === d.src)) all.push(d); }); return all; }
+function askSent(src) {   // 這一題送給了誰：[{ to, status, reply }]
+  const me = famMe(), out = [], a = ownMode() ? null : askOf(src);
+  if (a) out.push({ to: GUARDIAN_, status: a.status, reply: a.reply });
+  famList().filter(x => x.from === me && x.src === src).forEach(x => { if (!out.some(o => o.to === x.to)) out.push({ to: x.to, status: x.status, reply: x.reply }); });
+  return out;
+}
+function askLeft(src) { const sent = askSent(src).map(x => x.to); return (famOn() ? S.famAskTo : ownMode() ? [] : [GUARDIAN_]).filter(n => sent.indexOf(n) < 0); }
+function askChips(q, rest) {
+  const op = flagOpen[q]; if (!op.to || rest.indexOf(op.to) < 0) op.to = rest[0];
+  return `<div class="muted" style="margin-top:8px;font-size:14px">想跟誰一起檢討？</div><div class="askchips" role="radiogroup">${rest.map(n => `<button role="radio" aria-checked="${n === op.to}" class="${n === op.to ? 'on' : ''}" onclick="flagOpen['${q}'].to='${esc(n)}';render()">${n === op.to ? '✓ ' : ''}${esc(famName(n))}</button>`).join('')}</div>`;
+}
 function flagBtn(src, snap) {
-  if (isFamily() || ownMode() || !src) return '';
-  const f = flagOf(src), a = askOf(src), q = String(src).replace(/'/g, ''), K = askKinds(), G = esc(GUARDIAN_);
+  if (isFamily() || !src) return '';
+  if (ownMode() && !famOn()) return '';
+  const f = ownMode() ? null : flagOf(src), q = String(src).replace(/'/g, ''), K = askKinds(), G = esc(GUARDIAN_);
   flagSnaps[q] = snap;
-  const left = ['ask', 'flag'].filter(k => !(k === 'ask' ? a : f)), op = flagOpen[q];
-  const stat = [a ? (a.status === ASK_DONE ? `✓ 和${G}一起檢討過了` : `🙋 等${G}一起檢討`) : '', f ? '🚩 已回報' : ''].filter(Boolean).join('　');
+  const sent = askSent(src), rest = askLeft(src), op = flagOpen[q];
+  const left = (rest.length ? ['ask'] : []).concat(f || ownMode() ? [] : ['flag']);
+  const stat = sent.map(x => x.status === ASK_DONE ? `✓ 和${esc(famName(x.to))}一起檢討過了` : ownMode() && x.to === 'her' ? `🙋 送給${esc(famName(x.to))}了` : `🙋 等${esc(famName(x.to))}一起檢討`).concat(f ? ['🚩 已回報'] : []).join('　');
   const help = [askHelp[q], flagHelp[q]].filter(Boolean).slice(0, 1).map(h => `<div class="flaghelp" role="status" style="margin-top:8px;font-size:14px;line-height:1.6">🫶 ${esc(h)}</div>`).join('');
-  const reply = [a && a.reply, f && f.reply].filter(Boolean).map(r => `<div class="famreply"><b>${G}</b>：${esc(r)}</div>`).join('');
+  const reply = sent.filter(x => x.reply).map(x => `<div class="famreply"><b>${esc(famName(x.to))}</b>：${esc(x.reply)}</div>`).join('') + (f && f.reply ? `<div class="famreply"><b>${G}</b>：${esc(f.reply)}</div>` : '');
+  const title = ownMode() || famOn() ? '📨 跟家人說這題' : `📨 跟${G}說這題`;
   if (op && left.indexOf(op.k) >= 0) {
-    const k = op.k, opts = left.length > 1 ? `<div class="askopt" role="radiogroup">${left.map(x => `<button role="radio" aria-checked="${x === k}" class="${x === k ? 'on' : ''}" onclick="flagOpen['${q}'].k='${x}';render()">${x === k ? '✓ ' : ''}${K[x].t}<small>${esc(K[x].sub)}</small></button>`).join('')}</div>`
-      : `<div style="margin-top:6px;font-size:14px">${K[k].t}<small class="muted" style="margin-left:6px">${esc(K[k].sub)}</small></div>`;
-    return `${stat ? `<div class="askrow"><span class="st">${stat}</span></div>` : ''}${reply}<div class="flagbox" style="margin-top:10px;border-top:1px dashed var(--plum-light);padding-top:10px"><b style="font-size:14px">📨 跟${G}說這題</b>${opts}
+    const k = op.k, pick = k === 'ask' && (ownMode() || (famOn() && S.famAskTo.length > 1));
+    const opts = left.length > 1 ? `<div class="askopt" role="radiogroup">${left.map(x => `<button role="radio" aria-checked="${x === k}" class="${x === k ? 'on' : ''}" onclick="flagOpen['${q}'].k='${x}';render()">${x === k ? '✓ ' : ''}${K[x].t}<small>${esc(K[x].sub)}</small></button>`).join('')}</div>`
+      : ownMode() ? '' : `<div style="margin-top:6px;font-size:14px">${K[k].t}<small class="muted" style="margin-left:6px">${esc(K[k].sub)}</small></div>`;
+    const to = pick ? (op.to && rest.indexOf(op.to) >= 0 ? op.to : rest[0]) : GUARDIAN_;
+    const priv = ownMode() ? '寫的內容只有你選的那位家人看得到；存在 App 管理員的試算表，管理員技術上打得開。'
+      : to !== GUARDIAN_ ? `寫的內容只有你選的那位家人看得到；存在${G}的試算表，${G}技術上打得開，但答應過不去翻。寫到讓人擔心的話，畫面上會出現可以找人聊聊的方式。`
+      : `寫的內容只有${G}看得到。${S.concernMail === true ? `寫到讓人擔心的話，${G}還會另外收到一則提醒。` : '寫到讓人擔心的話，畫面上會出現可以找人聊聊的方式。'}`;
+    return `${stat ? `<div class="askrow"><span class="st">${stat}</span></div>` : ''}${reply}<div class="flagbox" style="margin-top:10px;border-top:1px dashed var(--plum-light);padding-top:10px"><b style="font-size:14px">${title}</b>${opts}${pick ? askChips(q, rest) : ''}
       <textarea id="flagNote" rows="2" maxlength="100" style="width:100%;margin-top:8px" placeholder="${K[k].ph}" oninput="flagNotes['${q}']=this.value">${esc(flagNotes[q] || '')}</textarea>
-      <div class="muted" style="font-size:12px;margin-top:4px">寫的內容只有${G}看得到。${S.concernMail === true ? `寫到讓人擔心的話，${G}還會另外收到一則提醒。` : '寫到讓人擔心的話，畫面上會出現可以找人聊聊的方式。'}</div>
+      <div class="muted" style="font-size:12px;margin-top:4px">${priv}</div>
       <div class="row" style="margin-top:8px"><button class="grow" onclick="sendFlag('${q}')" ${op.busy ? 'disabled' : ''}>送出</button><button class="ghost" onclick="flagOpen['${q}']=0;render()">先不要</button></div></div>`;
   }
   const open = k => `for(const x in flagOpen)flagOpen[x]=0;flagOpen['${q}']={k:'${k}'};render()`;
-  const btn = !left.length ? '' : left.length > 1 ? `<button class="flagbtn" onclick="${open('ask')}"><span>📨 跟${G}說這題</span></button>`
+  const btn = !left.length ? '' : left.length > 1 || ownMode() ? `<button class="flagbtn" onclick="${open(left[0])}"><span>${title}</span></button>`
     : `<button class="flagbtn" onclick="${open(left[0])}"><span>${K[left[0]].t}</span></button>`;
   if (!stat) return `<div style="text-align:right">${btn}</div>`;
   return `${reply}<div class="askrow"><span class="st">${stat}</span>${btn ? `<span class="b">${btn}</span>` : ''}</div>${help}`;
@@ -5022,17 +5061,19 @@ function flagBtn(src, snap) {
 function bxFlag(q) { const x = S.save['bx:' + q.bank]; return x ? flagBtn('bx:' + q.bank, { subj: laneLabel(q.lane), qn: (q.year ? q.year + ' 年' : '') + (q.qn ? '第 ' + q.qn + ' 題' : '') || q.bank, ex: (x.concept ? x.concept + '／' : '') + x.text }) : ''; }
 async function sendFlag(src) {
   const op = flagOpen[src], k = op && op.k; if (!k) return;
+  const to = k === 'ask' ? (op.to || askLeft(src)[0]) : GUARDIAN_, fam = k === 'ask' && (ownMode() || to !== GUARDIAN_);
   const el = document.getElementById('flagNote'), note = (el ? el.value : flagNotes[src] || '').trim().slice(0, 100);
   if (!navigator.onLine) return toast('有網路時再送');
   flagNotes[src] = note; op.busy = 1; render();
   try {
-    await flush(); S = await call(k === 'ask' ? 'addAsk' : 'addFlag', src, flagSnaps[src] || {}, note);
+    await flush(); S = await (fam ? call('addFamAsk', to, src, flagSnaps[src] || {}, note) : call(k === 'ask' ? 'addAsk' : 'addFlag', src, flagSnaps[src] || {}, note));
     if (S && S.flagHelp) { flagHelp[src] = S.flagHelp; delete S.flagHelp; }   // 命中字詞表才有，只顯示這一次
     if (S && S.askHelp) { askHelp[src] = S.askHelp; delete S.askHelp; }
     D = derive(S);
   } catch (e) { op.busy = 0; render(); return toast(/回報過|送過/.test(e.message || '') ? '這題已經送過了' : '沒送出去：' + (e.message || e)); }
   flagOpen[src] = 0; delete flagNotes[src];
-  if (k === 'ask') { askDone[src] = { src, status: '等一起檢討', reply: '' }; toast('送出了，這題排進下次一起檢討。'); }
+  if (fam) { famDone[src + '|' + to] = { from: famMe(), to, src, status: '等一起檢討', reply: '' }; toast('送出了，這題排進下次一起檢討。'); }
+  else if (k === 'ask') { askDone[src] = { src, status: '等一起檢討', reply: '' }; toast('送出了，這題排進下次一起檢討。'); }
   else { flagDone[src] = { src, status: '待看', reply: '' }; toast('送出了，這題會出現在' + GUARDIAN_ + '的清單上。'); }
   render();
 }
@@ -5048,18 +5089,46 @@ function askGo(src) {
 }
 function askCard() {
   if (isFamily() || ownMode()) return '';
-  const all = (S.asks || []).slice(); Object.keys(askDone).forEach(k => { if (!all.some(a => a.src === k)) all.push(askDone[k]); });
-  const wait = all.filter(a => a.status !== ASK_DONE), seen = askSeen(), news = all.filter(a => a.status === ASK_DONE && a.reply && a.id && seen.indexOf(a.id) < 0);
+  const G = esc(GUARDIAN_), seen = askSeen();
+  const dad = (S.asks || []).slice(); Object.keys(askDone).forEach(k => { if (!dad.some(a => a.src === k)) dad.push(askDone[k]); });
+  const all = dad.map(a => Object.assign({ to: GUARDIAN_ }, a)).concat(famOn() ? famList().filter(a => a.from === 'her') : []);
+  const wait = all.filter(a => a.status !== ASK_DONE), news = all.filter(a => a.status === ASK_DONE && a.reply && a.id && seen.indexOf(a.id) < 0);
   if (!wait.length && !news.length) return '';
-  const G = esc(GUARDIAN_), name = a => esc(String(a.text || '').replace(/^題目：/, '') || (a.src.indexOf('bx:') === 0 ? '考古題 ' + a.src.slice(3) : '這一題'));
+  const name = a => esc(String(a.text || '').replace(/^題目：/, '') || (a.src.indexOf('bx:') === 0 ? '考古題 ' + a.src.slice(3) : '這一題'));
   const row = a => { const q = a.src.replace(/'/g, '');
-    return `<div class="it${askRowOpen[q] ? ' open' : ''}" role="button" tabindex="0" onclick="askGo('${q}')"><span class="t">${name(a)}</span>${a.subj ? `<span class="tag">${esc(a.subj)}</span>` : ''}</div>`; };
-  return `<div class="card"><b>🙋 下次跟${G}一起檢討</b>${wait.length ? ` <span class="muted">${wait.length} 題</span>` : ''}
+    return famOn() ? `<div class="it two${askRowOpen[q] ? ' open' : ''}" role="button" tabindex="0" onclick="askGo('${q}')"><span class="t2"><span class="t">${name(a)}</span><span class="sub">給${esc(famName(a.to))}${a.at ? '・' + esc(short(a.at)) : ''}</span></span>${a.subj ? `<span class="tag">${esc(a.subj)}</span>` : ''}</div>`
+      : `<div class="it${askRowOpen[q] ? ' open' : ''}" role="button" tabindex="0" onclick="askGo('${q}')"><span class="t">${name(a)}</span>${a.subj ? `<span class="tag">${esc(a.subj)}</span>` : ''}</div>`; };
+  return `<div class="card"><b>${famOn() ? '🙋 下次一起檢討' : `🙋 下次跟${G}一起檢討`}</b>${wait.length ? ` <span class="muted">${wait.length} 題</span>` : ''}
     ${wait.length ? `<div class="asklist" style="margin-top:6px">${wait.slice(-20).reverse().map(row).join('')}</div>` : ''}
-    ${news.map(a => `<div style="margin-top:10px"><div class="muted" style="font-size:13px">✓ 和${G}一起檢討過了・${name(a)}</div><div class="famreply"><b>${G}</b>：${esc(a.reply)}</div>
+    ${news.map(a => `<div style="margin-top:10px"><div class="muted" style="font-size:13px">✓ 和${esc(famName(a.to))}一起檢討過了・${name(a)}</div><div class="famreply"><b>${esc(famName(a.to))}</b>：${esc(a.reply)}</div>
       <div style="text-align:right"><button class="ghost" style="min-height:44px" onclick="askSeenOne('${esc(a.id)}')">知道了</button></div></div>`).join('')}
-    <div class="muted" style="margin-top:6px;font-size:13px">點一題就打開那一題。和${G}一起檢討過的，會從這裡拿掉。</div></div>`;
+    <div class="muted" style="margin-top:6px;font-size:13px">點一題就打開那一題。和${famOn() ? '家人' : G}一起檢討過的，會從這裡拿掉。</div></div>`;
 }
+/* 「🙋 家人想跟你一起檢討」：送給自己、還沒檢討的題（有才出現）。點開看題目和對方寫的話，講過後按「一起檢討過了」，可以留一句（只有送的人看得到） */
+const famOpenId = {}, famReplyNote = {};
+function famInbox() {
+  if (isFamily() || !famOn()) return '';
+  const me = famMe(), list = (S.famAsks || []).filter(a => a.to === me && a.status !== ASK_DONE);
+  if (!list.length) return '';
+  const row = a => { const id = esc(a.id), nm = esc(famName(a.from)), open = famOpenId[a.id];
+    const t = esc(String(a.text || '').replace(/^題目：/, '') || '這一題');
+    return `<div class="it two${open ? ' open' : ''}" role="button" tabindex="0" onclick="famOpenId['${id}']=!famOpenId['${id}'];render()"><span class="t2"><span class="t">${t}</span><span class="sub">${nm}送來的${a.at ? '・' + esc(short(a.at)) : ''}</span></span>${a.subj ? `<span class="tag">${esc(a.subj)}</span>` : ''}<span class="chev" aria-hidden="true">›</span></div>
+      ${open ? `<div class="askfull">${esc(a.snap || a.text || '')}</div>${a.note ? `<div class="famreply"><b>${nm}</b>：${esc(a.note)}</div>` : ''}
+        <textarea id="famRe_${id}" rows="2" maxlength="200" style="width:100%;margin-top:8px" placeholder="一起檢討完，想留一句話嗎？（可以不寫）" oninput="famReplyNote['${id}']=this.value">${esc(famReplyNote[a.id] || '')}</textarea>
+        <div class="muted" style="font-size:12px;margin-top:4px">留的話只有${nm}看得到（存在管理員的試算表）。</div>
+        <div class="row" style="margin-top:8px"><button class="grow" aria-label="和${nm}一起檢討過了" onclick="famReply('${id}')">✓ 一起檢討過了</button><button class="ghost" onclick="famOpenId['${id}']=0;render()">收起來</button></div>` : ''}`; };
+  return `<div class="card"><b>🙋 家人想跟你一起檢討</b> <span class="muted">${list.length} 題</span><div class="asklist inbox" style="margin-top:6px">${list.slice(-20).reverse().map(row).join('')}</div></div>`;
+}
+async function famReply(id) {
+  if (!navigator.onLine) return toast('有網路時再送');
+  const el = document.getElementById('famRe_' + id), r = (el ? el.value : famReplyNote[id] || '').trim().slice(0, 200);
+  try { await flush(); S = await call('replyFamAsk', id, r); if (S && S.askHelp) { askHelp['fam:' + id] = S.askHelp; toast(S.askHelp); delete S.askHelp; } D = derive(S); }
+  catch (e) { return toast('沒送出去：' + (e.message || e)); }
+  delete famOpenId[id]; delete famReplyNote[id];
+  if (!askHelp['fam:' + id]) toast('記好了，這題一起檢討過了。');
+  render();
+}
+
 function bankExplain(q) {
   const x = S.save['bx:' + q.bank], who = laneWho(q.lane);
   if (x) return `<div class="row" style="flex-wrap:nowrap;margin-top:8px;align-items:flex-start"><span class="avatar">${who.pic}</span><div class="speech grow"><b>${esc(x.who || who.name)}</b>：
@@ -8800,6 +8869,8 @@ const WHO_SEES = [
   ['如果 AI 覺得你寫給老師或燈塔的話讓人擔心，會寄信請爸爸關心你（信裡不會有你寫的字）', '✅', '爸爸收到一封信', '—'],
   ['願望（讓島順起來）', '✅', '爸爸（寫給爸爸的）', '—'],
   ['你按『📨 跟' + GUARDIAN_ + '說這題』送出的題和你寫的話', '✅', '只有' + GUARDIAN_ + '看得到：記在他的試算表，也可能寄一封信給他。其他家人看不到。不會交給 AI。', '—'],   // ASK_v1＋FLAG_v1（文案 173 追記二）
+  ['你按『📨 跟家人說這題』送給其他家人的題和你寫的話', '✅', '只有你選的那位家人看得到；存在' + GUARDIAN_ + '的試算表，' + GUARDIAN_ + '技術上打得開，但答應過不去翻。不寄信，不會交給 AI。', '—', 'me'],   // ASK_FAM_v1 誰看得到（文案 183）
+  ['家人送給你的題和對方寫的話', '✅', '只有送題的家人和你看得到；存在' + GUARDIAN_ + '的試算表，' + GUARDIAN_ + '技術上打得開，但答應過不去翻。你留的話，也只有送題的家人看得到。', '—', 'me'],
   ['送書、明信片、鼓勵卡附的話', '✅', '只有寄的人和收的人', '—'],
   ['島的樣子、島名、等級、島民和家的擺設', '✅', '你選的人', '✅'],
   ['連續週數、這週完成幾項', '✅', '你選的人', '有勾的'],

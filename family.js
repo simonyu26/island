@@ -681,6 +681,7 @@
           <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(famLightSay(w))}</div></div>`
           : `<button class="ghost" style="width:100%" onclick="openKeeper('lighthouse')">🧓 燈塔還沒有守燈人，請一位來守燈吧</button>`)}
         <div class="hud" style="margin-top:10px"><div><b>${w.done}</b><span class="muted">✅ 這週完成</span></div><div><b>${w.boats}</b><span class="muted">⛵ 這週的船</span></div></div></div>
+      ${typeof famInbox === 'function' ? card('famask', famInbox()) : ''}
       <div class="card"><div class="row" style="flex-wrap:nowrap"><span style="font-size:28px">⛵</span><div class="grow"><b>燈塔下面的紙船碼頭</b>
           <div class="muted">做完一件事，想記一句心得，就去碼頭放一艘船。</div></div>
         <button onclick="go('paper');window.scrollTo(0,0)">去碼頭</button></div></div>
@@ -950,7 +951,7 @@
       return `<button class="wqo ${c}" aria-disabled="true" tabindex="-1">${c === 'mine' ? '<span class="wqwho">你選的</span>' : ''}${c === 'right' ? '✓ ' : ''}${t}</button>`; }).join('');
     const body = (x, i) => `<div class="wqk">${kindName(x)}</div>${stem(x)}<div class="${wqType(x) === 'usage' ? 'usage' : ''}">${opts(x, i)}</div>
       ${x.choice != null ? `<div class="wqex">${x.correct ? '答對了！' : ''}${esc(x.ex)}</div>${saySentence(wqType(x) === 'usage' ? { q: x.o[x.a], o: x.o, a: x.a } : x, set && set.lv)}
-        <div class="muted" style="font-size:12px;margin-top:4px">🤖 題目和解說是 AI 照你的單字卡出的，可能會錯；覺得怪怪的就查字典。</div>` : ''}`;
+        <div class="muted" style="font-size:12px;margin-top:4px">🤖 題目和解說是 AI 照你的單字卡出的，可能會錯；覺得怪怪的就查字典。</div>${typeof flagBtn === 'function' ? flagBtn(q.id + ':' + i, { q: x.q, o: x.o, a: x.a, choice: x.choice, ex: x.ex, subj: '🔤 單字' }) : ''}` : ''}`;
     const done = (x, i) => `<details class="item" style="display:block"><summary><b>${x.correct ? '✓ ' : ''}<span${L}>${esc(x.w)}</span></b> <span class="pill" style="font-size:12px;${x.correct ? 'background:#e5efe0;color:#2f5a3a' : 'background:#f7f1e5;color:#5f5a55'}">${x.correct ? '答對' : '再練'}</span><span class="muted">・${kindName(x, true)}</span></summary>${body(x, i)}</details>`;
     const head = q.done ? `這組答完了：答對 ${right}／${items.length} 題。${wrong ? '沒答對的 ' + wrong + ' 個字，下次出題會先出。' : '全部答對！'}` : `第 ${at + 1}／${items.length} 題・答一題 +2 經驗值`;
     return `${WQ_CSS}<div class="card" id="wqCard"><h3>🔤 ${esc(set ? set.name : '單字題')}</h3><div class="muted">${head}</div>
@@ -1077,5 +1078,6 @@
   if (PLACES.walk && PLACES.walk.about) PLACES.walk.about = PLACES.walk.about.map(s => s === '連續幾週都達標，可以拿到排球、浴衣這些運動家具' ? '累積幾週運動 3 天，就可以拿到排球、浴衣這些運動家具' : s);
   const flame = PLANTS.find(x => x.id === 'flame'); if (flame) flame.when = flame.when.split('，會考完、畢業的時候剛好開').join('，畢業季剛好開');
   if (typeof S !== 'undefined' && S) D = derive(S);   // family.js 載入前畫面已經用快取算過一次 D，這裡用家人版重算
+  OWN_CARDS.push('famask');   // ASK_FAM_v1：家人想跟你一起檢討
   window.FamIsle = { apply, after, cards: OWN_CARDS };
 })();
