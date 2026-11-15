@@ -563,7 +563,7 @@
   };
   function commonCard() {
     return `<div class="card" id="famCommonCard"><h3>🧰 其他</h3>
-      <div class="row" style="gap:6px"><button class="ghost grow" onclick="draft={}; go('log')">📖 航海日誌</button><button class="ghost grow" onclick="draft={}; go('wish')">💡 讓島順起來</button></div>
+      <div class="row" style="gap:6px"><button class="ghost grow" onclick="draft={}; go('log')">📒 航海日誌</button><button class="ghost grow" onclick="draft={}; go('wish')">💡 讓島順起來</button></div>
       <div class="row" style="flex-wrap:nowrap;margin-top:10px"><div class="grow"><b>💊 吃藥提醒</b><div class="muted">打開以後，首頁的おつとめ板會在你設的時段問一聲；紀錄在 App 裡只有你自己看得到，其他家人都看不到。</div></div>
         <button class="ghost" onclick="famMedSet(${medOn() ? 'false' : 'true'})">${medOn() ? '✅ 開著' : '⬜ 關著'}</button></div>${dailyRow()}${langCanOn() ? famLangRow() : ''}</div>`;
   }

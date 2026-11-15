@@ -27,6 +27,8 @@
   .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 14px;
           box-shadow: 0 2px 0 rgba(116,27,71,.12); }
   .muted { color: var(--muted); font-size: 13px; }
+  /* VERNO_v1 首頁版號 */ .verno { display: inline-block; font-size: 12px; line-height: 16px; color: var(--muted); text-decoration: underline dotted var(--muted); text-underline-offset: 3px; padding: 14px 12px; margin: -14px -12px; border-radius: 8px; }
+  .verno:focus-visible { outline: 2px solid var(--plum); outline-offset: -8px; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .grow { flex: 1; }
   button { font: inherit; border: none; border-radius: 12px; padding: 10px 16px; cursor: pointer;
@@ -57,6 +59,40 @@
   .island { background: var(--grass); border: 10px solid var(--sand); padding: 14px; border-radius: 32px; }
   .districts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
   .district { background: rgba(255,255,255,.85); border-radius: 14px; padding: 12px; }
+  /* DIST_ROW_v1 首頁清單模式：一位一行（美術 11/4 兩輪、爸爸 11/6 選②） */
+  .drows { display: flex; flex-direction: column; gap: 8px; }
+  .drw { display: flex; align-items: stretch; background: rgba(255,255,255,.85); border-radius: 14px; }
+  .drw.open { border-radius: 14px 14px 0 0; }
+  .drow { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; min-height: 56px; padding: 8px 4px 8px 12px; background: none; border: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+  .drow .avatar { flex: none; }
+  .drow .dn { flex: 1; min-width: 0; }
+  .drow .dn div { font-size: 12px; white-space: nowrap; }
+  .drow .dr { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+  .drow .hc { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .drow .grade { margin-left: 0; }
+  .drw .chv { align-self: center; padding: 0 12px 0 4px; color: var(--muted); font-size: 14px; cursor: pointer; }
+  .rcb { flex: none; width: 44px; min-height: 44px; align-self: center; background: none; border: 0; font-size: 18px; padding: 0; color: inherit; cursor: pointer; }
+  .rcb.done { color: var(--muted); font-size: 16px; }
+  .dbody { background: rgba(255,255,255,.85); border-radius: 0 0 14px 14px; padding: 0 12px 12px; }
+  .dbody .muted { font-size: 13px; }
+  .dsigns:empty { display: none; }
+  .dgo { display: inline-block; margin-top: 4px; padding: 10px 0 0; font-size: 14px; color: var(--plum); text-decoration: none; }
+  @media (max-width: 360px) { .drow { gap: 6px; padding-left: 8px; } .drow .avatar { width: 36px; height: 36px; font-size: 26px; } .drow .grade { padding: 2px 5px; } .drw .chv { font-size: 12px; padding: 0 8px 0 0; } .drw .rcb { margin: 0 -6px; } }
+  /* MORE_FOLD_v1 更多頁收納（美術 11/4 兩輪、爸爸 11/4 21:49～21:59） */
+  .mtop { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mtop button { min-height: 44px; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .mtop .mtalk { grid-column: 1 / -1; }
+  .mrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 8px 4px; background: none; border: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+  .mrow .mt { flex: 1; min-width: 0; }
+  .mrow .mt b { font-size: 16px; }
+  .mrow .mt div { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .mrow .chev { color: var(--muted); }
+  .mset .srow { border-top: 1px solid var(--sand); padding: 10px 0; }
+  .mset .srow:first-of-type { border-top: 0; }
+  .mset .srow > button { width: 100%; min-height: 44px; }
+  .mset .srow > button + button { margin-top: 8px; }
+  .mset .msub { margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .mset .msee > div { border-top: 1px solid var(--sand); padding: 8px 0; }
   .resident { display: flex; gap: 10px; align-items: center; }
   .avatar { font-size: 34px; line-height: 1; }
   .grade { margin-left: auto; font-weight: 700; color: #fff; background: var(--plum); border-radius: 8px; padding: 2px 8px; }
@@ -463,11 +499,12 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.50.9.1';
+const APP_VERSION = '2.51';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const CHANGELOG = [
+  { v: '2.51', date: '2026-11-15', items: ['🏝️ 首頁清單模式的島民改成一位一行：點一下就打開，房子、上次試煉和「去那條街」都在裡面。', '⚙️「更多」變短了：常用的按鈕放在最上面，島民關係收成一行；「誰看得到什麼」、3D 高畫質和登出，都收進最下面的「設定」。', '🏷️ 首頁島卡右下角看得到目前的版號，點一下就能打開更新紀錄。'] },
   { v: '2.50.9.1', date: '2026-11-15', fam: [1], items: ['🙋「一起檢討」可以選家人了：題目解析下面按『📨 跟家人說這題』，想跟誰一起看就選誰；家人送給你的題，會出現在燈塔一樓的『家人想跟你一起檢討』。', '🙋 家人自己的島：智慧島上過的課，可以按「📨 跟家人說這題」，送給一位家人一起檢討；家人送給你的題，會出現在「家人想跟你一起檢討」。'] },
   { v: '2.50.9', date: '2026-11-15', items: ['🫶 「更多」裡多了「想找人說說」：想找人聊聊的時候，這裡有可以直接打的電話；也可以按「讓爸爸知道我想聊聊」，爸爸只會收到一句「想找你聊聊」。開這一頁不會被記下來。', '🫶 老師和燈塔的擔心提醒改成分兩級：如果 AI 覺得你只是心情低落，只會給你可以找人聊聊的地方，不會寄信；說到想傷害自己、活不下去或被傷害時，才會寄提醒信請爸爸關心你，信裡沒有你寫的字。', '🔒 「誰看得到什麼」最上面多了「你寫的字」：寫清楚你寫的字存在哪裡、誰看得到。'] },
   { v: '2.50.8.3', date: '2026-11-14', items: ['⚡ 國文的快問快答多了兩組：字義（會考考古題，還有比比看同一個字在前後兩個詞裡，意思一不一樣）和成語（會考考古題，還有看意思選成語）。', '🔄 現在國文有字音、字形、字義、成語四組，一天還是最多練兩組，上次練過的組下次換別組。'] },
@@ -1400,6 +1437,7 @@ function hud() {
     </div>
     <div class="bar"><i style="width:${famNumOk('xp') ? pct : 0}%"></i></div>
     <div class="row" style="margin-top:4px"><span class="muted grow">${famNumOk('xp') ? `距離 Lv.${D.level + 1} 還差 ${D.lvNext - D.xp} 經驗值` : '「—」表示這部分沒有分享給你。'}</span><span class="env" id="envChip">${envText()}</span></div>
+    <div style="text-align:right;margin-top:4px;line-height:16px"><a class="verno" href="#" onclick="go('guide'); return false" aria-label="目前版本 v${APP_VERSION}，打開更新紀錄">v${APP_VERSION}</a></div>
   </div>`;
 }
 
@@ -1407,18 +1445,34 @@ function viewHome() {
   if (isFamily()) famSeen('cat', 'isle');
   return seeAskCard('isle') + viewHomeBody();
 }
+// ===== DIST_ROW_v1 首頁清單模式：一位一行（爸爸 11/4 23:10 定樣；11/6 選②每行留 ⚡）=====
+// 行：頭像、名字、第二行「科目圖示＋絆的階段」（沒有絆寫○○街）、🏠 n（疊在等級上）、等級、⚡（有快問快答的科目）、▾
+// 展開：○○街、房子、上次試煉、快問快答入口、淡色「去○○街 ›」（換 3D 並選那條街）；巷口牌（作文值班室、數學研究室）在五行下面常駐（爸爸 11/14 選）
+let distOpen = '', distGoTo = '';   // 只在記憶體：重新整理就全部收起
+function distTap(s) { distOpen = distOpen === s ? '' : s; render(); }
+function distGo(s) { distOpen = ''; distGoTo = s; replay.scroll = true; local.set('islandView', '3d'); render(); }
+function townN(p) { let n = Math.floor((p || 0) / 2), c = 0; TIERS.forEach(([ic, size]) => { c += Math.floor(n / size); n %= size; }); return c; }   // 和 town() 同一套換算，數棟數
+function houseN(s) { return SUBS[s] ? SUBS[s].reduce((a, sub) => a + townN(D.ptsBy[sub]), 0) + townN(D.ptsBy[s === '自' ? '自然' : '社會']) : townN(D.pts[s]); }
+function distRcDone(s) {   // 和 rcEntry 的「今天的份做完了」同一個判斷
+  const p = rcPlan(s); if (!p.done.length) return false;
+  const due = p.live.reduce((a, g) => a + Object.keys(rcCards(g)).filter(id => rcCards(g)[id][1] <= S.today).length, 0);
+  return !(due && !p.full);
+}
+function distRow(s) {
+  const r = resident(s), gr = D.grades[s], open = distOpen === s, n = houseN(s), k = D.kizuna && D.kizuna.her[s], st = SUBJECT_NAME[s] + '街';   // STREET_v1 12/5 改字時一起看
+  const rc = rcEntry(s), done = rc && distRcDone(s), own = ownMode();   // rcEntry 已經擋掉家人碼、家人島（card('recall')）；家人島沒有大考：不畫等級和上次試煉（原本 family.js 拿掉 .district 的 .grade 和最後一行，11/14 補）
+  const rcb = rc ? `<button class="rcb${done ? ' done' : ''}" aria-label="快問快答${done ? '，今天的份做完了' : ''}" onclick="event.stopPropagation(); rcOpen('${s}')">${done ? '✓' : '⚡'}</button>` : '';
+  return `<div><div class="drw${open ? ' open' : ''}"><button class="drow" aria-expanded="${open}" onclick="distTap('${s}')" aria-label="${esc(r.name)}，${st}${own ? '' : '，等級 ' + (gr ? esc(gr.level) : '還沒有')}，${n} 間房子，點一下${open ? '收起' : '展開'}">
+      <span class="avatar">${r.pic}</span>
+      <span class="dn"><b>${esc(r.name)}</b><div class="muted">${SUBJ_IC[s]} ${k ? esc(k.name) : st}</div></span>
+      <span class="dr"><span class="hc">🏠 ${n}</span>${own ? '' : `<span class="grade ${gr ? '' : 'none'}" title="${gr ? esc(gr.source + ' ' + gr.date) : '還沒有試煉紀錄'}">${gr ? esc(gr.level) : '?'}</span>`}</span></button>${rcb}<span class="chv" aria-hidden="true" onclick="distTap('${s}')">${open ? '▴' : '▾'}</span></div>
+    ${open ? `<div class="dbody"><div class="muted" style="margin-bottom:4px">${SUBJ_IC[s]} ${st}</div>${streets(s)}
+      ${own ? '' : `<div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div>`}<div class="rc-slot">${rc}</div>
+      ${BETA3D ? `<a class="dgo" href="javascript:void 0" onclick="distGo('${s}')">去${st} ›</a>` : ''}</div>` : ''}</div>`;
+}
 function viewHomeBody() {
   const g = guide(), ev = residentEvent();
-  const districts = SUBJECTS.map(s => {
-    const r = resident(s), gr = D.grades[s];
-    return `<div class="district">
-      <div class="resident"><span class="avatar">${r.pic}</span>
-        <div><b>${esc(r.name)}</b><div class="muted">${SUBJ_IC[s]} ${SUBJECT_NAME[s]}街${kzBadge(s)}</div></div>
-        <span class="grade ${gr ? '' : 'none'}" title="${gr ? esc(gr.source + ' ' + gr.date) : '還沒有試煉紀錄'}">${gr ? esc(gr.level) : '?'}</span></div>
-      ${streets(s)}
-      <div class="muted">${gr ? '上次試煉：' + esc(gr.source || '') + '（' + esc(gr.date) + '）' : '打一場 Boss 戰來顯示等級'}</div><div class="rc-slot">${s === '國' ? zwSign() : ''}${s === '數' ? sxSign() : ''}${rcEntry(s)}</div>
-    </div>`;
-  }).join('');
+  const districts = SUBJECTS.map(distRow).join('');   // DIST_ROW_v1 一位一行，點開一次一張
   const toggle = BETA3D ? `<div class="row" style="margin-bottom:10px">
       <button class="${use3D() ? '' : 'ghost'}" onclick="local.set('islandView','3d'); render()">🗺️ 3D 小島</button>
       <button class="${use3D() ? 'ghost' : ''}" onclick="local.set('islandView','list'); render()">📋 清單</button>
@@ -1427,7 +1481,7 @@ function viewHomeBody() {
         <div class="loading" style="padding-top:120px">🏝️ 小島浮出水面中…</div></div>
       <div class="card" style="margin-top:12px" id="i3dInfo"><div class="muted">👆 點一條街，看看島民和房子；點燈塔、中間的家、植木屋、書店可以走進去，點你種的樹會看到小木牌。用手指拖曳可以轉動小島，兩指可以縮放。</div></div>
       <details class="card" ${replay.idx != null || replay.timer ? 'open' : ''}><summary><b>⏳ 成長回放</b><span class="muted">・看小島一週一週長大</span></summary><div id="i3dTime" style="margin-top:10px">${card('timeline', timelineHtml())}</div></details>`
-    : `<div class="island"><div class="districts">${districts}</div></div>`;
+    : `<div class="island"><div class="drows">${districts}</div><div class="dsigns">${zwSign()}${sxSign()}</div></div>`;
   return hud() + week3FamCard() + portEveCard() + boardCard() + (use3D() ? '' : placesRow()) + `
     ${toggle}${islandView}
     ${card('kairan', kairanCard())}`;
@@ -4424,7 +4478,7 @@ function lightCard() {
 const lightOpen = {};
 const lightDet = k => `${lightOpen[k] ? 'open' : ''} ontoggle="lightOpen['${k}']=this.open"`;
 function lightFloors(cur) {
-  const f = [['light', '1F', '🌊 海灘'], ['log', '2F', '📖 <span style="white-space:nowrap">航海</span><span style="white-space:nowrap">日誌</span>'], ['lamp', '3F', '🔭 燈室'], ['paper', '', '⛵ 碼頭']];
+  const f = [['light', '1F', '🌊 海灘'], ['log', '2F', '📒 <span style="white-space:nowrap">航海</span><span style="white-space:nowrap">日誌</span>'], ['lamp', '3F', '🔭 燈室'], ['paper', '', '⛵ 碼頭']];
   return `<div class="floors">${f.map(([t, n, name]) => `<button class="${cur === t ? 'on' : ''}" ${cur === t ? 'disabled' : `onclick="go('${t}');window.scrollTo(0,0)"`}><small>${n || '岬角下'}</small>${name}</button>`).join('')}</div>${cur === 'log' && draft.logMode === 'port' ? '' : portHint()}`;
 }
 function viewLight() {
@@ -4675,7 +4729,7 @@ function viewLog() {
   const boat = `<div class="card"><h3>⛵ 紙船・🚢 親子船</h3>${boats.length ? boats.map(x => `<div style="margin-top:6px"><b>${x.kind === 'parent' ? '🚢 親子船' : '⛵ 紙船'}</b>　${x.lanes.map(l => `<span class="pill">🎏 ${esc(l)}</span>`).join(' ')}<span class="muted">・${short(x.date)}</span>${!fam && x.note ? `<div class="muted" style="font-size:13px">${esc(x.note)}</div>` : ''}</div>`).join('') : '<div class="muted">這週沒有放船。檢討完紙本考卷，可以到碼頭放一艘。</div>'}</div>`;
   const mine = (S.save.links || []).filter(l => inWk(l.date)), auto = Object.keys(S.save).filter(k => k.startsWith('xc:') && S.save[k] && inWk(S.save[k].at) && (S.save[k].lanes || []).length > 1).map(k => S.save[k]);
   const link = `<div class="card"><h3>🔗 跨科連結</h3>${mine.length || auto.length ? mine.map(l => `<div style="margin-top:4px">✏️ ${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}${!fam && l.note ? '：' + esc(l.note) : ''}</div>`).join('') + auto.map(x => `<div class="muted" style="margin-top:4px">🤖 ${x.lanes.map(esc).join(' × ')}${!fam && x.why ? '：' + esc(x.why) : ''}</div>`).join('') : '<div class="muted">這週沒有發現跨科連結。</div>'}</div>`;
-  return `${lightFloors('log')}<div class="card"><h2>📖 航海日誌</h2><div class="muted">一週一頁：照計畫讀了多少、瓶子、紙船和跨科連結。這裡只是紀錄，不加分也不扣分。</div>${nav}${logModes('week')}</div>
+  return `${lightFloors('log')}<div class="card"><h2>📒 航海日誌</h2><div class="muted">一週一頁：照計畫讀了多少、瓶子、紙船和跨科連結。這裡只是紀錄，不加分也不扣分。</div>${nav}${logModes('week')}</div>
     ${plan}${fam ? '' : week3Card(wk)}${words}${bottle}${boat}${link}
     ${logIslandBtn(wk)}
     <div class="row"><button class="ghost grow" onclick="go('light')">去海灘 🌊</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
@@ -4803,7 +4857,7 @@ function viewLogPort() {
       : portHas(r.back) && draft.portEdit !== 'back' ? show(portBackQ(r), r.back) + `<button class="ghost" style="margin-top:8px" onclick="draft.portEdit='back';render()">改一下</button>` : portForm(sel, 'back')}`;
     body = `<div class="card"><h2 style="margin:0">${sel.start ? '⚓ ' + sel.name + '（出發港）' : '⚓ ' + sel.name}</h2><div class="muted">${sel.days.map(short).join('、')}</div>${eve}${back}${portHelp(r)}</div>`;
   }
-  return `${lightFloors('log')}<div class="card"><h2>📖 航海日誌</h2><div class="muted">把每一次模考和會考當成一個港口。考前寫出航前夜，考完寫歸港，都是你自己的話，不加分也不扣分。寫的內容在 App 裡只有你自己看得到。</div>${logModes('port')}${route}<div class="muted" style="font-size:12px;margin-top:6px">點一個港口打開。</div></div>
+  return `${lightFloors('log')}<div class="card"><h2>📒 航海日誌</h2><div class="muted">把每一次模考和會考當成一個港口。考前寫出航前夜，考完寫歸港，都是你自己的話，不加分也不扣分。寫的內容在 App 裡只有你自己看得到。</div>${logModes('port')}${route}<div class="muted" style="font-size:12px;margin-top:6px">點一個港口打開。</div></div>
     ${body}
     <div class="row"><button class="ghost grow" onclick="go('light')">去海灘 🌊</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
@@ -4850,7 +4904,7 @@ function viewLogMonth() {
     <div>Boss 項目達成：${D.bossDone} 次　Full Combo：${D.fullCombo} 次</div>
     <div>故事任務：解了 ${D.questsDone.length} 題</div>
     <div class="muted" style="margin-top:6px">每累積 6 週紀錄會得到 1 張休息卡，某週沒記錄時會自動使用，連續週數不會中斷。</div></div>`;
-  return `${lightFloors('log')}<div class="card"><h2>📖 航海日誌</h2><div class="muted">月末繪卷：把這個月的每一週接成一卷。這裡只是紀錄，不加分也不扣分。</div>${nav}${logModes('month')}</div>
+  return `${lightFloors('log')}<div class="card"><h2>📒 航海日誌</h2><div class="muted">月末繪卷：把這個月的每一週接成一卷。這裡只是紀錄，不加分也不扣分。</div>${nav}${logModes('month')}</div>
     ${emaki}${tot}${words}${life}
     <div class="row"><button class="ghost grow" onclick="go('light')">去海灘 🌊</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
@@ -6345,6 +6399,7 @@ async function mount3D() {
       onSelect: showInfo3D
     });
     if (replay.idx != null) Island3D.setWeek(replay.idx, false);
+    if (distGoTo) { const g = distGoTo; distGoTo = ''; Island3D.select(g); }   // DIST_ROW_v1「去○○街 ›」：換成 3D 後選那條街
     updateEnv();
     if (replay.scroll) { replay.scroll = false; requestAnimationFrame(() => { const t = document.getElementById('i3d'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }
   } catch (e) {
@@ -7095,7 +7150,7 @@ function viewPlanBody() {
     <div class="row" style="margin-top:10px">
       <label class="btn grow" style="text-align:center">📷 拍手寫計畫<input type="file" accept="image/*" id="scanFile" hidden></label>
       ${empty && prevPlan ? '<button class="ghost" onclick="copyLastWeek()">📋 照上週排</button>' : ''}</div>
-    <div class="muted" style="margin-top:6px">拍下這週的手寫計畫，小島會幫你排進每一天，打勾的也會記成完成，你再檢查一下就好。也可以點下面的日子自己加。島民認不得的寫法可以到 <a href="#" onclick="go('abbr');return false">📖 我的寫法</a> 教他。</div></div>
+    <div class="muted" style="margin-top:6px">拍下這週的手寫計畫，小島會幫你排進每一天，打勾的也會記成完成，你再檢查一下就好。也可以點下面的日子自己加。島民認不得的寫法可以到 <a href="#" onclick="go('abbr');return false">✍️ 我的寫法</a> 教他。</div></div>
   <div class="card"><div class="chips">${chips}</div>
     <div class="row" style="margin-top:12px"><h3 class="grow" style="margin:0">${isTray ? '📦 這週要做、還沒排哪天' : '週' + DAYS[planDay] + ' ' + short(date)}${date === S.today ? '（今天）' : ''}</h3><span class="muted syncState">${syncState}</span></div>
     ${rows.length ? itemList(rows, r => (canLog ? seg(date, r) : '') + `<button class="x" onclick="planRemove(${r})" aria-label="移除">✕</button>`) + pendingList(rows, wk, planDay, true) : `<div class="muted" style="margin-top:6px">${isTray ? '確定這週要做、但還沒決定哪天的項目可以放這裡。' : '這天還沒排項目。'}</div>`}
@@ -7571,7 +7626,7 @@ function applyScan(merge) {
 /* --- 我的寫法（字典） --- */
 function viewAbbr() {
   const a = abbrOf(), keys = Object.keys(a.map).sort(), pick = draft.abRows || [];
-  return `<div class="card"><h2>📖 我的寫法</h2>
+  return `<div class="card"><h2>✍️ 我的寫法</h2>
       <div class="muted">拍計畫時，島民會先查這本字典。左邊是你在計畫本上的寫法，右邊是週檢討表上的項目。拍照時遇到看不懂的字，教過一次也會記在這裡。</div></div>
     <div class="card"><h3>寫法對照</h3>
       ${keys.length ? keys.map(k => `<div class="item"><div class="name"><b>${esc(k)}</b> → ${esc(abbrName(a.map[k]))}</div><button class="x" onclick="abbrDel('map', ${esc(JSON.stringify(k))})" aria-label="刪除">✕</button></div>`).join('') : '<div class="muted">還沒有。</div>'}
@@ -7585,7 +7640,7 @@ function viewAbbr() {
     <div class="card"><h3>跟讀書無關的行程</h3><div class="muted">看到這些寫法就略過，例如才藝課、運動。</div>
       <div style="margin-top:6px">${a.ignore.map(x => `<span class="pill">${esc(x)}<button class="x" style="padding:0 0 0 6px;color:inherit" onclick="abbrDel('ignore', ${esc(JSON.stringify(x))})" aria-label="刪除">✕</button></span>`).join('') || '<span class="muted">還沒有。</span>'}</div>
       <div class="row" style="margin-top:8px"><input id="abI" class="grow" placeholder="例如：violin"><button class="ghost" onclick="abbrIgnore()">加入</button></div></div>
-    <div class="row"><span class="muted syncState grow">${syncState}</span><button class="ghost" onclick="go('items')">📝 任務清單</button><button class="ghost" onclick="go('more')">返回</button></div>`;
+    <div class="row"><span class="muted syncState grow">${syncState}</span><button class="ghost" onclick="go('items')">📋 任務清單</button><button class="ghost" onclick="go('more')">返回</button></div>`;
 }
 function abbrKeep() {
   const k = document.getElementById('abK'), m = document.getElementById('abM');
@@ -7619,7 +7674,7 @@ function abbrDel(kind, k) {
 /* --- 任務清單：週檢討表上的項目，可以新增、改名 --- */
 function viewItems() {
   const subs = [...new Set(S.items.map(i => i.subject))];
-  return `<div class="card"><h2>📝 任務清單</h2>
+  return `<div class="card"><h2>📋 任務清單</h2>
       <div class="muted">這裡就是爸爸週檢討表上的項目。新增會在那一科最後面多一列，改名會直接改表上的名字，以前的紀錄都會保留。</div></div>
     ${subs.map(sub => `<div class="card"><div class="row"><h3 class="grow" style="margin:0">${esc(sub)}</h3><button class="ghost" style="padding:6px 12px" onclick="itemAdd(${esc(JSON.stringify(sub))})">＋ 新增</button></div>
       ${S.items.filter(i => i.subject === sub).map(it => `<div class="item"><div class="name">${esc(it.name)}${isBoss(it.name) ? '<span class="tag">Boss</span>' : ''}</div><button class="ghost" style="padding:6px 12px" onclick="itemRename(${it.row})">✏️ 改名</button></div>`).join('')}</div>`).join('')}
@@ -8806,7 +8861,7 @@ const TALK_LINES = [
 const TALK_ARIA = { 1925: '撥打 1925 安心專線', 1995: '撥打 1995 生命線', 113: '撥打 113 保護專線', 1980: '撥打 1980 張老師', 110: '撥打 110 報警', 119: '撥打 119 救護' };
 let talkBack = 'more', talkState = '';   // 只放在記憶體：重新整理就沒了
 function openTalk() { talkBack = tab === 'talk' ? talkBack : tab; talkState = ''; tab = 'talk'; draft = {}; render(); window.scrollTo(0, 0); }
-function talkSee() { tab = 'more'; draft = {}; render(); const c = document.getElementById('sfWrite'); if (c) c.scrollIntoView(); else window.scrollTo(0, 0); }
+function talkSee() { tab = 'more'; draft = {}; moreOpen = 'see';   /* MORE_FOLD_v1 */ render(); const c = document.getElementById('sfWrite'); if (c) c.scrollIntoView(); else window.scrollTo(0, 0); }
 function talkLinks() { return seeMine() ? `<div class="hlinks"><a role="link" tabindex="0" onclick="talkSee()">誰看得到 ›</a><a role="link" tabindex="0" onclick="openTalk()">想找人說說 ›</a></div>` : ''; }
 function talkLink() { return seeMine() ? `<div class="hlinks"><a role="link" tabindex="0" onclick="openTalk()">想找人說說 ›</a></div>` : ''; }   // 字詞比對命中時接在回饋下面（不跳出、不變色）
 async function askTalkNow() {
@@ -8837,28 +8892,38 @@ function talkWriteCard() {
   const G = esc(GUARDIAN_);
   return `<div class="card" id="sfWrite"><b>🔒 你寫的字</b><div style="font-size:14px;line-height:1.7;margin-top:4px">App 不會把你寫的字給家人看，除非你自己選了人。這些字存在${G}的 Google 帳號裡；${G}技術上打得開，但答應過不去翻你沒分享的內容。寫給老師和燈塔的話會交給 AI 讀，讀到你可能有危險時，會請${G}關心你，但不會給${G}看你寫的字。</div></div>`;
 }
-function viewMore() {
-  const pairs = Object.keys(D.kizuna.pair).filter(k => D.kizuna.pair[k].score > 0).map(k => [k, D.kizuna.pair[k]]);
-  return `<div class="card"><h2>👥 島民關係</h2>${SUBJECTS.map(s => { const r = resident(s);
+let moreOpen = '';   // MORE_FOLD_v1：更多頁展開哪一項（kz 島民關係／see 誰看得到什麼），只在記憶體
+function moreTap(k) { moreOpen = moreOpen === k ? '' : k; render(); }
+function seeSummary() {   // 文案 177：稱呼從她的設定來，不寫死
+  const cats = Object.keys(SEE_UI), sh = cats.filter(c => seeList(c).length), rest = cats.length - sh.length;
+  if (!sh.length) return cats.length + ' 類都只有你自己看得到';
+  if (!rest) return cats.length + ' 類都有分享給家人';
+  return (sh.length === 1 ? SEE_UI[sh[0]][1] + '給' + seeList(sh[0]).join('、') + '看' : '有 ' + sh.length + ' 類分享給家人') + '，其他 ' + rest + ' 類只有你自己看得到';
+}
+function viewMore() {   // MORE_FOLD_v1：頁首常用 → 📔 島民關係一行 → 📒 航海日誌 → ⚙️ 設定（我的寫法、修改島嶼設定、🔒 誰看得到什麼、3D 高畫質、登出、版本）
+  const pairs = Object.keys(D.kizuna.pair).filter(k => D.kizuna.pair[k].score > 0).map(k => [k, D.kizuna.pair[k]]), kzO = moreOpen === 'kz', seeO = moreOpen === 'see';
+  const top = `<div class="card"><div class="mtop">${seeMine() ? `<button class="ghost mtalk" onclick="openTalk()">🫶 想找人說說</button>` : ''}<button class="ghost" onclick="go('guide')">❓ 玩法說明</button><button class="ghost" onclick="go('items')">📋 任務清單</button>
+    <button class="ghost" onclick="go('wish')">💡 讓島順起來</button><button class="ghost" onclick="go('visits')">🎟️ 邀請朋友</button></div></div>`;
+  const kz = `<div class="card" style="padding:4px 12px"><button class="mrow" aria-expanded="${kzO}" onclick="moreTap('kz')"><span style="font-size:22px" aria-hidden="true">📔</span><span class="mt"><b>島民關係・${SUBJECTS.length} 位</b><div>${SUBJECTS.map(s => resident(s).ipic).join(' ')}　絆の手帖、島民之間的交情</div></span><span class="chev" aria-hidden="true">${kzO ? '▴' : '›'}</span></button>
+    ${kzO ? `<div style="padding:0 0 10px">${SUBJECTS.map(s => { const r = resident(s);
       return `<div class="item"><span class="avatar">${r.pic}</span><div class="name"><b>${esc(r.name)}</b>（${SUBJECT_NAME[s]}）${kzBadge(s)}<div class="muted">${esc(r.personality)}${r.relation ? '・' + esc(r.relation) : ''}</div>${r.intro ? `<div style="font-size:13px;margin-top:2px">${esc(r.intro)}</div>` : ''}</div></div>`; }).join('')}
     <button class="ghost" style="width:100%;margin-top:10px" onclick="draft={};tab='kizuna';render();window.scrollTo(0,0)">📔 翻開絆の手帖</button>
     <h3 style="margin-top:12px">💞 島民之間的交情</h3>${pairs.length ? pairs.map(([k, v]) =>
       `<div>${resident(k[0]).ipic} ${esc(resident(k[0]).name)} × ${resident(k[1]).ipic} ${esc(resident(k[1]).name)}：${v.name}</div>`).join('') : '<div class="muted">同一天讀兩科、寫跨科連結，島民之間就會越來越熟。</div>'}
     ${D.links.length ? `<details class="fold" style="margin-top:12px"><summary><h3>🔗 連結筆記</h3><span class="muted">${D.links.length} 則</span></summary>` + D.links.slice().reverse().map(l => `<div class="muted">${esc(l.date)}・${SUBJECT_NAME[l.a]} × ${SUBJECT_NAME[l.b]}：${esc(l.note)}</div>`).join('') + '</details>' : ''}
-    ${D.autoLinks.length ? `<details class="fold" style="margin-top:12px"><summary><h3>🤖 任務裡發現的跨科題</h3><span class="muted">${Math.min(D.autoLinks.length, 20)} 題</span></summary>` + D.autoLinks.slice().reverse().slice(0, 20).map(x => `<div class="muted">${esc(x.at)}・${x.lanes.map(esc).join(' × ')}：${esc(x.why)}</div>`).join('') + '</details>' : ''}
-  </div>
-  <div class="card"><h3>📖 航海日誌</h3><div class="muted">每週達成率、這週一句話、瓶子和紙船，還有一路走來的紀錄，都收進燈塔 2F 的航海日誌了。</div>
+    ${D.autoLinks.length ? `<details class="fold" style="margin-top:12px"><summary><h3>🤖 任務裡發現的跨科題</h3><span class="muted">${Math.min(D.autoLinks.length, 20)} 題</span></summary>` + D.autoLinks.slice().reverse().slice(0, 20).map(x => `<div class="muted">${esc(x.at)}・${x.lanes.map(esc).join(' × ')}：${esc(x.why)}</div>`).join('') + '</details>' : ''}</div>` : ''}</div>`;
+  const mine = seeMine(), talkW = typeof talkWriteCard === 'function' ? talkWriteCard().replace('<div class="card" id="sfWrite">', '<div id="sfWrite">') : '';
+  const see = `<div class="srow"><button class="ghost" aria-expanded="${seeO}" onclick="moreTap('see')">🔒 誰看得到什麼 ${seeO ? '▴' : '▾'}</button>${mine ? `<div class="msub">${esc(seeSummary())}</div>` : ''}
+    ${seeO ? `<div class="msee">${talkW}${mine ? `<div>${seeEditor().replace('<div class="card"><h3>👀 誰看得到什麼</h3>', '<div>')}</div>` : ''}<div>${privacyCard()}</div></div>` : ''}</div>`;
+  return top + kz + `
+  <div class="card"><h3>📒 航海日誌</h3><div class="muted">每週達成率、這週一句話、瓶子和紙船，還有一路走來的紀錄，都收進燈塔 2F 的航海日誌了。</div>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="tab='log';draft={logMode:'month'};render();window.scrollTo(0,0)">翻開航海日誌 ›</button></div>
-  <div class="card"><div class="row">${seeMine() ? `<button class="ghost" onclick="openTalk()">🫶 想找人說說</button>` : ''}<button class="ghost" onclick="go('guide')">❓ 玩法說明</button>
-    <button class="ghost" onclick="go('abbr')">📖 我的寫法</button>
-    <button class="ghost" onclick="go('items')">📝 任務清單</button>
-    <button class="ghost" onclick="go('wish')">💡 讓島順起來</button>
-    <button class="ghost" onclick="go('visits')">🎟️ 邀請朋友</button>
-    <button class="ghost" onclick="tab='setup'; draft={}; render()">修改島嶼設定（島民、嚮導、商店）</button></div>
-    <div class="muted" style="margin-top:8px">版本 v${APP_VERSION}</div></div>
-  ${privacyCard()}
-  ${BETA3D ? `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🖥️ 3D 高畫質</b><div class="muted">開著會有影子、比較細的海浪；手機變慢或發燙就關掉。畫面不順時會自動調低畫質，順了再調回來。</div></div>
-    <button class="ghost" onclick="toggleHQ()">${hqOn() ? '✅ 開著' : '⬜ 關著'}</button></div></div>` : ''}`;
+  <div class="card mset"><h3>⚙️ 設定</h3>
+    ${isFamily() ? '' : `<div class="srow"><button class="ghost" onclick="go('abbr')">✍️ 我的寫法</button><button class="ghost" onclick="tab='setup'; draft={}; render()">修改島嶼設定（島民、嚮導、商店）</button></div>`}
+    ${see}
+    ${BETA3D ? `<div class="srow"><button class="ghost" onclick="toggleHQ()" aria-pressed="${hqOn()}">🖥️ 3D 高畫質：${hqOn() ? '開著' : '關著'}</button><div class="msub">開著會有影子、比較細的海浪；手機變慢或發燙就關掉。畫面不順時會自動調低畫質，順了再調回來。</div></div>` : ''}
+    <div class="srow"><button class="ghost" onclick="logoutPhone()">🚪 登出這支手機</button><div class="msub">清掉這支手機上的配對碼和存著的資料。島上的紀錄都還在，之後輸入配對碼就能回來。</div></div>
+    <div class="muted" style="font-size:12px">版本 v${APP_VERSION}</div></div>`;
 }
 // v2.31 隱私（爸爸 2026-10-26）：「誰看得到什麼」表＋登出這支手機
 const WHO_SEES = [
@@ -8875,15 +8940,13 @@ const WHO_SEES = [
   ['島的樣子、島名、等級、島民和家的擺設', '✅', '你選的人', '✅'],
   ['連續週數、這週完成幾項', '✅', '你選的人', '有勾的'],
   ['📊 統計數字：' + GUARDIAN_ + '有一個讀數工具，看得到這些數字：每週計畫完成幾格、各科讀了幾分鐘、上課和運動的次數、挑戰任務答了幾題和答對幾題、漂流瓶和燈籠的數量、紙船的數量、AI 用了幾次，還有大考成績，和最近 14 天你在讀書和其他畫面各待了幾分鐘。只有數字和日期，看不到你寫的字，也看不到是哪幾題。這個工具只有' + GUARDIAN_ + '在用。', '✅', GUARDIAN_ + '（讀數工具）', '—', 'me']];   /* PRIV_STATS_v1 */ // 只給她看；之後 xpDaily、國文錯因、保留率、交易所使用量上線時，各包把自己的項目加進這一列（文案 216 追記四）
-function privacyCard() {
-  return talkWriteCard() + seeEditor() + `<div class="card"><details class="fold"><summary><h3>🔐 隱私說明</h3><span class="muted">點開看資料存在哪裡、訪客看得到哪些</span></summary>
+function privacyCard() {   // MORE_FOLD_v1：只回摺疊的說明，放在「🔒 誰看得到什麼」展開的最下面
+  return `<details class="fold"><summary><h3>資料存在哪裡、誰打得開、訪客看得到哪些</h3></summary>
     <div style="overflow-x:auto;margin-top:8px"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人</th><th>訪客</th></tr>
       ${WHO_SEES.filter(r => r[4] !== 'me' || !(isFamily() || ownMode())).map(r => `<tr><td style="text-align:left;white-space:normal">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div>
     <div style="margin-top:8px;font-size:13px">家人在 App 裡只看得到你選了給他們看的。沒選的、燈塔的話，還有你在智慧島、紙船這些地方寫的字，家人都看不到。這些資料存在爸爸管理的試算表和雲端硬碟裡，所以爸爸技術上打得開；他答應過，不會去讀你沒分享的內容。有疑問，隨時可以直接問爸爸。</div>
     <div class="muted" style="margin-top:6px;font-size:12px">你寫給智慧島老師和燈塔的話（包括再回老師的那一句），會交給 AI 產生回覆；AI 不會把內容告訴家人。每週檢討和大考成績，爸爸會交給 AI 學習顧問分析讀書方法。家人只能看、寄明信片、送書和鼓勵卡，不能改你的紀錄。漂流瓶和日めくり要選了人才算分享。訪客只看得到你確認過的那張邀請裡的快照；連續週數要發邀請時有勾才給看；邀請到期或收回就看不到。用到 AI 的功能（拍照讀計畫和錯題、出題、講解、島民的話）會把那一次的內容送到 Google 的 Gemini 產生回答。</div>
-    </details>
-    <button class="ghost" style="width:100%;margin-top:10px" onclick="logoutPhone()">🚪 登出這支手機</button>
-    <div class="muted" style="margin-top:4px;font-size:12px">清掉這支手機上的配對碼和存著的資料。島上的紀錄都還在，之後輸入配對碼就能回來。</div></div>`;
+    </details>`;
 }
 async function logoutPhone() {
   const running = focusActive() || moveActive();
@@ -8966,8 +9029,8 @@ function viewGuide() {
     p('計畫本上打勾（✓）的項目，套用時可以順便記成「完成」；劃掉的當作取消，不會排進計畫。所以只在週末拍一次照片，也能把整週排好、記好。') +
     p('讀照片通常要 10 到 60 秒，畫面會顯示已經等了幾秒。超過 150 秒還沒讀完，或 AI 太忙、照片看不清楚，畫面會告訴你原因，過一下再拍一次就好。拍的時候只拍這一週的那兩頁、光線亮一點，會讀得比較快。') +
     p('一個寫法可以代表好幾項，例如「國三」＝online、閱策、成語三項一起排。還不知道是哪一科的（例如「Wei H」，要等上課才知道是數學還是理化），會先排成 ❓ 待定，知道了再點一下選科目。') +
-    p('看不懂的字，島民會列出來問你：選它是哪一項按「記住」，下次就認得了；不是讀書的行程（才藝課、運動）按「無關」，以後就會略過。這些都存在「⚙️ 更多 → 📖 我的寫法」，可以自己新增或刪除。') +
-    p('週檢討表上沒有的項目，到「⚙️ 更多 → 📝 任務清單」新增；名字想改也在那裡改，以前的紀錄都會保留。') +
+    p('看不懂的字，島民會列出來問你：選它是哪一項按「記住」，下次就認得了；不是讀書的行程（才藝課、運動）按「無關」，以後就會略過。這些都存在「⚙️ 更多 → ✍️ 我的寫法」，可以自己新增或刪除。') +
+    p('週檢討表上沒有的項目，到「⚙️ 更多 → 📋 任務清單」新增；名字想改也在那裡改，以前的紀錄都會保留。') +
     p('上週排過的項目會出現在「最近常排的」，自己加的時候找起來比較快。'))}
   ${sec('📝', '記錄你做了什麼', p('首頁「今日のおつとめ」的「📝 讀書計畫」會列出今天排的項目，做完就點「完成」，做了一半就點「部分」，再點一次可以取消。按了就會自動存好，右上角會顯示「✓ 已存到試算表」。') +
     p('做了計畫外的項目？按「＋ 記錄計畫外的項目」。忘了記也沒關係，到計畫頁點那一天就能補，或週末確認時一次補。<b>想每天記、或只在週日記都可以</b>，小島兩種都接受。'))}
