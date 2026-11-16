@@ -34,6 +34,7 @@
   function apply() {
     b1Open();   // B1
     wordsOpen();   // 單字出題
+    b2Open();   // FAM_B2_v1 挑戰和故事
     langOpen();   // FAM_LANG_A 語言先行
     if (!OWN_TABS.includes(tab)) { tab = 'home'; draft = {}; }
     const all = (isle() && isle().dirs) || [], live = liveDirs();
@@ -60,7 +61,7 @@
   window.wisdomOn = () => !!(S && S.wisdomOk);
   WISDOM_RULE = '每天最多上兩講，同一位老師每週一講。上過的課可以回小屋回看。';   // 一天最多兩講（爸爸 11/2）、一週一講照她的 wisdomTodayDone、wisdomWeekDone（爸爸 10/28）
   WISDOM_SHELF = '';   // 家人島沒有書店，上過的書不擺書架
-  PLACES.wisdom.lead = '去智慧島的渡船由你請一位主人來開：取名字、選樣子、寫個性。';
+  PLACES.wisdom.lead = '去智慧島的渡船由你請一位管理員來開：取名字、選樣子、寫個性。';   // FAM_TERMS197_v1：地方的看守角色一律叫管理員（文案審查 197）
   PLACES.wisdom.about = ['從這裡開船去智慧島，四位老師的課照順序上，一天最多上兩講，同一位老師每週一講', '每一講最後寫一句交給老師，老師會回你一句', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你島上的家'];
   const AI_OK = '你在智慧島寫給老師的那一句，會交給 AI，讓老師回你一句。這個 AI 用的是 Google Gemini 的付費版，你寫的字不會被拿去訓練 AI。你寫的和老師的回話，在 App 裡只有你自己看得到，其他家人都看不到；資料存在 App 管理員的 Google 試算表裡，管理員答應過不會去讀。';   // 文案審查 25
   const ensureDaily0 = window.ensureDaily;   // FAM_COMMON2_v1
@@ -167,9 +168,9 @@
   const WHO_ = () => { const her = (S && S.herCall) || (typeof herCall === 'function' ? herCall() : '家人');   // FAM_PRIVACY_v1：她的名字或稱呼（女兒／妹妹／姪女），家人畫面不寫「她」
     return '你的計畫、每天的紀錄、運動和商店，在 App 裡只有你自己看得到；' + (S && S.visitOk ? '沒打開「讓家人來我的島看看」的話，' : '') + '其他家人和' + her + '都看不到你的島。'   // 文案審查 131：有互訪選項時不寫死
     + '這些資料存在 App 管理員的 Google 試算表裡，和' + her + '的紀錄放在同一份試算表、不同的隱藏分頁，每天也會備份一份；App 管理員技術上打得開，但答應過不會去讀你沒分享的內容。'
-    + '除了你在智慧島同意後寫給老師的那一句，不會把任何內容送給 AI。'
+    + (b2On() ? '會送給 AI 的只有：你在智慧島同意後寫給老師的那一句、你拍的手寫計畫的照片、島民每天的信裡島民的名字、個性、說話方式、負責的方向和跟你的交情、單字卡的照片和字、挑戰和故事的方向類別、難度和第幾章。你取的島名和夥伴名字、打字寫的計畫和紀錄都不會送。' : '除了你在智慧島同意後寫給老師的那一句，不會把任何內容送給 AI。')   // FAM_B2_v1
     + '沒按分享的日めくり，和喝水紀錄也一樣：在 App 裡只有你自己看得到。有疑問，隨時可以直接問 App 管理員。'
-    + '在聚會所貼的公告，家人走進聚會所都看得到；用乘船券來玩的朋友看不到，也不會推到任何人的首頁。'   // 2b-2（爸爸 10/27；文案審查 19）
+    + '在聚會所貼的公告，家人走進聚會所都看得到；用乘船券來拜訪的訪客看不到，也不會推到任何人的首頁。'   // 2b-2（爸爸 10/27；文案審查 19）
     + '在主島的列島地圖上，其他家人看得到你的稱呼、有沒有開島和你選的島背景（海上、宇宙、天空），看不到島名和島上的任何東西。'; };
   function privacy() {
     return `<div class="card"><h3>🔐 誰看得到什麼</h3><div class="muted" style="line-height:1.7">${WHO_()}${S.visitOk ? WHO_VISIT : ''}</div>
@@ -473,6 +474,7 @@
     OWN_TABS.push('hand');   // HANDLOG_FAM_v1：計時補登頁（HANDLOG_v1），存進家人自己的 move:／focus:，後端 handCheck_ 一樣擋
     OWN_CARDS.push('matShelf', 'buyBack');   // 商店的素材櫃與收購
     ['buyMat', 'sellDish'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    if (OWN_FNS.indexOf('giftDish') < 0) OWN_FNS.push('giftDish');   // FAM_GIFT_v1：送料理（平衡檢查 7b，B1 漏開）
     PLACES.hall = Object.assign({}, PLACES.hall, { about: PLACES.hall.about.map(a => a.replace('讀書計時', '專心計時')) });
     PLACES.yatai.about = PLACES.yatai.about.concat(['素材不夠的話，商店的素材櫃可以用島幣買常見素材；做好的料理也可以賣給商店']);
     b1bOpen();   // B1b
@@ -564,6 +566,7 @@
   function commonCard() {
     return `<div class="card" id="famCommonCard"><h3>🧰 其他</h3>
       <div class="row" style="gap:6px"><button class="ghost grow" onclick="draft={}; go('log')">📒 航海日誌</button><button class="ghost grow" onclick="draft={}; go('wish')">💡 讓島順起來</button></div>
+      ${b2On() ? `<div class="row fq-entry" style="flex-wrap:nowrap;margin-top:10px;min-height:44px;cursor:pointer" onclick="famQuestGo('top')"><div class="grow"><b>📖 挑戰和故事</b><div class="muted">生活裡用得到的小題，和島主夥伴的小故事。</div></div><span style="color:var(--muted);font-size:20px;padding:0 4px">›</span></div><div style="height:1px;background:var(--plum-light);margin:10px 0"></div>` : ''}
       <div class="row" style="flex-wrap:nowrap;margin-top:10px"><div class="grow"><b>💊 吃藥提醒</b><div class="muted">打開以後，首頁的おつとめ板會在你設的時段問一聲；紀錄在 App 裡只有你自己看得到，其他家人都看不到。</div></div>
         <button class="ghost" onclick="famMedSet(${medOn() ? 'false' : 'true'})">${medOn() ? '✅ 開著' : '⬜ 關著'}</button></div>${dailyRow()}${langCanOn() ? famLangRow() : ''}</div>`;
   }
@@ -1067,9 +1070,9 @@
     .replace(/連續 (\d+) 週/g, '累積 $1 週');
   const habitCard0ns = habitCard;
   window.habitCard = () => habitCard0ns().replace(/已經連續 (\d+) 週達標 🔥/, '已經累積 $1 週').replace(/・連續 (\d+) 週可以拿到/, '・累積 $1 週可以拿到')
-    .split('一週運動 3 天就達標').join('一週運動 3 天就算一週').split('海邊步道還沒有管理員').join('海邊步道還沒有主人');   // 管理員是 App 管理員的稱呼（文案審查 97）
-  // 地方的「管理員」在家人島叫「主人」（文案審查 68、97）；App 管理員不動；不用「他」指主人
-  const host = s => s.replace(/(?<!App )管理員/g, '主人').split('。他每天會用自己的個性跟你說話').join('。每天會用自己的個性跟你說話');
+    .split('一週運動 3 天就達標').join('一週運動 3 天就算一週');   // FAM_TERMS197_v1：步道的管理員照叫管理員（文案審查 197，取代 97 的「主人」）
+  // FAM_TERMS197_v1：地方的管理員兩島都叫「管理員」（文案審查 197，11/8 決策），不再換成「主人」；只留不用「他」指人那一句（文案審查 68）
+  const host = s => s.split('。他每天會用自己的個性跟你說話').join('。每天會用自己的個性跟你說話');
   const viewKeeper0ns = viewKeeper, viewKizuna0ns = viewKizuna;
   window.viewKeeper = (...a) => host(viewKeeper0ns(...a));
   window.viewKizuna = (...a) => host(viewKizuna0ns(...a));
@@ -1077,6 +1080,167 @@
   window.moveBlock = (...a) => moveBlock0ns(...a).split('沒帶手機（體育課、校隊）').join('沒帶手機（例如打球、游泳）');
   if (PLACES.walk && PLACES.walk.about) PLACES.walk.about = PLACES.walk.about.map(s => s === '連續幾週都達標，可以拿到排球、浴衣這些運動家具' ? '累積幾週運動 3 天，就可以拿到排球、浴衣這些運動家具' : s);
   const flame = PLANTS.find(x => x.id === 'flame'); if (flame) flame.when = flame.when.split('，會考完、畢業的時候剛好開').join('，畢業季剛好開');
+  // ---------- FAM_B2_v1 挑戰和故事（11/19）：FAM_B2 開了才有；頁面都畫在「更多」分頁底下（draft.fq），不加新分頁、不改 index.html ----------
+  const b2On = () => !!(S && S.b2Ok);
+  let b2Ready = false;
+  function b2Open() {
+    if (b2Ready || !b2On()) return; b2Ready = true;
+    ['famQuest', 'famAnswer', 'famStory', 'famQuestAi'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    VISIT_NO.push('挑戰和故事的對錯和進度');
+  }
+  const FQ_DIRS = [['lang', '外語'], ['read', '閱讀'], ['work', '工作'], ['health', '健康'], ['home', '家務'], ['hobby', '興趣']];
+  const FQ_LVS = [['easy', '輕鬆'], ['mid', '普通'], ['hard', '有點難']];
+  const FQ_DAILY = 3, FQ_L = i => '(' + 'ABCD'.charAt(i) + ') ';
+  const fqDirName = d => (FQ_DIRS.find(x => x[0] === d) || [0, ''])[1], fqLvName = l => (FQ_LVS.find(x => x[0] === l) || [0, ''])[1];
+  const FQ_NOTICE = '📖 挑戰和故事也會請 AI 出題、寫故事。送過去的只有你選的方向類別（例如「外語」）、難度和第幾章，不會有你取的名字或寫的字。';   // 文案 90
+  const FQ_CSS = `<style>.fq-opt{display:block;width:100%;box-sizing:border-box;text-align:left;background:#fff;color:var(--ink);border:1.5px solid var(--plum-light);border-radius:12px;padding:10px 12px;font-size:16px;line-height:1.6;margin-top:8px}
+    .fq-opt .fq-tag{display:block;font-size:12px;font-weight:700;margin-bottom:2px}.fq-opt.right{background:#e5efe0;border:2px solid #2f5a3a;color:#2f5a3a}.fq-opt.mine{border:1.5px dashed #5f5a55}.fq-opt.mine .fq-tag{color:#5f5a55}.fq-opt.other{background:#f7f1e5;border-color:#f7f1e5}
+    .fq-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.fq-chip{min-height:44px;border:1.5px solid var(--plum-light);border-radius:12px;background:#fff;color:var(--ink);font-size:15px;display:flex;align-items:center;justify-content:center;padding:0 6px}
+    .fq-chip.on{background:var(--plum-light);border:2px solid var(--plum);color:var(--plum);font-weight:600}.fq-sep{height:1px;background:var(--plum-light);margin:12px 0}
+    .fq-ex h4{margin:10px 0 2px;font-size:13px;font-weight:700}.fq-ex h4:first-child{margin-top:0}.fq-ex p{margin:0;font-size:15px;line-height:1.7}.fq-story{font-size:16px;line-height:1.8}
+    .fq-txt{background:none;color:var(--plum);padding:6px 0;text-decoration:underline}.fq-line{background:#fff;color:var(--plum);border:1.5px solid var(--plum-light)}</style>`;
+  // 事先準備好的題目和內建故事句：公開 repo 的兩個 json，載一次就留著；載不到就說「還在路上」，不叫後端
+  let fqBankP = null, fqStoriesP = null;
+  const fqBank = () => fqBankP || (fqBankP = fetch('famquest/bank.json').then(r => r.ok ? r.json() : null).catch(() => null).then(b => { if (!Array.isArray(b)) fqBankP = null; return Array.isArray(b) ? b : null; }));
+  const fqStories = () => fqStoriesP || (fqStoriesP = fetch('famquest/stories.json').then(r => r.ok ? r.json() : null).catch(() => null).then(b => { if (!b || typeof b !== 'object') fqStoriesP = null; return b && typeof b === 'object' ? b : null; }));
+  let fqStoryCache = null; fqStories().then(x => { fqStoryCache = x; });
+  const fqRows = f => Object.keys(S.save).filter(k => k.startsWith('fq:') && S.save[k] && (!f || f(S.save[k]))).sort().map(k => Object.assign({ id: k }, S.save[k]));
+  const fsRows = () => Object.keys(S.save).filter(k => k.startsWith('fs:') && S.save[k]).sort().map(k => Object.assign({ id: k }, S.save[k]));
+  const fqToday = () => fqRows(r => r.date === S.today && !r.story), fqOpenRow = () => fqRows(r => !r.done && !r.story)[0] || null;
+  const fsToday = () => fsRows().filter(r => r.date === S.today)[0] || null;
+  const fqAiOn = () => !!(S.save.aiOk) && !S.save.questAiOff;
+  const fqWho = () => '<b>' + esc((D.cfg && D.cfg.guide && D.cfg.guide.name) || '島主夥伴') + '</b>';
+  const fqText = t => esc(t).split('{who}').join(fqWho());   // 先 esc 再換 {who}（工程顧問 11/7 ②：名字也 esc）
+  let fqBusy = false;
+  window.famQuestGo = function (page) { draft = { fq: page, fqDir: draft.fqDir || 'lang', fqLv: draft.fqLv || 'easy' }; tab = 'more'; render(); window.scrollTo(0, 0); };
+  const fqBack = `<div style="text-align:center;margin-top:8px"><button class="fq-txt" onclick="draft={};render();window.scrollTo(0,0)">回到更多</button></div>`;
+  // 選項順序：每一題打亂一次（存在 draft），送回後端的是原本的位置
+  function fqOrder(q) {
+    if (!draft.fqOrder || draft.fqOrder.id !== q.id) { const o = [0, 1, 2, 3]; for (let i = 3; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } draft.fqOrder = { id: q.id, o }; }
+    return draft.fqOrder.o;
+  }
+  const fqOptions = q => fqOrder(q).map((oi, i) => `<button class="fq-opt" onclick="famQuestAnswer('${q.id}',${oi})" ${fqBusy ? 'disabled' : ''}>${FQ_L(i)}${esc(q.o[oi])}</button>`).join('');
+  function fqResult(r) {   // 答完：正確答案完成色＋✓、選的那顆虛線、其他 kinari（WORDQ_v2 規則）；「這題的答案是 X」照打亂後的位置
+    const o = (draft.fqOrder && draft.fqOrder.id === r.id) ? draft.fqOrder.o : [0, 1, 2, 3], at = o.indexOf(r.a);
+    return o.map((oi, i) => oi === r.a ? `<div class="fq-opt right"><span class="fq-tag">正確答案</span>✓ ${FQ_L(i)}${esc(r.o[oi])}</div>` : oi === r.choice ? `<div class="fq-opt mine"><span class="fq-tag">你選的</span>${FQ_L(i)}${esc(r.o[oi])}</div>` : `<div class="fq-opt other">${FQ_L(i)}${esc(r.o[oi])}</div>`).join('')
+      + `<div style="font-size:15px;font-weight:700;margin:14px 0 8px">這題的答案是 ${'ABCD'.charAt(at)}</div>
+      <div class="fq-ex" style="background:var(--sand);border-radius:14px;padding:12px 14px"><h4>道理</h4><p>${esc(r.ex)}</p><h4>你選的那個</h4><p>${esc((r.why || [])[r.choice] || '')}</p>${r.try ? `<h4>今天可以試試</h4><p>${esc(String(r.try).replace(/^今天可以試試[:：]\s*/, ''))}</p>` : ''}</div>`;
+  }
+  const fqHead = sub => `<h2>📖 挑戰和故事</h2>${sub ? `<div class="muted">${sub}</div>` : ''}`;
+  function viewFamQuest() {
+    const page = draft.fq, today = fqToday(), open = fqOpenRow();
+    if (!b2On()) return `${FQ_CSS}<div class="card">${fqHead()}<div class="muted">挑戰和故事還沒開放。</div>${fqBack}</div>`;
+    if (page === 'top' && S.save.aiOk && !S.save.fqNotice) return `${FQ_CSS}<div class="card">${fqHead()}
+      <div style="background:var(--sand);border-radius:14px;padding:12px 14px;line-height:1.7;font-size:15px">${FQ_NOTICE}</div>
+      <div class="row" style="margin-top:12px"><button class="fq-line grow" onclick="famQuestAiSet(true)" ${fqBusy ? 'disabled' : ''}>好</button><button class="fq-line grow" onclick="famQuestAiSet(false)" ${fqBusy ? 'disabled' : ''}>挑戰先不用 AI</button></div>
+      <div class="muted" style="font-size:13px;margin-top:10px">🔒 對錯和進度在 App 裡只有你自己看得到</div></div>`;
+    if (page === 'quiz' || page === 'done') {
+      const r = page === 'done' ? draft.fqRes : null, q = r || open;
+      if (!q) return viewFamQuestTop();
+      const n = r ? today.length : today.length;   // 答完的那題也算在今天的題數裡
+      return `${FQ_CSS}<div class="card">${fqHead(`${esc(fqDirName(q.dir || draft.fqDir))} · ${esc(fqLvName(q.lv || draft.fqLv))} · 今天第 ${Math.max(1, n)} 題`)}
+        ${q.note ? `<div class="muted" style="margin-top:6px">${esc(q.note)}</div>` : ''}
+        <p style="font-size:16px;line-height:1.6;margin:10px 0 4px">${esc(q.q)}</p>
+        ${r ? fqResult(r) : fqOptions(q)}
+        ${r ? `<div class="row" style="margin-top:14px"><button class="grow" onclick="famQuestAsk()" ${fqBusy || today.length >= FQ_DAILY ? 'disabled' : ''}>再出一題</button></div>${today.length >= FQ_DAILY ? '<div class="muted" style="text-align:center;margin-top:8px">今天的三題做完了。</div>' : ''}` : ''}
+        ${fqBack}</div>`;
+    }
+    if (page === 'story') return viewFamStory();
+    return viewFamQuestTop();
+  }
+  function viewFamQuestTop() {
+    const today = fqToday(), open = fqOpenRow(), done = today.length >= FQ_DAILY && !open;
+    const aiLine = fqAiOn() ? `今天還能請 AI 出 ${Math.max(0, Number(S.b2Ai) || 0)} 題` : S.save.aiOk ? '挑戰先不用 AI：用事先準備好的題目和故事' : '用事先準備好的題目和故事';
+    const consent = !S.save.aiOk ? `<div class="card" style="background:#f6f1e6"><div class="muted" style="line-height:1.7">${AI_OK}<br>${FQ_NOTICE}</div>
+        <button class="ghost" style="width:100%;margin-top:8px" onclick="famQuestAgree()">我看過了，同意</button>
+        <div class="muted" style="font-size:12px;margin-top:6px">先不同意也可以，會用事先準備好的題目和故事。</div></div>` : '';
+    return `${FQ_CSS}<div class="card">${fqHead()}
+      <div class="muted" style="font-size:13px">${aiLine} · 🔒 對錯和進度在 App 裡只有你自己看得到</div>
+      <div class="fq-sep"></div>
+      <div class="muted" style="margin-bottom:6px">選一個方向</div>
+      <div class="fq-chips">${FQ_DIRS.map(([k, n]) => `<button class="fq-chip ${draft.fqDir === k ? 'on' : ''}" onclick="draft.fqDir='${k}';render()">${draft.fqDir === k ? '✓ ' : ''}${n}</button>`).join('')}</div>
+      <div class="muted" style="margin:12px 0 6px">難度</div>
+      <div class="fq-chips">${FQ_LVS.map(([k, n]) => `<button class="fq-chip ${draft.fqLv === k ? 'on' : ''}" onclick="draft.fqLv='${k}';render()">${draft.fqLv === k ? '✓ ' : ''}${n}</button>`).join('')}</div>
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="famQuestAsk()" ${fqBusy || done ? 'disabled' : ''}>${open ? '繼續答這一題' : '出題'}</button></div>
+      ${done ? '<div class="muted" style="text-align:center;margin-top:8px">今天的三題做完了。</div>' : `<div class="muted" style="text-align:center;margin-top:8px;font-size:13px">今天 ${today.length}／${FQ_DAILY} 題</div>`}
+      <div class="fq-sep"></div>
+      <div class="row" style="flex-wrap:nowrap;min-height:44px;cursor:pointer" onclick="famQuestGo('story')"><div class="grow"><b>📖 看今天的故事</b></div><span style="color:var(--muted);font-size:20px;padding:0 4px">›</span></div>
+      ${S.save.aiOk ? `<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">挑戰用 AI：${S.save.questAiOff ? '先不用' : '開著'} <button class="fq-txt" style="font-size:12px" onclick="famQuestAiSet(${S.save.questAiOff ? 'true' : 'false'})">${S.save.questAiOff ? '打開' : '先不用'}</button></div>` : ''}
+      ${fqBack}</div>${consent}`;
+  }
+  function viewFamStory() {
+    const fs = fsToday(), who = fqWho();
+    const back = `<div class="row" style="margin-top:14px"><button class="fq-line grow" onclick="famQuestGo('top')">回到挑戰和故事</button></div>`;
+    if (!fs) return `${FQ_CSS}<div class="card"><h2>📖 今天的故事</h2><div class="muted">每天一章，${who}當主角，裡面有一題小題。</div>
+      <div class="row" style="margin-top:14px"><button class="grow" onclick="famStoryStart()" ${fqBusy ? 'disabled' : ''}>看今天的故事</button></div>${back}</div>`;
+    const q = S.save[fs.q] ? Object.assign({ id: fs.q }, S.save[fs.q]) : null, r = draft.fqRes && draft.fqRes.id === fs.q ? draft.fqRes : null;
+    let text = null;
+    if (fs.src === 'ai') text = { open: fs.open, ok: fs.ok, miss: fs.miss };
+    else if (fqStoryCache && fqStoryCache[fs.dir] && fqStoryCache[fs.dir][fs.idx]) text = fqStoryCache[fs.dir][fs.idx];
+    if (!text) { fqStories().then(x => { fqStoryCache = x; if (x) render(); }); return `${FQ_CSS}<div class="card"><h2>📖 今天的故事</h2><div class="muted">第 ${fs.n} 章</div><div class="muted" style="margin-top:10px">故事還在路上，等一下再試。</div>${back}</div>`; }
+    const finished = !q || q.done, right = r ? r.correct : !!fs.right;
+    return `${FQ_CSS}<div class="card"><h2>📖 今天的故事</h2><div class="muted">第 ${fs.n} 章${fs.note ? ' · ' + esc(fs.note) : ''}</div>
+      <div class="fq-story" style="background:var(--sand);border-radius:14px;padding:12px 14px;margin-top:8px">${fqText(text.open)}</div>
+      ${q ? `<p style="font-size:16px;line-height:1.6;margin:14px 0 4px">${esc(q.q)}</p>${r ? fqResult(r) : finished ? '' : fqOptions(q)}` : ''}
+      ${finished ? `<div class="fq-story" style="background:var(--sand);border-radius:14px;padding:12px 14px;margin-top:12px">${fqText(right ? text.ok : text.miss)}</div>${r ? '' : '<div class="muted" style="text-align:center;margin-top:10px">今天的故事說完了。</div>'}` : ''}
+      ${back}</div>`;
+  }
+  // 出題：先確定事先準備好的那一組載得到，再請後端抽（AI 出不出、用哪一題都由後端決定）
+  window.famQuestAsk = async function () {
+    if (fqBusy) return;
+    if (fqOpenRow()) { draft.fq = 'quiz'; delete draft.fqRes; render(); return; }
+    fqBusy = true; render();
+    try {
+      const bank = await fqBank(); if (!bank) throw new Error('題目還在路上，等一下再試。');
+      const dir = draft.fqDir || 'lang', lv = draft.fqLv || 'easy', list = bank.filter(x => x.dir === dir && x.lv === lv);
+      if (!list.length) throw new Error('題目還在路上，等一下再試。');
+      await flush(); S = await call('famQuest', dir, lv, list); D = derive(S);
+      fqBusy = false; draft.fq = 'quiz'; delete draft.fqRes; delete draft.fqOrder; render(); window.scrollTo(0, 0);
+    } catch (e) { fqBusy = false; render(); toast(e.message || String(e)); }
+  };
+  window.famQuestAnswer = async function (id, choice) {
+    if (fqBusy) return; fqBusy = true; render();
+    try {
+      await flush(); const r = await call('famAnswer', id, choice); S = r.st; D = derive(S);
+      fqBusy = false; draft.fqRes = r.res; draft.fq = r.res.story ? 'story' : 'done'; render();
+    } catch (e) { fqBusy = false; render(); toast(e.message || String(e)); }
+  };
+  window.famStoryStart = async function () {
+    if (fqBusy) return; fqBusy = true; render();
+    try {
+      const bank = await fqBank(), st = await fqStories(); if (!bank || !st) throw new Error('故事還在路上，等一下再試。');
+      fqStoryCache = st;
+      const n = fsRows().reduce((m, r) => Math.max(m, Number(r.n) || 0), 0) + 1, dir = FQ_DIRS[(n - 1) % 6][0], list = bank.filter(x => x.dir === dir && x.lv === 'easy');
+      if (!list.length) throw new Error('故事還在路上，等一下再試。');
+      await flush(); S = await call('famStory', list); D = derive(S);
+      fqBusy = false; delete draft.fqRes; delete draft.fqOrder; render(); window.scrollTo(0, 0);
+    } catch (e) { fqBusy = false; render(); toast(e.message || String(e)); }
+  };
+  window.famQuestAgree = async function () {   // 和智慧島同一個 agreeAi，只有 toast 不同（文案 196）
+    if (fqBusy) return; fqBusy = true; render();
+    try { await flush(); S = await call('agreeAi'); D = derive(S); fqBusy = false; toast('好，記下了。智慧島和挑戰、故事都會用 AI。'); render(); }
+    catch (e) { fqBusy = false; render(); toast('沒有存到：' + (e.message || e)); }
+  };
+  window.famQuestAiSet = async function (on) {
+    if (fqBusy) return; fqBusy = true; render();
+    try { await flush(); S = await call('famQuestAi', on); D = derive(S); fqBusy = false; render(); }
+    catch (e) { fqBusy = false; render(); toast('沒有存到：' + (e.message || e)); }
+  };
+  const viewMore0fq = window.viewMore;
+  window.viewMore = () => (draft.fq && b2On()) ? viewFamQuest() : viewMore0fq();
+  // 經驗值、島幣：答完的 fq:（當月）＋月結 fqm: 一起算，和後端 Coins.gs 的 ledger_ 同一個算法（經驗值只給升級、島幣直接給，不經過兌換）
+  const derive0fq = window.derive;
+  window.derive = function (st) {
+    const d = derive0fq(st), save = (st && st.save) || {};
+    if (!d || !(st && st.b2Ok)) return d;
+    const rows = Object.keys(save).filter(k => (k.startsWith('fq:') && save[k] && save[k].done) || (k.startsWith('fqm:') && save[k])).map(k => save[k]);
+    const xp = rows.reduce((a, r) => a + (r.xp || 0), 0), coins = rows.reduce((a, r) => a + (r.coins || 0), 0);
+    if (!xp && !coins) return d;
+    d.xp += xp; d.coins += coins; if (d.coinParts) d.coinParts.fqCoins = coins;
+    d.level = Math.floor(Math.sqrt(d.xp / 60)) + 1; d.lvBase = 60 * Math.pow(d.level - 1, 2); d.lvNext = 60 * Math.pow(d.level, 2);
+    if (Array.isArray(d.badges)) d.badges = d.badges.map(b => b.name === '島嶼 Lv.10' ? Object.assign({}, b, { ok: d.level >= 10 }) : b);
+    return d;
+  };
   if (typeof S !== 'undefined' && S) D = derive(S);   // family.js 載入前畫面已經用快取算過一次 D，這裡用家人版重算
   OWN_CARDS.push('famask');   // ASK_FAM_v1：家人想跟你一起檢討
   window.FamIsle = { apply, after, cards: OWN_CARDS };

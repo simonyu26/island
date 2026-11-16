@@ -1,4 +1,4 @@
-/* 會考小島：家人互訪的參觀畫面（家人島工作串；工程顧問 10/27 設計審查通過）
+/* 會考小島：家人互相拜訪的畫面（家人島工作串；工程顧問 10/27 設計審查通過）
  * 點港口選單、主島飛船碼頭的「去○○的島」才下載這個檔（Index.html 的 openFamVisit）。
  * 只看島主同意時做的快照（後端 famSnap），沒有任何寫入的按鈕；不記誰來看過。
  * 日めくり：後端照島主分享的頁現讀，家人和她來看都一樣（爸爸 10/28）；沒分享的頁誰都拿不到。
@@ -11,7 +11,7 @@
   function load(name) {
     if (cache[name] || busy === name) return;
     busy = name;
-    call('famSnap', name).then(r => { cache[name] = r || { error: '這座島還沒開放參觀' }; }, e => { cache[name] = { error: String(e && e.message || e) }; })
+    call('famSnap', name).then(r => { cache[name] = r || { error: '這座島還沒開放拜訪' }; }, e => { cache[name] = { error: String(e && e.message || e) }; })
       .then(() => { busy = null; if (tab === 'famvisit') render(); });
   }
   function view() {
