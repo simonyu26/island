@@ -410,6 +410,9 @@
   .hcur{display:flex;gap:10px;align-items:center;background:#f7f1e5;border-radius:10px;padding:8px}.hcur img{width:84px}.hcur b{display:block}.hstage{display:block;font-size:14px;color:var(--muted);white-space:nowrap}.hcur{flex-wrap:wrap}.hcur .ghost{white-space:nowrap;margin-left:auto}
   .hg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.hg2 .hopt{flex-direction:column;text-align:center;min-height:auto}.hg2 .hopt img{width:100%;height:auto}
   .hsw button.on{border:2px solid var(--plum);color:var(--plum);font-size:20px;font-weight:700;line-height:1}.hsw button.on::after{content:"✓"}
+  /* WHY4_v1 為什麼會錯：2×2、沒選白底灰框、選了淺梅底＋2px 梅框＋✓（美術 11/11） */
+  .whyg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.whyg .whyc{display:flex;flex-direction:column;justify-content:center;text-align:left;min-height:56px;padding:8px;border-radius:12px;background:#fff;border:1px solid #d8d4ce;color:var(--ink)}
+  .whyg .whyc .m{font-size:15px;white-space:nowrap}.whyg .whyc .s{font-size:12px;color:var(--muted);font-weight:400}.whyg .whyc.on{background:var(--plum-light);border:2px solid var(--plum);color:var(--plum);font-weight:700}
   /* ASK_v1 一起檢討（美術 11/4 v2）：兩個選項 ≤360 上下排、每列 ≥56px；狀態字靠左、按鈕靠右；燈塔小卡一行截斷、整列 ≥44px */
   .askopt { display: flex; gap: 8px; margin-top: 8px; }
   .askopt button { flex: 1; text-align: left; border: 1px solid #d8d4ce; border-radius: 12px; padding: 8px 10px; font-size: 14px; background: #fffdf8; color: inherit; min-height: 56px; box-shadow: none; font-weight: 400; }
@@ -499,12 +502,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.51.6';
+const APP_VERSION = '2.51.7';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.51.7', date: '2026-11-19', guide: ['燈塔（錯題的漂流瓶）'], items: ['📷 「為什麼會錯？」各科都改成四個選項：粗心（看錯／算錯）、觀念不熟（不會／用猜的）、沒讀懂題目、讀懂了，判斷錯。以前選「用猜的」的題，現在算在「觀念不熟」裡。錯題拍照、漂流瓶、紙船和燈塔的錯因統計都跟著換。國文錯題裡「沒讀懂題目」和「讀懂了，判斷錯」各有幾題，爸爸看得到，看不到是哪幾題；其他家人看不到。', '🏫 計畫頁上排了上課的格，名稱底下多了「記這堂課」：點一下就進「記一次上課」，課別和日期都已經選好。只有今天和前兩天的格會出現，記過就不再出現。'] },
   { v: '2.51.6', date: '2026-11-19', guide: ['衛星小島'], items: ['🚃 衛星小島多了第五種樣子「甘蔗田小島」：甘蔗田旁停著一節五分車，那天讀完一格英文計畫，五分車會載 1 份砂糖或牛奶給你（兩種輪流）；小站的郵筒裡每天有一張英文小知識卡。'] },
   { v: '2.51.5', date: '2026-11-18', guide: ['核心主島', '巷口的助教', '我的家', '挑戰任務（賺島幣）', 'Boss 戰', '燈塔（錯題的漂流瓶）', '島幣和商店', '讀書計時（集中の砂時計）', '智慧島'], items: ['📖 玩法說明補齊了：主島、巷口的助教、航路、島幣帳本、冥想、記一次上課和補登都寫進去了；我的家、挑戰任務、Boss 戰也照現在的樣子改好。'] },
   { v: '2.51.4', date: '2026-11-18', items: ['🍪 智慧島的助教也會送珍品了：鳳梨刀的鳳梨罐頭、魏老數學課的奶油派皮、魏老理化課的小蘇打（理化課 12/5 開講），每上完一講送一個；鳳梨刀從 11/9 開課以來上過的講也會補上。島の屋台多了三道料理：鳳梨酥、地瓜派、椪糖，拿到助教送的珍品，店主就會教你。絆の手帖也多了鳳梨刀一頁。'] },
@@ -4243,7 +4247,15 @@ function toggleExercise() {
 
 // 紙船碼頭：自己檢討是紙船，爸爸一起檢討是親子船；一科一面大漁旗
 const PAPER_MAX = 4;
-const REASONS = [['careless', '一時看錯／算錯'],['concept', '觀念不熟'], ['reading', '看不懂題目'], ['guess', '用猜的']];
+// WHY4_v1（爸爸 11/11）：各科統一四顆 [key, 主字, 小字]；舊的 guess（用猜的）一律算「觀念不熟」，存檔不改
+const REASONS = [['careless', '粗心', '看錯／算錯'], ['concept', '觀念不熟', '不會／用猜的'], ['reading', '沒讀懂題目', ''], ['judge', '讀懂了，判斷錯', '']];
+const WHY_OF = w => w === 'guess' ? 'concept' : w;
+const whyName = w => (REASONS.find(r => r[0] === WHY_OF(w)) || [, ''])[1];
+function whyMerge(o) { const m = {}; Object.keys(o || {}).forEach(k => { const w = WHY_OF(k); m[w] = (m[w] || 0) + (Number(o[k]) || 0); }); return m; }
+function whyGrid(on, click, dis, count) {   // on(key)→有沒有選；click(key)→onclick 字串；count：紙船的次數
+  return `<div class="whyg">${REASONS.map(r => { const sel = on(r[0]), c = count ? count[r[0]] || 0 : 0;
+    return `<button class="whyc${sel ? ' on' : ''}" ${dis ? 'disabled' : ''} onclick="${click(r[0])}"><span class="m">${sel ? '✓ ' : ''}${r[1]}${c ? ' ×' + c : ''}</span>${r[2] ? `<span class="s">${r[2]}</span>` : ''}</button>`; }).join('')}</div>`;
+}
 function viewPaper() {
   const f = draft.paper || (draft.paper = { kind: 'self', lanes: [], note: '', details: {}, stamp: false, more: false });
   const used = k => D.paperSessions.some(x => x.date === S.today && x.kind === k);
@@ -4260,8 +4272,7 @@ function viewPaper() {
       ${f.more ? f.lanes.map(l => { const d = f.details[l] || {};
         return `<div class="item" style="display:block"><b>${esc(l)}</b>
           <div class="row" style="margin-top:6px">錯了 <input type="number" min="0" max="99" style="width:70px" value="${d.wrong == null ? '' : d.wrong}" onchange="paperDetail('${l}','wrong',this.value)"> 題</div>
-          <div class="row" style="margin-top:6px;gap:6px">${REASONS.map(r => { const c = (d.reasons || {})[r[0]] || 0;
-            return `<button class="${c ? '' : 'ghost'}" style="padding:4px 10px;font-size:13px" onclick="paperReason('${l}','${r[0]}')">${r[1]}${c ? ' ×' + c : ''}</button>`; }).join('')}</div></div>`; }).join('') || '<div class="muted">先選科目。</div>' : ''}
+          ${whyGrid(k => !!whyMerge(d.reasons)[k], k => `paperReason('${l}','${k}')`, false, whyMerge(d.reasons))}</div>`; }).join('') || '<div class="muted">先選科目。</div>' : ''}
       ${f.kind === 'parent' ? `<div class="row" style="margin-top:12px;flex-wrap:nowrap"><div class="grow">${f.stamp ? '<span class="hanko">父</span> 爸爸蓋章了！' : '請爸爸在你的手機上蓋章'}</div>
         ${f.stamp ? '' : `<button class="ghost" onclick="paperStamp()">🔴 爸爸蓋章</button>`}</div>` : ''}
       <div class="muted" style="margin-top:10px">${used(f.kind) ? '今天已經放過' + (f.kind === 'parent' ? '親子船' : '紙船') + '了，這艘會記下來，但不會再給島幣。' : gain ? `這艘船：🪙 +${gain}、+20 經驗值` : '第一科 2 枚島幣，每多一科 +1 枚，一次最多 4 枚。'}</div>
@@ -4269,7 +4280,7 @@ function viewPaper() {
     <div class="card"><h3>🌊 碼頭上的船</h3>${list.length ? list.map(x => `<div class="item" style="display:block">
         <div class="row"><b class="grow">${x.kind === 'parent' ? '🚢 親子船' : '⛵ 紙船'}　${x.lanes.map(l => `<span class="pill">🎏 ${esc(l)}</span>`).join('')}</b><span class="muted">${short(x.date)}${x.paid ? '・🪙 +' + x.coins : ''}</span></div>
         <div style="margin-top:4px">💡 ${esc(x.note)}</div>
-        ${x.rows.some(r => r.wrong != null || r.reasons) ? `<div class="muted" style="font-size:12px;margin-top:2px">${x.rows.filter(r => r.wrong != null || r.reasons).map(r => esc(r.lane) + (r.wrong != null ? ' 錯 ' + r.wrong + ' 題' : '') + (r.reasons ? '（' + REASONS.filter(q => r.reasons[q[0]]).map(q => q[1] + r.reasons[q[0]]).join('、') + '）' : '')).join('；')}</div>` : ''}</div>`).join('')
+        ${x.rows.some(r => r.wrong != null || r.reasons) ? `<div class="muted" style="font-size:12px;margin-top:2px">${x.rows.filter(r => r.wrong != null || r.reasons).map(r => esc(r.lane) + (r.wrong != null ? ' 錯 ' + r.wrong + ' 題' : '') + (r.reasons ? '（' + REASONS.filter(q => whyMerge(r.reasons)[q[0]]).map(q => q[1] + whyMerge(r.reasons)[q[0]]).join('、') + '）' : '')).join('；')}</div>` : ''}</div>`).join('')
       : '<div class="muted">碼頭還空空的，放第一艘船吧！</div>'}</div>
     <div class="row"><button class="ghost" onclick="go('light')">去燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
@@ -4638,7 +4649,7 @@ function viewLightBody() {
   const lanterns = st.all.filter(b => b.lantern).sort((a, b) => b.lantern.localeCompare(a.lantern));
   const fam = isFamily();
   const tagOf = b => `${esc(laneLabel(laneOf(b.rec, b.lane)))}・${XQ_TIERS[b.tier] ? XQ_TIERS[b.tier].ic + ' ' + XQ_TIERS[b.tier].name : ''}`;
-  const why = b => b.rv.why ? '・' + (REASONS.find(r => r[0] === b.rv.why) || [, ''])[1] : '';
+  const why = b => b.rv.why ? '・' + whyName(b.rv.why) : '';
   const row = (b, btn) => `<div class="item" style="cursor:pointer" onclick="openBottle('${b.id}')"><span style="font-size:22px">${b.lantern ? '🏮' : b.guess ? '🫧' : '🍶'}</span>
       <div class="name grow"><b>${b.lantern && b.due <= S.today ? '老朋友・' : ''}${tagOf(b)}</b><div class="muted">${esc(b.label)}・${short(b.wrongAt)} ${b.guess ? '答對但有點猜' : '收進來'}${fam && !b.rv.why ? '' : why(b)}${!fam && (b.rv.to || []).length ? '・👀 ' + b.rv.to.map(esc).join('、') : ''}</div></div>${btn || ''}</div>`;
   const say = (daily && daily.messages && daily.messages.lighthouse) || lightKeeperLine(st), intro = fam ? '' : placeIntro('lighthouse');
@@ -4704,8 +4715,8 @@ function lampData() {
   const easy = bottles().filter(b => b.rec.bank && !b.lantern && !b.guess && Number(b.rec.pass) >= LAMP_EASY).sort((a, b) => (b.rec.pass - a.rec.pass) || (b.wrongAt || '').localeCompare(a.wrongAt || ''));
   // 錯因：瓶子上記的「為什麼錯」＋紙船／親子船填的錯因（含紙本檢討）
   const why = {}; REASONS.forEach(r => why[r[0]] = { bottle: 0, paper: 0 });
-  bottles().forEach(b => { if (why[b.rv.why]) why[b.rv.why].bottle++; });
-  D.paperSessions.forEach(ss => ss.rows.forEach(r => Object.keys(r.reasons || {}).forEach(k => { if (why[k]) why[k].paper += Number(r.reasons[k]) || 0; })));
+  bottles().forEach(b => { const w = WHY_OF(b.rv.why); if (why[w]) why[w].bottle++; });
+  D.paperSessions.forEach(ss => ss.rows.forEach(r => Object.keys(r.reasons || {}).forEach(k => { const w = WHY_OF(k); if (why[w]) why[w].paper += Number(r.reasons[k]) || 0; })));
   return { inv, self, easy, why, whyN: REASONS.reduce((a, r) => a + why[r[0]].bottle + why[r[0]].paper, 0) };
 }
 /* --- v2.35 錯題循環①：單元。考古題的單元是一次標好的固定資料 exam/units.json（國文、英文是題型）；
@@ -4785,7 +4796,7 @@ function unitFines(lane, unit) {
 }
 /* --- LAMPCHART_v1 燈室分析圖表：週為單位，中性色；「一時看錯」用 --note（這陣子的重點）--- */
 // 美術 11/2（配色規範 v2 第 2 期色票）：由下到上 一時看錯 kuri、觀念不熟 nezumi、看不懂題目 ishi、用猜的 hinoki、還沒標 kinari＋虛線框 gray-light；段與段留 1.5px 白縫
-const LC_COLORS = { careless: 'var(--kuri, #8a5a2c)', concept: 'var(--nezumi, #5f5a55)', reading: 'var(--ishi, #a9a59c)', guess: 'var(--hinoki, #c9a273)', none: 'var(--kinari, #f7f1e5)' };
+const LC_COLORS = { careless: 'var(--kuri, #8a5a2c)', concept: 'var(--nezumi, #5f5a55)', reading: 'var(--ishi, #a9a59c)', judge: 'var(--ainezu, #6c8aa8)', none: 'var(--kinari, #f7f1e5)' };
 const LC_DASH = 'var(--gray-light, #d8d4ce)';
 const LC_W = 328, LC_H = 132, LC_L = 22, LC_B = 20;   // 畫布寬、高、左邊刻度寬、下面週標籤高
 function lcWeeks(n) { const out = [], m = mondayOf(S.today); for (let i = n - 1; i >= 0; i--) out.push(addD(m, -7 * i)); return out; }
@@ -4818,18 +4829,18 @@ function lampCharts() {
 function lampWhyChart() {
   const fam = isFamily(), all = bottles(), W = LC_W - LC_L, ih = LC_H - LC_B - 8;
   // ② 錯在哪一種：最近 8 週，照瓶子第一次漂來那週（答錯那週）歸類
-  const wk8 = lcWeeks(8), keys = ['careless', 'concept', 'reading', 'guess', 'none'];
+  const wk8 = lcWeeks(8), keys = ['careless', 'concept', 'reading', 'judge', 'none'];
   const cnt = wk8.map(w => { const c = {}; keys.forEach(k => c[k] = 0);
-    all.filter(b => !b.guess && (!fam || b.rv.why) && b.wrongAt && b.wrongAt >= w && b.wrongAt <= addD(w, 6)).forEach(b => c[REASONS.some(r => r[0] === b.rv.why) ? b.rv.why : 'none']++); return c; });
+    all.filter(b => !b.guess && (!fam || b.rv.why) && b.wrongAt && b.wrongAt >= w && b.wrongAt <= addD(w, 6)).forEach(b => c[REASONS.some(r => r[0] === WHY_OF(b.rv.why)) ? WHY_OF(b.rv.why) : 'none']++); return c; });
   const tot = cnt.map(c => keys.reduce((a, k) => a + c[k], 0)), max2 = Math.max(4, ...tot), bw2 = W / wk8.length, y2 = v => 8 + ih - v / max2 * ih;
   const bars = cnt.map((c, i) => { let acc = 0; return keys.map(k => { if (!c[k]) return ''; const y0 = y2(acc), y1 = y2(acc += c[k]);
     return `<rect x="${LC_L + i * bw2 + bw2 * 0.18}" y="${y1 + 0.75}" width="${bw2 * 0.64}" height="${Math.max(0, y0 - y1 - 1.5)}" fill="${LC_COLORS[k]}"${k === 'none' ? ` stroke="${LC_DASH}" stroke-width="1" stroke-dasharray="2 2"` : ''}/>`; }).join(''); }).join('');
-  const names = Object.fromEntries(REASONS.concat([['none', '還沒標']]));
+  const names = Object.fromEntries(REASONS.map(r => [r[0], r[1]]).concat([['none', '還沒標']]));
   // 美術 11/2：圖 2 併進下面「🔍 錯的時候，最常是哪一種」那張卡的最上面（lampWhyChart），標題只留一個 🔍
   return tot.some(Boolean) ? `<div style="margin:4px 0 10px"><b style="font-size:14px">最近 8 週，錯在哪一種</b>
     <svg viewBox="0 0 ${LC_W} ${LC_H}" width="100%" role="img" aria-label="最近 8 週，每週答錯的題是哪一種原因">${lcAxis(wk8, 1, lcTicks(max2), max2)}${bars}</svg>
     <div class="row" style="gap:4px 12px;font-size:12px;margin-top:4px">${keys.map(k => `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${LC_COLORS[k]};${k === 'none' ? 'border:1px dashed ' + LC_DASH + ';box-sizing:border-box;' : ''}margin-right:4px;vertical-align:-1px"></span>${names[k]}</span>`).join('')}</div>
-    <div class="muted" style="font-size:12px;margin-top:6px">一時看錯，留一句下次要檢查的事；觀念不熟，先看觀念小卡；看不懂題目，先找出這題在問什麼。</div></div>` : '';
+    <div class="muted" style="font-size:12px;margin-top:6px">粗心，留一句下次要檢查的事；觀念不熟，先看觀念小卡；沒讀懂題目，先找出這題在問什麼；讀懂了，判斷錯，比一比你選的和正確答案差在哪裡。</div></div>` : '';
 }
 function lampBar(pct, color, ref) {
   return `<div style="position:relative;height:10px;background:var(--sand);border-radius:5px;margin:3px 0">
@@ -4950,7 +4961,7 @@ function portHint() {
 function portWhy(P) {
   if (P.start) return '';
   const bs = bottles().filter(b => b.rec && b.rec.mock && P.days.includes(b.rec.mock)); if (!bs.length) return '';
-  const n = {}; bs.forEach(b => { const w = b.rv && b.rv.why; if (w) n[w] = (n[w] || 0) + 1; });
+  const n = {}; bs.forEach(b => { const w = WHY_OF(b.rv && b.rv.why); if (w) n[w] = (n[w] || 0) + 1; });
   const got = REASONS.filter(r => n[r[0]]).map(r => r[1] + ' ' + n[r[0]] + ' 瓶'), un = bs.filter(b => !(b.rv && b.rv.why)).length;
   return `<div class="muted" style="font-size:13px;margin-top:4px">${got.length ? '這場標了場次的瓶子：' + got.join('、') : ''}${got.length && un ? '<br>' : ''}${un ? '還有 ' + un + ' 瓶沒標錯因' : ''}</div>`;
 }
@@ -5375,7 +5386,7 @@ function viewBottle() {
   if (!b) return `<div class="card">找不到這個瓶子。</div><div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button></div>`;
   const q = b.rec, fam = isFamily(), hide = fam && !(b.rv.why || b.rv.note || b.rv.check);   // 家人碼：後端只在她選了這位時才給原因和那句話
   if (fam && !hide) famSeen('rv', b.id);
-  const f = draft.rv || (draft.rv = { why: b.rv.why || null, note: b.rv.note || '', share: !!b.rv.share, check: b.rv.check || '' });
+  const f = draft.rv || (draft.rv = { why: WHY_OF(b.rv.why) || null, note: b.rv.note || '', share: !!b.rv.share, check: b.rv.check || '' });
   const ABCD = 'ABCD';
   let body;
   if (q.src === 'photo') body = photoBody(q, fam);
@@ -5394,7 +5405,7 @@ function viewBottle() {
       <div class="muted">${esc(laneLabel(laneOf(b.rec, b.lane)))}・${esc(b.label)}・${short(b.wrongAt)} ${b.guess ? '答對了，但你說有點猜' : '收進來'}</div>${body}
       <div class="muted" style="margin-top:8px">${b.lantern ? (b.guess ? '有把握答對了類題，' : '連續三次答對類題，') + short(b.lantern) + ' 變成燈籠漂走了。' + (b.rv.pass ? '📜 考古題也答對：最後一次答對的是同單元、你沒做過的會考考古題。' : '') + (b.due <= S.today ? '今天當老朋友漂回來了，可以到燈塔海灘撿起來。' : short(b.due) + ' 會當老朋友漂回來看看你。') : b.due <= S.today ? '🌊 今天漂回來了，可以到燈塔海灘撿起來。' : '🌫️ ' + short(b.due) + ' 會再漂回來。'}${tries ? '　類題紀錄：' + tries : ''}</div></div>
     ${hide ? '<div class="card"><div class="muted">這個瓶子上寫的原因和那一句話，目前沒有分享給你。</div></div>' : `<div class="card"><h3>📝 ${b.guess ? '想對自己說的話' : '為什麼會錯？'}</h3>
-      <div class="row" style="gap:6px${b.guess ? ';display:none' : ''}">${REASONS.map(r => `<button class="${f.why === r[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" ${fam ? 'disabled' : ''} onclick="bottleKeep();draft.rv.why=draft.rv.why==='${r[0]}'?null:'${r[0]}';render()">${r[1]}</button>`).join('')}</div>
+      <div${b.guess ? ' style="display:none"' : ''}>${whyGrid(k => f.why === k, k => `bottleKeep();draft.rv.why=draft.rv.why==='${k}'?null:'${k}';render()`, fam)}</div>
       ${f.why === 'careless' && !b.guess ? `<label>下次要檢查什麼？</label><input id="rvCheck" maxlength="60" value="${esc(f.check)}" ${fam ? 'disabled' : ''} placeholder="例如：單位有沒有換算、正負號、題目問的是『不正確』的、英文的單複數" oninput="draft.rv.check=this.value">
       <div class="muted" style="font-size:12px;margin-top:2px">下次遇到同一個單元的題目，會先提醒你。</div>` : ''}
       <label>想對自己說的一句話（選填）</label><input id="rvNote" maxlength="120" value="${esc(f.note)}" ${fam ? 'disabled' : ''} placeholder="例如：單位要先換成公尺" oninput="draft.rv.note=this.value">${fam ? '' : talkLinks()}
@@ -5711,10 +5722,10 @@ function viewWrongScan() {
       ${x.key ? '' : '<div class="muted" style="margin-top:4px">🤖 照片上看不到正確答案，這是 AI 自己解的，請對一下。</div>'}
       <label>題型</label>${types ? `<select onchange="draft.ws.items[${i}].type=this.value">${types.map(t => `<option${t === x.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`
         : `<input maxlength="12" value="${esc(x.type)}" oninput="draft.ws.items[${i}].type=this.value">`}`}
-      <label>為什麼會錯？（選填）</label><div class="row" style="gap:6px">${REASONS.map(r => `<button class="${x.why === r[0] ? '' : 'ghost'}" style="padding:6px 12px;font-size:14px" onclick="draft.ws.items[${i}].why=draft.ws.items[${i}].why==='${r[0]}'?null:'${r[0]}';render()">${r[1]}</button>`).join('')}</div>
+      <label>為什麼會錯？（選填）</label>${whyGrid(k => x.why === k, k => `draft.ws.items[${i}].why=draft.ws.items[${i}].why==='${k}'?null:'${k}';render()`)}
       ${x.ex ? `<details class="muted" style="margin-top:8px"><summary>💡 解說</summary>${esc(x.ex)}</details>` : ''}</div>`).join('');
   return `<div class="card"><h2>📷 ${esc(laneLabel(w.lane))}：讀到 ${w.items.length} 題</h2>
-      <div class="muted">${w.items.length ? '勾選要收進海灘的題；AI 讀錯的地方，點「讀錯了？點開修改」。收進一題 +' + 5 + ' 經驗值（每天的前 20 題有經驗值，超過的還是會收進海灘）。' : '照片上沒讀到題目，換個角度、拍亮一點再試一次。'}</div>${w.items.length ? pqSrcRow(w) : ''}</div>
+      <div class="muted">${w.items.length ? '勾選要收進海灘的題；AI 讀錯的地方，點「讀錯了？點開修改」。「為什麼會錯」可以不選，再點一次會取消。收進一題 +' + 5 + ' 經驗值（每天的前 20 題有經驗值，超過的還是會收進海灘）。' : '照片上沒讀到題目，換個角度、拍亮一點再試一次。'}</div>${w.items.length ? pqSrcRow(w) : ''}</div>
     ${cards}
     <div class="row">${w.items.length ? `<button class="grow" id="pqGo" onclick="collectWrongQ()" ${n ? '' : 'disabled'}>收進海灘（${n} 題）🍶</button>` : ''}<button class="ghost" onclick="draft.ws.items=null;render()">重拍</button><button class="ghost" onclick="go('light')">返回</button></div>`;
 }
@@ -6194,8 +6205,8 @@ function guessReview(q) { const src = q && q.review && S.save[q.review], rv = q 
 function afterAnswer(id, q) {
   if (isFamily() || !q || !q.done || (q.review && !(q.verify && !q.correct))) return '';   // 錯題循環③：考古題回合答錯的題是新瓶子，可以記原因
   const rv = S.save['rv:' + id] || {}, btn = (d, t) => `<button class="ghost" style="padding:6px 12px;font-size:14px" onclick='quickMark("${id}",${JSON.stringify(d)})'>${t}</button>`;
-  if (!q.correct) return rv.why ? `<div class="muted" style="font-size:13px;margin:-6px 0 10px">📝 記在瓶子上了：${(REASONS.find(r => r[0] === rv.why) || [, ''])[1]}${rv.why === 'careless' && !rv.check ? `・<a href="#" onclick="openBottle('${id}');return false">寫一句下次要檢查的事 ›</a>` : ''}</div>`
-    : `<div style="margin:-6px 0 12px"><div class="muted" style="font-size:13px">為什麼會錯？點一下就記到瓶子上（可以跳過）</div><div class="row" style="gap:6px;margin-top:4px">${REASONS.map(r => btn({ why: r[0] }, r[1])).join('')}</div></div>`;
+  if (!q.correct) return rv.why ? `<div class="muted" style="font-size:13px;margin:-6px 0 10px">📝 記在瓶子上了：${whyName(rv.why)}${rv.why === 'careless' && !rv.check ? `・<a href="#" onclick="openBottle('${id}');return false">寫一句下次要檢查的事 ›</a>` : ''}</div>`
+    : `<div style="margin:-6px 0 12px"><div class="muted" style="font-size:13px">為什麼會錯？點一下就記到瓶子上（可以跳過）</div>${whyGrid(() => false, k => `quickMark('${id}',{why:'${k}'})`)}</div>`;
   if (rv.sure) return rv.sure === 'guess' ? `<div class="muted" style="font-size:13px;margin:-6px 0 10px">${rv.gb ? '🫧 好，這題會變成一個輕輕的瓶子漂回來。下次有把握答對，就直接變燈籠。' : '🫧 記下來了。海灘上的瓶子有點多了，這題這陣子先不收進來，一次撿幾個就好。'}</div>` : '';
   return `<div style="margin:-6px 0 12px"><div class="muted" style="font-size:13px">這題你有把握嗎？</div><div class="row" style="gap:6px;margin-top:4px">${btn({ sure: 'sure' }, '有把握')}${btn({ sure: 'guess' }, '有點猜')}</div></div>`;
 }
@@ -7024,6 +7035,21 @@ const CLASS_T = { sci: { name: '數理課', sub: '數學＋理化', parts: [['�
 const CLASS_CS_NAME = { 數: '數學', 理化: '理化', 英: '英文', 日: '日文' }, CLASS_WEI = /\bwei\b(?!\s*h)/i;
 function classKindOf(cs) { return cs === '英' ? 'eng' : cs === '日' ? 'jpn' : 'sci'; }
 function classLink() { return (isFamily() || ownMode()) ? '' : `<div style="text-align:center;margin-top:-4px"><a href="#" onclick="classOpen();return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline">🏫 記一次上課</a></div>`; }
+/* CLASS_LINK_v1 計畫格記這堂課：那天的 wei 項目底下一行連結（一天一個、記過不出、前兩天內、家人不出）。 */
+function classUnder(date, rows) {
+  if (!date || isFamily() || ownMode()) return () => '';
+  const off = Math.round((parseD(S.today).getTime() - parseD(date).getTime()) / 86400000);
+  if (off < 0 || off > CLASS_DAYS) return () => '';
+  if (((S.save['focus:' + date] || {}).list || []).some(x => x.src === 'class' && classKindOf(x.cs) === 'sci')) return () => '';
+  const first = rows.find(r => { const it = D.itemsByRow[r]; return it && CLASS_WEI.test(it.name); });
+  return r => r === first ? `<div><a href="#" onclick="classHere('${date}');return false" style="display:inline-flex;align-items:center;min-height:44px;margin-top:8px;color:var(--plum);font-size:14px;text-decoration:underline">🏫 記這堂課</a></div>` : '';
+}
+function classHere(date) {
+  if (isFamily() || ownMode()) return;
+  const off = Math.round((parseD(S.today).getTime() - parseD(date).getTime()) / 86400000);
+  if (off < 0 || off > CLASS_DAYS) return;
+  classOpen('sci'); if (draft.cls) { draft.cls.day = off; render(); }
+}
 function classOpen(k) {
   if (isFamily() || ownMode()) return;
   k = CLASS_T[k] ? k : 'sci';
@@ -7159,7 +7185,7 @@ const HAND_DAYS = 2, HAND_N = 2, HAND_MAX = 120;
 const HAND_CSS = `<style>.hl-opt{background:#fff;color:var(--ink);border:1px solid #d8d4ce;border-radius:10px;padding:8px 6px;font-weight:400;line-height:1.25;min-height:44px}
 .hl-opt small{display:block;font-size:11px;color:var(--muted)}.hl-opt[aria-checked="true"]{background:var(--plum-light);border:2px solid var(--plum);color:var(--plum);font-weight:700}
 .hl-opt[aria-checked="true"]::before{content:"✓ "}.hl-off{background:#f7f1e5!important;color:#5f5a55!important;border:1px dashed #d8d4ce!important}
-#hlBox input[aria-invalid="true"]{border:2px solid #a33a2a}.hl-g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.hl-g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.hl-q{margin-top:12px;font-weight:700}</style>`;
+#hlBox input[aria-invalid="true"]{border:2px solid #a33a2a}#hlBox .hl-g3 .hl-opt small{font-size:12px;white-space:nowrap}.hl-g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.hl-g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.hl-q{margin-top:12px;font-weight:700}</style>`;
 function handName(k) { return k === 'focus' ? (ownMode() ? '專心' : '讀書') : mk(k === 'move' ? null : { k }).did === '練習' ? '藝文' : k === 'read' ? '閱讀' : k === 'medit' ? '冥想' : '運動'; }
 function handLink(k) { return (isFamily() || (ownMode() && !(S && S.b1Ok))) ? '' :   /* HANDLOG_FAM_v1：家人島島主 B1 開了也能補登（反套 HANDLINK_OWN） */ `<div style="text-align:center;margin-top:4px"><a href="#" onclick="handOpen('${k}');return false" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;color:var(--plum);font-size:14px;text-decoration:underline;text-underline-offset:3px">🕘 忘了計時？補登一筆</a></div>`; }
 function handOpen(k) {
@@ -7289,7 +7315,7 @@ function viewPlanBody() {
     <div class="muted" style="margin-top:6px">拍下這週的手寫計畫，小島會幫你排進每一天，打勾的也會記成完成，你再檢查一下就好。也可以點下面的日子自己加。島民認不得的寫法可以到 <a href="#" onclick="go('abbr');return false">✍️ 我的寫法</a> 教他。</div></div>
   <div class="card"><div class="chips">${chips}</div>
     <div class="row" style="margin-top:12px"><h3 class="grow" style="margin:0">${isTray ? '📦 這週要做、還沒排哪天' : '週' + DAYS[planDay] + ' ' + short(date)}${date === S.today ? '（今天）' : ''}</h3><span class="muted syncState">${syncState}</span></div>
-    ${rows.length ? itemList(rows, r => (canLog ? seg(date, r) : '') + `<button class="x" onclick="planRemove(${r})" aria-label="移除">✕</button>`) + pendingList(rows, wk, planDay, true) : `<div class="muted" style="margin-top:6px">${isTray ? '確定這週要做、但還沒決定哪天的項目可以放這裡。' : '這天還沒排項目。'}</div>`}
+    ${rows.length ? itemList(rows, r => (canLog ? seg(date, r) : '') + `<button class="x" onclick="planRemove(${r})" aria-label="移除">✕</button>`, classUnder(date, rows)) + pendingList(rows, wk, planDay, true) : `<div class="muted" style="margin-top:6px">${isTray ? '確定這週要做、但還沒決定哪天的項目可以放這裡。' : '這天還沒排項目。'}</div>`}
     ${extra.length ? `<div class="subj">計畫外</div>` + itemList(extra, r => seg(date, r)) : ''}
     <div class="row" style="margin-top:10px"><button class="ghost" onclick="openPicker('plan', ${planDay})">＋ 排項目</button>
       ${canLog ? `<button class="ghost" onclick="openPicker('log', '${date}')">＋ 記錄計畫外的項目</button>` : ''}</div>
@@ -7386,8 +7412,8 @@ function advSumText(mode) {
   }
   // 4. 錯因：這個月的瓶子（她標了才有）＋紙船、親子船
   const why = {}; REASONS.forEach(r => why[r[0]] = { b: 0, p: 0 });
-  all.filter(b => inM(String(b.wrongAt || '').slice(0, 10)) && why[b.rv.why]).forEach(b => why[b.rv.why].b++);
-  D.paperSessions.filter(ss => inM(ss.date)).forEach(ss => ss.rows.forEach(r => Object.keys(r.reasons || {}).forEach(k => { if (why[k]) why[k].p += Number(r.reasons[k]) || 0; })));
+  all.filter(b => inM(String(b.wrongAt || '').slice(0, 10)) && why[WHY_OF(b.rv.why)]).forEach(b => why[WHY_OF(b.rv.why)].b++);
+  D.paperSessions.filter(ss => inM(ss.date)).forEach(ss => ss.rows.forEach(r => Object.keys(r.reasons || {}).forEach(k => { const w = WHY_OF(k); if (why[w]) why[w].p += Number(r.reasons[k]) || 0; })));
   out.push('', '【錯因】瓶子上標的＋紙本檢討（紙船、親子船）');
   out.push(...REASONS.map(r => r[1] + '：' + (why[r[0]].b + why[r[0]].p) + '（瓶子 ' + why[r[0]].b + '、紙本 ' + why[r[0]].p + '）'));
   out.push('紙本檢討：' + D.paperSessions.filter(ss => inM(ss.date)).length + ' 次（親子船 ' + D.paperSessions.filter(ss => inM(ss.date) && ss.kind === 'parent').length + ' 次）');
@@ -7892,12 +7918,12 @@ function bindConfirm() {
   };
 }
 
-function itemList(rows, right) {
+function itemList(rows, right, under) {   // CLASS_LINK_v1：under(r) 可選，名稱底下多一段
   let html = '', last = '';
   rows.forEach(r => {
     const it = D.itemsByRow[r]; if (!it) return;
     if (it.subject !== last) { html += `<div class="subj">${subIc(it.subject)} ${esc(it.subject)}</div>`; last = it.subject; }
-    html += `<div class="item"><div class="name">${esc(it.name)}${isBoss(it.name) ? '<span class="tag">Boss</span>' : ''}</div>${right(r)}</div>`;
+    html += `<div class="item"><div class="name">${esc(it.name)}${isBoss(it.name) ? '<span class="tag">Boss</span>' : ''}${under ? under(r) : ''}</div>${right(r)}</div>`;
   });
   return html;
 }
@@ -9076,7 +9102,7 @@ const WHO_SEES = [
   ['送書、明信片、鼓勵卡附的話', '✅', '只有寄的人和收的人', '—'],
   ['島的樣子、島名、等級、島民和家的擺設', '✅', '你選的人', '✅'],
   ['連續週數、這週完成幾項', '✅', '你選的人', '有勾的'],
-  ['📊 統計數字：' + GUARDIAN_ + '有一個讀數工具，看得到這些數字：每週計畫完成幾格、各科讀了幾分鐘、上課和運動的次數、挑戰任務答了幾題和答對幾題、漂流瓶和燈籠的數量、紙船的數量、AI 用了幾次，還有大考成績，和最近 14 天你在讀書和其他畫面各待了幾分鐘。只有數字和日期，看不到你寫的字，也看不到是哪幾題。這個工具只有' + GUARDIAN_ + '在用。', '✅', GUARDIAN_ + '（讀數工具）', '—', 'me']];   /* PRIV_STATS_v1 */ // 只給她看；之後 xpDaily、國文錯因、保留率、交易所使用量上線時，各包把自己的項目加進這一列（文案 216 追記四）
+  ['📊 統計數字：' + GUARDIAN_ + '有一個讀數工具，看得到這些數字：每週計畫完成幾格、各科讀了幾分鐘、上課和運動的次數、挑戰任務答了幾題和答對幾題、漂流瓶和燈籠的數量、紙船的數量、國文錯題裡「沒讀懂題目」和「讀懂了，判斷錯」各有幾題、AI 用了幾次，還有大考成績，和最近 14 天你在讀書和其他畫面各待了幾分鐘。只有數字和日期，看不到你寫的字，也看不到是哪幾題。這個工具只有' + GUARDIAN_ + '在用。', '✅', GUARDIAN_ + '（讀數工具）', '—', 'me']];   /* PRIV_STATS_v1 */ // 只給她看；之後 xpDaily、國文錯因、保留率、交易所使用量上線時，各包把自己的項目加進這一列（文案 216 追記四）
 function privacyCard() {   // MORE_FOLD_v1：只回摺疊的說明，放在「🔒 誰看得到什麼」展開的最下面
   return `<details class="fold"><summary><h3>資料存在哪裡、誰打得開、訪客看得到哪些</h3></summary>
     <div style="overflow-x:auto;margin-top:8px"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人</th><th>訪客</th></tr>
@@ -9258,9 +9284,9 @@ function viewGuide() {
     p(`全國答對率高、你卻答錯的題會先漂回來，因為這種題最值得追回來。`) +
     p('<b>答完當下就能記</b>：答錯時，結果下面點一下為什麼會錯，就記到瓶子上（可以跳過）；答對時會問「這題你有把握嗎？」，選「有點猜」，這題會變成一個 🫧 輕輕的瓶子漂回來，下次有把握答對就直接變燈籠（這種燈籠不另給島幣）。海灘上的瓶子超過 ' + GUESS_CAP + ' 個時，有點猜的題先不收，一次撿幾個就好。') +
     p('🧭 <b>正在補強／已補強</b>：燈塔頂樓的燈室會把做過的題照單元整理（國文、英文照題型）。一個單元做滿 ' + UNIT_MIN + ' 題、海灘上還有瓶子，就可能列進「正在補強」，最多 3 個；一個單元的瓶子都變成燈籠，就會搬到「已補強」；最近 ' + RECENT_N + ' 題考古題和挑戰至少對 ' + RECENT_OK + ' 題，會多一個 ⭐（拍照收的題不算）。這裡不加分也不扣分。你在「誰看得到什麼」選了的家人看得到這兩張卡。') +
-    p('🩹 <b>照原因換練法</b>：撿瓶子的時候，會照你記的原因換一種練法：' + (UNIT_TOOLS ? '觀念不熟或用猜的，先看一張這個單元的觀念小卡；' : '') + '一時看錯／算錯，在瓶子上寫一句下次要檢查的事，之後同一個單元的題會先提醒你；看不懂題目，先選這題在問什麼，再答題。數學瓶如果不是一時算錯，類題會改成選怎麼列式、第一步怎麼做，不用算出答案；第三次漂回來的考古題和燈籠還是完整的題。' + (UNIT_TOOLS ? '小卡可以跳過，跳過也不影響經驗值和島幣。' : '')) +
+    p('🩹 <b>照原因換練法</b>：撿瓶子的時候，會照你記的原因換一種練法：' + (UNIT_TOOLS ? '觀念不熟，先看一張這個單元的觀念小卡；' : '') + '粗心，在漂流瓶上寫一句下次要檢查的事，之後同一個單元的題會先提醒你；沒讀懂題目，先選這題在問什麼，再答題；讀懂了，判斷錯，照一般的方式複習。數學漂流瓶如果不是粗心，類題會改成選怎麼列式、第一步怎麼做，不用算出答案；第三次漂回來的考古題和燈籠還是完整的題。' + (UNIT_TOOLS ? '小卡可以跳過，跳過也不影響經驗值和島幣。' : '')) +
     (UNIT_TOOLS ? p('🧭 <b>練一題、從補強單元出題</b>：燈室的「正在補強」可以按「練一題」，從那個單元你還沒做過的考古題抽一題。挑戰任務選「隨便一條」時，每天前 ' + XQ_WEAK + ' 題會從正在補強的單元抽，不想要可以在挑戰卡上關掉。題數和島幣都不變。') : '') +
-    p('點一個瓶子可以看原題、記下為什麼會錯（一時看錯／算錯、觀念不熟、看不懂題目、用猜的），也可以寫一句想對自己說的話。這些只有你看得到；想問家人的題，在「👀 想問誰這一題？」選人，家人才看得到你寫的原因和那句話。') +
+    p('點一個瓶子可以看原題、記下為什麼會錯（粗心、觀念不熟、沒讀懂題目、讀懂了，判斷錯），也可以寫一句想對自己說的話。這些只有你看得到；想問家人的題，在「👀 想問誰這一題？」選人，家人才看得到你寫的原因和那句話。') +
     p('📷 <b>拍錯題</b>：紙本考卷、講義上答錯的題，在首頁「今日のおつとめ」的「📷 拍錯題」或燈塔上方的「拍照」，先選科目再拍（會記得你上次選的科目）。AI 會讀出題目、你寫的答案和正確答案，分好題型（國文像字音字形、修辭、文意理解；英文像時態、片語、閱讀），你確認、勾好要收的題，它們就變成漂流瓶，明天開始漂回來出類題。每題先只列題目開頭和答案，AI 讀錯了再點開修改；沒讀出來時，可以用同一張照片再試一次；照片上看不到答案時，AI 會自己解，請你對一下。收進一題 +5 經驗值，每天的前 20 題有經驗值；超過 20 題還是會收進海灘，只是不加經驗值。照片想拍幾張都可以。') +
     p('🔤 <b>拍單字出題</b>：' + WORD_HOW) +
     p('🧭 <b>錯題類型</b>：燈塔會整理你最常錯哪一類題。按「練一題」，會照你收集的這一類錯題請 AI 出一題新題，每天前 ' + XQ_DAILY + ' 題才能練，答對一樣有經驗值和島幣，答錯也會變成漂流瓶。') +
