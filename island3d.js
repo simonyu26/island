@@ -965,7 +965,7 @@
   const ISLET_A = [0.3, 0.06, -0.18, -0.4, 0.62, 1.15].map(k => k * Math.PI), ISLET_R = 21.5;
   // ISLET2_v1 小島種樹格：ISLET_TREE、isleTree 和 index.html 同一份，改一邊就要改另一邊。每種樣子 4 格 [離中心, 相對往本島方向的弧度]，
   // 避開布景、地標和橋；小島上的樹縮成 ISLET_TREE_S 倍，最大的鳳凰木樹冠也不超出沙灘（美術、工程顧問 10/29）
-  const ISLET_TREE = { sand: [[1.8, -1.85], [2.5, -1.35], [2.5, 1.0], [2.5, 1.55]], pine: [[2.5, -1.6], [2.3, -0.95], [2.5, 0.95], [2.5, 1.5]], port: [[2.5, -1.55], [2.5, -1.0], [1.8, 0.95], [2.5, 1.45]], tea: [[1.8, -1.8], [2.5, -1.3], [1.8, 0.25], [2.2, 0.9]] }, ISLET_TREE_S = 0.7;
+  const ISLET_TREE = { sand: [[1.8, -1.85], [2.5, -1.35], [2.5, 1.0], [2.5, 1.55]], pine: [[2.5, -1.6], [2.3, -0.95], [2.5, 0.95], [2.5, 1.5]], port: [[2.5, -1.55], [2.5, -1.0], [1.8, 0.95], [2.5, 1.45]], tea: [[1.8, -1.8], [2.5, -1.3], [1.8, 0.25], [2.2, 0.9]], cane: [[2.45, 0.9], [2.45, -0.9], [2.5, 2.85], [2.5, -2.85]] }, ISLET_TREE_S = 0.7;   // CANE_v1 甘蔗田（美術 11/3）
   function isleTree(s, k, style) {   // 第 s 個位置、樣子 style 的小島上第 k 格的位置；[r, d]：離小島中心 r、相對「往本島」方向偏 d 弧度
     const a = ISLET_A[s], t = (ISLET_TREE[style] || [])[k]; if (a == null || !t) return null;
     return { x: Math.cos(a) * ISLET_R - Math.cos(a + t[1]) * t[0], z: Math.sin(a) * ISLET_R - Math.sin(a + t[1]) * t[0] };
@@ -980,7 +980,7 @@
     return 0.05;
   }
   // 小島的地標位（每座 2 個，本地座標）：避開各樣子的布景；茶園的橋頭右邊有竹簍、左邊有茶畦，所以放在外側；松樹岩島的岩石大，往沙灘外緣挪
-  const ISLET_MARK = { sand: [[1.25, -2.15], [-1.25, -2.15]], pine: [[1.55, -2.5], [-1.55, -2.5]], port: [[1.25, -2.15], [-1.25, -2.15]], tea: [[2.35, 1.75], [-2.35, 1.75]] };
+  const ISLET_MARK = { sand: [[1.25, -2.15], [-1.25, -2.15]], pine: [[1.55, -2.5], [-1.55, -2.5]], port: [[1.25, -2.15], [-1.25, -2.15]], tea: [[2.35, 1.75], [-2.35, 1.75]], cane: [[1.25, -2.15], [-1.25, -2.15]] };
   function isleXZ(a, x, z) { const t = -a + Math.PI / 2; return { x: Math.cos(a) * ISLET_R + x * Math.cos(t) + z * Math.sin(t), z: Math.sin(a) * ISLET_R - x * Math.sin(t) + z * Math.cos(t) }; }
   let isletLayer, isletSig = null;
   function isletMesh(style) {
@@ -1013,6 +1013,8 @@
       boat.rotation.y = Math.PI / 2; g.userData.boat = boat;
       [[0.6, 0.4], [1.3, -0.2]].forEach(([x, z]) => add(new THREE.CylinderGeometry(0.03, 0.04, 1.0, 5), wood, x, 0.6, z));
       [0.75, 0.95, 1.15].forEach((t, i) => add(new THREE.SphereGeometry(0.08, 8, 6), std(0xfff1d6, { emissive: 0xffb347, emissiveIntensity: 0.6 }), 0.6 + i * 0.35, 1.0 - i * 0.04, 0.4 - i * 0.3));
+    } else if (style === 'cane') {   // CANE_v1 甘蔗田小島：布景都在外緣，中央留給搬建物
+      g.add(caneScene());
     } else {   // tea：茶園梯田＋涼亭
       [[2.7, 0.3, 0.1], [2.1, 0.3, 0.4], [1.5, 0.3, 0.7]].forEach(([r, h, y]) => {
         add(new THREE.CylinderGeometry(r, r + 0.1, h, 24), 0x8cc56c, 0, y, 0);
@@ -1033,6 +1035,37 @@
     put(new THREE.CylinderGeometry(0.2, 0.15, 0.3, 10, 1, true), 0xc49a5c, bxz[0], 0.2, bxz[1]);   // 竹簍
     put(new THREE.TorusGeometry(0.2, 0.03, 4, 10).rotateX(Math.PI / 2), 0x9a6b4a, bxz[0], 0.35, bxz[1]);
     put(new THREE.SphereGeometry(0.17, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0x6fae4f, bxz[0], 0.3, bxz[1]);   // 簍裡的茶葉
+    const pos = [], nor = [], col = [];
+    parts.forEach(([q, c]) => { q.computeVertexNormals(); const cc = lin(new THREE.Color(c)); pos.push(...q.attributes.position.array); nor.push(...q.attributes.normal.array);
+      for (let i = 0; i < q.attributes.position.count; i++) col.push(cc.r, cc.g, cc.b); q.dispose(); });
+    const m = new THREE.BufferGeometry();
+    m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); m.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    return new THREE.Mesh(m, std(0xffffff, { vertexColors: true }));
+  }
+  // CANE_v1 甘蔗田小島（v2.50.x，美術 11/3 定位樣稿）：小島本地座標 lx = r·sin φ、lz = −r·cos φ，φ=0 朝本島。
+  // 甘蔗田窄帶在 φ −1.25 → −2.5；五分車軌道在 φ 1.25 → 2.55（r 2.68、2.92），車廂停在 φ 1.9；月台在車廂內側，郵筒在月台靠橋那一端。
+  // 中央石基 r ≤ 1.6 與踏石路不放東西；全部合成一個網格（頂點色），三角形預算 600
+  function caneScene() {
+    const parts = [], put = (geo, c, x, y, z, ry) => { const q = geo.index ? geo.toNonIndexed() : geo; if (q !== geo) geo.dispose(); if (ry) q.rotateY(ry); q.translate(x, y, z); parts.push([q, c]); };
+    const L = (r, f) => [r * Math.sin(f), -r * Math.cos(f)], th = f => f - Math.PI / 2;   // th：XZ 平面上的極角
+    const crown = (w, y0, y1) => {   // 倒四角錐的葉冠（不封口，4 個三角形）：尖端朝下接在莖上，往外散開
+      const v = []; for (let i = 0; i < 4; i++) { const a0 = i * Math.PI / 2 + Math.PI / 4, a1 = a0 + Math.PI / 2; v.push(0, y0, 0, Math.cos(a0) * w, y1, Math.sin(a0) * w, Math.cos(a1) * w, y1, Math.sin(a1) * w); }
+      const q = new THREE.BufferGeometry(); q.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); return q; };
+    for (let k = 0; k < 9; k++) [2.5, 2.85].forEach((r, j) => {   // 甘蔗：2 排 × 9 叢，高 0.6～0.8；每叢是黃綠的莖（四角柱不封口）＋淺綠的葉冠（美術 11/9）
+      const f = -1.25 - (k + j * 0.5) * (1.25 / 8.5), [x, z] = L(r, f), h = 0.6 + ((k * 7 + j * 3) % 5) * 0.05;
+      put(new THREE.CylinderGeometry(0.045, 0.05, h * 0.78, 4, 1, true), 0x8fae4a, x, 0.05 + h * 0.39, z, -th(f));
+      put(crown(0.22, h * 0.6, h), 0x9cc463, x, 0.05, z, -th(f));
+    });
+    [2.68, 2.92].forEach(r => put(new THREE.TorusGeometry(r, 0.03, 3, 12, 1.3).rotateX(Math.PI / 2).rotateY(-th(1.25)), 0x5f5a55, 0, 0.09, 0));   // 軌道
+    for (let i = 0; i < 8; i++) { const f = 1.25 + i * (1.3 / 7), [x, z] = L(2.8, f); put(new THREE.BoxGeometry(0.4, 0.03, 0.08), 0x8a6a4a, x, 0.065, z, -th(f)); }   // 枕木
+    const [cx, cz] = L(2.8, 1.9), ct = -(th(1.9) + Math.PI / 2);   // 車廂長邊沿軌道切線
+    put(new THREE.BoxGeometry(1.0, 0.55, 0.55), 0x8a5a2c, cx, 0.345, cz, ct);   // 車身 kuri
+    put(new THREE.BoxGeometry(1.08, 0.08, 0.62), 0xa33a2a, cx, 0.66, cz, ct);   // 車頂 beni（含車頂高 0.7）
+    const [px, pz] = L(2.22, 1.875); put(new THREE.BoxGeometry(1.44, 0.12, 0.3), 0xf7f1e5, px, 0.11, pz, -(th(1.875) + Math.PI / 2));   // 小站月台 kinari
+    const [mx, mz] = L(2.15, 1.4);   // 紅色丸型郵筒：和太鼓橋同一個紅，投信口一圈深色
+    put(new THREE.CylinderGeometry(0.13, 0.13, 0.48, 8, 1, true), 0xc0392b, mx, 0.29, mz);
+    put(new THREE.SphereGeometry(0.13, 8, 3, 0, Math.PI * 2, 0, Math.PI / 2), 0xc0392b, mx, 0.53, mz);
+    put(new THREE.BoxGeometry(0.12, 0.025, 0.03), 0x2f2a26, mx + Math.sin(1.4) * 0.12, 0.45, mz - Math.cos(1.4) * 0.12, -th(1.4) + Math.PI / 2);
     const pos = [], nor = [], col = [];
     parts.forEach(([q, c]) => { q.computeVertexNormals(); const cc = lin(new THREE.Color(c)); pos.push(...q.attributes.position.array); nor.push(...q.attributes.normal.array);
       for (let i = 0; i < q.attributes.position.count; i++) col.push(cc.r, cc.g, cc.b); q.dispose(); });
