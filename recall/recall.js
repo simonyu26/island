@@ -216,6 +216,7 @@ function rcEndView() {
   const say = E.err ? '這一輪的紀錄還沒送出去：' + esc(E.err) : E.again ? '再練一輪做完了，答錯的明天還會再出現。' : '今天的' + esc(nm) + '做完了。' + (sure.length ? sure.join('') + '你都穩了。' : '');
   return rcHead(say) + `<div class="card"><b>這一輪</b>
       <div class="row" style="margin-top:6px"><span class="pill">答對 ${E.ok}／${E.n}</span>${E.faster ? `<span class="pill">這 ${E.faster} 張比上次快</span>` : ''}</div>
+      ${E.saved && !E.again && !(E.xp > 0) ? '<p class="muted">今天快問快答的經驗值已經算滿了，明天會恢復；卡片和交情照樣記下來。</p>' : ''}   <!-- RECALL_XP5_v1：保險上限（一天 10 輪） -->
       ${E.saved && !E.again && (E.kz > 0 || E.xp > 0) ? `<div class="row">${E.kz > 0 ? '<span class="pill">🤝 交情 +1</span>' : ''}${E.xp > 0 ? `<span class="pill">⭐ 經驗值 +${E.xp}</span>` : ''}</div>` : ''}
       <p class="muted">${E.again ? '這一輪不加經驗值，也不改排程。' : (E.n - E.ok ? '答錯的 ' + (E.n - E.ok) + ' 張排在明天；' : '') + '答對的往後排到 3、7、21、30 天。'}</p></div>
     ${E.err ? '<button style="width:100%;margin-bottom:8px" onclick="rcRetry()">再送一次</button>' : ''}
