@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.2';
+const APP_VERSION = '2.52.3';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.3', date: '2026-11-20', items: ['🆕 小島有新版本時會自己更新；如果你正在作答、計時或打字，畫面上方會先出現一條提醒，做完再點就好。'], fam: true, guide: '無' },
   { v: '2.52.2', date: '2026-11-20', items: ['🎨 11/22 起，島上角色的頭像可以改選一張插畫：人物 40 張、動物 23 張，在角色的『樣子』裡按『或選一張插畫』就能挑。原本的樣子照舊可以用。插畫來自 Loose Drawing。'], fam: true, guide: '無' },
   { v: '2.52.1', date: '2026-11-20', items: ['🛍️ 商店變短了：素材櫃和收購合成「素材與料理」，點一下就打開；兌換紀錄收在獎品下面。家具店改成商店最下面的一個小連結，也可以從『我的家』進去；挑戰任務在首頁的『今日のおつとめ』。'], guide: ['島幣和商店', '衛星小島'] },
   { v: '2.52', date: '2026-11-20', fam: [1, 2, 3, 4, 5, 6], guide: '無', items: ['🎈 島上的碼頭改名「飛船碼頭」，渡船換成飛船。點碼頭會問「今天想去哪裡？」，可以去智慧島、主島，還有開放拜訪的家人的島。', '🎈 家人自己的島：港口改叫「飛船碼頭」，去智慧島坐的是飛船。', '🪪 家人自己的島：島主夥伴、島民和地方的管理員，都可以換成自己上傳的圖片。', '📚 家人自己的島：開了書店。可以把書放上自己的書架，每個方向能分成幾條小巷；讀完一本書，島上會長出一個地標。', '📑 家人自己的島：家人之間可以寄書籤信，有三款樣式，可以夾一本書。', '💬 收到送的書或鼓勵卡，除了按表情，也可以回一句話；回的話在 App 裡只有你和送的人看得到。', '🎟️ 家人自己的島：可以發乘船券，邀請朋友來看自己的島；券有期限，也可以隨時收回。'] },
@@ -6743,6 +6744,41 @@ async function doFlush() {
 function setSync(t) { syncState = t; document.querySelectorAll('.syncState').forEach(el => el.textContent = t); }
 let syncState = '';
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush().catch(() => {}); });
+// ===== AUTO_UPDATE_v1 手機有新版時自動更新（爸爸 卡選；工程顧問 11/15 規格、文案審查 227）=====
+let updBase = '', updAt = Date.now();
+async function updVer() {   // 抓 sw.js 裡的快取名（island-vNNN）；失敗（離線）回空字串
+  try { const r = await fetch('sw.js?u=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return ''; const m = /const CACHE = '([^']+)'/.exec(await r.text()); return m ? m[1] : ''; } catch (e) { return ''; }
+}
+function updIdle() {   // 在首頁、沒有計時、沒有待送、沒有草稿、沒有在打字
+  const el = document.activeElement;
+  return tab === 'home' && !focusActive() && !moveActive() && !Object.keys(pending).length && !Object.keys(draft).length
+    && !(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+}
+function updBar(on) {
+  let b = document.getElementById('updBar');
+  if (!on) { if (b) b.remove(); return; }
+  if (b) return;
+  b = document.createElement('div'); b.id = 'updBar'; b.setAttribute('role', 'status');
+  // 美術 11/19：不能把頁面往下推（作答、計時時停止鈕會跑掉）→ 浮在最上面；淡梅底梅色字（一屏只有一個實心鈕），層級低於提示 toast（9）和各種對話框（50 以上）
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:8;background:var(--plum-light);color:var(--plum);border-bottom:1px solid #d8d4ce;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;font-size:14px;line-height:1.5;text-align:center;cursor:pointer;min-height:44px;box-sizing:border-box;text-wrap:balance';
+  b.textContent = '🆕 小島有新版本，手上的事做完再點這裡更新。';
+  b.onclick = updGo;
+  document.body.appendChild(b);
+}
+async function updGo() {   // 點了先把待送的存完，再重新載入
+  try { await flush(); } catch (e) { toast('還沒存好，稍後再點一次'); return; }
+  location.reload();
+}
+async function updCheck() {
+  const v = await updVer(); if (!v) return;
+  if (!updBase) { updBase = v; return; }
+  if (v === updBase) { updBar(false); return; }   // 不相等才算有新版：回滾（版號變小）也要更新
+  let tried = ''; try { tried = sessionStorage.getItem('updTry') || ''; } catch (e) {}
+  if (updIdle() && tried !== v) { try { sessionStorage.setItem('updTry', v); } catch (e) {} location.reload(); return; }   // 一個版號只自動 reload 一次
+  updBar(true);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - updAt >= 30 * 60000) { updAt = Date.now(); updCheck(); } });
+updCheck();   // 開頁抓一次，記下目前的版號
 // 只更新需要變的部分，3D 小島不用重新載入
 function softRender() {
   if (tab === 'home') {
