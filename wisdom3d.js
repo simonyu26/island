@@ -36,11 +36,16 @@
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(cv), depthTest: false, transparent: true, toneMapped: false }));
     const k = 0.0078; sp.scale.set(W * k, H * k, 1); sp.renderOrder = 10; return sp;
   }
-  function avatarSprite(e, color, size) {
+  function avatarSprite(e, color, size, img) {   // AVATAR_LD_v1：img＝插畫，載好後畫進同一張 canvas
     const N = 192, cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d');
     g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(N / 2, N / 2, N / 2 - 8, 0, Math.PI * 2); g.fill(); g.lineWidth = 12; g.strokeStyle = color; g.stroke();
-    g.font = `${N * 0.56}px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, N / 2, N / 2 + 8);
+    g.font = `${N * 0.56}px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (!/\p{Extended_Pictographic}/u.test(e || '')) g.fillStyle = '#5a4636';   // 名字首字：底是米白，字要深色
+    g.fillText(e, N / 2, N / 2 + 8);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(cv), transparent: true, toneMapped: false }));
+    if (img) { const im = new Image(); im.onload = () => { const r = N / 2 - 14, w = r * 2 * 0.92, h = w * im.height / im.width;
+      g.save(); g.beginPath(); g.arc(N / 2, N / 2, r, 0, Math.PI * 2); g.clip(); g.fillStyle = '#fffaf0'; g.fillRect(0, 0, N, N);
+      g.drawImage(im, (N - w) / 2, N / 2 + r - h, w, h); g.restore(); sp.material.map.needsUpdate = true; }; im.src = img; }
     sp.scale.set(size, size, 1); return sp;
   }
   /** 平面上的字（招牌、暖簾） */
@@ -426,13 +431,13 @@
   }
   /** 主人站在渡船屋門口（和老師同一種圓形頭像）；歡迎詞、主人換了才重畫 */
   function buildDockLabels() {
-    const sig = JSON.stringify([opts.welcome || '', opts.keeper ? [opts.keeper.emoji, opts.keeper.name] : null]);
+    const sig = JSON.stringify([opts.welcome || '', opts.keeper ? [opts.keeper.emoji, opts.keeper.name, opts.keeper.img || '', opts.keeper.ld ? 1 : 0] : null]);
     if (sig === dockSig) return; dockSig = sig;
     drawBoard(opts.welcome);
     while (dockLayer.children.length) dockLayer.remove(dockLayer.children[0]);
     if (!opts.keeper) return;
     const ry = faceDock(DOCK.house, 18), x = DOCK.house[0] + Math.sin(ry) * 0.9 - Math.cos(ry) * 0.95, z = DOCK.house[1] + Math.cos(ry) * 0.9 + Math.sin(ry) * 0.95;
-    const sp = avatarSprite(opts.keeper.emoji || '🧑‍✈️', '#2f4f7a', 0.8); sp.position.set(x, 0.62, z); sp.userData.dock = 'house'; dockLayer.add(sp);
+    const sp = avatarSprite(opts.keeper.emoji || '🧑‍✈️', '#2f4f7a', opts.keeper.ld ? 1.0 : 0.8, opts.keeper.img); sp.position.set(x, 0.62, z); sp.userData.dock = 'house'; dockLayer.add(sp);
   }
 
   // ---------- 天空、海、霧、雨 ----------

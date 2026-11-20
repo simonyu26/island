@@ -112,7 +112,7 @@
         ...(b1On() ? { onLight: () => go('light'), onMark: id => window.famMark(id), hall: (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()), onHall: () => openHall() } : {}),   // B1   // 港口（10/27）；屋台（10/28，開島就有）
         ...(shopOn() ? { book: { name: '書店', sub: null }, onBook: () => openFamBooks() } : {}),   // FAM_SHOP_v1
         garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),   // 2b-1：種樹、衛星小島
-        islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
+        islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? (avText(k.emoji) ? k.emoji + ' ' : '') + k.name : '' }; }), onIslet: openIsle,
         grade: () => null, mainIsle: mainOpen() ? { a: -0.5 } : null, onMainIsle: () => go('mainisle'), onSelect: showInfo3D
       });
       if (replay.idx != null) Island3D.setWeek(replay.idx, false);
@@ -243,7 +243,7 @@
   function freeSlot(f) { for (let i = 0; i < MAX_DIRS; i++) if (!f.dirs.some(d => d.slot === i) && !((isle() && isle().dirs) || []).some(d => d.slot === i)) return i; return -1; }
   window.viewSetup = function () {
     const f = initDraft(), c = f.cfg;
-    const emo = (key, cur) => `<div class="emojis" data-key="${key}">${EMOJIS.map(e => `<button type="button" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}</div>`;
+    const emo = (key, cur) => `<div class="emojis" data-key="${key}">${EMOJIS.map(e => `<button type="button" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}${ldOpen() || isLd(cur) ? ldGrid(cur) : ''}</div>`;   // AVATAR_LD_v1
     const icSel = (i, cur) => `<select data-d="${i}.ic" style="width:72px">${DIR_IC.concat(DIR_IC.indexOf(cur) < 0 ? [cur] : []).map(e => `<option ${e === cur ? 'selected' : ''}>${esc(e)}</option>`).join('')}</select>`;
     const left = freeSlot(f) >= 0 && f.dirs.length < MAX_DIRS;
     return `<div class="card"><div class="big">🏝️</div><h2 style="text-align:center">${f.first ? '開一座自己的島' : '修改我的島'}</h2>
@@ -263,9 +263,10 @@
       ${f.dirs.map((d, i) => `<div style="border-top:1px dashed var(--plum-light);margin-top:12px;padding-top:8px">
         <div class="row">${icSel(i, d.ic)}<input class="grow" data-d="${i}.name" value="${esc(d.name)}" maxlength="8" placeholder="方向的名字">
           ${d.items.some(it => it.row) ? '' : `<button type="button" class="ghost" data-deldir="${i}">✕</button>`}</div>
-        <label>住在這條街的島民</label><div class="row"><select data-d="${i}.who.emoji" style="width:72px">${EMOJIS.map(e => `<option ${d.who.emoji === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
+        <label>住在這條街的島民</label><div class="row"><select data-d="${i}.who.emoji" style="width:72px">${EMOJIS.map(e => `<option ${d.who.emoji === e ? 'selected' : ''}>${e}</option>`).join('')}${isLd(d.who.emoji) ? `<option value="${esc(d.who.emoji)}" selected>插畫</option>` : ''}</select>
           <input class="grow" data-d="${i}.who.name" value="${esc(d.who.name)}" maxlength="12" placeholder="名字"></div>
-        <input data-d="${i}.who.personality" value="${esc(d.who.personality)}" maxlength="60" placeholder="個性（選填），例如：嘴硬心軟" style="margin-top:4px">${famUpl(SLOT[d.slot], f, d)}${shopOn() ? laneSetup(d, i) : ''}
+        <input data-d="${i}.who.personality" value="${esc(d.who.personality)}" maxlength="60" placeholder="個性（選填），例如：嘴硬心軟" style="margin-top:4px">
+        ${ldOpen() || isLd(d.who.emoji) ? `<div class="ldpick" data-dir="${i}">${ldGrid(d.who.emoji)}</div>` : ''}${famUpl(SLOT[d.slot], f, d)}${shopOn() ? laneSetup(d, i) : ''}
         <label>每週想做的項目</label>
         ${d.items.map((it, j) => `<div class="row" style="margin-top:4px${it.off ? ';opacity:.5' : ''}"><input class="grow" data-i="${i}.${j}" value="${esc(it.name)}" maxlength="16" placeholder="例如：讀 20 頁">${shopOn() && (d.lanes || []).length >= 2 ? laneSel(d, i, j) : ''}
           ${it.row ? `<button type="button" class="ghost" data-off="${i}.${j}">${it.off ? '拿出來' : '收起來'}</button>` : `<button type="button" class="ghost" data-delitem="${i}.${j}">✕</button>`}</div>`).join('')}
@@ -286,8 +287,12 @@
     document.querySelectorAll('[data-i]').forEach(el => el.oninput = () => { const [i, j] = el.dataset.i.split('.'); f.dirs[i].items[j].name = el.value; });
     document.querySelectorAll('.emojis').forEach(box => box.onclick = e => {
       const b = e.target.closest('button'); if (!b) return;
-      setPath(c, box.dataset.key, b.textContent);
+      setPath(c, box.dataset.key, b.dataset.v || b.textContent);
       box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    });
+    document.querySelectorAll('.ldpick').forEach(box => box.onclick = e => {   // AVATAR_LD_v1：方向島民選插畫
+      const b = e.target.closest('button'); if (!b) return;
+      f.dirs[box.dataset.dir].who.emoji = b.dataset.v; render();
     });
     const on = (sel, fn) => document.querySelectorAll(sel).forEach(el => el.onclick = () => { fn(el); render(); });
     on('[data-off]', el => { const [i, j] = el.dataset.off.split('.'); const it = f.dirs[i].items[j]; it.off = it.off ? 0 : 1; });

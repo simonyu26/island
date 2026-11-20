@@ -5,6 +5,8 @@
  */
 (function () {
   const SLOT = ['國', '英', '數', '自', '社'];
+  // AVATAR_LD_v1：插畫頭像用 index 的 ldImg（認不得的代號畫名字首字）；3D 由 island3d 自己認 ld:
+  const fvAv = (e, d, name) => /^ld:/.test(e || '') ? (typeof ldImg === 'function' ? ldImg(e, 'pic', name) : esc(Array.from(String(name || '').trim())[0] || d)) : esc(e || d);
   const cache = {};   // 稱呼 → { at, snapshot, diary } 或 { error }；這次打開 App 只抓一次
   let busy = null;
   function back() { return typeof ownMode === 'function' && ownMode() ? '回到我的島 🏝️' : '回到小島 🏝️'; }
@@ -23,10 +25,10 @@
     return `<div class="card"><div class="row"><h2 class="grow" style="margin:0">🏝️ ${esc(s.title || name + '的島')}</h2><span class="muted">島嶼 Lv.${esc(s.level || 1)}</span></div>
         <div class="muted" style="margin-top:4px">${esc(name)}的島・${esc(short(r.at || s.at || ''))} 的樣子</div></div>
       <div id="fv3d" style="height:min(52vh,400px);border-radius:16px;overflow:hidden;background:${s.bg === 'space' ? '#141c36' : s.bg === 'sky' ? '#dcefff' : '#cfe8f3'}"><div class="loading" style="padding-top:150px">🏝️ 小島浮出海面中…</div></div>
-      <div class="card"><div class="row" style="flex-wrap:nowrap"><span style="font-size:34px">${esc(g.emoji || '🐢')}</span>
+      <div class="card"><div class="row" style="flex-wrap:nowrap"><span style="font-size:34px">${fvAv(g.emoji, '🐢', g.name || '島主夥伴')}</span>
         <div class="speech grow"><b>${esc(g.name || '島主夥伴')}</b>：歡迎來${esc(name)}的島！慢慢逛。</div></div></div>
       ${dirs.length ? `<div class="card"><h3 style="margin-top:0">🧭 ${esc(name)}的方向</h3>${dirs.map(d => { const p = res[SLOT[d.slot]] || {};
-        return `<div class="item"><span class="avatar">${esc(p.emoji || '🙂')}</span><div class="name"><b>${esc(d.ic || '⭐')} ${esc(d.name)}</b>${p.name ? '・' + esc(p.name) : ''}</div></div>`; }).join('')}</div>` : ''}
+        return `<div class="item"><span class="avatar">${fvAv(p.emoji, '🙂', p.name || d.name)}</span><div class="name"><b>${esc(d.ic || '⭐')} ${esc(d.name)}</b>${p.name ? '・' + esc(p.name) : ''}</div></div>`; }).join('')}</div>` : ''}
       ${diary.length ? `<div class="card"><h3 style="margin-top:0">📆 ${esc(name)}分享的日めくり</h3>${diary.slice().reverse().map(p => `<div style="margin-top:6px"><span class="muted">${esc(short(p.date))}</span>・${esc(p.text)} ${esc(p.emoji || '')}</div>`).join('')}</div>` : ''}
       <div class="muted" style="text-align:center;margin:4px 0 10px">這是${esc(name)}願意分享的樣子。你可以慢慢看，不會改到任何東西。</div>
       <div class="row"><button class="ghost grow" onclick="go('home')">${back()}</button></div>`;

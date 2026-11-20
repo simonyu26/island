@@ -72,6 +72,15 @@
   function short(s) { const p = String(s || '').split('-'); return p.length === 3 ? Number(p[1]) + '/' + Number(p[2]) : s; }
   function taipeiHour() { return Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }).format(new Date())) % 24; }
   function phaseOf(h) { return h >= 19 || h < 5 ? 'night' : h < 7 ? 'dawn' : h < 17 ? 'day' : 'dusk'; }
+  // AVATAR_LD_v1：插畫頭像；認不得的代號、分享圖片 → 名字首字
+  // 島上有人用插畫時，emoji 頭像也放進同樣的圓底（美術 11/1 複審）；都沒用插畫時畫面不變
+  function anyLd() { return /"ld:/.test(JSON.stringify([snap.guide, snap.residents, snap.roommates, snap.mate])); }
+  function av(e, name, px) {
+    if (!/^ld:/.test(e || '')) return anyLd() ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:${px}px;height:${px}px;border-radius:50%;background:#f3ead9;font-size:${Math.round(px * .6)}px;line-height:1;vertical-align:middle">${esc(e)}</span>` : esc(e);
+    if (!/^ld:(p(0[1-9]|[1-3]\d|40)|a(0[1-9]|1\d|2[0-3]))$/.test(e)) return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${px}px;height:${px}px;border-radius:50%;background:#f3ead9;color:#5f5a55;font-weight:700;font-size:${Math.round(px * .45)}px;vertical-align:middle">${esc(Array.from(String(name || ''))[0] || '🙂')}</span>`;
+    return `<span style="display:inline-flex;align-items:flex-end;justify-content:center;overflow:hidden;width:${px}px;height:${px}px;border-radius:50%;background:#f3ead9;vertical-align:middle"><img src="avatars/${e.slice(3)}.webp" alt="" loading="lazy" style="width:92%;height:auto;display:block"></span>`;
+  }
+  function emoTxt(e, name) { return /^ld:/.test(e || '') ? (Array.from(String(name || ''))[0] || '🙂') : e; }
   function resident(s) {
     const r = (snap.residents && snap.residents[s]) || {};
     return { name: r.name || SUBJECT_NAME[s] + '島民', emoji: r.emoji || '🙂', personality: r.personality || '', intro: r.intro || '' };
@@ -120,7 +129,7 @@
           <dt>有效至</dt><dd>${esc(short(V.expires))}</dd>
           <dt>邀請人</dt><dd>${V.by === 'me' || V.by === 'fam' ? '島主' : esc(V.by) + '（島主已同意）'}</dd></dl>
       </div>
-      <div class="card"><div class="guide"><span class="who">${esc(g.emoji)}</span>
+      <div class="card"><div class="guide"><span class="who">${av(g.emoji, g.name, 44)}</span>
         <div class="grow"><b>${esc(g.name)}</b><div class="speech">${esc(V.welcome || '歡迎來到我的小島！')}</div></div></div>
         <label>你的暱稱（只存在這支手機，用來寫在紀念明信片上）</label>
         <input id="nick" maxlength="12" placeholder="例如：小美" value="${esc(p.nick || '')}">
@@ -146,7 +155,7 @@
       <div class="card" id="passport"></div>
       ${FAM ? '' : `<div class="card"><h3>🏘️ 去島民家作客</h3><div class="row" style="justify-content:space-around">
         <button class="ghost" style="padding:6px 8px;min-width:58px" data-room="me">🏡<br><small>島主</small></button>
-        ${SUBJECTS.map(s => `<button class="ghost" style="padding:6px 8px;min-width:58px" data-room="${s}">${esc(resident(s).emoji)}<br><small>${esc(resident(s).name)}</small></button>`).join('')}
+        ${SUBJECTS.map(s => `<button class="ghost" style="padding:6px 8px;min-width:58px" data-room="${s}">${av(resident(s).emoji, resident(s).name, 34)}<br><small>${esc(resident(s).name)}</small></button>`).join('')}
       </div></div>`}
       <div class="muted" style="text-align:center">快照拍攝於 ${esc(short(snap.at))}・照片與資料由島主分享</div>`;
     app.querySelectorAll('[data-room]').forEach(b => b.onclick = () => openRoom(b.dataset.room));
@@ -160,7 +169,7 @@
     box.innerHTML = `<div class="row"><h3 class="grow" style="margin:0">🎫 登島集章</h3><span class="muted">${got.length} / ${STAMPS.length}</span></div>
       <div class="muted">逛過一個地方就蓋一個章，點章可以直接過去。</div>
       <div class="stamps">${STAMPS.map(st => `<div class="stamp ${got.includes(st.key) ? 'on' : ''}" data-go="${st.key}">
-        <span>${esc(st.ic || resident(st.key).emoji)}</span>${esc(st.name)}</div>`).join('')}</div>
+        <span>${st.ic ? esc(st.ic) : av(resident(st.key).emoji, resident(st.key).name, 34)}</span>${esc(st.name)}</div>`).join('')}</div>
       ${done ? `<button style="width:100%;margin-top:12px" id="souvenir">🎴 下載登島紀念明信片</button>` : ''}`;
     box.querySelectorAll('[data-go]').forEach(el => el.onclick = () => {
       const k = el.dataset.go;
@@ -176,13 +185,13 @@
     const box = document.getElementById('info'); if (!box) return;
     if (FAM) {   // 家人島：只有島民和方向，沒有小巷和房間
       const r = resident(s);
-      box.innerHTML = `<div class="resident"><span class="avatar">${esc(r.emoji)}</span>
+      box.innerHTML = `<div class="resident"><span class="avatar">${av(r.emoji, r.name, 40)}</span>
         <div><b>${esc(r.name)}</b><div class="muted">${esc(SUBJECT_NAME[s])}街${r.personality ? '・' + esc(r.personality) : ''}</div></div></div>`;
       return;
     }
     const r = resident(s), pts = snap.pts || {};
     const lanes = SUBS[s] ? SUBS[s].concat(s === '自' ? ['自然'] : ['社會']) : [s];
-    box.innerHTML = `<div class="resident"><span class="avatar">${esc(r.emoji)}</span>
+    box.innerHTML = `<div class="resident"><span class="avatar">${av(r.emoji, r.name, 40)}</span>
         <div><b>${esc(r.name)}</b><div class="muted">${SUBJECT_NAME[s]}街${r.personality ? '・' + esc(r.personality) : ''}</div>${r.intro ? `<div style="font-size:13px;margin-top:4px">${esc(r.intro)}</div>` : ''}</div></div>
       <div style="margin-top:10px">${lanes.map(l => {
         const m = SUBS[s] ? roommate(l) : null;
@@ -219,7 +228,7 @@
       Island3D.setEnvironment({ phase: phaseOf(taipeiHour()), weather: (typeof env !== 'undefined' && env.weather) || 'clear' });   // WEATHER_SYNC_v1
     } catch (e) {
       el.innerHTML = `<div style="padding:16px">${SUBJECTS.map(s => `<div class="card" style="cursor:pointer" data-s="${s}">
-        <div class="resident"><span class="avatar">${esc(resident(s).emoji)}</span><b>${SUBJECT_NAME[s]}街</b></div></div>`).join('')}</div>`;
+        <div class="resident"><span class="avatar">${av(resident(s).emoji, resident(s).name, 40)}</span><b>${SUBJECT_NAME[s]}街</b></div></div>`).join('')}</div>`;
       el.style.overflow = 'auto';
       el.querySelectorAll('[data-s]').forEach(c => c.onclick = () => showInfo(c.dataset.s));
     }
@@ -229,7 +238,7 @@
   // 島主的家：同住夥伴招呼訪客（不談她的事）、她分享的日めくり
   function homeExtras() {
     const m = snap.mate, pages = snap.diary || [];
-    return (m ? `<div class="row" style="margin-top:10px;flex-wrap:nowrap"><span style="font-size:28px">${esc(m.emoji || '🐱')}</span><div class="speech grow"><b>${esc(m.name)}</b>：いらっしゃい～歡迎來我們家坐坐！</div></div>` : '')
+    return (m ? `<div class="row" style="margin-top:10px;flex-wrap:nowrap"><span style="font-size:28px">${av(m.emoji || '🐱', m.name, 34)}</span><div class="speech grow"><b>${esc(m.name)}</b>：いらっしゃい～歡迎來我們家坐坐！</div></div>` : '')
       + (pages.length ? `<div style="margin-top:10px"><b>📆 日めくり</b>${pages.slice().reverse().map(p => `<div class="muted" style="margin-top:4px">${esc(p.date.slice(5).replace('-', '/'))}・${esc(p.text)} ${esc(p.emoji || '')}</div>`).join('')}</div>` : '');
   }
   // v2.50 分房間（ROOMS_v1）：'me' 客廳、'me:wa' 和室、'me:bed' 二樓臥室
@@ -283,7 +292,7 @@
     g.fillStyle = '#cfe8f3'; g.fillRect(60, 60, 560, H - 120);
     g.fillStyle = '#dff0d8'; g.beginPath(); g.ellipse(340, 470, 230, 120, 0, 0, Math.PI * 2); g.fill();
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = emoji(64); SUBJECTS.forEach((s, i) => drawEmoji(g, resident(s).emoji, 180 + i * 80, 450 + (i % 2) * 40));
+    g.font = emoji(64); SUBJECTS.forEach((s, i) => drawEmoji(g, emoTxt(resident(s).emoji, resident(s).name), 180 + i * 80, 450 + (i % 2) * 40));
     g.font = emoji(90); g.fillText('🏡', 340, 330);
     g.font = emoji(70); g.fillText('🎈', 520, 640);
     // 右半：文字

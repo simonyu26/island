@@ -174,6 +174,18 @@
   .kface { display: inline-block; position: relative; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; vertical-align: middle; } /* KEEPER_FACE_v1 主島五位插畫頭像：圓底、圖佔 92% 貼底、不加框（和智慧島老師一樣） */
   .kface img { position: absolute; left: 4%; bottom: 0; width: 92%; height: 92%; object-fit: contain; object-position: bottom; }
   #miInfo .muted { text-wrap: pretty; } /* KEEPER_FACE_v1 美術 11/1：主島卡片說明不要最後剩一個字（舊瀏覽器忽略） */
+  .ldw { display: inline-flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 50%; vertical-align: middle; padding: 0; border: 0; }   /* AVATAR_LD_v1（美術 11/1）：一個圓、淡色底填滿、圖寬 92% 貼齊底部 */
+  .ldw > img { width: 92%; height: auto; display: block; }
+  .ldi { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f3ead9; color: #5f5a55; font-weight: 700; vertical-align: middle; }
+  .pic.ldi { font-size: 18px; } .avatar .pic.ldi { font-size: 23px; } .greet-pic .pic.ldi { font-size: 38px; } .kpic.ldi { font-size: .56em; } .ipic.ldi { font-size: .63em; } .bscene .keeper .kpic.ldi { font-size: 18px; }
+  .has-ld .avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 52px; width: 52px; height: 52px; border-radius: 50%; background: #f3ead9; }   /* 有人選了插畫時，emoji 頭像也放進同樣大小的圓底，名字才對齊（美術 11/1）；沒選插畫的人畫面不變 */
+  .ldsum { list-style: none; cursor: pointer; } .ldsum::-webkit-details-marker { display: none; } .ldsum::before { content: '▸ '; } details[open] > .ldsum::before { content: '▾ '; }
+  .ldbox { flex: 1 0 100%; margin-top: 6px; }
+  .ldgrid { display: grid; grid-template-columns: repeat(5, minmax(44px, 1fr)); gap: 6px; margin-top: 6px; }
+  @media (max-width: 340px) { .ldgrid { grid-template-columns: repeat(4, minmax(44px, 1fr)); } }
+  .ldgrid button, .emojis .ldgrid button, .emojis .ldgrid button.on { padding: 0; border: 0; background: none; border-radius: 50%; line-height: 0; }   /* 開島設定的 .emojis 會給按鈕框和底色，這裡蓋掉，和管理員選單同一個樣子（美術 11/1 複審） */
+  .ldgrid button .ldw { width: 100%; aspect-ratio: 1; }
+  .ldgrid button.on .ldw { box-shadow: 0 0 0 3px var(--plum); }
   .ipic { width: 1.4em; height: 1.4em; border-radius: 50%; object-fit: cover; vertical-align: -0.35em; background: #fff; }
   .upl { margin-top: 6px; }
   .upl label.btn { display: inline-block; margin: 0; font-size: 14px; background: var(--plum-light); color: var(--plum); padding: 6px 12px; border-radius: 10px; cursor: pointer; }
@@ -515,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.1';
+const APP_VERSION = '2.52.2';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.2', date: '2026-11-20', items: ['🎨 11/22 起，島上角色的頭像可以改選一張插畫：人物 40 張、動物 23 張，在角色的『樣子』裡按『或選一張插畫』就能挑。原本的樣子照舊可以用。插畫來自 Loose Drawing。'], fam: true, guide: '無' },
   { v: '2.52.1', date: '2026-11-20', items: ['🛍️ 商店變短了：素材櫃和收購合成「素材與料理」，點一下就打開；兌換紀錄收在獎品下面。家具店改成商店最下面的一個小連結，也可以從『我的家』進去；挑戰任務在首頁的『今日のおつとめ』。'], guide: ['島幣和商店', '衛星小島'] },
   { v: '2.52', date: '2026-11-20', fam: [1, 2, 3, 4, 5, 6], guide: '無', items: ['🎈 島上的碼頭改名「飛船碼頭」，渡船換成飛船。點碼頭會問「今天想去哪裡？」，可以去智慧島、主島，還有開放拜訪的家人的島。', '🎈 家人自己的島：港口改叫「飛船碼頭」，去智慧島坐的是飛船。', '🪪 家人自己的島：島主夥伴、島民和地方的管理員，都可以換成自己上傳的圖片。', '📚 家人自己的島：開了書店。可以把書放上自己的書架，每個方向能分成幾條小巷；讀完一本書，島上會長出一個地標。', '📑 家人自己的島：家人之間可以寄書籤信，有三款樣式，可以夾一本書。', '💬 收到送的書或鼓勵卡，除了按表情，也可以回一句話；回的話在 App 裡只有你和送的人看得到。', '🎟️ 家人自己的島：可以發乘船券，邀請朋友來看自己的島；券有期限，也可以隨時收回。'] },
   { v: '2.51.8', date: '2026-11-20', guide: ['週末確認這週'], items: ['🗃️ 週日「確認這週」多了「這週碰到的科目」：這週有讀到、練到的科目會列出來，沒碰到的不會出現，也不打分。這張卡在 App 裡只有你自己看得到。'] },
@@ -1005,7 +1018,7 @@ function viewKizuna() {
       return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col[v.lv]}" stroke-width="${v.score > 0 ? 2 + v.lv * 2 : 1.5}" ${v.score > 0 ? '' : 'stroke-dasharray="4 4"'} stroke-linecap="round" style="cursor:pointer" onclick="draft.kzPair='${k}';render()"/>
         <line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="transparent" stroke-width="18" style="cursor:pointer" onclick="draft.kzPair='${k}';render()"/>`; }).join('');
     const dots = SUBJECTS.map(s => { const r = resident(s), p = pos[s];
-      return `<circle cx="${p[0]}" cy="${p[1]}" r="24" fill="#fdf6ec" stroke="#741b47" stroke-width="2"/><text x="${p[0]}" y="${p[1] + 8}" text-anchor="middle" font-size="22">${esc(r.emoji)}</text>
+      return `<circle cx="${p[0]}" cy="${p[1]}" r="24" fill="#fdf6ec" stroke="#741b47" stroke-width="2"/>${ldSrc(r.emoji) ? `<image href="${ldSrc(r.emoji)}" x="${p[0] - 21}" y="${p[1] - 21}" width="42" height="42"/>` : `<text x="${p[0]}" y="${p[1] + 8}" text-anchor="middle" font-size="22">${isLd(r.emoji) ? ldInitial(r.name) : esc(r.emoji)}</text>`}
         <text x="${p[0]}" y="${p[1] + (p[1] > C ? 42 : -30)}" text-anchor="middle" font-size="12" fill="#3a2a33">${esc(r.name)}</text>`; }).join('');
     const pv = sel && D.kizuna.pair[sel];
     body = `<div class="card"><svg viewBox="0 0 ${W} ${W}" style="width:100%;max-width:360px;display:block;margin:0 auto">${lines}${dots}</svg>
@@ -1223,12 +1236,36 @@ function derive(S) {
 function esc(s) { return String(s == null ? '' : s).replace(/妳/g, '你').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 // 自訂圖片存在存檔的 img:<key>，沒有圖片時用 emoji
 function imgOf(key) { return S && S.save && S.save['img:' + key]; }
-function pic(key, emoji) { const src = imgOf(key); return src ? `<img class="pic" src="${src}" alt="">` : emoji; }
-function ipic(key, emoji) { const src = imgOf(key); return src ? `<img class="ipic" src="${src}" alt="">` : emoji; }
+// 插畫頭像 AVATAR_LD_v1（爸爸 10/30～10/31）：emoji 欄位存 ld:p01；圖在 avatars/（© Loose Drawing，不在本 repo 授權範圍，見 avatars/README.md）
+const LD_RE = /^ld:(p(0[1-9]|[1-3]\d|40)|a(0[1-9]|1\d|2[0-3]))$/;
+const LD_IDS = Array.from({ length: 40 }, (_, i) => 'p' + String(i + 1).padStart(2, '0')).concat(Array.from({ length: 23 }, (_, i) => 'a' + String(i + 1).padStart(2, '0')));
+const LD_BG = ['#f3ead9', '#e3ecf5', '#f1e4ea', '#e5efe0'];
+const LD_OPEN_AT = '2026-11-22';   // 選單開放日：新版上線隔天才開（工程顧問 10/31），顯示一律支援；網址加 ?ld=1 可以先預覽
+function isLd(e) { return /^ld:/.test(String(e || '')); }
+function ldSrc(e) { return LD_RE.test(String(e || '')) ? 'avatars/' + String(e).slice(3) + '.webp' : ''; }
+function ldInitial(name) { return esc(Array.from(String(name || '').trim())[0] || '🙂'); }
+function ldImg(e, cls, name) {   // 認不得的代號不顯示空白或壞圖，改顯示名字首字（fail-closed）
+  const src = ldSrc(e); if (!src) return `<span class="${cls} ldi">${ldInitial(name)}</span>`;
+  if (typeof document !== 'undefined') document.body.classList.add('has-ld');
+  return `<span class="${cls} ldw" style="background:${LD_BG[LD_IDS.indexOf(String(e).slice(3)) % LD_BG.length]}"><img src="${src}" alt="" loading="lazy"></span>`;
+}
+function avText(e) { return isLd(e) ? '' : (e || ''); }   // 純文字場合（toast、名牌字串）不顯示代號
+function ldOpen() {
+  if (S && S.today >= LD_OPEN_AT) return true;
+  if (/[?&]ld=1\b/.test(location.search)) local.set('ldPreview', '1');
+  return local.get('ldPreview') === '1';
+}
+// 插畫選單：按鈕帶 data-v；放在 <details> 裡，打開才載入圖片
+function ldGrid(cur, onclickFor) {
+  return `<details class="ldbox"${isLd(cur) ? ' open' : ''}><summary class="muted ldsum">或選一張插畫（${LD_IDS.length} 張）</summary><div class="ldgrid">${LD_IDS.map(id => `<button type="button" data-v="ld:${id}" class="${cur === 'ld:' + id ? 'on' : ''}" aria-label="插畫 ${id}"${onclickFor ? ` onclick="${onclickFor('ld:' + id)}"` : ''}>${ldImg('ld:' + id, '', '')}</button>`).join('')}</div></details>`;
+}
+function pic(key, emoji, name) { const src = imgOf(key); return src ? `<img class="pic" src="${src}" alt="">` : isLd(emoji) ? ldImg(emoji, 'pic', name) : emoji; }
+function ipic(key, emoji, name) { const src = imgOf(key); return src ? `<img class="ipic" src="${src}" alt="">` : isLd(emoji) ? `<span class="ipic ldi">${ldInitial(name)}</span>` : emoji; }   // 不到 34px，插畫看不清楚，改首字（美術 10/30）
 function resident(s) {
   const r = (D.cfg && D.cfg.residents && D.cfg.residents[s]) || {};
   const emoji = r.emoji || '🙂';
-  return { name: r.name || SUBJECT_NAME[s] + '島民', emoji, pic: pic(s, emoji), ipic: ipic(s, emoji), personality: r.personality || '', relation: r.relation || '',
+  const nm = r.name || SUBJECT_NAME[s] + '島民';
+  return { name: nm, emoji, pic: pic(s, emoji, nm), ipic: ipic(s, emoji, nm), personality: r.personality || '', relation: r.relation || '',
     speech: r.speech || '', intro: r.intro || '' };   // speech：說話方式／口頭禪；intro：人物介紹（v2.26，選填）
 }
 function roommate(sub) {
@@ -1239,7 +1276,7 @@ function streets(s) {
   if (!SUBS[s]) return `<div class="town">${town(D.pts[s])}</div>`;
   const rows = SUBS[s].map(sub => {
     const m = roommate(sub);
-    return `<div class="lane"><span class="lane-name">${imgOf('sub:' + sub) || m.emoji ? ipic('sub:' + sub, m.emoji) + ' ' : ''}${esc(m.name || sub)}<small>${m.name ? sub : ''}</small></span><span class="town">${town(D.ptsBy[sub] || 0)}</span></div>`;
+    return `<div class="lane"><span class="lane-name">${imgOf('sub:' + sub) || m.emoji ? ipic('sub:' + sub, m.emoji, m.name || sub) + ' ' : ''}${esc(m.name || sub)}<small>${m.name ? sub : ''}</small></span><span class="town">${town(D.ptsBy[sub] || 0)}</span></div>`;
   });
   const whole = s === '自' ? '自然' : '社會';
   if (D.ptsBy[whole]) rows.push(`<div class="lane"><span class="lane-name">綜合廣場<small>模卷・歷屆</small></span><span class="town">${town(D.ptsBy[whole])}</span></div>`);
@@ -1247,7 +1284,7 @@ function streets(s) {
 }
 function guide() {
   const g = (D.cfg && D.cfg.guide) || {}, emoji = g.emoji || '🦉';
-  return { name: g.name || '嚮導', emoji, pic: pic('guide', emoji), ipic: ipic('guide', emoji), tone: g.tone || '朋友' };
+  return { name: g.name || '嚮導', emoji, pic: pic('guide', emoji, g.name || '嚮導'), ipic: ipic('guide', emoji, g.name || '嚮導'), tone: g.tone || '朋友' };
 }
 function town(p) {
   let n = Math.floor(p / 2), out = '';
@@ -2210,7 +2247,7 @@ async function mountWisdom3D() {
     el.innerHTML = '';
     Wisdom3D.mount(el, { phase: env.phase, weather: env.weather,
       huts: WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k); return { key: k, name: t.name, place: t.place, ic: t.ic, color: t.color, st: wisdomStatus(k), can: !x.why, closed: x.why === 'closed' }; }),
-      onHut: k => openWisdomHut(k), welcome: welcomeText(), keeper: (k => k ? { emoji: k.emoji || '🧑‍✈️', name: k.name } : null)(keeperOf('wisdom')),
+      onHut: k => openWisdomHut(k), welcome: welcomeText(), keeper: (k => k ? { emoji: isLd(k.emoji) ? (Array.from(String(k.name || '').trim())[0] || '🧑‍✈️') : (k.emoji || '🧑‍✈️'), img: ldSrc(k.emoji) || '', ld: isLd(k.emoji), name: k.name } : null)(keeperOf('wisdom')),
       onDock: k => { draft.wDock = draft.wDock === k ? '' : k; render(); } });
   } catch (e) { local.set('wisdomView', '2d'); toast('這支手機開不了 3D，先用插畫'); render(); }
 }
@@ -3245,7 +3282,7 @@ function roomHtml(who, guest) {
   const fs = shownFor(who).map(furnOf).filter(Boolean), wall = wallFor(who);
   const g = guest ? resident(guest) : null;
   roomOpts = { wall, accent: isMe(who) ? (homeOf() || {}).roof || '#741b47' : '#741b47', night: env.phase === 'night',
-    items: roomItems(who), visitor: g && { emoji: g.emoji, img: imgOf(guest) || null } };
+    items: roomItems(who), visitor: g && { emoji: isLd(g.emoji) ? (Array.from(String(g.name || ''))[0] || '🙂') : g.emoji, img: imgOf(guest) || ldSrc(g.emoji) || null } };
   if (isMe(who) && g) { const u = floorCells(who).used, vc = VISITOR_ORDER.find(x => !u[x]); if (vc != null) roomOpts.visitorCell = vc; }
   if (ROOM_STYLE[who]) roomOpts.style = ROOM_STYLE[who];
   const toggle = BETA3D ? `<div class="row" style="margin-bottom:8px">
@@ -3736,7 +3773,7 @@ function viewIsle() {
 }
 function keeperOf(place) { const k = S.save['keeper:' + place]; return k ? Object.assign({}, k, { img: imgOf('keeper:' + place) || '' }) : null; }
 // 管理員的樣子：她上傳了自己的圖就用圖，不然用 emoji（和島民一樣，爸爸，2026-10-25）
-function kpPic(k) { return k && k.img ? `<img class="kpic" src="${k.img}" alt="">` : esc((k && k.emoji) || '🙂'); }
+function kpPic(k) { return k && k.img ? `<img class="kpic" src="${k.img}" alt="">` : k && isLd(k.emoji) ? ldImg(k.emoji, 'kpic', k.name) : esc((k && k.emoji) || '🙂'); }
 async function keeperImg(place, input) {
   const f = input.files[0]; if (!f) return;
   toast('圖片處理中…'); keeperKeep();
@@ -4248,9 +4285,11 @@ function viewKeeper() {
       <div class="muted" style="margin-top:6px">${pl.who ? pl.who + '平常會做什麼' : pl.name + '是做什麼的'}：<ul style="margin:4px 0 0 18px;padding:0">${pl.about.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>
       <label>名字</label><input id="kpName" value="${esc(k.name)}" maxlength="12" placeholder="例如：小夏學姊" oninput="draft.keeper.name=this.value">
       <label>樣子</label><div class="row" style="gap:6px">${pl.emojis.map(e => `<button type="button" class="${k.emoji === e ? '' : 'ghost'}" style="padding:4px 8px;font-size:24px" onclick="keeperKeep();draft.keeper.emoji='${e}';render()">${e}</button>`).join('')}</div>
+      ${ldOpen() || isLd(k.emoji) ? ldGrid(k.emoji, v => `keeperKeep();draft.keeper.emoji='${v}';render()`) : ''}
       <div class="row" style="margin-top:8px;gap:8px">${imgOf('keeper:' + place) ? `<img class="pic" src="${imgOf('keeper:' + place)}" alt="">` : ''}
         ${card('keeperImg', `<label class="btn">${imgOf('keeper:' + place) ? '換一張圖片' : '或上傳自己的圖片'}<input type="file" accept="image/*" hidden onchange="keeperImg('${place}', this)"></label>
         ${imgOf('keeper:' + place) ? `<button type="button" class="ghost" onclick="keeperImgDel('${place}')">改回 emoji</button>` : ''}`)}</div>
+      <div class="muted" style="font-size:12px;margin-top:4px">上傳時請用自己畫的圖或自己拍的照片；照片裡有別人的話，先問過對方。你把「島的樣子」分享給家人或訪客時，頭像也會一起出現。</div>
       <label>${pl.roleLabel || '身分'}</label><div class="row" style="gap:6px">${pl.roles.map(r => `<button type="button" class="${k.role === r ? '' : 'ghost'}" style="padding:6px 10px;font-size:14px" onclick="keeperKeep();draft.keeper.role='${r}';render()">${r}</button>`).join('')}</div>
       <input id="kpRole" style="margin-top:6px" value="${esc(k.role)}" maxlength="20" placeholder="也可以自己寫" oninput="draft.keeper.role=this.value">
       <label>個性</label><input id="kpPers" value="${esc(k.personality)}" maxlength="60" placeholder="${pl.persHint || '例如：開朗、很會鼓勵人，喜歡排球和冰淇淋'}" oninput="draft.keeper.personality=this.value">
@@ -4263,7 +4302,7 @@ async function saveKeeperForm(place) {
   try { await flush(); S = await call('saveKeeper', place, k); D = derive(S); }
   catch (e) { return toast('儲存失敗：' + (e.message || e)); }
   if (place === 'home') houseWho = 'me';
-  toast(k.emoji + ' ' + k.name + (place === 'home' ? ' 搬進來一起住了！' : place === 'bookcat' ? ' 住進書店了！' : ' 來' + PLACES[place].name + '上班了！')); go(PLACES[place].tab || 'home');
+  toast((avText(k.emoji) ? k.emoji + ' ' : '') + k.name + (place === 'home' ? ' 搬進來一起住了！' : place === 'bookcat' ? ' 住進書店了！' : ' 來' + PLACES[place].name + '上班了！')); go(PLACES[place].tab || 'home');
 }
 function toggleExercise() {
   const on = !exToday(), wk = mondayOf(S.today), before = D.exWeeks[wk] || 0;
@@ -6374,7 +6413,7 @@ function laneWho(l) {
   const me = { name: r.name, pic: r.pic, personality: r.personality, speech: r.speech, relation: r.relation };
   if (SUBS[s]) {
     const m = roommate(l);   // 室友有自己的個性和口吻（v2.26）；沒填才借街長的
-    if (m.name || imgOf('sub:' + l)) return { name: m.name || l + '室友', pic: pic('sub:' + l, m.emoji || r.emoji), personality: m.personality || r.personality, speech: m.speech, relation: '住在' + SUBJECT_NAME[s] + '街，街長是' + r.name };
+    if (m.name || imgOf('sub:' + l)) return { name: m.name || l + '室友', pic: pic('sub:' + l, m.emoji || r.emoji, m.name || l + '室友'), personality: m.personality || r.personality, speech: m.speech, relation: '住在' + SUBJECT_NAME[s] + '街，街長是' + r.name };
   }
   return me;
 }
@@ -6557,7 +6596,7 @@ async function mount3D() {
     if (!document.getElementById('i3d')) return;
     el.innerHTML = '';
     Island3D.mount(el, {
-      S, bond: D.bond, resident, roommate, imgOf, subjectName: SUBJECT_NAME, subjIc: SUBJ_IC, pointsUntil: pointsUntil,
+      S, bond: D.bond, resident, roommate, imgOf, ldSrc, subjectName: SUBJECT_NAME, subjIc: SUBJ_IC, pointsUntil: pointsUntil,
       sig: JSON.stringify(D.weekPts), season: solarTerm(S.today), walk: D.exDays.length,
       home: homeOf() && Object.assign({ tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') }, home3Ctx(true)),
       onHome: () => openHouse('me'),
@@ -6566,7 +6605,7 @@ async function mount3D() {
       ferry: wisdomOn() || mainOpen() ? { open: wisdomOn() && !wisdomTodayDone(), label: '🎈 飛船碼頭', sub: herPortSub(), far: wisdomOn() } : null, onFerry: () => herPort(),
       yatai: !isFamily() || keeperOf('yatai') ? { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null } : null, onYatai: () => openYatai(),
       hall: !isFamily() || keeperOf('hall') ? (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()) : null, onHall: () => openHall(),
-      islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
+      islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? (avText(k.emoji) ? k.emoji + ' ' : '') + k.name : '' }; }), onIslet: openIsle,
       book: { name: bookTitle(), sub: newCards().length ? '📮 ' + newCards().length + ' 張新明信片' : null }, onBook: () => go('bookstore'),
       marks: landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })), onMark: id => { const m = landmarkList().find(x => x.id === id); if (m) openBook(m.key); },
       grade: s => D.grades[s] && D.grades[s].level,
@@ -6786,7 +6825,7 @@ function focusBlock() {
   const lines = ['我陪你一起讀，加油！', '專心一下下，等等再休息。', '你已經開始了，最難的一步做完了。'];   // 用開始時間挑一句，同一次計時不會一直換
   return `<div class="focus" id="focusBox"><div class="row"><span class="grow"><b>${esc(itemLabel(cur.row))}</b>${f.date !== S.today ? '（' + short(f.date) + ' 開始的）' : ''}</span><span class="muted">${f.pausedAt ? '☕ 休息中' : '⏳ 計時中'}</span></div>
     <div class="row"><span class="clock grow focusClock">${clockText(focusMs(f))}</span><span class="muted focusGlass">${glassText(min, f.date)}</span></div>
-    ${min >= FOCUS_MAX ? `<div class="speech" style="margin:6px 0">已經 ${FOCUS_MAX} 分鐘了，還在讀嗎？先停下來休息一下吧。如果早就讀完了，按停止時可以把結束時間改早一點。</div>` : `<div class="muted" style="margin:4px 0">${w.emoji} ${esc(w.name)}：「${lines[f.sid % lines.length]}」</div>`}
+    ${min >= FOCUS_MAX ? `<div class="speech" style="margin:6px 0">已經 ${FOCUS_MAX} 分鐘了，還在讀嗎？先停下來休息一下吧。如果早就讀完了，按停止時可以把結束時間改早一點。</div>` : `<div class="muted" style="margin:4px 0">${avText(w.emoji)} ${esc(w.name)}：「${lines[f.sid % lines.length]}」</div>`}
     <div class="row" style="margin-top:6px"><button class="ghost" onclick="focusPause()">${f.pausedAt ? '▶ 繼續' : '☕ 休息一下'}</button>
       <button class="grow" onclick="focusStopOpen()">⏹ 停止</button></div>
     <div class="row" style="margin-top:8px"><span class="muted">換下一項</span><select id="fNext" onchange="focusSwitch(Number(this.value))">${focusOptions(cur.row)}</select></div>
@@ -6867,7 +6906,7 @@ function viewFocusStop() {
   const line = r => `<div class="item"><div class="name">${esc(itemLabel(r))}${byRow[r] ? `<div class="muted">這次讀了 ${Math.round(byRow[r] / 60000)} 分鐘</div>` : ''}</div>${lg[r] === 2 ? '<span class="muted">✓ 今天已經記過完成了</span>'
     : `<div class="seg fseg" data-row="${r}">${[[0, '還沒完'], [1, '部分'], [2, '讀完了']].map(([v, t]) => `<button data-s="${v}" class="${(st.choice[r] || 0) === v ? 'on' : ''}">${t}</button>`).join('')}</div>`}</div>`;
   return `<div class="card"><h2>⏹ 這次讀了 ${min} 分鐘</h2>
-      <div class="speech">${w.emoji} ${esc(w.name)}：「辛苦了！${gain ? '這次集到 ' + '⏳'.repeat(gain) + '，+' + gain * FOCUS_GREEN + ' 綠點。' : min < FOCUS_GLASS ? '再多讀一點，滿 ' + FOCUS_GLASS + ' 分鐘就有一顆砂時計喔。' : '今天的砂時計已經集滿了，還是很棒！'}」</div>
+      <div class="speech">${isLd(w.emoji) ? w.pic : w.emoji} ${esc(w.name)}：「辛苦了！${gain ? '這次集到 ' + '⏳'.repeat(gain) + '，+' + gain * FOCUS_GREEN + ' 綠點。' : min < FOCUS_GLASS ? '再多讀一點，滿 ' + FOCUS_GLASS + ' 分鐘就有一顆砂時計喔。' : '今天的砂時計已經集滿了，還是很棒！'}」</div>
       <div class="muted" style="margin-top:6px">🌱 你會有 ${D.green + gain * FOCUS_GREEN} 綠點，可以去植木屋種樹。</div>
       ${capped ? `<div class="muted" style="margin-top:8px">計時開了很久，一次最多算 ${FOCUS_MAX} 分鐘${f.date !== S.today ? '（算在 ' + short(f.date) + '）' : ''}。</div>` : ''}
       <div class="row" style="margin-top:10px"><label class="grow" style="margin:0">什麼時候停下來的？忘了按停止可以改早一點</label><input type="time" id="fEnd" value="${hhmm(st.endAt)}" style="width:auto"></div></div>
@@ -7021,7 +7060,7 @@ function viewMoveStop() {
   const m = st.m, min = moveMinutes(st), art = !!m.k, K = mk(m), kp = keeperOf(K.page);   // art：不是運動（藝文或共讀）
   const dayMin = (((D.moveDays || {})[m.date] || {}).byK || {})[m.k || 'move'] || 0, gain = Math.floor((dayMin + min) / MOVE_STEP) - Math.floor(dayMin / MOVE_STEP);   // DAYSUM_v1
   const stamp = !art && min >= MOVE_STAMP && !S.save['ex:' + m.date];
-  const who = kp ? kpPic(kp) + ' ' + esc(kp.name) : guide().emoji + ' ' + esc(guide().name);
+  const who = kp ? kpPic(kp) + ' ' + esc(kp.name) : (isLd(guide().emoji) ? ldImg(guide().emoji, 'kpic', guide().name) : guide().emoji) + ' ' + esc(guide().name);
   return `<div class="card"><h2>🏁 這次${K.did}了 ${min} 分鐘</h2>
       <div class="speech">${who}：「${min < MOVE_MIN ? '這次不到 ' + MOVE_MIN + ' 分鐘，要記下來嗎？' : (m.k === 'read' ? '讀了 ' + min + ' 分鐘，真好！' : '辛苦了！') + (gain ? '這次留下 ' + K.step.repeat(gain) + '，+' + gain * MOVE_GREEN + ' 綠點。' : '再多' + (art ? '待' : '動') + '一點，滿 ' + MOVE_STEP + ' 分鐘就有一' + (K.unit || '個') + K.stepName + '喔。') + (stamp ? '今天的章也幫你蓋好了！' : '')}」</div>
       ${gain ? `<div class="muted" style="margin-top:6px">🌱 你會有 ${D.green + gain * MOVE_GREEN} 綠點，可以去植木屋種樹。</div>` : ''}
@@ -7130,14 +7169,14 @@ function viewClass() {
   const parts = T.parts.map((p, i) => `<div><label for="clsM${i}">${CLASS_CS_NAME[p[0]]}（分鐘）</label><input id="clsM${i}" inputmode="numeric" value="${c.mins[i]}"${sinv} onchange="classSet('m${i}',this.value)"></div>`).join('');
   const recent = []; for (let i = 0; i < 14 && recent.length < 6; i++) { const d = addD(S.today, -i), L = ((S.save['focus:' + d] || {}).list || []).filter(x => x.src === 'class'); if (L.length) recent.push(`<div class="row" style="font-size:14px"><span class="grow">${short(d)}</span><span class="muted">${L.map(x => `<span style="white-space:nowrap">${CLASS_CS_NAME[x.cs] || ''} ${x.min} 分</span>`).join('・')}・🏫 上課${L.some(x => x.back) ? '（補記）' : ''}</span></div>`); }
   return HAND_CSS + `<div class="card" id="hlBox"><h2 style="margin:0">🏫 記一次上課</h2>
-    <div class="speech" style="margin-top:8px">${w.emoji} ${esc(w.name)}：「上完課了，辛苦了。記下來的話，這段時間也算進你的讀書時間。」</div>
+    <div class="speech" style="margin-top:8px">${avText(w.emoji)} ${esc(w.name)}：「上完課了，辛苦了。記下來的話，這段時間也算進你的讀書時間。」</div>
     <div class="hl-q" id="clsKQ">哪一堂</div><div class="hl-g3" role="radiogroup" aria-labelledby="clsKQ">${Object.keys(CLASS_T).map(k => opt(c.k === k, CLASS_T[k].name, `classSet('k','${k}')`, CLASS_T[k].sub + '<br>' + (k === 'sci' ? '3 小時' : '1 小時'))).join('')}</div>
     <div class="hl-q" id="clsDayQ">哪一天</div><div class="hl-g3" role="radiogroup" aria-labelledby="clsDayQ">${['今天', '昨天', '前天'].slice(0, CLASS_DAYS + 1).map((t, i) => opt(c.day === i, t, `classSet('day',${i})`, short(addD(S.today, -i)))).join('')}</div>
     <div class="row" style="margin-top:12px"><label class="grow" style="margin:0" for="clsA">開始</label><input type="time" lang="zh-TW" id="clsA" value="${c.a}"${inv} style="width:auto" onchange="classSet('a',this.value)"></div>
     <div class="row" style="margin-top:8px"><label class="grow" style="margin:0" for="clsB">結束</label><input type="time" lang="zh-TW" id="clsB" value="${c.b}"${inv} style="width:auto" onchange="classSet('b',this.value)"></div>
     ${T.parts.length > 1 && !r.wait && r.min > 0 && r.min <= CLASS_MAX ? `<div class="hl-q">${r.min} 分鐘怎麼分</div><div class="hl-g2">${parts}</div><div class="muted" style="margin-top:4px">兩格加起來要等於 ${r.min}。</div>` : ''}
     ${r.wait ? `<div class="muted" id="clsWhy" style="margin-top:10px">填好開始和結束的時間，就會算出幾分鐘。</div>`
-      : r.err ? `<div class="speech" id="clsWhy" style="margin-top:12px">${w.emoji} ${esc(w.name)}：「${r.err}」</div>`
+      : r.err ? `<div class="speech" id="clsWhy" style="margin-top:12px">${avText(w.emoji)} ${esc(w.name)}：「${r.err}」</div>`
       : `<div class="focus" style="margin-top:12px"><b>${T.parts.length > 1 ? '' : CLASS_CS_NAME[T.parts[0][0]] + ' '}${r.min} 分鐘</b>${gain ? '・⏳ ×' + gain + '・+' + gain * FOCUS_GREEN + ' 綠點' : ''}</div>`}
     ${wei.length ? `<div class="hl-q" id="clsDoneQ">計畫表上的${wei.map(x => '「' + esc(x.name) + '」').join('')}</div><div class="hl-g2" role="radiogroup" aria-labelledby="clsDoneQ">${opt(c.done === 1, '記成完成', `classSet('done',1)`, wei.length > 1 ? '各 +25 經驗值' : '+25 經驗值')}${opt(c.done === 0, '先不要', `classSet('done',0)`)}</div>` : ''}
     <div class="row" style="margin-top:12px">${ok ? '<button class="grow" onclick="classSave()">存起來 ✨</button>' : '<button class="grow hl-off" aria-disabled="true" aria-describedby="clsWhy">存起來 ✨</button>'}<button class="ghost" onclick="classBack()">不記了</button></div>
@@ -9331,7 +9370,7 @@ function viewGuide() {
     p('料理大多要兩三條街的素材，湊齊了按「做」就做好了。拿到新的素材，店主就會教你一道用得到它的料理。素材不會扣經驗值和島幣；如果取消了勾選，竹籃最少是 0，做好的料理不會收回。') +
     p('每位島民和智慧島的老師都有最喜歡的料理，交情到「聊得來」以後，在絆の手帖裡就看得到。島民最喜歡的料理可以在島嶼設定裡改。') +
     p('🎁 做好的料理可以送給島民和已經開門的智慧島老師：每位一天收一份，送到最喜歡的那道，交情會多一點。送出去的料理就不能再賣了。') + p('🎋 竹葉魚壽司和竹葉茶一年四季都能做。還沒學會的食譜先收起來，學會了才出現。') /* GUIDE_SYNC_v1 */)}
-  ${sec('🎨', '打扮你的島', p('在「⚙️ 更多 → 修改島嶼設定」可以改島名、嚮導的說話風格、島民和室友的名字與個性，也可以上傳自己的圖片當頭像。') +
+  ${sec('🎨', '打扮你的島', p('在「⚙️ 更多 → 修改島嶼設定」可以改島名、嚮導的說話風格、島民和室友的名字與個性，也可以選一張插畫，或上傳自己畫的圖、自己拍的照片當頭像。你把「島的樣子」分享給家人或訪客時，頭像也會一起出現。插畫來自 <a href="https://loosedrawing.com/" target="_blank" rel="noopener">Loose Drawing</a>。') +
     p('每位島民和室友都可以填「說話方式／口頭禪」（例如句尾愛加「啦」、自稱「本大爺」），寫信、故事、挑戰任務和講解都會照著說。島民還可以寫一段 80 字內的介紹，會出現在島民的家和「更多」頁，來參觀的家人和朋友也看得到。'))}
   ${sec('🏠', '我的家', p('島中央的碼頭是你的家。按右上角的房子圖示（或在 3D 小島點中間的房子）就能回家。第一次回家先幫它取名字、選屋頂和牆壁的顏色，之後隨時可以改。島嶼長大以後，可以按「🎨 改外觀」選一種風格：和風、台灣鄉村、台灣城市、海邊（沖繩）或西洋，之後也能換，家具都會留著。') +
     p('島嶼升級時，房子會照你選的風格慢慢長大，房子越大，房間能擺的家具越多。小木屋（Lv.4）多一間和室、兩層樓小屋（Lv.7）多一間二樓臥室，各可以擺 8 件；房間上面的按鈕可以換房間，一件家具一次只會在一間。') +
@@ -9464,8 +9503,8 @@ function viewSetup() {
   const upl = key => { const src = imgOf(key);
     return `<div class="row upl" data-img="${key}">${src ? `<img class="pic" src="${src}" alt="">` : ''}
       <label class="btn">${src ? '換一張圖片' : '或上傳自己的圖片'}<input type="file" accept="image/*" hidden></label>
-      ${src ? '<button type="button" class="ghost" data-del>改回 emoji</button>' : ''}</div>`; };
-  const pick = (key, cur) => `<div class="emojis" data-key="${key}">${EMOJIS.map(e => `<button type="button" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}</div>`;
+      ${src ? '<button type="button" class="ghost" data-del>改回 emoji</button>' : ''}</div><div class="muted" style="font-size:12px;margin-top:2px">上傳時請用自己畫的圖或自己拍的照片；照片裡有別人的話，先問過對方。你把「島的樣子」分享給家人或訪客時，頭像也會一起出現。</div>`; };
+  const pick = (key, cur) => `<div class="emojis" data-key="${key}">${EMOJIS.map(e => `<button type="button" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}${ldOpen() || isLd(cur) ? ldGrid(cur) : ''}</div>`;
   return `<div class="card"><div class="big">🏝️</div><h2 style="text-align:center">${D.cfg ? '修改島嶼設定' : '歡迎來到你的島'}</h2>
     <div class="muted" style="text-align:center">這座島會跟著你一路到會考。島上的一切都由你決定。</div>
     ${D.cfg ? '' : `<div class="muted" style="text-align:center;margin-top:6px">你過去 ${D.recordedWeeks} 週的週檢討已經變成島上的房子了 🏠</div>`}</div>
@@ -9487,10 +9526,10 @@ function viewSetup() {
       <label>介紹（選填，80 字內，會顯示在島民的家）</label><textarea data-f="residents.${s}.intro" maxlength="80" rows="2" style="width:100%">${esc(r.intro || '')}</textarea>
       ${SUBS[s] ? `<label>室友（選填）：島民是${SUBJECT_NAME[s]}街的街長；${SUBS[s].join('、')}各有一條小巷，可以各住一位室友當巷長。不填就顯示科目名稱。</label>
         ${SUBS[s].map(sub => `<div class="row" style="margin-top:4px"><span style="width:40px">${sub}</span>
-          <select style="width:72px" data-f="roommates.${sub}.emoji"><option value="">－</option>${EMOJIS.map(e => `<option ${c.roommates[sub].emoji === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
+          <select style="width:72px" data-f="roommates.${sub}.emoji"><option value="">－</option>${EMOJIS.map(e => `<option ${c.roommates[sub].emoji === e ? 'selected' : ''}>${e}</option>`).join('')}${isLd(c.roommates[sub].emoji) ? `<option value="${esc(c.roommates[sub].emoji)}" selected>插畫</option>` : ''}</select>
           <input class="grow" data-f="roommates.${sub}.name" value="${esc(c.roommates[sub].name)}" placeholder="名字"></div>
           <div class="row" style="margin-top:4px;padding-left:44px;gap:4px"><input class="grow" data-f="roommates.${sub}.personality" maxlength="60" value="${esc(c.roommates[sub].personality || '')}" placeholder="個性（選填）">
-          <input class="grow" data-f="roommates.${sub}.speech" maxlength="60" value="${esc(c.roommates[sub].speech || '')}" placeholder="說話方式（選填）"></div>${upl('sub:' + sub)}`).join('')}` : ''}</div>`; }).join('')}</div>
+          <input class="grow" data-f="roommates.${sub}.speech" maxlength="60" value="${esc(c.roommates[sub].speech || '')}" placeholder="說話方式（選填）"></div>${ldOpen() || isLd(c.roommates[sub].emoji) ? `<div class="emojis" data-key="roommates.${sub}.emoji" style="padding-left:44px">${ldGrid(c.roommates[sub].emoji)}</div>` : ''}${upl('sub:' + sub)}`).join('')}` : ''}</div>`; }).join('')}</div>
   <div class="card"><h3>4. 島嶼商店</h3><div class="muted">你想用島幣換什麼？價格你自己訂，再跟爸媽討論。照計畫完成一項大約是 2.5 枚島幣。</div>
     <div id="shopRows">${c.shop.map((x, i) => `<div class="row" style="margin-top:6px"><input class="grow" data-f="shop.${i}.name" value="${esc(x.name)}" placeholder="例如：追劇一集"><input style="width:80px" type="number" min="1" data-f="shop.${i}.price" value="${x.price}"></div>`).join('')}</div>
     <div style="margin-top:8px"><button class="ghost" type="button" id="addShop">＋ 新增商品</button></div></div>
@@ -9507,7 +9546,7 @@ function bindSetup() {
     setPath(c, el.dataset.f, el.type === 'number' ? Number(el.value) : el.value));
   document.querySelectorAll('.emojis').forEach(box => box.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
-    setPath(c, box.dataset.key, b.textContent);
+    setPath(c, box.dataset.key, b.dataset.v || b.textContent);   // AVATAR_LD_v1：插畫按鈕帶 data-v
     box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   });
   document.querySelectorAll('.upl').forEach(box => {

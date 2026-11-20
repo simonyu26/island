@@ -214,7 +214,9 @@
       g.lineWidth = 10; g.strokeStyle = '#741b47'; g.stroke(); };
     drawBase();
     g.font = `${N * 0.6}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-    g.textAlign = 'center'; g.textBaseline = 'middle'; drawEmoji(g, emoji, N / 2, N / 2 + 10);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (!/\p{Extended_Pictographic}/u.test(emoji || '')) g.fillStyle = '#5a4636';   // AVATAR_LD_v1：插畫代號認不得時畫名字首字，不能用底圓的白色
+    drawEmoji(g, emoji, N / 2, N / 2 + 10);
     if (imgSrc) {
       const im = new Image();
       im.onload = () => { drawBase(); g.save(); g.beginPath(); g.arc(N / 2, N / 2, N / 2 - 12, 0, Math.PI * 2); g.clip();
@@ -720,7 +722,9 @@
       const r = ctx.resident(s), gr = ctx.grade(s);
       const k = `who:${s}:${r.name}:${gr || ''}:${r.emoji}:${ctx.imgOf(s) ? ctx.imgOf(s).length : 0}`; keep.add(k);
       if (old.has(k)) return;
-      const av = avatarSprite(r.emoji, ctx.imgOf(s));
+      // AVATAR_LD_v1：插畫頭像當圖片畫進同一張 canvas（不加貼圖、不加 draw call）；認不得的代號畫名字首字
+      const lds = ctx.ldSrc ? ctx.ldSrc(r.emoji) : (/^ld:(p(0[1-9]|[1-3]\d|40)|a(0[1-9]|1\d|2[0-3]))$/.test(r.emoji || '') ? 'avatars/' + r.emoji.slice(3) + '.webp' : '');
+      const av = avatarSprite(/^ld:/.test(r.emoji || '') ? (Array.from(r.name || '')[0] || '🙂') : r.emoji, ctx.imgOf(s) || lds);
       av.position.copy(anchors[s]); av.userData.key = k; av.userData.subject = s; av.userData.avatar = true;
       const lb = labelSprite(r.name, `${ctx.subjIc && ctx.subjIc[s] ? ctx.subjIc[s] + ' ' : ''}${ctx.subjectName[s]}街${gr ? '・' + gr : ''}`, { scale: 1.15 });
       lb.position.set(anchors[s].x, anchors[s].y + 1.8, anchors[s].z); lb.userData.declutter = 1;

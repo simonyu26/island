@@ -63,7 +63,9 @@
     const base = () => { g.clearRect(0, 0, N, N); g.fillStyle = '#fff'; g.beginPath(); g.arc(N / 2, N / 2, N / 2 - 6, 0, Math.PI * 2); g.fill();
       g.lineWidth = 10; g.strokeStyle = '#741b47'; g.stroke(); };
     base();
-    g.font = `${N * 0.6}px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; drawEmoji(g, emoji || '🙂', N / 2, N / 2 + 10);
+    g.font = `${N * 0.6}px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (!/\p{Extended_Pictographic}/u.test(emoji || '🙂')) g.fillStyle = '#5a4636';   // AVATAR_LD_v1：插畫代號認不得時畫名字首字
+    drawEmoji(g, emoji || '🙂', N / 2, N / 2 + 10);
     if (imgSrc) {
       const im = new Image();
       im.onload = () => { base(); g.save(); g.beginPath(); g.arc(N / 2, N / 2, N / 2 - 12, 0, Math.PI * 2); g.clip();
