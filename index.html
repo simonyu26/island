@@ -97,6 +97,19 @@
   .avatar { font-size: 34px; line-height: 1; }
   .grade { margin-left: auto; font-weight: 700; color: #fff; background: var(--plum); border-radius: 8px; padding: 2px 8px; }
   .grade.none { background: #bbb; }
+  /* SHOP_TIDY_v1 商店頁（美術 11/5 第二版） */
+  .shopv a { color: var(--plum); text-decoration: underline; }
+  .shopv .xplink a { display: inline-block; padding: 12px 0; min-height: 44px; box-sizing: border-box; }
+  .shopv .bline { background: #fff; border: 1.5px solid var(--plum); color: var(--plum); }
+  .shopv .bline:disabled { opacity: .45; }
+  .shopv details.fold > summary { flex-wrap: wrap; row-gap: 2px; }
+  .shopv details.fold > summary h3 { white-space: nowrap; }
+  .mchead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .mchead b { font-size: 15px; color: var(--ink); }
+  .mcsec { margin-top: 10px; }
+  .mcsec.mcsell { margin-top: 16px; }
+  .shopfoot { text-align: center; }
+  .shopfoot a { display: inline-block; padding: 12px 8px; min-height: 44px; box-sizing: border-box; font-size: 14px; }
   .town { font-size: 20px; letter-spacing: 2px; margin-top: 8px; min-height: 26px; word-break: break-all; }
   .lane { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
   .lane-name { flex: 0 0 72px; font-size: 13px; color: var(--plum); }
@@ -502,12 +515,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52';
+const APP_VERSION = '2.52.1';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.1', date: '2026-11-20', items: ['🛍️ 商店變短了：素材櫃和收購合成「素材與料理」，點一下就打開；兌換紀錄收在獎品下面。家具店改成商店最下面的一個小連結，也可以從『我的家』進去；挑戰任務在首頁的『今日のおつとめ』。'], guide: ['島幣和商店', '衛星小島'] },
   { v: '2.52', date: '2026-11-20', fam: [1, 2, 3, 4, 5, 6], guide: '無', items: ['🎈 島上的碼頭改名「飛船碼頭」，渡船換成飛船。點碼頭會問「今天想去哪裡？」，可以去智慧島、主島，還有開放拜訪的家人的島。', '🎈 家人自己的島：港口改叫「飛船碼頭」，去智慧島坐的是飛船。', '🪪 家人自己的島：島主夥伴、島民和地方的管理員，都可以換成自己上傳的圖片。', '📚 家人自己的島：開了書店。可以把書放上自己的書架，每個方向能分成幾條小巷；讀完一本書，島上會長出一個地標。', '📑 家人自己的島：家人之間可以寄書籤信，有三款樣式，可以夾一本書。', '💬 收到送的書或鼓勵卡，除了按表情，也可以回一句話；回的話在 App 裡只有你和送的人看得到。', '🎟️ 家人自己的島：可以發乘船券，邀請朋友來看自己的島；券有期限，也可以隨時收回。'] },
   { v: '2.51.8', date: '2026-11-20', guide: ['週末確認這週'], items: ['🗃️ 週日「確認這週」多了「這週碰到的科目」：這週有讀到、練到的科目會列出來，沒碰到的不會出現，也不打分。這張卡在 App 裡只有你自己看得到。'] },
   { v: '2.51.7.1', date: '2026-11-19', guide: ['經驗值怎麼算'], items: ['⚡ 快問快答練完一輪，經驗值從 +2 改成 +5，也不再和拍照單字共用每天 10 點經驗值的上限，兩邊各算各的。', '⭐ 11/17 到 11/19 練過的輪，已經照新的算法補上經驗值了。'] },
@@ -3676,9 +3690,9 @@ function isletCard() {
   const c = D.coinParts, have = islets(), n = have.length, cost = ISLET_COST[n];
   const list = have.length ? `<div class="row" style="gap:6px;margin-top:8px">${have.map(x => `<button class="ghost" style="padding:6px 10px" onclick="openIsle('${x.key}')">${ISLET_STYLES[x.style].ic} ${esc(isletName(x))}</button>`).join('')}</div>` : '';
   return `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🏝️ 經驗值換衛星小島</b>
-      <div class="muted">海上會多一座小島，用紅色太鼓橋接回本島。換了經驗值不會減少，島嶼等級和房子都不會變；只是用掉的經驗值不能再換島幣。</div>
+      <div class="muted">海上多一座小島，用太鼓橋接回本島。經驗值不會減少，但換小島用掉的經驗值，就不能再拿來換島幣。</div>
       <div style="margin-top:4px">${cost == null ? '六座小島都蓋好了！' : `第 ${n + 1} 座要 <b>${cost}</b> 點，現在可以換的經驗值有 <b>${c.avail}</b> 點`}</div></div>
-      ${cost == null ? '' : `<button ${c.avail >= cost ? '' : 'disabled'} onclick="draft={};tab='isleNew';render();window.scrollTo(0,0)">去挑</button>`}</div>${list}</div>`;
+      ${cost == null ? '' : `<button class="bline" ${c.avail >= cost ? '' : 'disabled'} onclick="draft={};tab='isleNew';render();window.scrollTo(0,0)">去挑</button>`}</div>${list}</div>`;
 }
 function viewIsleNew() {
   const c = D.coinParts, n = islets().length, cost = ISLET_COST[n], used = islets().map(x => x.slot);
@@ -8013,21 +8027,30 @@ async function submitExam() {
 }
 
 /* --- 商店 --- */
+// ===== SHOP_TIDY_v1 商店頁重整（爸爸 11/5 定案；美術第二版、文案 179）=====
+function shopDay(d) { const x = String(d || '').slice(0, 10); return x.slice(0, 4) === String(S.today).slice(0, 4) ? Number(x.slice(5, 7)) + '/' + Number(x.slice(8, 10)) : x.replace(/-/g, '/'); }   // 文案 179：寫 11/1，跨年加年份
+function shopMatCard() {   // 素材櫃＋收購合成一張；裡面照舊走 card('matShelf')／card('buyBack')，全域函式（家人版的字替換照樣有效）
+  const m = card('matShelf', matShelfCard()), b = card('buyBack', buyBackCard());
+  if (!m && !b) return '';
+  const buyLeft = Math.max(0, MAT_BUY_DAILY - D.shop.buyToday), sellLeft = Math.max(0, sellCap() - D.shop.soldToday);
+  const mats = m ? m.replace('<div class="card">', '<div class="mcsec">').replace(/<details class="fold"[^>]*>/, '<div>').replace('</details>', '</div>')
+    .replace(/<summary>[\s\S]*?<\/summary>/, `<div class="mchead"><b>🥕 買素材</b><span class="muted">今天還能買 ${buyLeft} 個</span></div>`) : '';
+  const sell = b ? b.replace('<div class="card">', '<div class="mcsec mcsell">').replace('<h3>💰 收購</h3>', `<div class="mchead"><b>💰 賣料理</b><span class="muted">今天還能賣 🪙 ${sellLeft}</span></div>`) : '';
+  const sum = [m ? '今天還能買 ' + buyLeft + ' 個' : '', b ? (m ? '賣' : '今天還能賣') + ' 🪙 ' + sellLeft : ''].filter(x => x).join('・');
+  const html = `<div class="card"><details class="fold" ${matOpen ? 'open' : ''} ontoggle="matOpen=this.open"><summary><h3>🧺 素材與料理</h3><span class="muted">${sum}</span></summary>${mats}${sell}</details></div>`;
+  return ownMode() ? '<div data-card="matShelf" style="display:contents">' + html + '</div>' : html;   // 家人島：外框也標成 matShelf（開關照 card() 裡面兩張）
+}
 function viewShop() {
   const shop = (D.cfg.shop || []).filter(x => x.name);
   const bought = (S.save.purchases || []).slice().reverse();
-  return `<div class="card"><h2>🛍️ 島嶼商店</h2><div class="muted">${famNumOk('coins') ? `你有 <b>${D.coins}</b> 枚島幣。` : ''}一般一週大約可以賺 10 到 15 枚，挑戰任務可以再多賺一些。商品可以在「更多 → 修改島嶼設定」新增。</div></div>
-    ${card('xpEx', xpExCard())}
+  return `<div class="shopv"><div class="card"><h2>🛍️ 島嶼商店</h2><div class="muted">${famNumOk('coins') ? `你有 <b>${D.coins}</b> 枚島幣。` : ''}島幣是讀書、賣料理慢慢存下來的，挑戰任務可以再多賺一些；不用急著一次用完。商品可以在「更多 → 修改島嶼設定」新增。</div></div>
+    <div class="xplink">${card('xpEx', xpExCard())}</div>
+    ${shopMatCard()}
+    <div class="card"><h3>🎁 兌換獎品</h3>${shop.length ? shop.map((x, i) => `<div class="item"><div class="name">${esc(x.name)}</div><span>🪙 ${x.price}</span>
+      <button class="bline" ${D.coins < x.price ? 'disabled' : ''} onclick="buyItem(${i})">兌換</button></div>`).join('') : '<div class="muted">商店還是空的。</div>'}
+      ${bought.length ? `<details class="fold" style="margin-top:8px"><summary><h3 style="font-size:15px">兌換紀錄</h3><span class="muted">${bought.length} 筆，最近一次 ${esc(shopDay(bought[0].date))}</span></summary>${bought.map(p => `<div class="item"><div class="name">${esc(p.name)}</div><span class="muted">${esc(shopDay(p.date))}・🪙${p.price}</span></div>`).join('')}</details>` : ''}</div>
     ${card('islet', isletCard())}
-    ${card('matShelf', matShelfCard())}
-    ${card('buyBack', buyBackCard())}
-    <div class="card"><div class="item" style="border:none"><div class="name"><b>🏠 家具店</b><div class="muted">幫你的家買家具，也可以送家具給島民布置他們的家</div></div>
-      <button onclick="openHouse('me')">去逛逛</button></div></div>
-    <div class="card"><div class="item" style="border:none"><div class="name"><b>⚔️ 挑戰任務</b><div class="muted">自己選難度，想練幾題都可以，答對賺 🪙 1～3 枚</div></div>
-      <button onclick="go('home');setTimeout(()=>{const e=document.getElementById('xqCard');if(e)e.scrollIntoView()},50)">去解題</button></div></div>
-    <div class="card">${shop.length ? shop.map((x, i) => `<div class="item"><div class="name">${esc(x.name)}</div><span>🪙 ${x.price}</span>
-      <button ${D.coins < x.price ? 'disabled' : ''} onclick="buyItem(${i})">兌換</button></div>`).join('') : '<div class="muted">商店還是空的。</div>'}</div>
-    ${bought.length ? `<div class="card"><h3>兌換紀錄</h3>${bought.map(p => `<div class="item"><div class="name">${esc(p.name)}</div><span class="muted">${esc(p.date)}・🪙${p.price}</span></div>`).join('')}</div>` : ''}`;
+    ${isFamily() || ownMode() ? '' : `<div class="shopfoot"><a href="#" onclick="openHouse('me');return false">🏠 想布置房子的話，家具店在這裡 ›</a></div>`}</div>`;
 }
 // v2.41 素材櫃（常見素材 🪙2、一天 5 個）與收購（料理；一天最多賣得 min(10, 當天讀書拿到的素材數)）。後端 Coins.gs 照同一套檢查
 const MAT_PRICE = 2, MAT_BUY_DAILY = 5, SELL_DAILY = 10;
@@ -8051,7 +8074,7 @@ function buyBackCard() {
     ${list.length && list.every(d => DISH_PRICE[d.id] > left) ? '<div class="muted" style="margin-top:6px">今天的收購額度不夠了，明天會恢復。</div>' : ''}
     ${list.length ? list.map(d => `<div class="item"><div class="name grow">${d.ic} ${d.n}<span class="muted"> ×${D.mats.left[d.id]}</span></div><span>🪙 ${DISH_PRICE[d.id]}</span>
       <button class="ghost" style="padding:6px 12px" ${DISH_PRICE[d.id] > left || shopBusy ? 'disabled' : ''} onclick="sellDishNow('${d.id}')">賣</button></div>`).join('')
-      : '<div class="muted" style="margin-top:6px">還沒有做好的料理，到島の屋台做一道吧。</div>'}</div>`;
+      : '<div class="muted" style="margin-top:6px">還沒有做好的料理。想做的話，可以到島の屋台。</div>'}</div>`;
 }
 async function buyMatNow(m) {
   if (shopBusy) return; shopBusy = true; render();
@@ -9281,8 +9304,8 @@ function viewGuide() {
     p('就像音遊重打同一首歌，你只跟上一次的自己比。') + p('五科都可以填錯幾題（選填），各科等級和錯幾題排在同一列。歷次試煉會算「總分」，照會考積分算，滿分 36。你在「誰看得到什麼」打開「大考成績」的家人，也看得到總分和錯幾題。') /* GUIDE_SYNC_v1 */)}
   ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：到商店最上面按「兌換」（點首頁的「🪙 島幣」也會到商店）。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚；照計畫完成一項 +25 經驗值，大約是 2.5 枚。挑戰任務答對另外直接給 1～3 枚。') +
     p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。') +
-    p('🧺 <b>素材櫃</b>：常見的素材一個 🪙 2，一天最多買 5 個。稀有素材（抹茶粉、蜂蜜、紅豆、糯米、螢石、柴魚）和智慧島的珍品不賣，要讀書才拿得到。') +
-    p('💰 <b>收購</b>：屋台做好的料理可以賣給商店，一般料理 🪙 3～5、珍珠奶茶和溫泉蛋 🪙 8。一天最多賣得 🪙 10，而且不超過當天讀書拿到的素材數。賣掉的料理不會影響島民的交情。') + p('🧮 我的島幣帳本：商店裡的「看我的島幣帳本」可以看這個月進來、出去多少，也可以訂一個存錢目標，算算每週要存幾枚。主島的交易所也打得開。') /* GUIDE_SYNC_v1 */)}
+    p('🥕 <b>買素材</b>（在商店的「🧺 素材與料理」裡，點一下打開）：常見的素材一個 🪙 2，一天最多買 5 個。稀有素材（抹茶粉、蜂蜜、紅豆、糯米、螢石、柴魚）和智慧島的珍品不賣，要讀書才拿得到。') +
+    p('💰 <b>賣料理</b>：屋台做好的料理可以賣給商店，一般料理 🪙 3～5、珍珠奶茶和溫泉蛋 🪙 8。一天最多賣得 🪙 10，而且不超過當天讀書拿到的素材數。賣掉的料理不會影響島民的交情。') + p('🧮 我的島幣帳本：商店裡的「看我的島幣帳本」可以看這個月進來、出去多少，也可以訂一個存錢目標，算算每週要存幾枚。主島的交易所也打得開。') /* GUIDE_SYNC_v1 */)}
   ${sec('🔥', '連續週數和休息卡', p('每週有確認或有紀錄，連續週數就 +1。每累積 6 週紀錄會得到 1 張 🛌 休息卡。') +
     p('哪一週真的沒空，休息卡會自動幫你守住連續週數，不用擔心一斷就歸零。'))}
   ${sec('💞', '跨科連結和好感度', p('發現兩科之間的關係時（例如數學的比例和理化的密度），在「確認這週」頁記下來。兩位島民的好感度會上升，可以在「更多」看到他們的關係。') +
@@ -9291,7 +9314,7 @@ function viewGuide() {
     p('好幾天沒去找他，他會說有點想你；回來找他就好。交情的等級只升不降。這週計畫沒排到的科目，島民會乖乖等你；會考前一個月開始，大家都只會替你加油。交情只寫等級，不算分數、也不排名次。交情越深，島民寫信和故事的語氣就越親近。') +
     p('島民之間也有交情：你同一天讀了兩科、寫了跨科連結、AI 發現跨科題，或故事裡兩位一起出場，他們就會越來越熟，3D 小島上的連線也會變粗。') +
     p('想看大家的交情，到「更多」翻開📔 絆の手帖：第一頁是五位島民，第二頁是智慧島的老師（上一講、寫心得會變熟，7 天沒去才變淡）和各地方的管理員，第三頁是島民之間的關係圖。手帖只寫關係和回憶，不寫分數。'))}
-  ${sec('🏝️', '衛星小島', p('在商店的兌換卡下面，可以用經驗值換一座衛星小島：挑一種樣子（沙洲小島、松樹岩島、漁港小島、茶園小島、甘蔗田小島）、一個方向，也可以幫它取名字。小島會出現在本島旁邊的海上，用紅色太鼓橋接回來，在 3D 小島上點小島或橋就能過去。') +
+  ${sec('🏝️', '衛星小島', p('在商店的「🏝️ 經驗值換衛星小島」卡，可以用經驗值換一座衛星小島：挑一種樣子（沙洲小島、松樹岩島、漁港小島、茶園小島、甘蔗田小島）、一個方向，也可以幫它取名字。小島會出現在本島旁邊的海上，用紅色太鼓橋接回來，在 3D 小島上點小島或橋就能過去。') +
     p('第一座 300 點，之後 500、800、1200、1600、2000 點，最多六座。換小島和換島幣用的是同一包「可換的經驗值」：換了之後經驗值總數和島嶼等級都不會變，房子也不會變小，只是用掉的那些點數不能再換島幣。') +
     p('每座小島可以請一位你自己設定的主人（名字、樣子、個性）。第一次去的時候，主人會先打招呼，之後也會寫話給你。') +
     p('每座小島的沙灘上有 4 格空地可以種樹（在植木屋種）。讀完的書長出的地標，本島一條街最多放 ' + MARK_PER_ST + ' 個；放滿以後，新的地標會照讀完的先後長到小島上，每座小島 ' + MARK_PER_ISLE + ' 個。') +
