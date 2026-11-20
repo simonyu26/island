@@ -16,7 +16,7 @@
   }
   function view() {
     const name = famVisitWho, r = cache[name];
-    if (!r) { load(name); return '<div class="loading">⛴️ 開往' + esc(name) + '的島…</div>'; }
+    if (!r) { load(name); return '<div class="loading">🎈 飛往' + esc(name) + '的島…</div>'; }   // AIRSHIP_WORDS_v1
     if (r.error) return `<div class="card" style="text-align:center"><div style="font-size:40px">🌫️</div><h3>${esc(r.error)}</h3></div>
       <div class="row"><button class="ghost grow" onclick="go('home')">${back()}</button></div>`;
     const s = r.snapshot || {}, g = s.guide || {}, dirs = s.dirs || [], res = s.residents || {}, diary = r.diary || [];

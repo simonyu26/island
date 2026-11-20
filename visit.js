@@ -32,6 +32,17 @@
   const code = (new URLSearchParams(location.search).get('c') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   let V = null;   // 後端給的 { snapshot, welcome, expires, by, stats }
   let snap = null;
+  let FAM = false; const FAM_IC = {};   // FAM_TICKET_v1：家人島的乘船券（FAM_IC：方向的圖示）
+  // 家人島的快照：五條街換成島主的方向（位置 0～4 對到國英數自社），沒有小巷、沒有房間、沒有點數
+  function famSetup() {
+    FAM = true;
+    const dirs = (snap.dirs || []).filter(x => SUBJECTS[x.slot]), keys = dirs.map(x => SUBJECTS[x.slot]);
+    dirs.forEach(x => { SUBJECT_NAME[SUBJECTS[x.slot]] = x.name; FAM_IC[SUBJECTS[x.slot]] = x.ic; });
+    SUBJECTS.splice(0, SUBJECTS.length, ...keys);
+    Object.keys(SUBS).forEach(k => delete SUBS[k]);
+    STAMPS.splice(0, STAMPS.length, ...keys.map(k => ({ key: k, name: SUBJECT_NAME[k] + '街' })), { key: 'home', name: (snap.home && snap.home.name) || '島主的家', ic: '🏡' });
+    snap.diary = V.diary || [];
+  }
 
   const local = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -94,20 +105,20 @@
     return j.result;
   }
 
-  function fail(msg) {
+  function fail(msg) {   // AIRSHIP_WORDS_v1：渡船 → 飛船（文案審查 64）；⛴️ → 🎈（工程顧問 10/30）
     app.innerHTML = `<div class="card" style="margin-top:40px;text-align:center"><div style="font-size:48px">🌫️</div>
-      <h2>今天渡船沒有開</h2><div class="muted">${esc(msg)}</div></div>`;
+      <h2>今天飛船沒有開</h2><div class="muted">${esc(msg)}</div></div>`;
   }
 
   // ---------- 碼頭：乘船券與歡迎詞 ----------
   function viewDock() {
     const g = guide(), p = prog();
-    app.innerHTML = `<div class="boat">⛴️</div>
+    app.innerHTML = `<div class="boat">🎈</div>
       <div class="ticket">
         <div class="head"><b>${esc(islandName())}</b><small>乘船券</small></div>
         <dl><dt>航線</dt><dd>本島碼頭 → ${esc(islandName())}</dd>
           <dt>有效至</dt><dd>${esc(short(V.expires))}</dd>
-          <dt>邀請人</dt><dd>${V.by === 'me' ? '島主' : esc(V.by) + '（島主已同意）'}</dd></dl>
+          <dt>邀請人</dt><dd>${V.by === 'me' || V.by === 'fam' ? '島主' : esc(V.by) + '（島主已同意）'}</dd></dl>
       </div>
       <div class="card"><div class="guide"><span class="who">${esc(g.emoji)}</span>
         <div class="grow"><b>${esc(g.name)}</b><div class="speech">${esc(V.welcome || '歡迎來到我的小島！')}</div></div></div>
@@ -128,15 +139,15 @@
         <div class="row"><b class="grow" style="color:var(--indigo);letter-spacing:2px">${esc(islandName())}</b>
           <span class="muted">Lv.${esc(snap.level || 1)}${snap.season ? '・' + esc(snap.season) : ''}</span></div></div>
       <div id="i3d"><span class="chip">👆 點一條街、或點島主的家</span><div class="loading">🏝️ 小島浮出海面中…</div></div>
-      <div class="card" id="info"><div class="muted">點小島上的街道，看看島民和他們的房子。房子越多，代表島主在那一科花的心力越多。</div></div>
+      <div class="card" id="info"><div class="muted">${FAM ? '點小島上的街道，看看住在那裡的島民。' : '點小島上的街道，看看島民和他們的房子。房子越多，代表島主在那一科花的心力越多。'}</div></div>
       ${stats ? `<div class="card"><h3>📋 島主的努力看板</h3><div class="board">
         <div><b>${esc(stats.streakWeeks || 0)}</b><span class="muted">連續有讀書的週數</span></div>
         <div><b>${esc(stats.weekDone || 0)}</b><span class="muted">這週完成的項目</span></div></div></div>` : ''}
       <div class="card" id="passport"></div>
-      <div class="card"><h3>🏘️ 去島民家作客</h3><div class="row" style="justify-content:space-around">
+      ${FAM ? '' : `<div class="card"><h3>🏘️ 去島民家作客</h3><div class="row" style="justify-content:space-around">
         <button class="ghost" style="padding:6px 8px;min-width:58px" data-room="me">🏡<br><small>島主</small></button>
         ${SUBJECTS.map(s => `<button class="ghost" style="padding:6px 8px;min-width:58px" data-room="${s}">${esc(resident(s).emoji)}<br><small>${esc(resident(s).name)}</small></button>`).join('')}
-      </div></div>
+      </div></div>`}
       <div class="muted" style="text-align:center">快照拍攝於 ${esc(short(snap.at))}・照片與資料由島主分享</div>`;
     app.querySelectorAll('[data-room]').forEach(b => b.onclick = () => openRoom(b.dataset.room));
     renderPassport();
@@ -163,6 +174,12 @@
   function showInfo(s) {
     stamp(s);
     const box = document.getElementById('info'); if (!box) return;
+    if (FAM) {   // 家人島：只有島民和方向，沒有小巷和房間
+      const r = resident(s);
+      box.innerHTML = `<div class="resident"><span class="avatar">${esc(r.emoji)}</span>
+        <div><b>${esc(r.name)}</b><div class="muted">${esc(SUBJECT_NAME[s])}街${r.personality ? '・' + esc(r.personality) : ''}</div></div></div>`;
+      return;
+    }
     const r = resident(s), pts = snap.pts || {};
     const lanes = SUBS[s] ? SUBS[s].concat(s === '自' ? ['自然'] : ['社會']) : [s];
     box.innerHTML = `<div class="resident"><span class="avatar">${esc(r.emoji)}</span>
@@ -192,6 +209,8 @@
         bond: snap.bond || {}, resident, roommate, imgOf: () => null, subjectName: SUBJECT_NAME,
         pointsUntil: () => snap.pts || {}, sig: JSON.stringify(snap.pts || {}), season: snap.season, walk: snap.walk || 0,
         home: snap.home || null, onHome: () => openRoom('me'), grade: () => null, onSelect: showInfo,
+        ...(FAM ? { subjIc: FAM_IC,   // 家人島：方向的圖示、沒用到的位置是空地、島主選的背景
+          layout: { lanes: false, light: false, off: ['國', '英', '數', '自', '社'].filter(k => SUBJECTS.indexOf(k) < 0), bg: snap.bg }, islets: snap.islets || [] } : {}),
         garden: snap.garden || null,  // v2.10：她種的植物（不含小木牌）
         book: snap.book || null,      // v2.17：獨立書店（訪客只看外觀）
         yatai: snap.yatai || null,    // v2.30.3：島の屋台（訪客只看外觀）
@@ -216,6 +235,12 @@
   // v2.50 分房間（ROOMS_v1）：'me' 客廳、'me:wa' 和室、'me:bed' 二樓臥室
   const ROOM_NAMES = { me: '🛋️ 客廳', 'me:wa': '🍵 和室', 'me:bed': '🛏️ 二樓臥室' };
   async function openRoom(who) {
+    if (FAM) {   // 家人島的快照沒有房間：島主的家看名字、歡迎詞和日めくり
+      stamp('home');
+      const box = document.getElementById('info'); if (!box) return;
+      box.innerHTML = `<div class="resident"><span class="avatar">🏡</span><div><b>${esc((snap.home && snap.home.name) || '島主的家')}</b><div class="muted">島主住的地方</div></div></div>${homeExtras()}`;
+      return box.scrollIntoView({ behavior: 'smooth' });
+    }
     const room = (snap.rooms || {})[who] || { wall: '#f6efe6', items: [] }, mine = who === 'me' || who.indexOf('me:') === 0;
     if (who === 'me') stamp('home');
     const title = mine ? (snap.home && snap.home.name) || '島主的家' : resident(who).name + '的家';
@@ -260,7 +285,7 @@
     g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = emoji(64); SUBJECTS.forEach((s, i) => drawEmoji(g, resident(s).emoji, 180 + i * 80, 450 + (i % 2) * 40));
     g.font = emoji(90); g.fillText('🏡', 340, 330);
-    g.font = emoji(70); g.fillText('⛴️', 520, 640);
+    g.font = emoji(70); g.fillText('🎈', 520, 640);
     // 右半：文字
     g.textAlign = 'left'; g.fillStyle = '#2f4a7a'; g.font = font(54, 'bold'); g.fillText(islandName(), 660, 140);
     g.fillStyle = '#3a2a33'; g.font = font(30);
@@ -289,6 +314,7 @@
     if (!code) return fail('連結裡沒有邀請碼，請跟島主要一個完整的連結。');
     try {
       V = await fetchVisit(); snap = V.snapshot || {};
+      if (V.by === 'fam' && snap.kind === 'fam') famSetup();   // FAM_TICKET_v1
       document.title = islandName() + '・登島參觀';
       viewDock();
     } catch (e) { fail(e.message || String(e)); }

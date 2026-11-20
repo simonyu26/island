@@ -59,6 +59,9 @@
   let labelLayer, teachers = [], rings = [], boat, signature = '', envSig = '';
   let dockLayer, boardTex, dockSig = null, dockGroups = [];
   const WY = -0.35;   // 海面高度
+  // 🎈 飛船：和 mainisle3d.js port() 的飛船同一份數字，改一邊要改另一邊（test_airship 會比對）。這裡整艘放大 AIRSHIP_S 倍，停在棧橋盡頭外側的海面上空
+  const AIRSHIP = { hull: [0.42, 0.2, 0.7, 0xffffff], balloon: [0.5, 6, 4, 0.9, 0.75, 1.6, 0.75, 0xe0782f], rope: [0.03, 0.4, 0.03, 0.15, 0.25, 0x9a6b43], win: [0.2, 0.08, 0.02, 0.02, 0.355] };   // win：吊艙前面一扇小窗（美術 10/30，晚上會亮）
+  const AIRSHIP_S = 1.1, AIR_Y = WY + 0.9;
 
   // ---------- 島：沙灘、草地、小丘、步道 ----------
   // 小屋位置：門朝向中間的廣場；碼頭在正前方（+z）
@@ -359,13 +362,13 @@
     [-0.75, 0.75].forEach(x => mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.6, 8), red, x, 0.8, 0, torii));
     mesh(box(1.9, 0.12, 0.16), std(0x2b2b2b), 0, 1.66, 0, torii); mesh(box(1.7, 0.1, 0.12), red, 0, 1.38, 0, torii);
     const sg = textPlane('智慧島', 0.5, 0.2, '#fbf4e4', '#5b3a1e', 20); sg.position.set(0, 1.52, 0.08); torii.add(sg);
-    // 渡船
-    boat = new THREE.Group(); boat.position.set(1.35, WY, 9.0); boat.rotation.y = 0.1; root.add(boat);
-    mesh(box(0.9, 0.3, 2.0), std(0xfdfaf2), 0, 0.12, 0, boat);
-    mesh(box(0.92, 0.06, 2.02), std(0xc0392b), 0, 0.2, 0, boat);
-    mesh(box(0.66, 0.4, 0.8), std(0xf1e6d2), 0, 0.47, -0.1, boat);
-    mesh(box(0.72, 0.06, 0.9), std(0x2f6fae), 0, 0.7, -0.1, boat);
-    const w = winMat(); [-0.34, 0.34].forEach(x => { const p = mesh(box(0.02, 0.16, 0.5), w, x, 0.5, -0.1, boat); p.castShadow = false; });
+    // 🎈 飛船（原本的渡船；主島浮空以後往來都坐飛船）：吊艙、氣囊、兩根吊繩、一扇小窗，五個網格
+    boat = new THREE.Group(); boat.position.set(-1.6, AIR_Y, 9.9); boat.rotation.y = -0.25; boat.scale.setScalar(AIRSHIP_S); root.add(boat);
+    const [hw, hh, hd, hc] = AIRSHIP.hull, [br, bw, bh, sx, sy, sz, by, bc] = AIRSHIP.balloon, [rw, rh, rd, rx, ry, rc] = AIRSHIP.rope;
+    mesh(box(hw, hh, hd), std(hc), 0, 0, 0, boat);   // 吊艙
+    mesh(new THREE.SphereGeometry(br, bw, bh), std(bc), 0, by, 0, boat).scale.set(sx, sy, sz);   // 氣囊
+    const rope = std(rc); [-rx, rx].forEach(x => mesh(box(rw, rh, rd), rope, x, ry, 0, boat));   // 吊繩
+    const [ww, wh, , wy, wz] = AIRSHIP.win, wm = winMat(); wm.side = THREE.DoubleSide; mesh(new THREE.PlaneGeometry(ww, wh), wm, 0, wy, wz + 0.01, boat).castShadow = false;   // 小窗：一片平面貼在吊艙前緣（工程顧問 10/30 省三角形，和主島同一種做法），和小屋的窗同一種發光材質，晚上會亮
     // 遠方的本島（燈塔）
     const far = new THREE.Group(); far.position.set(-16, WY, -24); root.add(far);
     const farM = std(0x6f8a7a);
@@ -388,7 +391,7 @@
     [-0.65, 0.65].forEach(x => [-0.45, 0.4].forEach(z => mesh(box(0.08, 0.85, 0.08), wood, x, 0.5, z, h)));
     const roof = mesh(new THREE.ConeGeometry(0.98, 0.5, 4), tile, 0, 1.17, -0.05, h); roof.rotation.y = Math.PI / 4; roof.scale.set(1.08, 1, 0.78);
     mesh(box(1.4, 0.06, 0.32), wood, 0, 0.16, 0.6, h);   // 緣側
-    const noren = textPlane('渡船', 0.56, 0.36, '#2f4f7a', '#ffffff', 30); noren.position.set(0, 0.7, 0.41); h.add(noren);
+    const noren = textPlane('飛船', 0.56, 0.36, '#2f4f7a', '#ffffff', 30); noren.position.set(0, 0.7, 0.41); h.add(noren);
     [-0.45, 0.45].forEach(x => mesh(box(0.22, 0.2, 0.02), winNew(), x, 0.66, 0.41, h).castShadow = false);   // 暖簾兩邊的窗，用新小屋那片發光窗的材質，晚上照規則亮起來
     mesh(box(0.6, 0.05, 0.05), wood, 0, 0.9, 0.42, h);
     const lg = std(0xfff1c9, { emissive: 0xffc861, emissiveIntensity: 0.2 }); glass.push(lg);
@@ -429,7 +432,7 @@
     while (dockLayer.children.length) dockLayer.remove(dockLayer.children[0]);
     if (!opts.keeper) return;
     const ry = faceDock(DOCK.house, 18), x = DOCK.house[0] + Math.sin(ry) * 0.9 - Math.cos(ry) * 0.95, z = DOCK.house[1] + Math.cos(ry) * 0.9 + Math.sin(ry) * 0.95;
-    const sp = avatarSprite(opts.keeper.emoji || '⛴️', '#2f4f7a', 0.8); sp.position.set(x, 0.62, z); sp.userData.dock = 'house'; dockLayer.add(sp);
+    const sp = avatarSprite(opts.keeper.emoji || '🧑‍✈️', '#2f4f7a', 0.8); sp.position.set(x, 0.62, z); sp.userData.dock = 'house'; dockLayer.add(sp);
   }
 
   // ---------- 天空、海、霧、雨 ----------
@@ -549,7 +552,7 @@
     for (let i = 0; i < a.length; i += 3) { const x = seaBase[i], z = seaBase[i + 2]; a[i + 1] = Math.sin(x * 0.35 + t * 1.1) * 0.08 + Math.cos(z * 0.3 + t * 0.8) * 0.08; }
     p.needsUpdate = true; sea.geometry.computeVertexNormals();
     foam.scale.setScalar(1 + Math.sin(t * 0.9) * 0.025); foam.material.opacity = 0.35 + Math.sin(t * 0.9) * 0.15;
-    if (boat) { boat.position.y = WY + Math.sin(t * 1.3) * 0.05; boat.rotation.z = Math.sin(t * 0.9) * 0.04; }
+    if (boat) { boat.position.y = AIR_Y + Math.sin(t * 1.3) * 0.08; boat.rotation.z = Math.sin(t * 0.9) * 0.03; }   // 飛船在空中慢慢浮沉（和主島同一個節奏）
     spin.forEach(s => { s.m.rotation.y += s.v * dt; });
     steam.forEach(s => { const u = (t * 0.25 + s.userData.ph) % 1; s.position.set(s.userData.x + Math.sin(u * 6 + s.userData.ph * 9) * 0.1, 0.3 + u * 1.3, s.userData.z); s.scale.setScalar(0.35 + u * 0.6); s.material.opacity = Math.sin(u * Math.PI) * 0.55; });
     mist.forEach(m => { const u = m.userData; u.a += u.v * dt; m.position.set(Math.cos(u.a) * u.r, u.y, Math.sin(u.a) * u.r); });

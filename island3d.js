@@ -37,7 +37,39 @@
   // 家人島（做法 B）：ctx.layout 決定靜態版面；沒傳就是她的島，和以前完全一樣
   const LY = () => (ctx && ctx.layout) || {};
   const BG = () => LY().bg === 'space' || LY().bg === 'sky' ? LY().bg : 'sea';   // 家人島的背景
-  const laneOf = s => LY().lanes === false ? null : LANES[s];
+  const famLanes = () => { const L = LY().lanes; return !!L && typeof L === 'object'; };   // FAM_LANES_v1：家人版小巷
+  const laneOf = s => LY().lanes === false ? null : famLanes() ? ((LY().lanes[s] || []).length >= 2 ? LY().lanes[s] : null) : LANES[s];
+  let laneTags = [], laneFar = null, laneLineSpec = [];   // 家人版小巷的名牌：拉遠時只顯示小巷名；laneLineSpec：這次要畫的分隔線
+  // 不隨距離縮放的名牌（sizeAttenuation 關掉）：userData.px 是螢幕上的高度（CSS 像素），視窗大小變了重算
+  function fitFlat(sp) { if (!camera || !container) return; const H = container.clientHeight || 1, k = 2 * Math.tan(camera.fov * Math.PI / 360) / H; sp.scale.set(sp.userData.px * sp.userData.ar * k, sp.userData.px * k, 1); }
+  function fitLaneTags() { laneTags.forEach(t => t.children.forEach(fitFlat)); }
+  // 名牌重疊淡化（共用，工程顧問 10/29）：list() 回傳要比的名牌（Sprite）；只在 controls change 後算、最多每 100ms 一次；
+  //   遠的和近的重疊（含 8px 間距）就淡到 0.4，透明度用補間；fpsguard 最低一級時全部回到 1、不再計算
+  function labelDeclutter(list) {
+    let dirty = true, last = -1e9, items = [], moving = false, wasLow = false; const v = new THREE.Vector3(), camP = new THREE.Vector3(), camQ = new THREE.Quaternion();
+    return {
+      mark() { dirty = true; },
+      tick(now, dt) {
+        if (!dirty && camera && (!camP.equals(camera.position) || !camQ.equals(camera.quaternion))) dirty = true;   // 鏡頭被程式移動（開場、拉近）也要重算
+        if (dirty) items = list(); if (!items.length) return;
+        const low = window.FpsGuard && FpsGuard.level() >= 2;
+        if ((dirty || (low && !wasLow)) && now - last >= 100) { dirty = false; last = now; wasLow = low; moving = true; camP.copy(camera.position); camQ.copy(camera.quaternion);
+          const W = container.clientWidth, H = container.clientHeight, t = Math.tan(camera.fov * Math.PI / 360), boxes = [];
+          items.map(sp => { sp.getWorldPosition(v); const d = v.clone().applyMatrix4(camera.matrixWorldInverse).z * -1; v.project(camera);
+            const ws = new THREE.Vector3(); sp.getWorldScale(ws); const hpx = sp.material.sizeAttenuation === false ? ws.y / t * H / 2 : ws.y / (Math.max(d, 0.1) * t) * H / 2;
+            return { sp, d, x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H, h: hpx, w: hpx * ws.x / ws.y }; })
+            .sort((a, b) => (b.sp.userData.dcKeep ? 1 : 0) - (a.sp.userData.dcKeep ? 1 : 0) || a.d - b.d).forEach(b => {   // dcKeep（島民名牌）先放、永遠不淡
+              const hit = !low && !b.sp.userData.dcKeep && boxes.some(o => Math.abs(o.x - b.x) * 2 < o.w + b.w + 16 && Math.abs(o.y - b.y) * 2 < o.h + b.h + 16);
+              b.sp.userData.fadeTo = hit ? 0.4 : 1; if (!hit) boxes.push(b); });
+        }
+        if (!moving) return; moving = false;
+        items.forEach(sp => { const to = sp.userData.fadeTo == null ? 1 : sp.userData.fadeTo, m = sp.material; if (m.opacity !== to) { m.opacity = Math.abs(m.opacity - to) < 0.02 ? to : m.opacity + (to - m.opacity) * (dt > 0 ? Math.min(1, dt * 8) : 1); moving = true; } });
+      }
+    };
+  }
+  const laneDeclutter = labelDeclutter(() => { if (!laneTags.length || !buildLayer) return []; const out = [];
+    buildLayer.children.forEach(m => { if (m.userData.laneTag) m.children.forEach(c => { if (c.visible) out.push(c); }); else if (m.userData.avatar === undefined && m.isGroup) m.children.forEach(c => { if (c.userData.declutter || (m.userData.subject && c.isSprite && c.material.map)) { c.userData.dcKeep = true; out.push(c); } }); });   // 島民名牌、頭像：不淡，小巷名牌讓它們
+    return out; });
   const isOff = s => (LY().off || []).indexOf(s) >= 0;
   // 天色與天氣
   let homeLayer, homeSig = '', walkLayer, walkSig = '';
@@ -52,7 +84,7 @@
   // 獨立書店（v2.17）：碼頭左前方的巷口小書店
   let bookLayer, bookSig = null;
   // 智慧島的渡船碼頭（v2.24）：島左前方的海邊
-  let ferryLayer, ferrySig = null, ferryBoat = null;
+  let ferryLayer, ferrySig = null, ferryBoat = null, ferryShadow = null;
   let yataiLayer, yataiSig = null;
   // 核心主島（家人島第二階段 2a）：遠海上的小剪影，只畫一次
   let mainIsle = null;
@@ -155,19 +187,23 @@
     const cv = document.createElement('canvas'), g = cv.getContext('2d');
     const font = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
     g.font = `700 44px ${font}`;
+    const subPx = opts.subPx || 32;
+    if (opts.maxW) { const fit = (t, f) => { g.font = f; if (g.measureText(t).width <= opts.maxW) return t; let x = t; while (x.length > 1 && g.measureText(x + '…').width > opts.maxW) x = x.slice(0, -1); return x + '…'; };
+      text = fit(text, `700 44px ${font}`); if (sub) sub = fit(sub, `500 ${subPx}px ${font}`); g.font = `700 44px ${font}`; }
     const w1 = g.measureText(text).width;
-    g.font = `500 32px ${font}`;
+    g.font = `500 ${subPx}px ${font}`;
     const w2 = sub ? g.measureText(sub).width : 0;
     const W = Math.ceil(Math.max(w1, w2) + 48), H = sub ? 120 : 76;
     cv.width = W; cv.height = H;
     g.fillStyle = opts.bg || 'rgba(255,255,255,0.92)'; roundRect(g, 2, 2, W - 4, H - 4, 22); g.fill();
     g.fillStyle = opts.color || '#741b47'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = `700 44px ${font}`; g.fillText(text, W / 2, sub ? 40 : H / 2);
-    if (sub) { g.font = `500 32px ${font}`; g.fillStyle = '#8a6a7a'; g.fillText(sub, W / 2, 88); }
+    if (sub) { g.font = `500 ${subPx}px ${font}`; g.fillStyle = '#8a6a7a'; g.fillText(sub, W / 2, 88); }
     const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4; if (CM) tex.encoding = THREE.sRGBEncoding;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, toneMapped: false }));
     const k = (opts.scale || 1) * 0.012;
     sp.scale.set(W * k, H * k, 1); sp.renderOrder = 10;
+    if (opts.px) { sp.material.sizeAttenuation = false; sp.userData.px = opts.px; sp.userData.ar = W / H; sp.renderOrder = 12; fitFlat(sp); }   // FAM_LANES_v1
     return sp;
   }
   function avatarSprite(emoji, imgSrc) {
@@ -281,7 +317,7 @@
       const plate = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.75, 0.3, 6), std(isOff(s) ? 0xd8d2c0 : PLATE[s]));
       plate.position.set(c.x, 0.2, c.z); if (!isOff(s)) plate.userData.subject = s; root.add(plate); plates[s] = plate;
       if (isOff(s)) return;   // 家人島還沒用到的區：只有一塊空地
-      if (laneOf(s)) {           // 三條小巷的分隔線
+      if (laneOf(s) && !famLanes()) {           // 三條小巷的分隔線
         for (let k = 0; k < 3; k++) {
           const a = -Math.PI / 2 + k * (Math.PI * 2 / 3) + Math.PI / 3;
           const line = new THREE.Mesh(bx(2.5, 0.04, 0.08), std(0xffffff));
@@ -598,13 +634,14 @@
     buildLayer.children.forEach(m => old.set(m.userData.key, m));
     const keep = new Set();
     const pts = pointsUntil(weekIdx);
-    const place = (subj, key, points, a0, a1, labelText) => {
-      const kinds = buildingsFor(points);
+    const place = (subj, key, points, a0, a1, labelText, kindsIn) => {
+      const kinds = kindsIn || buildingsFor(points);
       const pos = slots(districtPos(SUBJECTS.indexOf(subj)), a0, a1, kinds.length);
       kinds.forEach((kind, i) => {
         const k = `${key}:${i}:${kind}`; keep.add(k);
         if (old.has(k)) return;
         const b = makeBuilding(kind, subj);
+        if (kindsIn && typeof bake === 'function') bake(b);   // FAM_LANES_v1：家人小巷的房子（她的島不走這裡）
         b.position.copy(pos[i]); b.userData.key = k; b.userData.subject = subj;
         b.rotation.y = (i * 1.3) % (Math.PI * 2);
         buildLayer.add(b);
@@ -622,7 +659,29 @@
     };
     SUBJECTS.forEach(s => {
       if (isOff(s)) return;
-      if (laneOf(s)) {
+      if (laneOf(s) && famLanes()) {   // FAM_LANES_v1
+        const L = laneOf(s), n = L.length, c = districtPos(SUBJECTS.indexOf(s));
+        const span = Math.PI * 2 / n, base = n === 2 ? Math.PI / 2 : -Math.PI * 5 / 6, gap = n === 2 ? 0.35 : 0.12;
+        // 整個方向的點數決定蓋幾棟、多大，再照每條小巷的點數分下去：大的先分給還差最多的那條
+        const SIZE = { castle: 80, tower: 20, community: 5, house: 1 }, rem = L.map(key => Math.floor((pts[key] || 0) / 2)), lists = L.map(() => []);
+        buildingsFor(L.reduce((a, key) => a + (pts[key] || 0), 0)).forEach(kd => { let b = 0; rem.forEach((r, i) => { if (r > rem[b]) b = i; }); lists[b].push(kd); rem[b] -= SIZE[kd]; });
+        L.forEach((key, i) => { if (!lists[i].length && (pts[key] || 0) >= 2) lists[i].push('house'); });   // 點數少的小巷也至少有一間小屋，不會空著
+        laneLineSpec.push({ s, n, c, base, span });   // 分隔線：所有方向的合成一個網格，畫在島民頭像之前（工程顧問 10/30：少畫幾次）
+        L.forEach((key, k) => {
+          const a0 = base + k * span, a1 = a0 + span;
+          place(s, key, 0, a0 + gap, a1 - gap, null, lists[k]);
+          const info = ctx.laneInfo ? ctx.laneInfo(key) : { name: key, mate: '' };
+          const tk = `ft:${key}:${n}:${k}:${info.name}:${info.mate || ''}`; keep.add(tk);
+          if (!old.has(tk)) {
+            const mid = (a0 + a1) / 2, grp = new THREE.Group();   // 三條同一規則：扇區外緣上方；疊到島民名牌時小巷名牌淡掉（美術複審 10/30）
+            const full = labelSprite(info.name, info.mate || null, { subPx: 40, maxW: 352, px: info.mate ? 34 : 22 });
+            const brief = labelSprite(info.name, null, { maxW: 352, px: 22 });
+            full.userData.laneFull = true; brief.userData.laneBrief = true; full.renderOrder = brief.renderOrder = 9; grp.add(full, brief);
+            grp.position.set(c.x + Math.cos(mid) * 3.45, 0.9, c.z + Math.sin(mid) * 3.45);
+            grp.userData.key = tk; grp.userData.subject = s; grp.userData.laneTag = true; buildLayer.add(grp);
+          }
+        });
+      } else if (laneOf(s)) {
         laneOf(s).forEach((sub, k) => {
           const a0 = -Math.PI / 2 + k * (Math.PI * 2 / 3) - Math.PI / 3, a1 = a0 + Math.PI * 2 / 3;
           const mate = ctx.roommate ? ctx.roommate(sub) : null;
@@ -642,6 +701,19 @@
         place(s, s, pts[s] || 0, 0, Math.PI * 2, null);
       }
     });
+    if (laneLineSpec.length) {   // FAM_LANES_v1：所有方向的小巷分隔線合成一個網格
+      const lk = 'fl:' + laneLineSpec.map(o => o.s + o.n).join(','); keep.add(lk);
+      if (!old.has(lk)) {
+        const pos = [], nor = [], m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), per = {};
+        laneLineSpec.forEach(({ s, n, c, base, span }) => { per[s] = n;
+          for (let k = 0; k < n; k++) { const a = base + k * span, g = new THREE.BoxGeometry(2.5, 0.04, 0.08).toNonIndexed();
+            m4.compose(new THREE.Vector3(c.x + Math.cos(a) * 2.25, 0.37, c.z + Math.sin(a) * 2.25), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -a), one); g.applyMatrix4(m4);
+            pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); g.dispose(); } });
+        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+        const line = new THREE.Mesh(geo, std(0xffffff)); line.userData.key = lk; line.userData.laneLines = per; buildLayer.add(line);
+      }
+      laneLineSpec = [];
+    }
     // 島民頭像與名牌
     SUBJECTS.forEach(s => {
       if (isOff(s)) return;
@@ -651,11 +723,12 @@
       const av = avatarSprite(r.emoji, ctx.imgOf(s));
       av.position.copy(anchors[s]); av.userData.key = k; av.userData.subject = s; av.userData.avatar = true;
       const lb = labelSprite(r.name, `${ctx.subjIc && ctx.subjIc[s] ? ctx.subjIc[s] + ' ' : ''}${ctx.subjectName[s]}街${gr ? '・' + gr : ''}`, { scale: 1.15 });
-      lb.position.set(anchors[s].x, anchors[s].y + 1.8, anchors[s].z);
+      lb.position.set(anchors[s].x, anchors[s].y + 1.8, anchors[s].z); lb.userData.declutter = 1;
       const grp = new THREE.Group(); grp.add(av, lb); grp.userData.key = k; grp.userData.subject = s;
       buildLayer.add(grp);
     });
     buildLayer.children.slice().forEach(m => { if (!keep.has(m.userData.key)) { buildLayer.remove(m); drop(m); } });
+    laneTags = buildLayer.children.filter(m => m.userData.laneTag); laneFar = null; fitLaneTags(); laneDeclutter.mark();   // FAM_LANES_v1
     buildLinks();
     buildHome();
     buildWalk();
@@ -846,7 +919,7 @@
     if (sig === ferrySig) return;
     ferrySig = sig;
     clearLayer(ferryLayer);
-    ferryBoat = null;
+    ferryBoat = ferryShadow = null;
     if (!F) return;
     const pier = new THREE.Group(); pier.userData.ferry = true;
     const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m.isMaterial ? m : std(m)); o.position.set(x, y, z); pier.add(o); return o; };
@@ -858,22 +931,27 @@
     [-0.62, 0.62].forEach(x => add(new THREE.CylinderGeometry(0.05, 0.06, 1.1, 8), red, x, 0.7, 0.5));
     add(bx(1.6, 0.09, 0.12), red, 0, 1.28, 0.5); add(bx(1.4, 0.07, 0.1), red, 0, 1.1, 0.5);
     add(bx(0.06, 0.6, 0.06), post, 0.95, 0.45, 0.3); add(bx(0.5, 0.3, 0.04), 0xfbf4e4, 0.95, 0.7, 0.32);
-    // 小渡船：白船身、紅腰帶、藍色船艙頂
+    // AIRSHIP_v1 飛船（11/20，美術 10/29、10/30）：數字照主島 mainisle3d.js port()：白吊艙、橘氣囊、兩根吊繩；吊艙一扇小窗沿用船艙的發光玻璃（晚上亮）
     const boat = new THREE.Group(); boat.userData.ferry = true;
-    const hull = new THREE.Mesh(bx(0.9, 0.3, 1.9), std(0xfdfaf2)); hull.position.y = 0.05; boat.add(hull);
-    const belt = new THREE.Mesh(bx(0.92, 0.07, 1.92), red); belt.position.y = 0.12; boat.add(belt);
-    const cab = new THREE.Mesh(bx(0.6, 0.35, 0.7), std(0xf1e6d2)); cab.position.set(0, 0.38, -0.15); boat.add(cab);
+    const sb = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(bx(w, h, d), m.isMaterial ? m : std(m)); o.position.set(x, y, z); boat.add(o); return o; };
+    sb(0.42, 0.2, 0.7, 0xffffff, 0, 0, 0);   // 吊艙
+    const bal = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 4), std(0xe0782f)); bal.scale.set(0.9, 0.75, 1.6); bal.position.y = 0.75; boat.add(bal);   // 氣囊
+    [-0.15, 0.15].forEach(x => sb(0.03, 0.4, 0.03, 0x9a6b43, x, 0.25, 0));   // 吊繩
     const glass = std(0xfff1c2, { emissive: 0xffc46b, emissiveIntensity: 0.15 });
-    const win = new THREE.Mesh(bx(0.62, 0.12, 0.5), glass); win.position.set(0, 0.42, -0.15); boat.add(win);
-    const top = new THREE.Mesh(bx(0.7, 0.06, 0.8), std(0x2f6fae)); top.position.set(0, 0.59, -0.15); boat.add(top);
-    boat.position.set(1.05, -0.45, -3.4); pier.add(boat); ferryBoat = boat;
+    glass.side = THREE.DoubleSide; const win = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.08), glass); win.position.set(0, 0.02, 0.355 + 0.01); win.castShadow = false; boat.add(win);   // 小窗 [0.2, 0.08, y 0.02, z 0.355]：和智慧島 AIRSHIP.win、主島同一組；一片平面貼在吊艙前緣（+2 三角形，工程顧問 10/30）
+    sb(0.02, 0.7, 0.02, 0x9a6b43, 0.18, -0.45, 0.3);   // 繫在棧橋盡頭的繩子
+    boat.scale.setScalar(1.1); boat.position.set(-0.6, 1.1, -4.6); pier.add(boat); ferryBoat = boat;   // 棧橋左外側（和智慧島碼頭同一邊，美術 10/30）
+    // 海上背景：水面一個不透明、比海略深的橢圓影子，看得出飛船浮著（顏色、高度每幀跟著海）
+    const shade = std(0x5a9cc2, { roughness: 0.32, metalness: 0.05 });
+    ferryShadow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 16), shade); ferryShadow.rotation.x = -Math.PI / 2; ferryShadow.scale.set(1, 1.6, 1);
+    ferryShadow.position.set(-0.6, -0.55, -4.6); ferryShadow.castShadow = ferryShadow.receiveShadow = false; pier.add(ferryShadow);
     pier.position.set(FERRY.x, 0, FERRY.z);
     pier.rotation.y = -FERRY.a - Math.PI / 2;   // -z 朝外海
     pier.userData.glass = glass;
-    bake(boat, [glass]); bake(pier, [boat]);   // MERGE_v1
+    bake(boat, [glass]); bake(pier, [boat, ferryShadow]);   // MERGE_v1；飛船的影子跟著海變色，不合
     ferryLayer.add(pier);
-    const lb = labelSprite(F.label || '⛴️ 智慧島渡船', F.sub != null ? F.sub : F.open ? '今日開航' : '今天的課上完了', { scale: 0.75, color: '#3a2a33' });
-    lb.position.set(FERRY.x, 2.2, FERRY.z); lb.userData.ferry = true; ferryLayer.add(lb);
+    const lb = labelSprite(F.label || '🎈 飛船碼頭', F.sub != null ? F.sub : F.open ? '今日開航' : '今天的課上完了', { scale: 0.75, color: '#3a2a33' });
+    lb.position.set(FERRY.x, 2.8, FERRY.z); lb.userData.ferry = true; ferryLayer.add(lb);   // AIRSHIP_v1：名牌留在岸邊（預設鏡頭看得到，美術 10/30），2.2 → 2.8，近看時不被氣囊擋住
     // 遠方霧裡的智慧島：小山丘、松樹、四間小屋的屋頂
     const far = new THREE.Group(); far.userData.ferry = true;
     const fa = (geo, c, x, y, z) => { const o = new THREE.Mesh(geo, std(c)); o.position.set(x, y, z); far.add(o); return o; };
@@ -1576,6 +1654,32 @@
         cyl(0.45, 0.45, 0.015, 0x6fb4d8, -0.3, 0.005, 0.45, 12);
         break;
       }
+      // ---- 智慧島三位新老師的書（NEWMARKS_v1，11/20）----
+      case 'yirong': {   // 怡容的老教室：紅磚牆上掛著一排泛黃的老照片
+        box(0.9, 0.62, 0.1, 0xa8553e, 0, 0.31, -0.1); box(0.96, 0.05, 0.16, 0x7a3a2a, 0, 0.64, -0.1);
+        [[-0.3, 0.42, 0xd9c6a2], [-0.08, 0.46, 0xc9b48e], [0.16, 0.4, 0xe2d3b5], [0.34, 0.47, 0xbfae92], [0.05, 0.22, 0xd3c09c]].forEach(([x, y, c]) => {
+          const tilt = x === -0.08 ? 0.07 : x === 0.34 ? -0.06 : 0;   // 美術 10/30：一兩張歪一點，像手掛的
+          box(0.17, 0.15, 0.015, DARK, x, y, -0.04).rotation.z = tilt; box(0.13, 0.11, 0.01, c, x, y, -0.03).rotation.z = tilt; });
+        box(0.44, 0.04, 0.14, WOOD, 0, 0.16, 0.25); [-0.17, 0.17].forEach(x => box(0.03, 0.14, 0.12, 0x4a4a4a, x, 0.07, 0.25));
+        break;
+      }
+      case 'mi': {   // 瞇的暗房：稻田旁邊一面白牆，牆上直書三行詩（由右往左）
+        box(0.8, 0.5, 0.08, WHITE, -0.05, 0.25, -0.25); box(0.84, 0.03, 0.1, 0x6d6a64, -0.05, 0.515, -0.25);
+        [[0.14, 0.32], [0.04, 0.24], [-0.06, 0.28]].forEach(([x, h]) => box(0.025, h, 0.01, 0x3a3a3a, x, 0.44 - h / 2, -0.205));   // 美術 10/30：直書、由右往左
+        box(0.9, 0.04, 0.5, 0x6fb4d8, 0, 0.02, 0.2);   // 水田：島上的海水色
+        const rice = new THREE.ConeGeometry(0.05, 0.16, 3, 1, true), tip = new THREE.TetrahedronGeometry(0.024), GR = std(0x9bb062), YE = std(0xf8b500);
+        for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { const x = -0.3 + c * 0.2, z = 0.05 + r * 0.15;   // 3 排 × 4 叢，尖端一點山吹色
+          add(rice, GR, x, 0.12, z); add(tip, YE, x, 0.205, z); }   // 一叢 6＋穗 4 個三角形，整座 ≤200
+        break;
+      }
+      case 'guo': {   // 郭哥的物理治療所：海邊沙灘上的單槓，掛著一條毛巾
+        box(0.9, 0.03, 0.6, 0xe8d7a8, 0, 0.015, 0);   // 沙地
+        [-0.3, 0.3].forEach(x => box(0.05, 0.7, 0.05, 0x5e7f8f, x, 0.36, 0));
+        cyl(0.018, 0.018, 0.64, 0xc9cfd2, 0, 0.68, 0, 6).rotation.z = Math.PI / 2;
+        box(0.12, 0.22, 0.01, 0xf2a65a, 0.12, 0.56, 0.02);   // 毛巾
+        box(0.13, 0.2, 0.08, 0x4f8a4a, -0.42, 0.11, 0.18); box(0.1, 0.05, 0.03, 0x3e6f3a, -0.42, 0.07, 0.23);   // 美術 10/30：只留背包，約柱子三分之一高，前面一片翻蓋
+        break;
+      }
       default: { cyl(0.04, 0.05, 0.6, WOOD, 0, 0.3, 0, 5); box(0.4, 0.25, 0.03, 0xe9dcc4, 0, 0.6, 0); }   // 沒有專屬模型的書：小木牌
     }
     g.traverse(o => { if (o.isMesh) o.userData.markPart = true; });
@@ -1822,6 +1926,8 @@
     const v = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     const ray = new THREE.Raycaster(); ray.setFromCamera(v, camera);
     const hits = ray.intersectObjects(root.children, true);
+    const tagAt = hits.findIndex(h => h.object.visible && h.object.parent && h.object.parent.userData.laneTag);   // FAM_LANES_v1
+    if (tagAt > 0) hits.unshift(Object.assign({}, hits.splice(tagAt, 1)[0], { distance: 0 }));
     if (hits.length && ctx.onMainIsle) { let o = hits[0].object; while (o && !o.userData.mainIsle) o = o.parent; if (o) { ctx.onMainIsle(); return; } }
     const homeHit = hits.find(h => { let o = h.object; while (o && !o.userData.home && !o.userData.subject) o = o.parent; return o && o.userData.home; });
     const hit = hits.find(h => {
@@ -1889,7 +1995,7 @@
   function resize() {
     if (!container) return;
     const w = container.clientWidth, h = container.clientHeight;
-    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); fitLaneTags(); laneDeclutter.mark();
     if (!framed && w && h) {      // 直式手機畫面要拉遠一點，整座島才放得下
       framed = true;
       const d = Math.min(62, 31 * Math.pow(Math.max(1, h / w), 0.9) * (ctx.islets && ctx.islets.length ? 1.32 : 1));   // 有衛星小島時再拉遠一點
@@ -1905,7 +2011,8 @@
     animateSea(now);
     if (HQ && shadowOn && (shadowDirty || popping.length || now - lastShadow > 1)) { if (shadowDirty) shadowize(); renderer.shadowMap.needsUpdate = true; lastShadow = now; shadowDirty = false; }
     spinners.forEach(sp => { sp.m.rotation[sp.axis] += sp.v * dt; });
-    if (ferryBoat) { ferryBoat.position.y = -0.45 + Math.sin(now * 1.3) * 0.05; ferryBoat.rotation.z = Math.sin(now * 0.9) * 0.03; }
+    if (ferryBoat) { ferryBoat.position.y = 1.1 + Math.sin(now * 1.3) * 0.05; ferryBoat.rotation.z = Math.sin(now * 0.9) * 0.02; }   // AIRSHIP_v1：飛船輕輕上下晃
+    if (ferryShadow) { ferryShadow.visible = !!(water && water.visible); if (ferryShadow.visible) { ferryShadow.position.y = waterY + 0.13; ferryShadow.material.color.copy(water.material.color).multiplyScalar(0.82); } }
     popping = popping.filter(p => {
       p.t += realDt / 0.45;
       const t = Math.min(p.t, 1);
@@ -1914,6 +2021,9 @@
       return t < 1;
     });
     controls.update();
+    if (laneTags.length) { const far = camera.position.length() > 42;   // FAM_LANES_v1：拉遠時只顯示小巷名
+      if (far !== laneFar) { laneFar = far; laneTags.forEach(t => t.children.forEach(c => { c.visible = c.userData.laneFull ? !far : far; })); laneDeclutter.mark(); }
+      laneDeclutter.tick(performance.now(), realDt); }
     renderer.render(scene, camera);
     if (guard) guard.frame();
     requestAnimationFrame(loop);
@@ -1935,6 +2045,7 @@
       controls.enableDamping = true; controls.enablePan = false;
       controls.minDistance = 12; controls.maxDistance = 50; controls.maxPolarAngle = 1.25;
       controls.autoRotate = true; controls.autoRotateSpeed = 0.5;
+      controls.addEventListener('change', () => laneDeclutter.mark());   // FAM_LANES_v1
       renderer.domElement.addEventListener('pointerdown', onDown);
       renderer.domElement.addEventListener('pointerup', onUp);
       window.addEventListener('resize', resize);

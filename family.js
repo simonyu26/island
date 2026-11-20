@@ -33,6 +33,7 @@
   const OWN_CARDS = ['diaryShare', 'kairan', 'timeline', 'homeMate', 'moveArt', 'habit', 'move', 'islet', 'xpEx', 'water', 'medit', 'diary', 'news', 'version'];   // water、diary：2b-1   // medit：冥想計時（MEDIT_v1）   // news、version：版本說明的兩張卡（FAM_NEWSCARDS_v1）
   function apply() {
     b1Open();   // B1
+    shopOpen();   // FAM_SHOP_v1
     wordsOpen();   // 單字出題
     b2Open();   // FAM_B2_v1 挑戰和故事
     langOpen();   // FAM_LANG_A 語言先行
@@ -42,6 +43,7 @@
     all.forEach(d => { GROUP[d.name] = SLOT[d.slot]; });
     let touched = false;
     (S.allItems || []).concat(S.items).forEach(it => { if (RAW[it.subject] != null) { const d = all.find(x => x.slot === RAW[it.subject]); if (d) { it.subject = d.name; touched = true; } } });
+    if (shopOn()) touched = laneApply(all) || touched;   // FAM_SHOP_v1：分了小巷的方向，項目的科目換成「方向・小巷」
     if (touched) D = derive(S);
     SLOT.forEach((s, i) => { const d = live.find(x => x.slot === i); SUBJECT_NAME[s] = d ? d.name : '空地'; SUBJ_IC[s] = d ? d.ic : '🌾'; });
     if (live.length) SUBJECTS.splice(0, SUBJECTS.length, ...SLOT.filter((s, i) => live.some(d => d.slot === i)));
@@ -61,7 +63,7 @@
   window.wisdomOn = () => !!(S && S.wisdomOk);
   WISDOM_RULE = '每天最多上兩講，同一位老師每週一講。上過的課可以回小屋回看。';   // 一天最多兩講（爸爸 11/2）、一週一講照她的 wisdomTodayDone、wisdomWeekDone（爸爸 10/28）
   WISDOM_SHELF = '';   // 家人島沒有書店，上過的書不擺書架
-  PLACES.wisdom.lead = '去智慧島的渡船由你請一位管理員來開：取名字、選樣子、寫個性。';   // FAM_TERMS197_v1：地方的看守角色一律叫管理員（文案審查 197）
+  PLACES.wisdom.lead = '去智慧島的飛船由你請一位管理員來開：取名字、選樣子、寫個性。';   // AIRSHIP_WORDS_v1   // FAM_TERMS197_v1：地方的看守角色一律叫管理員（文案審查 197）
   PLACES.wisdom.about = ['從這裡開船去智慧島，四位老師的課照順序上，一天最多上兩講，同一位老師每週一講', '每一講最後寫一句交給老師，老師會回你一句', '上完一講，老師會送一樣珍品，可以拿去屋台做料理', '一本書蓋滿 13 個章，老師會送一件畢業禮物到你島上的家'];
   const AI_OK = '你在智慧島寫給老師的那一句，會交給 AI，讓老師回你一句。這個 AI 用的是 Google Gemini 的付費版，你寫的字不會被拿去訓練 AI。你寫的和老師的回話，在 App 裡只有你自己看得到，其他家人都看不到；資料存在 App 管理員的 Google 試算表裡，管理員答應過不會去讀。';   // 文案審查 25
   const ensureDaily0 = window.ensureDaily;   // FAM_COMMON2_v1
@@ -100,13 +102,15 @@
       const live = liveDirs().map(d => SLOT[d.slot]);
       Island3D.mount(el, {
         S, bond: D.bond, resident, roommate, imgOf, subjectName: SUBJECT_NAME, subjIc: SUBJ_IC,
-        pointsUntil: i => { const p = pointsUntil(i), o = {}; Object.keys(p).forEach(k => { const g = GROUP[k] || k; o[g] = (o[g] || 0) + p[k]; }); return o; },
-        sig: JSON.stringify(D.weekPts), season: solarTerm(S.today), walk: D.exDays.length,
+        pointsUntil: i => { const p = pointsUntil(i), o = {}; Object.keys(p).forEach(k => { const g = GROUP[k] || k; o[g] = (o[g] || 0) + p[k]; if (LANE_INFO[k]) o[k] = (o[k] || 0) + p[k]; }); return o; },   // FAM_SHOP_v1：小巷的點數另外留一份
+        sig: JSON.stringify(D.weekPts) + (b1On() ? JSON.stringify(S.save.imgv || {}) : '') + (shopOn() ? JSON.stringify(LANE_INFO) : ''), season: solarTerm(S.today), walk: D.exDays.length,
         home: homeOf() && Object.assign({ tier: houseTier().key, roof: homeOf().roof, wall: homeOf().wall, name: homeOf().name, flowers: shownFurniture().includes('flower') }, typeof home3Ctx === 'function' ? home3Ctx(true) : {}),
         onHome: () => openHouse('me'),
-        layout: { lanes: false, light: b1On(), off: SLOT.filter(s => live.indexOf(s) < 0), bg: D.cfg && D.cfg.bg },   // 島的背景：海上／宇宙／天空
-        light: b1On() ? { name: lightTitle() } : null, ferry: { open: true, label: '⛴️ 港口', sub: '去別的島', far: false }, onFerry: openPort, yatai: { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null }, onYatai: () => openYatai(), book: null, marks: b1On() ? landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })) : [],
-        ...(b1On() ? { onLight: () => go('light'), onMark: famMark, hall: (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()), onHall: () => openHall() } : {}),   // B1   // 港口（10/27）；屋台（10/28，開島就有）
+        laneInfo: k => LANE_INFO[k] || { name: k, mate: '' },
+        layout: { lanes: shopOn() ? laneLayout() : false, light: b1On(), off: SLOT.filter(s => live.indexOf(s) < 0), bg: D.cfg && D.cfg.bg },   // 島的背景：海上／宇宙／天空
+        light: b1On() ? { name: lightTitle() } : null, ferry: { open: true, label: '🎈 飛船碼頭', sub: '去別的島', far: false }, onFerry: openPort, yatai: { name: '島の屋台', sub: DISHES.some(canCook) ? '今天可以做料理' : null }, onYatai: () => openYatai(), book: null, marks: b1On() ? landmarkList().map(m => ({ id: m.id, model: m.model, s: m.s, at: m.at })) : [],
+        ...(b1On() ? { onLight: () => go('light'), onMark: id => window.famMark(id), hall: (w => ({ name: '音樂廳', lit: w.min > 0, sub: moveActive() && moveActive().k === 'art' ? '計時中 🎵' : null }))(hallWeek()), onHall: () => openHall() } : {}),   // B1   // 港口（10/27）；屋台（10/28，開島就有）
+        ...(shopOn() ? { book: { name: '書店', sub: null }, onBook: () => openFamBooks() } : {}),   // FAM_SHOP_v1
         garden: gardenCtx(), onGarden: openGarden, onPlant: id => openGarden(id),   // 2b-1：種樹、衛星小島
         islets: islets().map(x => { const k = keeperOf(x.key); return { key: x.key, slot: x.slot, style: x.style, name: isletName(x), ic: ISLET_STYLES[x.style].ic, keeper: k ? k.emoji + ' ' + k.name : '' }; }), onIslet: openIsle,
         grade: () => null, mainIsle: mainOpen() ? { a: -0.5 } : null, onMainIsle: () => go('mainisle'), onSelect: showInfo3D
@@ -141,7 +145,7 @@
         <div><b>${esc(r.name)}</b><div class="muted">${esc(d.ic)} ${esc(d.name)}${r.personality ? '・' + esc(r.personality) : ''}</div></div></div>
       <div class="muted" style="margin-top:8px">${d.items.filter(it => !it.off).map(it => esc(it.name)).join('、')}</div>
       <div class="row" style="justify-content:space-around;margin-top:8px">${recent}</div>
-      <div class="muted" style="text-align:center;font-size:12px">最近四週完成的次數</div>${famWordLink(d)}${b1On() ? famMarkList(s) : ''}`;
+      <div class="muted" style="text-align:center;font-size:12px">最近四週完成的次數</div>${famWordLink(d)}${shopOn() ? laneLines(d) : ''}${b1On() ? famMarkList(s) : ''}`;
   };
 
   // ---------- 更多 ----------
@@ -156,10 +160,11 @@
         : '<div class="muted">排好一週的計畫、週末按「確認這週」後，這裡會開始記錄每週達成率。</div>'}</div>
     <div class="card"><h3>📊 紀錄</h3><div>有紀錄的週數：${D.recordedWeeks}</div></div>
     <div class="card"><div class="row"><button class="ghost" onclick="go('guide')">❓ 玩法說明</button>
-      <button class="ghost" onclick="famOwnSwitch(false)">⛴️ ${esc(herGo())}</button></div>
+      <button class="ghost" onclick="famOwnSwitch(false)">🎈 ${esc(herGo())}</button></div>
       <div class="muted" style="margin-top:8px">版本 v${APP_VERSION}・家人島第一版</div></div>
     ${privacy()}
     ${visitCard()}
+    ${ticketCard()}
     ${commonCard()}
     ${BETA3D ? `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🖥️ 3D 高畫質</b><div class="muted">開著會有影子、比較細的海浪；手機變慢或發燙就關掉。</div></div>
       <button class="ghost" onclick="toggleHQ()">${hqOn() ? '✅ 開著' : '⬜ 關著'}</button></div></div>` : ''}`;
@@ -228,7 +233,8 @@
     const dirs = ((isle() && isle().dirs) || []).filter(d => !d.off).map(d => {
       const r = (cfg.residents || {})[SLOT[d.slot]] || {};
       return { slot: d.slot, name: d.name, ic: d.ic, who: { name: r.name || '', emoji: r.emoji || '🙂', personality: r.personality || '' },
-        items: d.items.map(it => ({ row: it.row, name: it.name, off: it.off ? 1 : 0 })) };
+        items: d.items.map(it => Object.assign({ row: it.row, name: it.name, off: it.off ? 1 : 0 }, it.lane != null ? { lane: it.lane } : {})),
+        lanes: (d.lanes || []).map(l => ({ name: l.name, who: Object.assign({ name: '', emoji: '🙂', personality: '' }, l.who || {}) })) };   // FAM_SHOP_v1
     });
     draft.fam = { cfg, dirs, consent: !!(isle() && isle().consent), first: !isle() };
     if (!cfg.shop || !cfg.shop.length) cfg.shop = [{ name: '', price: 10 }];
@@ -251,7 +257,7 @@
       <label>打開 App 先到</label><select data-c="landing">${[['home', '🏝️ 我的島']].concat(mainOpen() ? [['main', '⛰️ 主島']] : []).map(([k, v]) => `<option value="${k}" ${(c.landing || 'home') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
     <div class="card"><h3>${f.first ? '4. ' : ''}島主夥伴</h3><div class="muted">每天在島上陪你的角色，由你自己創造。</div>
       <label>名字</label><input data-c="guide.name" value="${esc(c.guide.name)}" maxlength="12">
-      <label>長相</label>${emo('guide.emoji', c.guide.emoji)}
+      <label>長相</label>${emo('guide.emoji', b1On() && !f.first && imgOf('guide') ? '' : c.guide.emoji)}${famUpl('guide', f)}
       <label>說話風格</label><select data-c="guide.tone">${Object.entries(TONES).map(([k, v]) => `<option value="${k}" ${c.guide.tone === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
     <div class="card"><h3>${f.first ? '5. ' : ''}方向（最多 ${MAX_DIRS} 個）</h3><div class="muted">每個方向是島上的一條街，住一位島民。每個方向放 1～${MAX_ITEMS} 個每週想做的項目。不用的項目可以收起來，累積的經驗值不會不見。</div>
       ${f.dirs.map((d, i) => `<div style="border-top:1px dashed var(--plum-light);margin-top:12px;padding-top:8px">
@@ -259,9 +265,9 @@
           ${d.items.some(it => it.row) ? '' : `<button type="button" class="ghost" data-deldir="${i}">✕</button>`}</div>
         <label>住在這條街的島民</label><div class="row"><select data-d="${i}.who.emoji" style="width:72px">${EMOJIS.map(e => `<option ${d.who.emoji === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
           <input class="grow" data-d="${i}.who.name" value="${esc(d.who.name)}" maxlength="12" placeholder="名字"></div>
-        <input data-d="${i}.who.personality" value="${esc(d.who.personality)}" maxlength="60" placeholder="個性（選填），例如：嘴硬心軟" style="margin-top:4px">
+        <input data-d="${i}.who.personality" value="${esc(d.who.personality)}" maxlength="60" placeholder="個性（選填），例如：嘴硬心軟" style="margin-top:4px">${famUpl(SLOT[d.slot], f, d)}${shopOn() ? laneSetup(d, i) : ''}
         <label>每週想做的項目</label>
-        ${d.items.map((it, j) => `<div class="row" style="margin-top:4px${it.off ? ';opacity:.5' : ''}"><input class="grow" data-i="${i}.${j}" value="${esc(it.name)}" maxlength="16" placeholder="例如：讀 20 頁">
+        ${d.items.map((it, j) => `<div class="row" style="margin-top:4px${it.off ? ';opacity:.5' : ''}"><input class="grow" data-i="${i}.${j}" value="${esc(it.name)}" maxlength="16" placeholder="例如：讀 20 頁">${shopOn() && (d.lanes || []).length >= 2 ? laneSel(d, i, j) : ''}
           ${it.row ? `<button type="button" class="ghost" data-off="${i}.${j}">${it.off ? '拿出來' : '收起來'}</button>` : `<button type="button" class="ghost" data-delitem="${i}.${j}">✕</button>`}</div>`).join('')}
         <button type="button" class="ghost" style="margin-top:6px" data-additem="${i}">＋ 項目</button></div>`).join('')}
       ${left ? `<div style="margin-top:12px"><div class="muted">加一個方向：</div><div class="row" style="gap:6px;margin-top:4px">
@@ -299,7 +305,10 @@
       if (f.first && !f.consent) return toast('先看過「誰看得到什麼」並勾同意');
       if (!String(c.islandName || '').trim()) return toast('先幫島取個名字吧');
       if (!String(c.guide.name || '').trim()) return toast('幫島主夥伴取個名字吧');
-      const dirs = f.dirs.map(d => ({ slot: d.slot, name: String(d.name || '').trim(), ic: d.ic, items: d.items.filter(it => it.row || String(it.name || '').trim()).map(it => it.row ? { row: it.row, name: it.name, off: it.off ? 1 : 0 } : { name: it.name }) }));
+      const dirs = f.dirs.map(d => Object.assign({ slot: d.slot, name: String(d.name || '').trim(), ic: d.ic, items: d.items.filter(it => it.row || String(it.name || '').trim()).map(it => Object.assign(it.row ? { row: it.row, name: it.name, off: it.off ? 1 : 0 } : { name: it.name }, shopOn() && (d.lanes || []).length >= 2 ? { lane: Number(it.lane) || 0 } : {})) },
+        shopOn() ? { lanes: (d.lanes || []).map(l => ({ name: String(l.name || '').trim(), who: { name: String(l.who.name || '').trim(), emoji: l.who.emoji, personality: String(l.who.personality || '').trim() } })) } : {}));   // FAM_SHOP_v1
+      if (dirs.some(d => (d.lanes || []).some(l => !l.name))) return toast('每條小巷都要有名字');
+      if (dirs.some(d => (d.lanes || []).some((l, k) => d.lanes.findIndex(x => x.name === l.name) !== k))) return toast('同一個方向裡，兩條小巷的名字一樣了');
       if (!dirs.length) return toast('至少訂一個方向');
       if (dirs.some(d => !d.name)) return toast('每個方向都要有名字');
       if (dirs.some((d, i) => dirs.findIndex(x => x.name === d.name) !== i)) return toast('兩個方向的名字一樣了');
@@ -328,7 +337,7 @@
   function after(t) {
     const app = document.getElementById('app');
     app.insertAdjacentHTML('afterbegin', `<div class="card" style="background:#2f6b4f;color:#fff"><div class="row"><b class="grow">🏝️ ${esc(S.who.name)}的島</b>
-      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="famOwnSwitch(false)">⛴️ ${esc(herGo())}</button></div></div>`);
+      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="famOwnSwitch(false)">🎈 ${esc(herGo())}</button></div></div>`);
     const rm = el => el && el.remove();
     // 家人島沒有的卡片（日めくり的分享按鈕、跨科連結、燈塔的話、學習顧問、管理員上傳圖片）由 Index.html 的 card() 照 OWN_CARDS 不畫；這裡只剩管理員介紹裡講到它們的那幾行
     app.querySelectorAll('li').forEach(li => { if (/分享給家人|每天會寫一句話/.test(li.textContent)) rm(li); });   // 日めくり還不能分享；小島管理員每天的一句話要 AI（2c-2）
@@ -336,6 +345,7 @@
       const scan = document.getElementById('scanFile'); if (scan && !scanOn()) { const card = scan.closest('.card'); rm(scan.closest('label')); if (card) card.querySelectorAll('.muted').forEach(m => { if (m.querySelector('[onclick*="abbr"]')) rm(m); }); }
       app.querySelectorAll(scanOn() ? '[onclick*="go(\'items\')"]' : '[onclick*="go(\'abbr\')"],[onclick*="go(\'items\')"]').forEach(rm);   // FAM_COMMON2_v1
     }
+    if (t === 'keeper' && b1On()) { const up = app.querySelector('#app input[type=file]'); if (up && up.closest('.row')) { const row = up.closest('.row'); row.classList.add('upl'); const im = row.querySelector('img.pic'); if (im) { im.style.cssText = 'width:56px;height:56px;border-radius:50%;border:3px solid #741b47;object-fit:cover'; im.insertAdjacentHTML('afterend', '<span class="pill">使用中</span>'); } row.insertAdjacentHTML('afterend', FAM_IMG_NOTE); } }   // 管理員頁也寫誰看得到（文案審查 45）
     if (t === 'shop') {
       app.querySelectorAll('[onclick*="xqCard"]').forEach(b => rm(b.closest('.card')));
       const m = app.querySelector('.card h2 + .muted'); if (m && /挑戰任務/.test(m.textContent)) m.innerHTML = `你有 <b>${D.coins}</b> 枚島幣。經驗值可以換島幣，島幣換你自己訂的獎勵，商品在「更多 → 修改我的島」新增。`;
@@ -355,6 +365,7 @@
     app.querySelectorAll('[onclick^="shareDiaryPage"],[onchange^="shareDiaryPage"]').forEach(b => {   // 互訪：分享按鈕的字和說明；FAM_VISIT 沒開就不給分享（沒有人看得到）
       const box = b.tagName === 'INPUT' ? b.closest('label') : (b.tagName === 'BUTTON' ? b : null);   // FAM_SEECHK_v1：分享重整起是勾選框（她那邊的字是乘船券），家人島換成互訪的字
       if (!box) return rm(b);   // 認不出來的寫法（沒有 label 的勾選框、不是按鈕的東西）就拿掉，不留她那邊的字
+      famGuestBox(b);   // FAM_TICKET_v1：日めくり「也放進乘船券」
       if (!S.visitOk) return rm(box);
       if (box !== b) { [...box.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); box.insertAdjacentText('beforeend', ' 分享給來看的家人'); }
       else b.textContent = /已分享/.test(b.textContent) ? '👀 已分享（按一下收回）' : '分享給來看的家人';
@@ -381,7 +392,7 @@
     const list = [{ ic: '🏝️', name: '我的島（你在這裡）', here: 1 }].concat(PORT.filter(p => p.on() && p.name !== '去看她的島'), PORT.filter(p => p.name === '去看她的島').map(p => Object.assign({}, p, { name: herGo() })),
       ((S && S.famVisit) || []).filter(n => n !== S.who.name).map(n => ({ ic: '🏝️', name: '去' + famIsleLabel(n), go: () => openFamVisit(n) })));   // 互訪；島名和稱呼都是本人自己填的（爸爸 10/28），她的島是她的島名（她自己填了稱呼才加括號）
     document.body.insertAdjacentHTML('beforeend', `<div id="famPort" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">
-      <div class="card" style="width:100%;max-width:480px;margin:0 16px 16px"><h3 style="margin-top:0">⛴️ 要去哪裡？</h3>
+      <div class="card" style="width:100%;max-width:480px;margin:0 16px 16px"><h3 style="margin-top:0">🎈 今天想去哪裡？</h3>
       ${list.map((p, i) => `<button class="opt" style="width:100%;margin-top:6px${p.here ? ';background:#eee;color:#888;border-color:#ddd' : ''}" data-port="${i}"${p.here ? ' disabled' : ''}>${p.ic} ${esc(p.name)}</button>`).join('')}
       <button class="ghost" style="width:100%;margin-top:10px" data-port="-1">留在島上</button></div></div>`);
     document.querySelectorAll('#famPort [data-port]').forEach(b => b.onclick = () => { const p = list[Number(b.dataset.port)]; closePort(); if (p) p.go(); });
@@ -465,6 +476,247 @@
     queueSave('diary:' + date, 'saveDiary', date, d.text, d.shared, d.emoji || '');
     toast(d.shared ? '這一頁分享出去了，家人都看得到' : '收回了；已經被看過的收不回'); render();
   };
+  // 上傳自己的圖片（FAM_IMG_v1，爸爸 10/29、工程顧問 10/29）：FAM_B1 開了、不是第一次開島、這條街已經存過才有
+  const FAM_IMG_NOTE = '<div class="muted" style="font-size:12px;margin-top:4px">上傳的圖片目前只有你自己在島上看得到，來作客的家人看到的還是 emoji。別人的照片，先問過本人再放。</div>';   // 文案審查 45
+  window.famUpl = function (key, f, d) {
+    if (!b1On() || f.first || !key) return '';
+    if (d && !((S.save.isle && S.save.isle.dirs) || []).some(x => x.slot === d.slot)) return '';
+    const src = imgOf(key);
+    return `<div class="row upl famUpl" data-img="${esc(key)}" style="margin-top:6px">${src ? `<img src="${src}" alt="" style="width:56px;height:56px;border-radius:50%;border:3px solid #741b47;object-fit:cover"><span class="pill">使用中</span>` : ''}
+      <label class="btn">${src ? '換一張圖片' : '或上傳自己的圖片'}<input type="file" accept="image/*" hidden></label>
+      ${src ? '<button type="button" class="ghost" data-del>改回 emoji</button>' : ''}</div>${key === 'guide' ? FAM_IMG_NOTE : ''}`;
+  };
+  const famBind0 = window.bindSetup;
+  window.bindSetup = function () {
+    famBind0.apply(this, arguments);
+    document.querySelectorAll('.famUpl').forEach(box => {
+      const key = box.dataset.img;
+      box.querySelector('input').onchange = async e => {
+        const file = e.target.files[0]; if (!file) return;
+        toast('圖片處理中…');
+        try { const d0 = draft.fam; S = await call('saveImage', key, await shrinkImage(file)); D = derive(S); draft.fam = d0; toast('圖片換好了！'); render(); }
+        catch (err) { toast('沒有換成功：' + (err.message || err)); }
+      };
+      const del = box.querySelector('[data-del]');
+      if (del) del.onclick = async () => { try { const d0 = draft.fam; S = await call('saveImage', key, ''); D = derive(S); draft.fam = d0; render(); } catch (err) { toast('沒有改成：' + (err.message || err)); } };
+    });
+  };
+  // ---------- 書店與小巷（FAM_SHOP_v1，爸爸 10/29「全部一次做」、工程顧問 10/29 排 11/20）：FAM_SHOP 開了才有 ----------
+  const shopOn = () => !!(S && S.shopOk);
+  let shopReady = false, LANE_INFO = {};
+  function shopOpen() {
+    if (shopReady || !shopOn()) return; shopReady = true;
+    OWN_TABS.push('bookstore'); KEEP_PLACE.push('books');   // 借她的 bookstore 分頁名稱：Index.html 的分頁表會叫 viewBookstore，下面換成家人的書架
+    ['shelfAdd', 'bookAdd', 'bookRead', 'bookDel'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    window.maybeMoreBooks = () => {}; window.seeBooksNow = () => {};   // 她的書店頁畫完會補書（叫 AI）、記已讀；家人的書架不叫 AI、不碰她的存檔
+    const bl = PLACE_LINKS.find(x => x.key === 'books'); if (bl) { bl.on = () => true; bl.go = () => openFamBooks(); }
+    PLACES.bookstore = Object.assign({}, PLACES.bookstore, { name: '書店', about: ['這裡是你自己的書架：可以從書單挑書，也可以自己加書', '讀完一本按「讀完了」，那個方向的街上會長出一個地標', '書架上的書，在島上只有你自己看得到'] });
+  }
+  // 小巷：方向・小巷 當作項目的科目（計畫、確認頁的小標題），GROUP 對回方向的位置，經驗值和島民照舊
+  const lanesOf = d => !d.off && (d.lanes || []).length >= 2 ? d.lanes : null;
+  const laneKey = (d, k) => d.name + '・' + (d.lanes[k] || d.lanes[0]).name;
+  function laneApply(all) {
+    let touched = false; LANE_INFO = {};
+    all.forEach(d => { const L = lanesOf(d); if (!L) return;
+      L.forEach((l, k) => { const key = laneKey(d, k); GROUP[key] = SLOT[d.slot]; LANE_INFO[key] = { name: l.name, mate: (l.who && l.who.name) || '', emoji: (l.who && l.who.emoji) || '🙂', slot: d.slot }; });
+      d.items.forEach(x => { const key = laneKey(d, x.lane >= 0 && x.lane < L.length ? x.lane : 0);
+        (S.allItems || []).concat(S.items).forEach(it => { if (it.row === x.row && it.subject !== key) { it.subject = key; touched = true; } }); }); });
+    return touched;
+  }
+  function laneLayout() { const o = {}; liveDirs().forEach(d => { const L = lanesOf(d); if (L) o[SLOT[d.slot]] = L.map((l, k) => laneKey(d, k)); }); return o; }
+  function laneLines(d) {
+    const L = lanesOf(d); if (!L) return '';
+    const p = pointsUntil(replay.idx);
+    return `<div style="margin-top:10px">${L.map((l, k) => { const key = laneKey(d, k);
+      return `<div class="lane"><span class="lane-name" style="flex-basis:110px">${esc((l.who && l.who.emoji) || '🙂')} ${esc(l.name)}<small>${esc((l.who && l.who.name) || '')}</small></span><span class="town">${town(p[key] || 0)}</span></div>`; }).join('')}</div>`;
+  }
+  function laneSetup(d, i) {
+    const n = (d.lanes || []).length;
+    return `<label>小巷（選填）</label><div class="muted" style="font-size:13px">一個方向可以再分成 2 或 3 條小巷，每條住一位室友，項目放進其中一條。</div>
+      <div class="row" style="gap:6px;margin-top:4px">${[[0, '不分'], [2, '2 條'], [3, '3 條']].map(([k, t]) => `<button type="button" class="${n === k ? '' : 'ghost'}" data-lanes="${i}.${k}">${t}</button>`).join('')}</div>
+      ${(d.lanes || []).map((l, k) => `<div class="row" style="margin-top:6px"><select data-d="${i}.lanes.${k}.who.emoji" style="width:72px">${EMOJIS.map(e => `<option ${l.who.emoji === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
+        <input style="width:7em" data-d="${i}.lanes.${k}.name" value="${esc(l.name)}" maxlength="6" placeholder="小巷名字">
+        <input class="grow" data-d="${i}.lanes.${k}.who.name" value="${esc(l.who.name)}" maxlength="12" placeholder="室友的名字（選填）"></div>`).join('')}`;
+  }
+  function laneSel(d, i, j) {
+    const cur = Number(d.items[j].lane) || 0;
+    return `<select data-lane="${i}.${j}" style="width:6.5em" aria-label="放在哪條小巷">${d.lanes.map((l, k) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l.name || '第 ' + (k + 1) + ' 條')}</option>`).join('')}</select>`;
+  }
+  const shopBind0 = window.bindSetup;
+  window.bindSetup = function () {
+    shopBind0();
+    if (!shopOn()) return;
+    const f = draft.fam;
+    document.querySelectorAll('[data-lanes]').forEach(el => el.onclick = () => {
+      const [i, k] = el.dataset.lanes.split('.').map(Number), d = f.dirs[i], L = d.lanes || [];
+      d.lanes = k ? Array.from({ length: k }, (_, m) => L[m] || { name: '', who: { name: '', emoji: '🙂', personality: '' } }) : [];
+      d.items.forEach(it => { if (!(Number(it.lane) < k)) it.lane = 0; });
+      render();
+    });
+    document.querySelectorAll('[data-lane]').forEach(el => el.onchange = () => { const [i, j] = el.dataset.lane.split('.'); f.dirs[i].items[j].lane = Number(el.value); });
+  };
+  // 書店：自己的書架
+  window.openFamBooks = function (part) {   // part='shiori'：捲到「收到的書籤信」（收禮通知 12/1 的「打開」用）
+    if (!keeperOf('bookstore')) return openKeeper('bookstore');
+    draft = {}; tab = 'bookstore'; shioriBox = null; shioriLoad(); render(); window.scrollTo(0, 0);   // FAM_SHIORI_v1
+    if (part === 'shiori') setTimeout(() => { const el = document.getElementById('shIn'); if (el) el.scrollIntoView({ block: 'start' }); }, 50);
+  };
+  const SHELF_CATS = BOOK_CATS.filter(c => c[0] !== 'BL');
+  function shelf() {
+    return Object.keys(S.save).filter(k => (k.startsWith('fshelf:') || k.startsWith('fbook:')) && S.save[k]).map(k => {
+      const r = S.save[k], c = k.startsWith('fshelf:') ? BOOK_CATALOG.find(b => b.id === k.slice(7)) : null;
+      if (k.startsWith('fshelf:') && !c) return null;
+      const d = liveDirs().find(x => x.slot === r.slot) || liveDirs()[0];
+      return { key: k, title: c ? c.title : r.title, author: c ? c.author : r.author, ic: c ? c.ic : '📘', hours: c ? c.hours : r.hours, readAt: r.readAt, at: r.at, d,
+        land: c ? (LANDMARKS[c.id] || [])[1] : r.landmark, model: c && LANDMARKS[c.id] ? c.id : 'sign' };
+    }).filter(Boolean).sort((a, b) => (!!a.readAt - !!b.readAt) || String(b.at).localeCompare(String(a.at)));
+  }
+  const viewBookstore0 = window.viewBookstore;
+  window.viewBookstore = () => shopOn() ? viewFamBooks() : viewBookstore0();
+  function viewFamBooks() {
+    const kp = keeperOf('bookstore'), list = shelf(), dirs = liveDirs(), on = new Set(list.map(b => b.key));
+    const dsel = id => `<select id="${id}">${dirs.map(d => `<option value="${d.slot}">${esc(d.ic)} ${esc(d.name)}</option>`).join('')}</select>`;
+    const row = b => `<div class="item"><span style="font-size:22px">${esc(b.ic)}</span><div class="name grow">${esc(b.title)}<div class="muted" style="font-size:12px">${b.author ? esc(b.author) + '・' : ''}${b.d ? esc(b.d.ic) + ' ' + esc(b.d.name) : ''}${b.readAt ? '・' + esc(short(b.readAt)) + ' 讀完' : ''}</div>
+        ${b.readAt && b.d ? `<div class="bkland" onclick="go('home')">🏞️ ${esc(b.d.name)}街長出了「${esc(b.land || '小書屋')}」<span class="muted">・回小島看看 ›</span></div>` : ''}</div>
+      <div style="display:flex;flex-direction:column;gap:4px"><button class="${b.readAt ? 'ghost' : ''}" style="padding:4px 10px;font-size:13px" onclick="famBookRead('${b.key}', ${b.readAt ? 'false' : 'true'})">${b.readAt ? '還沒讀完' : '讀完了'}</button>
+        <button class="ghost" style="padding:4px 10px;font-size:13px" onclick="famBookDel('${b.key}')">拿下來</button></div></div>`;
+    const cat = draft.bcat || SHELF_CATS[0][0];
+    return `<div class="card"><h2>📚 書店</h2>${placeIntro('bookstore') || (kp ? `<div class="row" style="margin-top:6px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('bookstore')"><span style="font-size:30px">${kpPic(kp)}</span>
+        <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：いらっしゃいませ～${list.some(b => !b.readAt) ? '書架上有 ' + list.filter(b => !b.readAt).length + ' 本書，挑一本想讀的就好。' : '要不要挑一本新書？'}</div></div>` : '')}</div>
+    <div class="card"><h3>我的書架</h3>${list.length ? list.map(row).join('') : '<div class="muted">書架還空空的。從下面的書單挑一本，或自己加一本吧。</div>'}
+      <div class="muted" style="font-size:12px;margin-top:8px">讀完一本，那個方向的街上會長出一個地標。書架上的書，在島上只有你自己看得到。</div></div>${shioriHtml()}
+    <div class="card"><h3>➕ 自己加一本</h3>
+      <input id="fbTitle" maxlength="30" placeholder="書名"><input id="fbAuthor" maxlength="30" placeholder="作者（選填）" style="margin-top:4px">
+      <div class="row" style="margin-top:4px"><span class="muted">放在</span>${dsel('fbSlot')}<span class="muted">大約</span><input id="fbHours" type="number" min="0.5" max="20" step="0.5" value="4" style="width:70px"><span class="muted">小時</span></div>
+      <input id="fbLand" maxlength="10" placeholder="讀完長出的地標（選填），例如：小書屋" style="margin-top:4px">
+      <button style="width:100%;margin-top:8px" onclick="famBookAdd()">放上書架</button></div>
+    <div class="card"><h3>🗂️ 從書單挑</h3><div class="row" style="gap:6px">${SHELF_CATS.map(([c, n]) => `<button type="button" class="${c === cat ? '' : 'ghost'}" style="padding:4px 10px;font-size:13px" onclick="draft.bcat='${c}';render()">${n}</button>`).join('')}</div>
+      <div class="row" style="margin-top:8px"><span class="muted">放在</span>${dsel('fbPickSlot')}</div>
+      ${BOOK_CATALOG.filter(b => b.cat === cat).map(b => `<div class="item"${on.has('fshelf:' + b.id) ? ' style="opacity:.45"' : ''}><span style="font-size:22px">${esc(b.ic)}</span>
+        <div class="name grow">${esc(b.title)}<div class="muted" style="font-size:12px">${esc(b.author)}・大約 ${b.hours} 小時</div><div class="muted" style="font-size:12px">${esc(b.about)}</div></div>
+        ${on.has('fshelf:' + b.id) ? '<span class="muted" style="font-size:12px">在書架上</span>' : `<button class="ghost" style="padding:4px 10px;font-size:13px" onclick="famShelfAdd('${b.id}')">放上書架</button>`}</div>`).join('')}</div>
+    <div class="row"><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
+  };
+  const shopCall = async (fn, ...a) => { try { S = await call(fn, ...a); D = derive(S); const c = draft.bcat; render(); draft.bcat = c; return true; } catch (e) { toast('沒有存到：' + (e.message || e)); return false; } };
+  window.famShelfAdd = async id => { const el = document.getElementById('fbPickSlot'), c = draft.bcat; if (await shopCall('shelfAdd', id, Number(el && el.value))) { draft.bcat = c; toast('放上書架了'); render(); } };
+  window.famBookAdd = async () => {
+    const v = id => (document.getElementById(id) || {}).value || '';
+    if (!v('fbTitle').trim()) return toast('寫一下書名吧');
+    if (await shopCall('bookAdd', { title: v('fbTitle'), author: v('fbAuthor'), slot: Number(v('fbSlot')), hours: Number(v('fbHours')), landmark: v('fbLand') })) toast('放上書架了');
+  };
+  window.famBookRead = async (key, read) => { if (await shopCall('bookRead', key, read) && read) toast('🏞️ 讀完了！回小島看看長出來的地標'); };
+  window.famBookDel = async key => { if (confirm('把這本從書架拿下來嗎？長出來的地標也會一起收起來。')) await shopCall('bookDel', key); };
+  // ---- FAM_SHIORI_v1：家人之間的送書書籤（爸爸 11/1 選書籤；樣式 ① 藍染 ③ 稿紙 ④ 車票，美術 11/1）。寄件人自己那列 fgive、收件人那列 fgot，後端 FamShiori.gs ----
+  ['shioriFrom', 'sendShiori', 'shioriIn', 'shioriOut', 'shioriTo', 'shioriBox', 'replyShiori'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+  const SHIORI_STYLES = [['indigo', '藍染', 's-ai'], ['ruled', '稿紙', 's-genko'], ['ticket', '車票', 's-kippu']];
+  const SHIORI_EG = ['我讀這本時想到你', '這本陪我度過一段時間，想送給你', '這本很好笑，想跟你分享'];
+  const SHIORI_CSS = `.shiori{position:relative;width:160px;height:250px;margin:34px auto 0;box-sizing:border-box;border-radius:6px;padding:32px 16px 34px;font-size:14px;line-height:1.85;text-align:left;color:#2f2a26;box-shadow:0 2px 6px #0002;word-break:break-all;white-space:pre-wrap}
+.shiori .hole{position:absolute;top:9px;left:50%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#eaf4fa;box-shadow:inset 0 0 0 1.5px #0003}
+.shiori .cord{position:absolute;top:-32px;left:50%;width:2px;height:46px;margin-left:-1px;background:#c8452d;border-radius:1px}
+.shiori .from{position:absolute;left:16px;bottom:10px;font-size:12px;color:#5f5a55;white-space:nowrap}
+.shiori .from:before{content:"— "}
+.s-ai{background:#2b4a6f;padding:0;box-shadow:0 2px 6px #0003}
+.s-ai .pat{position:absolute;inset:0;border-radius:6px;opacity:.28;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Ccircle cx='12' cy='12' r='11'/%3E%3Ccircle cx='12' cy='12' r='7'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='0' cy='12' r='11'/%3E%3Ccircle cx='24' cy='12' r='11'/%3E%3C/g%3E%3C/svg%3E")}
+.s-ai .in{position:absolute;inset:26px 10px 10px;background:#fffdf8;border-radius:3px;padding:8px 8px 28px;box-sizing:border-box}
+.s-ai .hole{background:#eaf4fa;box-shadow:inset 0 0 0 1.5px #fff8}
+.s-ai .cord{background:#fffdf8}
+.s-ai .from{left:8px;bottom:6px}
+.s-genko{background:#fffdf8;border:1px solid #e3c9bd;background-image:repeating-linear-gradient(#0000 0 25px,#e9c0b4 25px 26px);background-position:0 31px;background-origin:padding-box;line-height:26px;padding-top:30px}
+.s-genko .from{left:auto;right:12px;bottom:10px;background:#c8452d;color:#fff;padding:2px 5px;border-radius:2px;font-weight:700;letter-spacing:1px}
+.s-genko .from:before{content:""}
+.s-kippu{background:#ece0c6;border-radius:4px;padding-top:58px;-webkit-mask:radial-gradient(circle 7px at 0 50px,#0000 98%,#000),radial-gradient(circle 7px at 100% 50px,#0000 98%,#000);-webkit-mask-composite:source-in;mask-composite:intersect}
+.s-kippu .head{position:absolute;left:0;right:0;top:20px;height:30px;display:flex;justify-content:space-between;align-items:center;padding:0 14px;font-size:12px;color:#2b4a6f;font-weight:700;border-bottom:2px dashed #b8a37d}
+.s-kippu .head b{font-size:14px;color:#2f2a26}
+.s-kippu .no{position:absolute;right:12px;bottom:8px;font:12px/1 ui-monospace,monospace;color:#8a7350}`;
+  let shioriBox = null, shioriBusy = false, shioriCssOn = false;   // shioriBox = { in: 收到的, out: 寄出的, to: 誰開放讓我寄 }，進書店時去拿一次
+  window.shDraft = { to: '', book: '', style: 'indigo', text: '', gate: null, gateEdit: false, reply: {} };
+  const shioriNames = () => Object.keys(HER_REL).filter(n => n !== S.who.name);
+  const shioriRender = () => { const c = draft.bcat; render(); draft.bcat = c; };
+  function shioriLoad() {
+    if (!shopOn() || shioriBusy) return; shioriBusy = true;
+    call('shioriBox').then(b => { b = b || {}; shioriBox = { in: Array.isArray(b.in) ? b.in : [], out: Array.isArray(b.out) ? b.out : [], to: Array.isArray(b.to) ? b.to : [] }; })
+      .catch(() => { shioriBox = { in: [], out: [], to: [], err: 1 }; }).then(() => { shioriBusy = false; if (tab === 'bookstore') shioriRender(); });
+  }
+  const shCall = async (fn, ...a) => { try { S = await call(fn, ...a); D = derive(S); return true; } catch (e) { toast(e.message || String(e)); return false; } };
+  function shioriCard(b, from) {   // 一張書籤：樣式照寄件人選的；不認得的用藍染
+    const st = SHIORI_STYLES.find(x => x[0] === b.style) || SHIORI_STYLES[0], msg = esc(b.note), f = esc(from);
+    if (st[2] === 's-ai') return `<div class="shiori s-ai"><i class="pat"></i><i class="cord"></i><i class="hole"></i><div class="in"><span class="msg">${msg}</span><span class="from">${f}</span></div></div>`;
+    if (st[2] === 's-kippu') return `<div class="shiori s-kippu"><div class="head"><span class="f">${f} 寄</span><span>→</span><b>給你</b></div><span class="msg">${msg}</span><span class="no">No.${esc(String(b.at || '').replace(/-/g, '').slice(4) || '0000')}</span></div>`;
+    return `<div class="shiori s-genko"><i class="cord"></i><i class="hole"></i><span class="msg">${msg}</span><span class="from">${f}</span></div>`;
+  }
+  const shioriBook = id => id ? BOOK_CATALOG.find(x => x.id === id) : null;
+  function shioriInRow(b) {
+    const bk = shioriBook(b.book), r = shDraft.reply[b.key], k = b.key.replace(/'/g, '');
+    return `<div style="margin-top:10px;padding-bottom:10px;border-bottom:1px dashed #ddd">${shioriCard(b, b.from)}
+      <div class="muted" style="text-align:center;font-size:12px;margin-top:6px">${esc(b.from)}・${esc(short(b.at))}${bk ? '・夾在《' + esc(bk.title) + '》裡，想讀可以從下面的書單放上書架' : ''}</div>
+      ${b.reply && r == null ? `<div class="muted" style="font-size:13px;margin-top:6px;text-align:center">你回了：${esc(b.reply)}　<button class="ghost" style="padding:2px 8px;font-size:12px" onclick="famShioriEdit('${k}', 1)">改</button> <button class="ghost" style="padding:2px 8px;font-size:12px" onclick="famShioriReply('${k}', '')">收回</button></div>`
+        : r != null ? `<textarea id="shR_${k}" maxlength="60" rows="2" style="margin-top:6px" placeholder="在書籤信背面回一句（60 字內，也可以不回）">${esc(r)}</textarea><div class="row" style="margin-top:6px"><button class="grow" onclick="famShioriReply('${k}')">放回書裡</button><button class="ghost" onclick="famShioriEdit('${k}', 0)">先不用</button></div><div class="muted" style="font-size:12px;margin-top:4px">在 App 裡只有你和${esc(b.from)}看得到。不回的話，${esc(b.from)}那邊什麼都不會顯示。</div>`
+        : `<div class="row" style="justify-content:center;margin-top:6px"><button class="ghost" style="padding:4px 12px;font-size:13px" onclick="famShioriEdit('${k}', 1)">回一句</button></div>`}</div>`;
+  }
+  function shioriOutRow(b) {
+    const bk = shioriBook(b.book);
+    return `<div class="item"><span style="font-size:20px">📑</span><div class="name grow">給${esc(b.to)}・${esc(short(b.at))}${bk ? '・《' + esc(bk.title) + '》' : ''}<div class="muted" style="font-size:12px">${esc(b.note)}</div>${b.reply ? `<div style="font-size:13px;margin-top:2px">${esc(b.to)}在背面回了：${esc(b.reply)}</div>` : ''}</div></div>`;
+  }
+  function shioriHtml() {
+    if (!shopOn()) return '';
+    if (!shioriCssOn) { document.head.insertAdjacentHTML('beforeend', '<style id="famShioriCss">' + SHIORI_CSS + '</style>'); shioriCssOn = true; }
+    const me = S.who.name, kp = keeperOf('bookstore'), kpn = kp ? esc(kp.name) : '書店', names = shioriNames(), gate = S.save.shioriFrom, d = shDraft;
+    if (!Array.isArray(gate) || d.gateEdit) {   // 第一次進書店先問；預設誰都不行（工程顧問 10/29、11/1）
+      const pick = d.gate || [];
+      return `<div class="card" id="shGate"><h3>📑 書籤信</h3><div class="muted">家人可以在送書時夾一張書籤信給你，也可以單獨寄一張。誰可以寄書籤信給你？沒選的人寄不進來，之後隨時可以改。</div>
+        <div class="row" style="gap:6px;margin-top:8px">${names.map(n => `<button type="button" class="${pick.includes(n) ? '' : 'ghost'}" style="padding:4px 12px" onclick="famShioriPick('${n}')">${esc(n)}</button>`).join('')}</div>
+        <button style="width:100%;margin-top:10px" onclick="famShioriGate()">${pick.length ? '就這幾位' : '先都不要'}</button></div>`;
+    }
+    const box = shioriBox || { in: [], out: [], to: [] }, left = 60 - String(d.text || '').length;
+    let h = `<div class="card" id="shIn"><div class="row" style="align-items:baseline;flex-wrap:nowrap"><h3 class="grow" style="margin:0">📬 收到的書籤信</h3><button class="ghost" style="padding:2px 8px;font-size:12px;white-space:nowrap" onclick="famShioriGateEdit()">誰可以寄給我</button></div>
+      ${!shioriBox ? '<div class="muted" style="margin-top:6px">翻一下書架…</div>' : box.in.length ? box.in.map(shioriInRow).join('') : `<div class="muted" style="margin-top:6px">還沒有人寄書籤信給你。${gate.length ? '' : '你目前沒有讓任何人寄。'}</div>`}</div>`;
+    h += `<div class="card"><h3>📑 寫一張書籤信</h3>
+      <div class="muted">寫一句話給家人，可以夾在書單的一本書裡送過去，也可以只寄書籤信。${kpn}會在對方下次進書店時轉交。在 App 裡只有你和收到的人看得到，不算點數。</div>`;
+    if (!shioriBox) h += '<div class="muted" style="margin-top:6px">翻一下書架…</div></div>';
+    else if (!box.to.length) h += '<div class="muted" style="margin-top:6px">現在還沒有可以寄的人。</div></div>';   // 只列已經開放給自己的人，沒開放的不出現、不說原因（文案審查 107）
+    else h += `<div class="row" style="gap:6px;margin-top:8px"><span class="muted">給</span>${box.to.map(n => `<button type="button" class="${d.to === n ? '' : 'ghost'}" style="padding:4px 12px" onclick="shDraftSet('to','${n}')">${esc(n)}</button>`).join('')}</div>
+      <div class="row" style="gap:6px;margin-top:8px"><span class="muted">樣式</span>${SHIORI_STYLES.map(x => `<button type="button" class="${d.style === x[0] ? '' : 'ghost'}" style="padding:4px 12px" onclick="shDraftSet('style','${x[0]}')">${x[1]}</button>`).join('')}</div>
+      <div class="row" style="margin-top:8px;flex-wrap:nowrap"><span class="muted" style="white-space:nowrap">夾一本書</span><select id="shBook" class="grow" onchange="shDraft.book=this.value"><option value="">不夾書，只寄書籤信</option>${SHELF_CATS.map(([c, n]) => `<optgroup label="${esc(n)}">${BOOK_CATALOG.filter(b => b.cat === c).map(b => `<option value="${b.id}"${d.book === b.id ? ' selected' : ''}>${esc(b.title)}</option>`).join('')}</optgroup>`).join('')}</select></div>
+      <div class="row" style="gap:6px;margin-top:8px">${SHIORI_EG.map(t => `<button type="button" class="ghost" style="padding:4px 10px;font-size:13px" onclick="shDraftSet('text','${t}')">${t}</button>`).join('')}</div>
+      <textarea id="shText" maxlength="60" rows="3" style="margin-top:8px" placeholder="想說的話（60 字內）" oninput="shDraft.text=this.value;document.getElementById('shLeft').textContent=60-this.value.length">${esc(d.text || '')}</textarea>
+      <div class="muted" style="font-size:12px;text-align:right">還可以寫 <span id="shLeft">${left}</span> 字</div>
+      ${d.text ? `<div style="margin-top:4px">${shioriCard({ note: d.text, style: d.style, at: S.today }, me)}</div>` : ''}
+      <button style="width:100%;margin-top:10px" id="shGo" onclick="famShioriSend()">交給${kpn}轉交</button>
+      <div class="muted" style="font-size:12px;margin-top:6px">每天最多 3 張。你看不到對方有沒有打開，對方也不用回。</div></div>`;
+    if (box.out.length) h += `<div class="card"><h3>📤 寄出的書籤信</h3>${box.out.map(shioriOutRow).join('')}</div>`;
+    return h;
+  }
+  window.shDraftSet = (k, v) => { shDraft[k] = v; shioriRender(); };
+  window.famShioriPick = n => { const g = shDraft.gate || []; shDraft.gate = g.includes(n) ? g.filter(x => x !== n) : g.concat([n]); shioriRender(); };
+  window.famShioriGate = async () => { if (await shCall('shioriFrom', shDraft.gate || [])) { shDraft.gateEdit = false; shDraft.gate = null; toast('記住了'); shioriRender(); shioriLoad(); } };
+  window.famShioriGateEdit = () => { shDraft.gate = (S.save.shioriFrom || []).slice(); shDraft.gateEdit = true; shioriRender(); };
+  window.famShioriSend = async () => {
+    const el = document.getElementById('shText'), text = (el ? el.value : shDraft.text || '').trim(), sel = document.getElementById('shBook');
+    if (!shDraft.to || !(shioriBox && shioriBox.to.includes(shDraft.to))) return toast('先選要寄給誰');
+    if (!text) return toast('寫一句話吧');
+    const btn = document.getElementById('shGo'); if (btn) btn.disabled = true;
+    const kp = keeperOf('bookstore');
+    if (await shCall('sendShiori', shDraft.to, sel ? sel.value : shDraft.book || '', text, shDraft.style)) { shDraft.text = ''; shDraft.book = ''; toast('📑 交給' + (kp ? kp.name : '書店') + '了'); shioriRender(); shioriLoad(); }
+    else if (btn) btn.disabled = false;
+  };
+  window.famShioriEdit = (key, on) => { if (on) shDraft.reply[key] = (shioriBox && (shioriBox.in.find(b => b.key === key) || {}).reply) || ''; else delete shDraft.reply[key]; shioriRender(); };
+  window.famShioriReply = async (key, text) => {
+    if (text == null) { const el = document.getElementById('shR_' + key); text = (el ? el.value : '').trim(); if (!text) return toast('寫一句再放回去，或按「先不用」'); }
+    if (await shCall('replyShiori', key, text)) { delete shDraft.reply[key]; toast(text ? '放回書裡了' : '收回了'); shioriRender(); shioriLoad(); }
+  };
+  // 讀完的書也長地標（照書架上選的方向）；點地標回書店
+  const markList1 = () => window.landmarkList();
+  function shelfMarks() {
+    return shelf().filter(b => b.readAt && b.d).map(b => ({ id: b.key, key: b.key, at: b.readAt, title: b.title, s: SLOT[b.d.slot], name: b.land || '小書屋', street: b.d.name + '街', model: b.model }));
+  }
+  let shopMarksOn = false;
+  function shopMarks() {
+    if (shopMarksOn) return; shopMarksOn = true;
+    const ll = window.landmarkList, fm = window.famMark;
+    window.landmarkList = function () { const base = ll(); return shopOn() ? base.concat(shelfMarks()).sort((a, b) => (a.at || '').localeCompare(b.at || '')) : base; };
+    window.famMark = function (id) { if (shopOn() && /^(fshelf|fbook):/.test(id)) return openFamBooks(); return fm(id); };
+  }
+
   // ---------- B1（爸爸 10/28 選、工程顧問 10/28 排進 11/5）：FAM_B1 開了才有；關著時上面的白名單一個字都不加 ----------
   const b1On = () => !!(S && S.b1Ok);
   let b1Ready = false;
@@ -473,7 +725,8 @@
     KEEP_PLACE.push('hall'); OWN_TABS.push('hall');   // 音樂廳：計時寫家人自己的 move:日期（saveMove），綠點照她的規則從那裡算
     OWN_TABS.push('hand');   // HANDLOG_FAM_v1：計時補登頁（HANDLOG_v1），存進家人自己的 move:／focus:，後端 handCheck_ 一樣擋
     OWN_CARDS.push('matShelf', 'buyBack');   // 商店的素材櫃與收購
-    ['buyMat', 'sellDish'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    ['buyMat', 'sellDish', 'saveImage'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    OWN_CARDS.push('keeperImg');   // FAM_IMG_v1：管理員頁的上傳圖片（她原本的卡片，存到家人自己的列）
     if (OWN_FNS.indexOf('giftDish') < 0) OWN_FNS.push('giftDish');   // FAM_GIFT_v1：送料理（平衡檢查 7b，B1 漏開）
     PLACES.hall = Object.assign({}, PLACES.hall, { about: PLACES.hall.about.map(a => a.replace('讀書計時', '專心計時')) });
     PLACES.yatai.about = PLACES.yatai.about.concat(['素材不夠的話，商店的素材櫃可以用島幣買常見素材；做好的料理也可以賣給商店']);
@@ -1243,5 +1496,84 @@
   };
   if (typeof S !== 'undefined' && S) D = derive(S);   // family.js 載入前畫面已經用快取算過一次 D，這裡用家人版重算
   OWN_CARDS.push('famask');   // ASK_FAM_v1：家人想跟你一起檢討
+  shopMarks();   // FAM_SHOP_v1
+  // ---------- 乘船券（FAM_TICKET_v1）：家人也能發券請朋友來逛，畫面照她的「邀請朋友來島上」 ----------
+  // 快照只用 guestView 算（後端 seeGuest_ 給的那一份：島的樣子、勾了「也放進乘船券」的日めくり）；後端再過互訪白名單，等級和房子一律最低
+  OWN_TABS.push('visits');
+  ['guestView', 'createTicket', 'revokeTicket', 'refreshTicket', 'diaryGuest', 'saveWelcome'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+  const TICKET_YES = ['島名、島的樣子和背景', '方向的名字和圖示、島民和島主夥伴的名字', '你的家的外觀、種的樹、衛星小島', '你勾了「也放進乘船券」的日めくり'];
+  const TICKET_NO = ['等級和房子大小（一律顯示最小的）', '計畫、每天的紀錄、達成率', '喝水、智慧島寫給老師的句子、紙船上的心得', '小巷連結寫的那一句、單字卡和練習結果',
+    '書架上的書、讀完書長出來的地標', '你上傳的島民圖片和照片', '沒勾「也放進乘船券」的日めくり'];   // 文案審查 59：島上每一種自己做的內容都要出現在其中一邊（快照只放 famVisitClean_ 白名單，這些都不在）
+  function ticketList() { return Object.keys(S.save).filter(k => k.indexOf('ticket:') === 0 && S.save[k]).map(k => S.save[k]).sort((a, b) => (b.created || '').localeCompare(a.created || '')); }
+  function ticketState(t) { return t.status === 'active' && t.expires < S.today ? 'expired' : t.status; }
+  function ticketCard() {
+    if (!S.ticketOk) return '';
+    const n = ticketList().filter(t => ticketState(t) === 'active').length;
+    return `<div class="card" id="famTicketCard"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🎟️ 邀請朋友來島上</b>
+      <div class="muted">發一張乘船券（連結）給朋友，朋友可以來逛你的島，只能看。${n ? '現在有 ' + n + ' 張有效的。' : ''}</div></div>
+      <button class="ghost" onclick="draft={}; go('visits')">打開</button></div></div>`;
+  }
+  async function ticketSnap() {
+    const g = await call('guestView'), keepS = S, keepD = D;
+    try { S = Object.assign({}, S, { save: g || {} }); D = derive(S); return famSnapOf(); }
+    finally { S = keepS; D = keepD; }
+  }
+  function ticketHtml(t) {
+    const url = visitUrl(t.code);
+    return `<div class="famTicket" style="border:2px solid #b98a5e;border-radius:12px;padding:12px;margin-top:10px;background:#fffaf0">
+      <div class="row"><b class="grow">${esc(t.note || '乘船券')}</b><span class="muted">到 ${short(t.expires)}・${t.views || 0} 人次</span></div>
+      <div class="muted">快照 ${short((t.snapshot && t.snapshot.at) || t.created)}</div>
+      <div class="row" style="margin-top:8px;flex-wrap:nowrap"><div class="qr" data-url="${esc(url)}" style="flex:0 0 auto"></div>
+        <input readonly value="${esc(url)}" onclick="this.select()" style="font-size:12px"></div>
+      <div class="row" style="margin-top:8px"><button style="padding:6px 12px" onclick="shareVisit('${t.code}')">📤 分享</button>
+        <button class="ghost" style="padding:6px 12px" onclick="famTicketRefresh('${t.code}')">📸 重拍</button>
+        <button class="ghost" style="padding:6px 12px" onclick="famTicketRevoke('${t.code}')">收回</button></div></div>`;
+  }
+  window.viewVisits = function () {
+    if (!S.ticketOk) return `<div class="card"><div class="muted">乘船券還沒開放。</div></div><div class="row"><button class="ghost grow" onclick="go('more')">回到更多</button></div>`;
+    const w = (S.save.wisdom && S.save.wisdom.welcome) || '', list = ticketList(), g = guide();
+    const active = list.filter(t => ticketState(t) === 'active'), past = list.filter(t => ticketState(t) !== 'active');
+    return `<div class="card"><h2>🎟️ 邀請朋友來島上</h2><div class="muted">朋友會拿到一張乘船券（連結），可以逛你的 3D 小島。他們不能改任何東西。</div></div>
+    <div class="card"><h3>✍️ 歡迎詞</h3><div class="muted">每位朋友到碼頭時，${esc(g.name)}會先念這段話。</div>
+      <div class="row" style="align-items:flex-start;margin-top:8px;flex-wrap:nowrap"><span class="avatar">${g.pic}</span>
+        <textarea id="welcome" maxlength="120" placeholder="例如：歡迎來我的島！這裡的房子都是我一週一週蓋起來的，慢慢逛～">${esc(draft.welcome != null ? draft.welcome : w)}</textarea></div>
+      <button style="margin-top:8px" onclick="saveWelcomeText()">${w ? '更新歡迎詞' : '存好歡迎詞'}</button></div>
+    <div class="card"><h3>🎟️ 發一張乘船券</h3>
+      <label>要給誰（只有你看得到，選填）</label><input id="vNote" maxlength="30" placeholder="例如：老同學、同事" value="${esc(draft.vNote || '')}" oninput="draft.vNote=this.value">
+      <label>有效天數</label><div class="row">${VISIT_DAYS.map(d => `<button class="${(draft.vDays || 7) === d ? '' : 'ghost'}" style="padding:6px 12px" onclick="draft.vDays=${d};render()">${d} 天</button>`).join('')}</div>
+      <div class="row" style="align-items:flex-start;margin-top:8px"><div class="grow" style="min-width:150px"><b style="color:#2e7d32">✅ 朋友看得到</b>
+        <ul style="margin:4px 0;padding-left:18px">${TICKET_YES.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+        <div class="grow" style="min-width:150px"><b style="color:var(--plum)">🙈 看不到</b><ul style="margin:4px 0;padding-left:18px">${TICKET_NO.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>
+      <button style="width:100%;margin-top:10px" onclick="famNewTicket()" ${w ? '' : 'disabled'}>🎟️ 發一張乘船券</button>
+      ${w ? '' : '<div class="muted" style="margin-top:6px">先在上面寫好歡迎詞，才能發券。</div>'}</div>
+    ${active.length ? `<div class="card"><h3>🎟️ 有效的乘船券</h3>${active.map(ticketHtml).join('')}</div>` : ''}
+    ${past.length ? `<div class="card"><details><summary class="muted">已收回或過期的乘船券（${past.length}）</summary>${past.map(t =>
+      `<div class="item"><div class="name">${esc(t.note || '未命名')}<div class="muted">${ticketState(t) === 'revoked' ? '已收回' : '已過期'}・${t.views || 0} 人次</div></div></div>`).join('')}</details></div>` : ''}
+    <div class="row"><button class="ghost grow" onclick="go('more')">回到更多</button></div>`;
+  };
+  window.famNewTicket = async function () {
+    const note = ((document.getElementById('vNote') || {}).value || '').trim();
+    let snap; try { snap = await ticketSnap(); } catch (e) { return toast(e.message || String(e)); }
+    if (await visitCall('createTicket', { days: draft.vDays || 7, note, snapshot: snap })) { draft.vNote = ''; toast('乘船券發好了，分享連結給朋友吧'); }
+  };
+  window.famTicketRefresh = async function (code) {
+    let snap; try { snap = await ticketSnap(); } catch (e) { return toast(e.message || String(e)); }
+    if (await visitCall('refreshTicket', code, snap)) toast('用現在的小島重拍好了');
+  };
+  window.famTicketRevoke = async function (code) {
+    if (!confirm('收回這張乘船券？連結會立刻失效。')) return;
+    if (await visitCall('revokeTicket', code)) toast('收回了');
+  };
+  function famGuestBox(b) {   // 日めくり：分享按鈕那一列下面加「也放進乘船券」
+    const m = /shareDiaryPage\('(\d{4}-\d{2}-\d{2})'\)/.exec(b.getAttribute('onclick') || b.getAttribute('onchange') || ''), row = b.tagName === 'INPUT' ? (b.closest('label') || b) : b.parentNode;   // 分享重整起是勾選框：接在那個勾選框下面
+    if (!S.ticketOk || !m || !row || row.parentNode.querySelector('.famGuest')) return;
+    const on = !!(S.save['diary:' + m[1]] || {}).guest;
+    row.insertAdjacentHTML('afterend', `<label class="row famGuest" style="gap:6px;align-items:center;font-size:13px;margin-top:4px;flex-wrap:nowrap">
+      <input type="checkbox" class="check" style="flex:0 0 auto" ${on ? 'checked' : ''} onchange="famDiaryGuest('${m[1]}', this.checked)"> 🎟️ 也放進乘船券（拿到乘船券的朋友看得到這一頁）</label>`);
+  }
+  window.famDiaryGuest = async function (date, on) {
+    try { await flush(); S = await call('diaryGuest', date, on); D = derive(S); } catch (e) { toast('沒有存到：' + (e.message || e)); return render(); }
+    toast(on ? '這一頁會放進乘船券' : '乘船券不放這一頁了'); render();
+  };
   window.FamIsle = { apply, after, cards: OWN_CARDS };
 })();
