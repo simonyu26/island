@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.5';
+const APP_VERSION = '2.52.6';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.6', date: '2026-11-21', guide: ['挑戰任務（賺島幣）'], items: ['⚔️ 挑戰任務選「🎲 隨便一條」時，每週會先出 3 題自然。另外每週最多有 3 題，是你兩到四週前答對過的題，再出一次看看還記不記得，照常有島幣和經驗值；答對幾題，爸爸用讀數工具看得到。'] },
   { v: '2.52.5', date: '2026-11-21', fam: [0, 1], guide: '無', items: ['📚 家人自己的島：書店的書架可以幫書選分類（像漫畫、輕小說），上面多一排標籤，可以只看某一類。分類在 App 裡只有你自己看得到，訪客看不到。', '📰 家人自己的島：玩法說明頁最下面多了完整的更新紀錄，以前每一版跟家人有關的更新都列在那裡，最近 3 版攤開，更早的點開才看得到。'] },
   { v: '2.52.4', date: '2026-11-21', fam: [0, 1, 2, 3], guide: ['經驗值怎麼算', '島幣和商店', '島の屋台（素材與料理）'], items: ['⏳ 計畫格有計時（或記了上課）超過 30 分鐘的話，超過的部分每 2 分鐘多 1 點經驗值，一格最多算 90 分鐘，一天合計最多 240 分鐘，Boss 雙倍。勾「完成」+25、「部分」+12 照舊。', '⭐ 11/19 起計時過的格，已經照新的算法補上經驗值了。', '🍶 撿瓶子拿到的經驗值，現在有一半可以在商店的「經驗值換島幣」換成島幣，每天最多換 5 枚，換了經驗值不會減少。11/19 起撿的瓶子已經算進去了。', '🏮 放走的紙燈籠每累積 20 盞（標了「有點猜」的瓶子不算），就多 20 點經驗值，可以幫島嶼升級；這 20 點不算進經驗值換島幣。以前放走的燈籠也已經算進去了。', '🔀 屋台換素材不用再限同一個街區了：同一種常見素材 2 個，可以換 1 個另一種常見素材，一天還是可以換 2 次。稀有素材和智慧島的珍品一樣不能換。', '🎨 插畫頭像提早一天開放：11/21 起，在角色的『樣子』裡就可以改選一張插畫。', '🧺 稀有素材多了一個來源：同一天裡，國文、英文、數學、自然、社會都有做完的計畫格（自然、社會裡哪一科都算），就會拿到 1 個稀有素材，種類不一定。一天最多 1 個，和其他拿稀有素材的方式分開算。'] },
   { v: '2.52.3', date: '2026-11-20', items: ['🆕 小島有新版本時會自己更新；如果你正在作答、計時或打字，畫面上方會先出現一條提醒，做完再點就好。'], fam: true, guide: '無' },
@@ -6246,7 +6247,7 @@ function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題�
   } else {
     if (last && last.done && last.at === S.today) html = show(last) + `<div class="opts${last.img ? ' abcd' : ''}">${last.o.map((o, i) => `<button class="opt ${i === last.a ? 'right' : i === last.choice ? 'wrong' : ''}" disabled>${esc(o)}</button>`).join('')}</div>
       <div class="speech" style="margin-top:10px">${last.correct ? '⭕ 答對了！' : '❌ 這次沒答對。'}<div style="margin-top:4px">${srcTag(last.bank ? 'exam' : 'ai')} ${esc(last.ex)}</div></div>
-      ${last.bank ? bankExplain(last) : ''}
+      ${last.bank ? bankExplain(last) : ''}${last.ret && !isFamily() ? retainNote(last) : ''}
       <div class="muted" style="margin:6px 0 12px">${last.coins ? '🪙 +' + last.coins + '、' : ''}+${last.xp} 經驗值${last.lantern ? '・🏮 瓶子變成紙燈籠，漂到海上了！' + (last.verify ? '📜 考古題也答對' : '') : last.verify && !last.correct ? '・📜 原本的瓶子留著，再答對一次就變燈籠；這題另外變成新瓶子，明天漂回來' : last.review ? (last.friend ? (last.correct ? '・🏮 老朋友記得你，一個月後再來' : '・🏮 老朋友一週後再來看你') : last.correct ? '・🍶 再答對 ' + Math.max(1, LANTERN_AT - reviewStreak(S.save['rv:' + last.review])) + ' 次就變成燈籠' : '・🍶 瓶子明天會再漂回來') : last.correct ? '' : '・🍶 這題漂到燈塔海灘了，明天會漂回來'}
         ${last.review ? ` <a href="#" onclick="openBottle('${last.review}');return false">看原題</a>` : ''}</div>${afterAnswer(last.id, last)}${last.bank ? bxFlag(last) : flagBtn(last.id, { subj: laneLabel(last.lane), q: last.q, o: last.o, a: last.a, ex: last.ex, choice: last.choice })}`;
     if (inLight) return `<div class="card" id="xqCard">${html}</div>`;
@@ -6257,6 +6258,7 @@ function xqCard(inLight) {   // inLight：在燈塔頁只顯示漂流瓶的題�
       : left ? `${n >= XQ_DAILY && lightStats().due ? `<div class="muted" style="margin-top:6px">🍶 燈塔海灘有 ${lightStats().due} 個瓶子漂回來了，多練的時候可以先<a href="#" onclick="go('light');return false">去撿瓶子</a>。</div>` : ''}<select id="xqLane" style="width:100%;margin-top:8px" onchange="xqLanePick=this.value">${opts}</select>
       ${isFamily() || !UNIT_TOOLS ? '' : `<label style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:14px"><input type="checkbox" style="width:auto" ${xqWeakOn() ? 'checked' : ''} onchange="setXqWeak(this.checked)"> 🧭 前 ${XQ_WEAK} 題從正在補強的單元出</label>
       <div class="muted" style="font-size:12px">選「隨便一條」時，每天前 ${XQ_WEAK} 題會從你正在補強的單元抽考古題；不想要可以關掉。題數和島幣都不變。</div>`}
+      ${sci3Left() ? `<div class="muted" style="font-size:13px;margin-top:6px">🔬 這週先出 3 題自然，再從正在補強的單元出（自然還有 ${sci3Left()} 題）</div>` : ''}
       <div class="tiers">${Object.keys(XQ_TIERS).map(k => { const t = XQ_TIERS[k];
         return `<button onclick="challengeXq('${k}')" ${xqBusy ? 'disabled' : ''}>${t.ic} ${t.name}<small>答對 🪙 +${t.coins}</small></button>`; }).join('')}</div>
       <div class="muted" style="margin-top:6px">${xqBusy ? '✍️ 島民出題中…' : '題目來自會考考古題。基礎：七成以上的考生答對；中級：四到七成；進階：不到四成。難度越高，島幣越多。'}</div>`
@@ -6302,6 +6304,34 @@ async function pickWeakBank(tier) {
   const t = um.weak[done % um.weak.length];
   return await pickUnitBank(t.lane, t.unit, tier) || (await Promise.all(um.weak.map(w => pickUnitBank(w.lane, w.unit, tier)))).find(Boolean) || null;
 }
+// XQ_SCI3_v1 自然每週 3 題（學習策略 11/12）：選「隨便一條」時，這週還沒做滿 3 題理化，就先從理化延伸的單元抽考古題
+// 開講前和第 1～4 講期間四個單元每週輪流（從 11/16 那週算起）；第 5 講以後的順序學習策略之後給
+const SCI3_N = 3, SCI3_FROM = '2026-11-16', SCI3_UNITS = ['測量與密度', '科學探究（實驗設計與變因）', '水溶液與濃度（含溶解度）', '反應速率與平衡'];
+function weekChallenges() { const m = mondayOf(S.today); return extraQuests().filter(q => q.tier && q.date >= m && q.date <= S.today); }
+function sci3Left() { return isFamily() ? 0 : Math.max(0, SCI3_N - weekChallenges().filter(q => q.lane === '理化' && !q.review && !q.ret).length); }
+async function pickSciBank(tier) {
+  if (!sci3Left()) return null;
+  const w = Math.max(0, Math.round((parseD(mondayOf(S.today)) - parseD(SCI3_FROM)) / 6048e5)), n = SCI3_UNITS.length;
+  for (let i = 0; i < n; i++) { const it = await pickUnitBank('理化', SCI3_UNITS[(w + i) % n], tier); if (it) return it; }
+  return await pickBank(tier, '理化');
+}
+// RETAIN_v1 保留率抽測（研發、學習策略 11/12；爸爸選照常給點）：每天第 2 題、每週最多 3 題，再出一次 14～28 天前答對過、不是猜的考古題
+const RETAIN_WEEK = 3, RETAIN_MIN = 14, RETAIN_MAX = 28;
+async function pickRetBank() {
+  if (isFamily() || todayChallenges().length !== 1 || weekChallenges().filter(q => q.ret).length >= RETAIN_WEEK) return null;
+  const b = await loadBank(); if (!b || !b.items) return null;
+  const all = extraQuests(), lo = addD(S.today, -RETAIN_MAX), hi = addD(S.today, -RETAIN_MIN), done = new Set(all.filter(q => q.ret).map(q => q.ret));
+  const ok = all.filter(q => q.bank && q.correct === true && !q.review && !q.ret && !q.practice && !done.has(q.id) && (q.at || q.date) >= lo && (q.at || q.date) <= hi
+    && !((S.save['rv:' + q.id] || {}).sure === 'guess' || (S.save['rv:' + q.id] || {}).gb));
+  const pool = ok.map(q => ({ q, it: b.items.find(x => x.id === q.bank) })).filter(x => x.it && noGroup(x.it));
+  if (!pool.length) return null;
+  const x = pool[Math.floor(Math.random() * pool.length)];
+  return Object.assign({}, x.it, { ret: x.q.id });
+}
+function retainNote(q) {
+  const src = S.save[q.ret] || {}, n = Math.round((parseD(q.at || S.today) - parseD(src.at || src.date || S.today)) / 864e5);
+  return `<div style="margin-top:8px;background:#f7f1e5;border:1px solid #d8d4ce;border-radius:12px;padding:10px 12px;font-size:14px;color:var(--ink)">🔁 這題你 ${n} 天前答對過，再出一次是為了看還記不記得。${q.correct ? '還記得，很好。' : '隔一陣子會忘是常有的事，已經放進漂流瓶了。'}</div>`;
+}
 async function challengeXq(tier) {
   if (xqBusy || todayChallenges().length >= XQ_MAX) return;
   xqLateOnce();
@@ -6310,7 +6340,7 @@ async function challengeXq(tier) {
   xqBusy = true; softRender();
   try {
     await flush();
-    const item = (!chosen && await pickWeakBank(tier)) || await pickBank(tier, chosen);   // v2.36 先從正在補強的單元挑；再從考古題挑，挑不到（題庫用完或沒有題庫）才請 AI 出
+    const item = (!chosen && (await pickRetBank() || await pickSciBank(tier) || await pickWeakBank(tier))) || await pickBank(tier, chosen);   // RETAIN_v1、XQ_SCI3_v1 排在補強單元前面   // v2.36 先從正在補強的單元挑；再從考古題挑，挑不到（題庫用完或沒有題庫）才請 AI 出
     if (item) S = await call('challengeBank', item);
     else if (todayChallenges().length >= XQ_DAILY) toast('這一科、這個難度的考古題你都做過了。想繼續的話，可以換一科或換個難度。');   // XQ_MORE_v1：過了 10 題不叫 AI
     else {
@@ -9321,7 +9351,7 @@ const WHO_SEES = [
   ['送書、明信片、鼓勵卡附的話', '✅', '只有寄的人和收的人', '—'],
   ['島的樣子、島名、等級、島民和家的擺設', '✅', '你選的人', '✅'],
   ['連續週數、這週完成幾項', '✅', '你選的人', '有勾的'],
-  ['📊 統計數字：' + GUARDIAN_ + '有一個讀數工具，看得到這些數字：每週計畫完成幾格、各科讀了幾分鐘、上課和運動的次數、挑戰任務答了幾題和答對幾題、漂流瓶和燈籠的數量、紙船的數量、國文錯題裡「沒讀懂題目」和「讀懂了，判斷錯」各有幾題、AI 用了幾次，還有大考成績，和最近 14 天你在讀書和其他畫面各待了幾分鐘。只有數字和日期，看不到你寫的字，也看不到是哪幾題。這個工具只有' + GUARDIAN_ + '在用。', '✅', GUARDIAN_ + '（讀數工具）', '—', 'me']];   /* PRIV_STATS_v1 */ // 只給她看；之後 xpDaily、國文錯因、保留率、交易所使用量上線時，各包把自己的項目加進這一列（文案 216 追記四）
+  ['📊 統計數字：' + GUARDIAN_ + '有一個讀數工具，看得到這些數字：每週計畫完成幾格、各科讀了幾分鐘、上課和運動的次數、挑戰任務答了幾題和答對幾題、挑戰任務再出一次的舊題答對幾題、漂流瓶和燈籠的數量、紙船的數量、國文錯題裡「沒讀懂題目」和「讀懂了，判斷錯」各有幾題、AI 用了幾次，還有大考成績，和最近 14 天你在讀書和其他畫面各待了幾分鐘。只有數字和日期，看不到你寫的字，也看不到是哪幾題。這個工具只有' + GUARDIAN_ + '在用。', '✅', GUARDIAN_ + '（讀數工具）', '—', 'me']];   /* PRIV_STATS_v1 */ // 只給她看；之後 xpDaily、國文錯因、保留率、交易所使用量上線時，各包把自己的項目加進這一列（文案 216 追記四）
 function privacyCard() {   // MORE_FOLD_v1：只回摺疊的說明，放在「🔒 誰看得到什麼」展開的最下面
   return `<details class="fold"><summary><h3>資料存在哪裡、誰打得開、訪客看得到哪些</h3></summary>
     <div style="overflow-x:auto;margin-top:8px"><table style="font-size:13px;width:100%"><tr><th style="text-align:left">內容</th><th>${isFamily() ? '她' : '你'}</th><th>家人</th><th>訪客</th></tr>
