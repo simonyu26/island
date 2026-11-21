@@ -215,6 +215,16 @@
       ${nextList(famNext(), `下次更新：${esc(NEXT_UP && NEXT_UP.when || '')}，預計會有：`, 'margin-top:4px;font-size:13px')}
       <button class="ghost" style="margin-top:8px;padding:4px 10px;font-size:13px" onclick="local.del('islandSeenVersion');go('mail')">看這次更新了什麼 ›</button></div>`);   // FAM_NEWSCARDS_v1
   }
+  // FAM_CHANGELOG_v1：玩法說明頁最下面的完整更新紀錄（只列家人看得到的條目；一版都沒有就不畫）
+  function famLogCard() {
+    const list = CHANGELOG.map(c => Object.assign({}, c, { items: famPick(c, c.items) })).filter(c => c.items.length);
+    if (!list.length) return '';
+    const one = c => c.minor ? minorFold([c]) : `<div style="margin-top:8px"><b>v${c.v}</b> <span class="muted">${esc(c.date)}</span>
+      <ul style="margin:4px 0;padding-left:20px">${c.items.map(i => `<li>${esc(newsText(i))}</li>`).join('')}</ul></div>`;
+    if (OWN_CARDS.indexOf('famlog') < 0) OWN_CARDS.push('famlog');   // 11/21：用 card() 包（test_own_buttons 規定新卡片要有 data-card）
+    return window.card('famlog', `<div class="card"><h3>📰 更新紀錄</h3>${list.slice(0, 3).map(one).join('')}
+      ${list.length > 3 ? `<details class="fold" style="margin-top:10px"><summary><b>更早的 ${list.length - 3} 版</b></summary>${list.slice(3).map(one).join('')}</details>` : ''}</div>`);
+  }
   window.viewGuide = function () {
     const g = guide();
     return `${famVersionCard()}<div class="card"><div class="big">${g.pic}</div><h2 style="text-align:center">${esc(D.cfg.islandName)} 的玩法</h2>
@@ -223,6 +233,7 @@
     <div class="card"><h3>⭐ 經驗值與房子</h3><p style="line-height:1.7">完成一次 +10 經驗值，做了一部分 +5；確認一週 +20，達成率越高加越多。經驗值讓島升級、房子變大；換島幣不會扣經驗值，房子也不會變小。</p></div>
     <div class="card"><h3>🏃 運動</h3><p style="line-height:1.7">運動完蓋一個章，一章 +5 經驗值；一週集滿 3 章 +3 枚島幣。</p></div>
     <div class="card"><h3>🪙 島幣</h3><p style="line-height:1.7">到「商店」用經驗值換島幣，再換你自己訂的獎勵，或幫你的家買家具。</p></div>
+    ${famLogCard()}
     <div class="row"><button class="grow" onclick="go('home')">回到島上</button></div>`;
   };
 
@@ -274,7 +285,7 @@
       ${left ? `<div style="margin-top:12px"><div class="muted">加一個方向：</div><div class="row" style="gap:6px;margin-top:4px">
         ${SUGGEST.filter(x => !f.dirs.some(d => d.name === x.name)).map((x, k) => `<button type="button" class="ghost" data-sug="${SUGGEST.indexOf(x)}">${x.ic} ${x.name}</button>`).join('')}
         <button type="button" class="ghost" data-sug="-1">＋ 自己訂</button></div></div>` : ''}</div>
-    <div class="card"><h3>${f.first ? '6. ' : ''}島嶼商店（選填）</h3><div class="muted">島幣可以換什麼？價格你自己訂。一般一週大約賺 5 到 10 枚。</div>
+    <div class="card"><h3>${f.first ? '6. ' : ''}島嶼商店（選填）</h3><div class="muted">島幣可以換什麼？價格你自己訂。島幣是慢慢存下來的，不用急著一次用完。</div>
       ${c.shop.map((x, i) => `<div class="row" style="margin-top:6px"><input class="grow" data-c="shop.${i}.name" value="${esc(x.name)}" placeholder="例如：週末睡晚一點"><input style="width:80px" type="number" min="1" data-c="shop.${i}.price" value="${x.price}"></div>`).join('')}
       <div style="margin-top:8px"><button class="ghost" type="button" id="famShop">＋ 新增商品</button></div></div>
     <div class="row"><button id="famSave" class="grow">${f.first ? '開島！' : '儲存'}</button>${f.first ? '' : `<button class="ghost" onclick="draft={};go('more')">取消</button>`}</div>`;
@@ -512,7 +523,7 @@
   function shopOpen() {
     if (shopReady || !shopOn()) return; shopReady = true;
     OWN_TABS.push('bookstore'); KEEP_PLACE.push('books');   // 借她的 bookstore 分頁名稱：Index.html 的分頁表會叫 viewBookstore，下面換成家人的書架
-    ['shelfAdd', 'bookAdd', 'bookRead', 'bookDel'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    ['shelfAdd', 'bookAdd', 'bookRead', 'bookDel', 'bookCat'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
     window.maybeMoreBooks = () => {}; window.seeBooksNow = () => {};   // 她的書店頁畫完會補書（叫 AI）、記已讀；家人的書架不叫 AI、不碰她的存檔
     const bl = PLACE_LINKS.find(x => x.key === 'books'); if (bl) { bl.on = () => true; bl.go = () => openFamBooks(); }
     PLACES.bookstore = Object.assign({}, PLACES.bookstore, { name: '書店', about: ['這裡是你自己的書架：可以從書單挑書，也可以自己加書', '讀完一本按「讀完了」，那個方向的街上會長出一個地標', '書架上的書，在島上只有你自己看得到'] });
@@ -573,28 +584,47 @@
       if (k.startsWith('fshelf:') && !c) return null;
       const d = liveDirs().find(x => x.slot === r.slot) || liveDirs()[0];
       return { key: k, title: c ? c.title : r.title, author: c ? c.author : r.author, ic: c ? c.ic : '📘', hours: c ? c.hours : r.hours, readAt: r.readAt, at: r.at, d,
-        land: c ? (LANDMARKS[c.id] || [])[1] : r.landmark, model: c && LANDMARKS[c.id] ? c.id : 'sign' };
+        land: c ? (LANDMARKS[c.id] || [])[1] : r.landmark, model: c && LANDMARKS[c.id] ? c.id : 'sign',
+        cat: r.cat || (c && c.cat === 'BL' ? 'BL' : '') };   // FAMSHOP_CAT_v1：自己標的分類優先；書單的 BL 預設標 BL
     }).filter(Boolean).sort((a, b) => (!!a.readAt - !!b.readAt) || String(b.at).localeCompare(String(a.at)));
   }
   const viewBookstore0 = window.viewBookstore;
   window.viewBookstore = () => shopOn() ? viewFamBooks() : viewBookstore0();
+  // FAMSHOP_CAT_v1：書架分類（只有島主自己看得到：後端 SEE_DROP 剝 cat、快照和乘船券本來就不帶書）
+  const FAM_BOOK_CATS = ['漫畫', '輕小說', '動漫', 'BL', '小說'];   // 和 FamShop.gs 的 FAM_BOOK_CATS 一樣（測試會比）
+  const FC_CSS = '.fcchips{display:flex;gap:6px;overflow-x:auto;white-space:nowrap;margin:8px 0;padding-bottom:2px;-webkit-overflow-scrolling:touch}.fcchip{flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;border:1px solid #d8d4ce;background:#fff;color:var(--ink);border-radius:999px;padding:0 12px;font-size:13px;cursor:pointer}.fcchip.on{background:var(--plum-light);border:2px solid var(--plum)}button.fctag{font-size:12px;border-radius:6px;padding:2px 6px;background:#f1f1f1;color:#555;white-space:nowrap;border:0;min-height:0;line-height:1.4}';
+  function fcCss() { if (!document.getElementById('famCatCss')) document.head.insertAdjacentHTML('beforeend', '<style id="famCatCss">' + FC_CSS + '</style>'); return ''; }
+  const fcOf = b => b.cat || '';
+  function fcChips(list) {   // draft.fcat：'' 全部、'none' 沒分類、其他＝分類名；沒有書的分類不畫
+    const cur = draft.fcat || '', n = c => c === '' ? list.length : c === 'none' ? list.filter(b => !fcOf(b)).length : list.filter(b => fcOf(b) === c).length;
+    const chips = [['', '全部']].concat(FAM_BOOK_CATS.map(c => [c, c])).concat([['none', '沒分類']]).filter(([c]) => c === '' || n(c));
+    return `<div class="fcchips">${chips.map(([c, name]) => `<span class="fcchip${cur === c ? ' on' : ''}" onclick="famCatPick('${c}')">${cur === c ? '✓ ' : ''}${name} ${n(c)}</span>`).join('')}</div>`;
+  }
+  const fcList = list => { const cur = draft.fcat || ''; return cur === '' ? list : list.filter(b => cur === 'none' ? !fcOf(b) : fcOf(b) === cur); };
+  function fcTag(b) {
+    if (draft.fcEdit === b.key) return `<select onchange="famBookCat('${b.key}', this.value)" style="min-height:44px;font-size:13px;margin:0;width:auto"><option value="">沒分類</option>${FAM_BOOK_CATS.map(c => `<option value="${c}"${fcOf(b) === c ? ' selected' : ''}>${c}</option>`).join('')}</select>`;
+    return fcOf(b) ? `<button type="button" class="fctag" onclick="draft.fcEdit='${b.key}';render()">${esc(fcOf(b))}</button>` : `<button type="button" class="ghost" style="padding:4px 10px;font-size:13px" onclick="draft.fcEdit='${b.key}';render()">選分類</button>`;
+  }
+  window.famCatPick = c => { draft.fcat = c; render(); };
+  window.famBookCat = async (key, cat) => { const f = draft.fcat; draft.fcEdit = null; if (await shopCall('bookCat', key, cat)) { draft.fcat = f; toast(cat ? '分類改好了' : '拿掉分類了'); render(); } };
   function viewFamBooks() {
     const kp = keeperOf('bookstore'), list = shelf(), dirs = liveDirs(), on = new Set(list.map(b => b.key));
     const dsel = id => `<select id="${id}">${dirs.map(d => `<option value="${d.slot}">${esc(d.ic)} ${esc(d.name)}</option>`).join('')}</select>`;
     const row = b => `<div class="item"><span style="font-size:22px">${esc(b.ic)}</span><div class="name grow">${esc(b.title)}<div class="muted" style="font-size:12px">${b.author ? esc(b.author) + '・' : ''}${b.d ? esc(b.d.ic) + ' ' + esc(b.d.name) : ''}${b.readAt ? '・' + esc(short(b.readAt)) + ' 讀完' : ''}</div>
         ${b.readAt && b.d ? `<div class="bkland" onclick="go('home')">🏞️ ${esc(b.d.name)}街長出了「${esc(b.land || '小書屋')}」<span class="muted">・回小島看看 ›</span></div>` : ''}</div>
-      <div style="display:flex;flex-direction:column;gap:4px"><button class="${b.readAt ? 'ghost' : ''}" style="padding:4px 10px;font-size:13px" onclick="famBookRead('${b.key}', ${b.readAt ? 'false' : 'true'})">${b.readAt ? '還沒讀完' : '讀完了'}</button>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${fcTag(b)}<button class="${b.readAt ? 'ghost' : ''}" style="padding:4px 10px;font-size:13px" onclick="famBookRead('${b.key}', ${b.readAt ? 'false' : 'true'})">${b.readAt ? '還沒讀完' : '讀完了'}</button>
         <button class="ghost" style="padding:4px 10px;font-size:13px" onclick="famBookDel('${b.key}')">拿下來</button></div></div>`;
     const cat = draft.bcat || SHELF_CATS[0][0];
     return `<div class="card"><h2>📚 書店</h2>${placeIntro('bookstore') || (kp ? `<div class="row" style="margin-top:6px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('bookstore')"><span style="font-size:30px">${kpPic(kp)}</span>
         <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：いらっしゃいませ～${list.some(b => !b.readAt) ? '書架上有 ' + list.filter(b => !b.readAt).length + ' 本書，挑一本想讀的就好。' : '要不要挑一本新書？'}</div></div>` : '')}</div>
-    <div class="card"><h3>我的書架</h3>${list.length ? list.map(row).join('') : '<div class="muted">書架還空空的。從下面的書單挑一本，或自己加一本吧。</div>'}
+    <div class="card"><h3>我的書架</h3>${fcCss()}${list.length ? fcChips(list) + (fcList(list).map(row).join('') || '<div class="muted">這個分類還沒有書。</div>') : '<div class="muted">書架還空空的。從下面的書單挑一本，或自己加一本吧。</div>'}
       <div class="muted" style="font-size:12px;margin-top:8px">讀完一本，那個方向的街上會長出一個地標。書架上的書，在島上只有你自己看得到。</div></div>${shioriHtml()}
     <div class="card"><h3>➕ 自己加一本</h3>
       <input id="fbTitle" maxlength="30" placeholder="書名"><input id="fbAuthor" maxlength="30" placeholder="作者（選填）" style="margin-top:4px">
+      <select id="fbCat" style="margin-top:4px"><option value="">分類（選填）</option>${FAM_BOOK_CATS.map(c => `<option value="${c}">${c}</option>`).join('')}</select><div class="muted" style="font-size:12px;margin-top:4px">🔒 分類在 App 裡只有你自己看得到</div>
       <div class="row" style="margin-top:4px"><span class="muted">放在</span>${dsel('fbSlot')}<span class="muted">大約</span><input id="fbHours" type="number" min="0.5" max="20" step="0.5" value="4" style="width:70px"><span class="muted">小時</span></div>
       <input id="fbLand" maxlength="10" placeholder="讀完長出的地標（選填），例如：小書屋" style="margin-top:4px">
-      <button style="width:100%;margin-top:8px" onclick="famBookAdd()">放上書架</button></div>
+      <button style="width:100%;margin-top:8px" onclick="famBookAdd()">放上書架</button><div class="muted" style="font-size:12px;margin-top:6px">分類只是幫你整理書架，可以之後再改。</div></div>
     <div class="card"><h3>🗂️ 從書單挑</h3><div class="row" style="gap:6px">${SHELF_CATS.map(([c, n]) => `<button type="button" class="${c === cat ? '' : 'ghost'}" style="padding:4px 10px;font-size:13px" onclick="draft.bcat='${c}';render()">${n}</button>`).join('')}</div>
       <div class="row" style="margin-top:8px"><span class="muted">放在</span>${dsel('fbPickSlot')}</div>
       ${BOOK_CATALOG.filter(b => b.cat === cat).map(b => `<div class="item"${on.has('fshelf:' + b.id) ? ' style="opacity:.45"' : ''}><span style="font-size:22px">${esc(b.ic)}</span>
@@ -607,7 +637,7 @@
   window.famBookAdd = async () => {
     const v = id => (document.getElementById(id) || {}).value || '';
     if (!v('fbTitle').trim()) return toast('寫一下書名吧');
-    if (await shopCall('bookAdd', { title: v('fbTitle'), author: v('fbAuthor'), slot: Number(v('fbSlot')), hours: Number(v('fbHours')), landmark: v('fbLand') })) toast('放上書架了');
+    if (await shopCall('bookAdd', { title: v('fbTitle'), author: v('fbAuthor'), slot: Number(v('fbSlot')), hours: Number(v('fbHours')), landmark: v('fbLand'), cat: v('fbCat') })) toast('放上書架了');
   };
   window.famBookRead = async (key, read) => { if (await shopCall('bookRead', key, read) && read) toast('🏞️ 讀完了！回小島看看長出來的地標'); };
   window.famBookDel = async key => { if (confirm('把這本從書架拿下來嗎？長出來的地標也會一起收起來。')) await shopCall('bookDel', key); };
@@ -940,7 +970,7 @@
     return `${famFloors('light')}<div class="card"><h2>🗼 ${esc(lightTitle())}</h2>
         ${intro || (kp ? `<div class="row" style="flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('lighthouse')"><span style="font-size:32px">${kpPic(kp)}</span>
           <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(famLightSay(w))}</div></div>`
-          : `<button class="ghost" style="width:100%" onclick="openKeeper('lighthouse')">🧓 燈塔還沒有守燈人，請一位來守燈吧</button>`)}
+          : `<button class="ghost" style="width:100%" onclick="openKeeper('lighthouse')">🧓 燈塔在等一位守燈人，想的話可以請一位來守燈。</button>`)}
         <div class="hud" style="margin-top:10px"><div><b>${w.done}</b><span class="muted">✅ 這週完成</span></div><div><b>${w.boats}</b><span class="muted">⛵ 這週的船</span></div></div></div>
       ${typeof famInbox === 'function' ? card('famask', famInbox()) : ''}
       <div class="card"><div class="row" style="flex-wrap:nowrap"><span style="font-size:28px">⛵</span><div class="grow"><b>燈塔下面的紙船碼頭</b>
