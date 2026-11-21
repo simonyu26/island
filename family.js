@@ -37,6 +37,7 @@
     wordsOpen();   // 單字出題
     b2Open();   // FAM_B2_v1 挑戰和故事
     langOpen();   // FAM_LANG_A 語言先行
+    p3a1Open();   // P3A1_JW 日文單字巷
     if (!OWN_TABS.includes(tab)) { tab = 'home'; draft = {}; }
     const all = (isle() && isle().dirs) || [], live = liveDirs();
     // 項目的科目換成方向的名字（計畫、確認頁的小標題用），GROUP 也加上方向名字 → 位置，經驗值和房子照位置算
@@ -125,6 +126,7 @@
   const FAM_LANG_DIR = /外語|日文|英文|日語|英語|語言/;
   function famWordLink(d) {
     if (!d || !wordsOn() || !(d.ic === '🔤' || FAM_LANG_DIR.test(String(d.name || '')))) return '';
+    const jl = typeof famLangLanes === 'function' ? famLangLanes(d) : null; if (jl != null) return jl;   // P3A1_JW
     return `<button class="ghost" style="width:100%;margin-top:8px" onclick="go('words');window.scrollTo(0,0)">🔤 去練單字</button>`;
   }
   const streets0 = window.streets;
@@ -1610,5 +1612,130 @@
     try { await flush(); S = await call('diaryGuest', date, on); D = derive(S); } catch (e) { toast('沒有存到：' + (e.message || e)); return render(); }
     toast(on ? '這一頁會放進乘船券' : '乘船券不放這一頁了'); render();
   };
+  // ---------- P3A1_JW 語言模組 P3a-1：街區選單＋日文單字巷（N1 單字書卡冊） ----------
+  const JW_PER = 10, JW_PAGE = 50, JW_MAX = 1852, JW_FLUSH = 20, JW_WAIT = 3000;
+  let p3a1Ready = false;
+  const jwCache = {};   // 書裡編號 → { no, forms: [...] }（只在這次開 App 的記憶體，不存手機）
+  let jwPending = {}, jwTimer = null, jwLoaded = false, jwErr = '';
+  function p3a1Open() {
+    if (p3a1Ready || !langCanOn()) return; p3a1Ready = true;
+    ['n1Cards', 'langGet', 'langSet', 'langMark', 'langStreet'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+  }
+  // 這條街區練哪一種語言：本人選的（lsl）優先；名字寫了日文／英文就照名字；都看不出來回 ''
+  function famLangOfDir(d) {
+    const m = (S.save && S.save.lsl) || {}, v = m[String(d.slot)];
+    if (v === 'ja' || v === 'en') return v;
+    const n = String(d.name || '');
+    if (/日文|日語|日本/.test(n)) return 'ja';
+    if (/英文|英語/.test(n)) return 'en';
+    return '';
+  }
+  window.famLangPick = async function (slot, lang) {
+    try { const r = await call('langStreet', slot, lang); S.save.lsl = r.lsl; } catch (e) { return toast('沒有存到：' + (e.message || e)); }
+    render();
+  };
+  // 巷子格：日文街區才有；回 null 表示這條街區不用巷子格（走原本的「去練單字」）
+  function famLangLanes(d) {
+    if (!langCanOn() || typeof ownMode !== 'function' || !ownMode()) return null;
+    const lang = famLangOfDir(d);
+    if (!lang) return `<div style="margin-top:8px"><div class="muted" style="font-size:13px">這個街區要練哪一種語言？</div>
+      <div class="row" style="gap:8px;margin-top:6px"><button class="ghost grow" onclick="famLangPick(${d.slot},'ja')">日文</button><button class="ghost grow" onclick="famLangPick(${d.slot},'en')">英文</button></div></div>`;
+    if (lang !== 'ja') return null;
+    const off = n => `<div class="jwlane off" aria-disabled="true"><div>${n[0]}</div><div>${n[1]}</div><div class="muted" style="font-size:11px">準備中</div></div>`;
+    return `<style>.jwlanes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}.jwlane{border:2px solid var(--plum-light,#e6c6d4);border-radius:12px;padding:10px 6px;text-align:center;background:#fff;min-height:44px}
+      .jwlane.off{border-style:dashed;opacity:.6}</style>
+      <div class="jwlanes"><button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="jwGo()"><div>🔤</div><div>單字巷</div></button>${off(['📃', '閱讀巷'])}${off(['🧱', '文法巷'])}${off(['🎧', '聽力巷'])}</div>`;
+  }
+  const jwMarks = () => Object.assign({}, (S.save && S.save['lcards:ja']) || {}, jwPending);
+  function jwRange() { const r = (S.save && S.save['lrange:ja']) || { k: 'all' }; return r && r.k ? r : { k: 'all' }; }
+  function jwDeck() {
+    const r = jwRange(), m = jwMarks(), out = [];
+    if (r.k === 'seg') { for (let n = Math.max(1, r.a || 1); n <= Math.min(JW_MAX, r.b || 50); n++) out.push(n); return out; }
+    for (let n = 1; n <= JW_MAX; n++) { const v = m[String(n)]; if (r.k === 'again' ? v === 'a' : r.k === 'unseen' ? !v : true) out.push(n); }
+    return out;
+  }
+  window.jwGo = async function () {
+    go('words'); draft = { jw: { p: 0, ready: false } }; render(); window.scrollTo(0, 0);
+    try {
+      const g = await call('langGet', 'ja'); S.save['lcards:ja'] = g.cards; S.save['lrange:ja'] = g.range; S.save['llv:ja'] = { v: g.lv }; if (g.lsl) S.save.lsl = g.lsl;
+      jwErr = '';
+    } catch (e) { jwErr = '拿不到你的紀錄：' + (e.message || e); }
+    jwLoaded = true; await jwLoad();
+  };
+  async function jwLoad() {
+    if (!draft || !draft.jw) return;
+    const deck = jwDeck(), p = draft.jw.p || 0, nos = deck.slice(p * JW_PER, p * JW_PER + JW_PER), need = {};
+    nos.forEach(n => { if (!jwCache[n]) need[Math.floor((n - 1) / JW_PAGE) * JW_PAGE + 1] = 1; });
+    try {
+      for (const st of Object.keys(need)) { const r = await call('n1Cards', 'ja', Number(st), JW_PAGE); (r.cards || []).forEach(c => { jwCache[c.no] = c; }); }
+      jwErr = '';
+    } catch (e) { jwErr = '卡片載入失敗：' + (e.message || e); }
+    if (draft && draft.jw) { draft.jw.ready = true; render(); }
+  }
+  window.jwPage = function (d) { const total = Math.max(1, Math.ceil(jwDeck().length / JW_PER)); draft.jw.p = Math.min(total - 1, Math.max(0, (draft.jw.p || 0) + d)); draft.jw.ready = false; render(); window.scrollTo(0, 0); jwLoad(); };
+  window.jwRangeSet = async function (k) {
+    const o = { k: k };
+    if (k === 'seg') {
+      const a = Number((document.getElementById('jwA') || {}).value), b = Number((document.getElementById('jwB') || {}).value);
+      o.a = a >= 1 && a <= JW_MAX ? Math.floor(a) : 1; o.b = b >= o.a && b <= JW_MAX ? Math.floor(b) : Math.min(JW_MAX, o.a + 49);
+    }
+    await jwFlush();
+    try { S = await call('langSet', 'ja', { range: o }); D = derive(S); } catch (e) { return toast('沒有存到：' + (e.message || e)); }
+    draft.jw.p = 0; draft.jw.ready = false; render(); jwLoad();
+  };
+  window.jwFlip = function (n) { const el = document.getElementById('jwc' + n); if (el) el.classList.toggle('fl'); };
+  window.jwMark = function (n, v, ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    const m = jwMarks(), cur = m[String(n)], next = cur === v ? null : v;   // 再按一次同一顆就取消
+    jwPending[String(n)] = next;
+    if (next) (S.save['lcards:ja'] = S.save['lcards:ja'] || {})[String(n)] = next; else if (S.save['lcards:ja']) delete S.save['lcards:ja'][String(n)];
+    const el = document.getElementById('jwc' + n);
+    if (el) { el.classList.toggle('mk', next === 'k'); el.classList.toggle('ma', next === 'a'); el.querySelectorAll('[data-v]').forEach(b => { b.classList.toggle('on', b.dataset.v === next); b.setAttribute('aria-pressed', String(b.dataset.v === next)); }); }
+    const cn = document.getElementById('jwCnt'), mm = jwMarks(); if (cn) cn.textContent = '記得了 ' + Object.keys(mm).filter(k => mm[k] === 'k').length + ' 張・再看一次 ' + Object.keys(mm).filter(k => mm[k] === 'a').length + ' 張';
+    if (Object.keys(jwPending).length >= JW_FLUSH) jwFlush(); else { clearTimeout(jwTimer); jwTimer = setTimeout(jwFlush, JW_WAIT); }
+  };
+  async function jwFlush() {
+    clearTimeout(jwTimer); const batch = jwPending; if (!Object.keys(batch).length) return; jwPending = {};
+    try { await call('langMark', 'ja', batch); } catch (e) { Object.keys(batch).forEach(k => { if (!(k in jwPending)) jwPending[k] = batch[k]; }); toast('這幾張的標記還沒存到，稍後會再試：' + (e.message || e)); clearTimeout(jwTimer); jwTimer = setTimeout(jwFlush, 15000); }
+  }
+  window.jwBack = async function () { await jwFlush(); draft = {}; go('home'); window.scrollTo(0, 0); };
+  window.jwToWords = async function () { await jwFlush(); draft = {}; render(); window.scrollTo(0, 0); };
+  function jwCardHtml(c, m) {
+    const f = c.forms || [], v = m[String(c.no)], first = f[0] || {};
+    const hi = (ex, x) => { const t = [x.w, x.base].find(y => y && ex.indexOf(y) >= 0); return t ? esc(ex).replace(esc(t), '<u>' + esc(t) + '</u>') : esc(ex); };
+    return `<div class="jwc${v === 'k' ? ' mk' : ''}${v === 'a' ? ' ma' : ''}" id="jwc${c.no}" onclick="jwFlip(${c.no})" role="button" tabindex="0" aria-label="翻面">
+      <div class="fr"><div class="muted" style="font-size:12px">N1・No.${c.no}${first.page ? '・第 ' + first.page + ' 頁' : ''}</div>
+        ${f.map(x => `<div class="row" style="flex-wrap:nowrap;gap:6px"><div class="grow" lang="ja"><span style="font-size:22px">${esc(x.w)}</span> <span class="muted">${esc(x.r)}</span></div><span onclick="event.stopPropagation()">${sayBtn(x.r || x.w, 'ja-n1')}</span></div>`).join('')}
+        <div class="muted" style="font-size:12px;margin-top:4px">點一下看字義和例句</div></div>
+      <div class="bk">${f.map(x => `<div style="margin-top:6px"><b lang="ja">${esc(x.w)}</b>　${esc(x.mean)}
+        <div lang="ja" style="margin-top:2px">${hi(String(x.ex || ''), x)} <span onclick="event.stopPropagation()">${sayBtn(x.ex || '', 'ja-n1')}</span></div><div class="muted">${esc(x.exZh)}</div></div>`).join('')}</div>
+      <div class="row" style="gap:8px;margin-top:8px" onclick="event.stopPropagation()"><button data-v="a" class="jwb${v === 'a' ? ' on' : ''} grow" aria-pressed="${v === 'a'}" onclick="jwMark(${c.no},'a',event)"><span class="ck">✓ </span><span class="ic">🔁 </span>再看一次</button><button data-v="k" class="jwb${v === 'k' ? ' on' : ''} grow" aria-pressed="${v === 'k'}" onclick="jwMark(${c.no},'k',event)"><span class="ck">✓ </span>記得了</button></div></div>`;
+  }
+  window.jwView = function () {
+    const r = jwRange(), m = jwMarks(), deck = jwDeck(), p = draft.jw.p || 0, total = Math.max(1, Math.ceil(deck.length / JW_PER)), nos = deck.slice(p * JW_PER, p * JW_PER + JW_PER);
+    const known = Object.keys(m).filter(k => m[k] === 'k').length, again = Object.keys(m).filter(k => m[k] === 'a').length;
+    const rb = (k, t) => `<button class="jwb${r.k === k ? ' on' : ''}" style="padding:6px 12px;min-height:44px" aria-pressed="${r.k === k}" onclick="jwRangeSet('${k}')"><span class="ck">✓ </span>${t}</button>`;
+    const body = !draft.jw.ready ? '<div class="loading">卡片載入中…</div>'
+      : !nos.length ? `<div class="muted" style="padding:10px 0">${r.k === 'again' ? '沒有標「再看一次」的字。' : r.k === 'unseen' ? '每一張都標過了。' : '這個範圍沒有字。'}</div>`
+      : nos.map(n => jwCache[n] ? jwCardHtml(jwCache[n], m) : '').join('');
+    return `<style>.jwc{border:2px solid var(--plum-light,#e6c6d4);border-radius:14px;padding:12px;margin:10px 0;background:#fff;cursor:pointer}
+      .jwc .bk{display:none}.jwc.fl .fr{display:none}.jwc.fl .bk{display:block}
+      .jwc.mk{border-color:#2f5a3a;background:#e5efe0}.jwc.ma{border-style:dashed;background:#f7f1e5}
+      .jwb{background:#fff;color:inherit;border:1px solid #d8d4ce;border-radius:12px;padding:8px 10px;min-height:44px;font:inherit;cursor:pointer}
+      .jwb.on{background:var(--plum-light,#ead1dc);border:2px solid var(--plum,#741b47)}
+      .jwb .ck{display:none}.jwb.on .ck{display:inline}.jwb.on .ic{display:none}
+      .jwoff{background:#f7f1e5;color:#5f5a55;border:1px dashed #d8d4ce;border-radius:12px;padding:8px 14px;min-height:44px;font:inherit}</style>
+      <div class="card"><h2>🔤 日文單字巷</h2><div class="muted">N1 單字書，一共 ${JW_MAX} 個編號。點卡片翻面，記得就按「記得了」，想再看就按「再看一次」。</div>
+        <div class="muted" style="margin-top:4px" id="jwCnt">記得了 ${known} 張・再看一次 ${again} 張</div>
+        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${rb('all', '全部')}${rb('seg', '挑一段編號')}${rb('again', '再看一次的字')}${rb('unseen', '新的字')}</div>
+        ${r.k === 'seg' ? `<div class="row" style="gap:6px;margin-top:6px;align-items:center">No.<input id="jwA" type="number" min="1" max="${JW_MAX}" value="${r.a || 1}" style="width:80px"> ～ <input id="jwB" type="number" min="1" max="${JW_MAX}" value="${r.b || 50}" style="width:80px"><button class="ghost" onclick="jwRangeSet('seg')">套用</button></div>` : ''}
+        ${jwErr ? `<div class="muted" style="color:#9a3567;margin-top:6px">${esc(jwErr)}</div>` : ''}</div>
+      ${body}
+      <div class="row" style="gap:8px">${p <= 0 ? '<button class="jwoff" disabled aria-disabled="true">上一頁</button>' : '<button class="ghost" onclick="jwPage(-1)">上一頁</button>'}<span class="muted grow" style="text-align:center;align-self:center">${deck.length ? (p + 1) + '／' + total : '0'}</span>${p >= total - 1 ? '<button class="jwoff" disabled aria-disabled="true">下一頁</button>' : '<button class="ghost" onclick="jwPage(1)">下一頁</button>'}</div>
+      <div class="row" style="margin-top:8px"><button class="ghost grow" onclick="jwToWords()">🔤 我的單字卡（拍照出題）</button></div>
+      <div class="row"><button class="ghost grow" onclick="jwBack()">回到小島 🏝️</button></div>`;
+  };
+  const viewWordsJw0 = window.viewWords;
+  window.viewWords = function () { return langCanOn() && draft && draft.jw ? jwView() : viewWordsJw0.apply(this, arguments); };
   window.FamIsle = { apply, after, cards: OWN_CARDS };
 })();
