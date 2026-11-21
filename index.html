@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.3';
+const APP_VERSION = '2.52.4';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.4', date: '2026-11-21', fam: [0, 1, 2, 3], guide: ['經驗值怎麼算', '島幣和商店', '島の屋台（素材與料理）'], items: ['⏳ 計畫格有計時（或記了上課）超過 30 分鐘的話，超過的部分每 2 分鐘多 1 點經驗值，一格最多算 90 分鐘，一天合計最多 240 分鐘，Boss 雙倍。勾「完成」+25、「部分」+12 照舊。', '⭐ 11/19 起計時過的格，已經照新的算法補上經驗值了。', '🍶 撿瓶子拿到的經驗值，現在有一半可以在商店的「經驗值換島幣」換成島幣，每天最多換 5 枚，換了經驗值不會減少。11/19 起撿的瓶子已經算進去了。', '🏮 放走的紙燈籠每累積 20 盞（標了「有點猜」的瓶子不算），就多 20 點經驗值，可以幫島嶼升級；這 20 點不算進經驗值換島幣。以前放走的燈籠也已經算進去了。', '🔀 屋台換素材不用再限同一個街區了：同一種常見素材 2 個，可以換 1 個另一種常見素材，一天還是可以換 2 次。稀有素材和智慧島的珍品一樣不能換。', '🎨 插畫頭像提早一天開放：11/21 起，在角色的『樣子』裡就可以改選一張插畫。', '🧺 稀有素材多了一個來源：同一天裡，國文、英文、數學、自然、社會都有做完的計畫格（自然、社會裡哪一科都算），就會拿到 1 個稀有素材，種類不一定。一天最多 1 個，和其他拿稀有素材的方式分開算。'] },
   { v: '2.52.3', date: '2026-11-20', items: ['🆕 小島有新版本時會自己更新；如果你正在作答、計時或打字，畫面上方會先出現一條提醒，做完再點就好。'], fam: true, guide: '無' },
   { v: '2.52.2', date: '2026-11-20', items: ['🎨 11/22 起，島上角色的頭像可以改選一張插畫：人物 40 張、動物 23 張，在角色的『樣子』裡按『或選一張插畫』就能挑。原本的樣子照舊可以用。插畫來自 Loose Drawing。'], fam: true, guide: '無' },
   { v: '2.52.1', date: '2026-11-20', items: ['🛍️ 商店變短了：素材櫃和收購合成「素材與料理」，點一下就打開；兌換紀錄收在獎品下面。家具店改成商店最下面的一個小連結，也可以從『我的家』進去；挑戰任務在首頁的『今日のおつとめ』。'], guide: ['島幣和商店', '衛星小島'] },
@@ -1061,6 +1062,60 @@ function weekStreak(first, curMon, ok) {
   }
   return { streak, best };
 }
+// PLAN_MIN_v1（爸爸 11/18 縮小版）：計畫格勾了「讀完了／部分」，那天那格有 ⏳ 計時（focus 列帶 row，含補登）或上課登記（wei 格：同科 class 列），
+// 分鐘取兩者大的（不相加），5 分鐘為單位、一格最多算 90 分、一天合計最多算 240 分（照列號順序）；超過 30 分的部分每分鐘 +0.5（無條件捨去），Boss 雙倍。
+// 原標準不變，這裡只算加給；PLAN_MIN_FROM（上線前兩天）以後的日子才算，所以舊的不變、只增不減。前端 derive 和 Coins.gs 用同一段（逐字相同，測試會比）。
+const PLAN_MIN_FROM = '2026-11-19', PLAN_MIN_WEI = /\bwei\b(?!\s*h)/i;
+function planMinBonus_(save, byRow, today, bossOf) {
+  let bonus = 0;
+  Object.keys(save).filter(k => /^log:\d{4}-\d{2}-\d{2}$/.test(k)).forEach(k => {
+    const d = k.slice(4); if (d < PLAN_MIN_FROM || d > today) return;
+    const rows = (save[k] && save[k].rows) || {}, list = ((save['focus:' + d] || {}).list) || [];
+    let used = 0;
+    Object.keys(rows).map(Number).filter(r => r > 0).sort((a, b) => a - b).forEach(r => {
+      const it = byRow[r]; if (!it || !(Number(rows[r]) > 0)) return;
+      let t = 0, c = 0;
+      list.forEach(x => { if (x && x.src !== 'class' && Number(x.row) === r) t += Number(x.min) || 0; });
+      if (PLAN_MIN_WEI.test(it.name || '')) {
+        const cs = /理化|自/.test(it.subject || '') ? '理化' : /數/.test(it.subject || '') ? '數' : '';
+        if (cs) list.forEach(x => { if (x && x.src === 'class' && x.cs === cs) c += Number(x.min) || 0; });
+      }
+      let m = Math.floor(Math.min(90, Math.max(t, c)) / 5) * 5;
+      m = Math.min(m, Math.max(0, 240 - used)); used += m;
+      if (m > 30) bonus += Math.floor(0.5 * (m - 30)) * (bossOf(it.name || '') ? 2 : 1);
+    });
+  });
+  return bonus;
+}
+// BOTTLE_EX_v1（爸爸 11/18）：燈塔撿瓶子（xq 有 review）的經驗值，一半可以換島幣，每天最多算 BOTTLE_EX_DAY（50 點＝5 枚）。
+// 只算當題沒給島幣的（q.coins 為 0；變燈籠那題已經給過，不重複），挑戰任務（沒有 review）不動。每天先合計、再取一半（無條件捨去）、再封頂。
+// BOTTLE_EX_FROM（上線前兩天）以後的日子才算，所以只增不減。前端 derive 和 Coins.gs 用同一段。
+const BOTTLE_EX_FROM = '2026-11-19', BOTTLE_EX_DAY = 50;
+function bottleExXp_(save, today) {
+  const day = {};
+  Object.keys(save).forEach(k => {
+    if (!/^xq:/.test(k)) return; const q = save[k]; if (!q || !q.done || !q.review || Number(q.coins) > 0) return;
+    const d = String(q.at || q.date || '').slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < BOTTLE_EX_FROM || d > today) return;
+    day[d] = (day[d] || 0) + (Number(q.xp) || 0);
+  });
+  return Object.keys(day).reduce((a, d) => a + Math.min(BOTTLE_EX_DAY, Math.floor(day[d] / 2)), 0);
+}
+// LANTERN_MS_v1（爸爸 11/18）：漂流瓶每變成 20 盞紙燈籠 +20 經驗值，只加升級用的 xp，不加 coinXp（不換島幣、不碰帳本，只在前端）
+// 每次從存檔重新數 rv:<key>.lantern（Lighthouse.gs 寫入、不會收回），不另存「已領」，所以不會重複給。
+// LANTERN_MS_FROM：'' 表示以前的燈籠全部算；填日期表示只算那天起的燈籠。LANTERN_MS_LIGHT：輕瓶子（答對但有點猜，來源 correct===true）算不算。
+const LANTERN_MS_FROM = '', LANTERN_MS_LIGHT = false, LANTERN_MS_EVERY = 20, LANTERN_MS_XP = 20;
+function lanternMsXp_(save, today) {
+  let n = 0;
+  Object.keys(save || {}).forEach(k => {
+    if (k.indexOf('rv:') !== 0) return;
+    const rv = save[k], d = rv && rv.lantern ? String(rv.lantern).slice(0, 10) : '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d > today || (LANTERN_MS_FROM && d < LANTERN_MS_FROM)) return;
+    const src = save[k.slice(3)];
+    if (!LANTERN_MS_LIGHT && src && src.correct === true) return;
+    n++;
+  });
+  return Math.floor(n / LANTERN_MS_EVERY) * LANTERN_MS_XP;
+}
 function derive(S) {
   const save = S.save || {};
   const cfg = save.config || null;
@@ -1112,6 +1167,9 @@ function derive(S) {
     if (wd.settled || wd.daily) coinXp += wxp;
   });
   xp = Math.round(xp); coinXp = Math.round(coinXp);
+  { const pm = planMinBonus_(save, itemsByRow, S.today, isBoss); xp += pm; coinXp += pm; }   // PLAN_MIN_v1：計時加給，可換島幣
+  coinXp += bottleExXp_(save, S.today);   // BOTTLE_EX_v1：撿瓶子的經驗值一半可換（每天最多 50 點）；經驗值本身已經算進 xp，這裡只加可換
+  xp += lanternMsXp_(save, S.today);   // LANTERN_MS_v1：只加升級用經驗值，不加 coinXp
 
   const exams = S.assessments.length;
   xp += exams * 50;
@@ -1241,7 +1299,7 @@ function imgOf(key) { return S && S.save && S.save['img:' + key]; }
 const LD_RE = /^ld:(p(0[1-9]|[1-3]\d|40)|a(0[1-9]|1\d|2[0-3]))$/;
 const LD_IDS = Array.from({ length: 40 }, (_, i) => 'p' + String(i + 1).padStart(2, '0')).concat(Array.from({ length: 23 }, (_, i) => 'a' + String(i + 1).padStart(2, '0')));
 const LD_BG = ['#f3ead9', '#e3ecf5', '#f1e4ea', '#e5efe0'];
-const LD_OPEN_AT = '2026-11-22';   // 選單開放日：新版上線隔天才開（工程顧問 10/31），顯示一律支援；網址加 ?ld=1 可以先預覽
+const LD_OPEN_AT = '2026-11-21';   // 選單開放日：新版上線隔天才開（工程顧問 10/31），顯示一律支援；網址加 ?ld=1 可以先預覽
 function isLd(e) { return /^ld:/.test(String(e || '')); }
 function ldSrc(e) { return LD_RE.test(String(e || '')) ? 'avatars/' + String(e).slice(3) + '.webp' : ''; }
 function ldInitial(name) { return esc(Array.from(String(name || '').trim())[0] || '🙂'); }
@@ -4020,6 +4078,7 @@ function matHash(str) { let h = 7; for (const c of String(str)) h = (h * 31 + c.
 function iqMat(date) { const L = Object.keys(MATS).filter(m => !MATS[m].rare && MATS[m].s !== '智'); return L[matHash(date + ':iq') % L.length]; }
 /* LH_RARE_v1 */ // 燈塔稀有素材：回傳 [{ m, d }]，一天最多一個
 const LH_RARE_START = '2026-11-17';
+const RARE5_START = '2026-11-21';   /* RARE_ALL5_v1 */ // 五領域稀有素材：上線日起算，之前的竹籃不變
 function lhRareDays(today) {
   if (today < LH_RARE_START || isFamily() || ownMode()) return [];
   let all; try { all = bottles(); } catch (e) { return []; }
@@ -4071,6 +4130,12 @@ function matsOf(save, itemsByRow, today) {
     const rows = (save['log:' + d] && save['log:' + d].rows) || {};
     if (Object.keys(rows).some(r => rows[r] === 2 && itemsByRow[r] && (GROUP[itemsByRow[r].subject] || itemsByRow[r].subject) === '英')) { add(n++ % 2 ? 'milk' : 'sugar', d, 'islet'); by[by.length - 1].isle = 'cane'; } }); }
   Object.keys(save).filter(k => k.startsWith('iq:') && save[k] && save[k].done && k.slice(3) >= MAT_START && k.slice(3) <= today).sort().forEach(k => add(iqMat(k.slice(3)), k.slice(3), 'iq'));   // ISLE_QUEST_v1 島民任務：完成那天 1 個，一天最多一次（後端保證）
+  /* RARE_ALL5_v1 */ // 那天國文、英文、數學、自然、社會五個領域都完成至少一格計畫，掉 1 個稀有素材（六種照日期隨機）；一天最多 1 個，不和燈塔、整週全做完共用；家人島不掉
+  if (!ownMode()) { const R5 = Object.keys(MAT_RARE).reduce((a, g) => a.concat(MAT_RARE[g]), []);
+    Object.keys(save).filter(k => k.startsWith('log:') && k.slice(4) >= RARE5_START && k.slice(4) <= today).map(k => k.slice(4)).sort().forEach(d => {
+      const rows = (save['log:' + d] && save['log:' + d].rows) || {}, gs = {};
+      Object.keys(rows).forEach(r => { const it = itemsByRow[r]; if (!it || rows[r] !== 2) return; const g = GROUP[it.subject] || it.subject; if (MAT_RARE[g]) gs[g] = 1; });
+      if (Object.keys(MAT_RARE).every(g => gs[g])) add(R5[matHash(d + ':all5') % R5.length], d, 'rare5'); }); }
   lhRareDays(today).forEach(x => add(x.m, x.d, 'light'));   /* LH_RARE_v1 */ // 燈塔：當天到期的瓶子都撿過，給那科稀有 1 個
   const used = {}, cooked = {}, cooks = [], bought = {}, sold = {}, gifted = {}, gifts = [];   // GIFT_v1：送給島民的料理
   const seenId = {}, fixed = {}, fixes = [];   // MILK_FIX_v1：同一個 id 只算一次；fix 是一次性補發
@@ -4226,10 +4291,10 @@ async function giftDishNow(to) {
   } catch (err) { toast('沒送成：' + (err.message || err)); }
   giftBusy = false; render();
 }
-// MAT_SWAP_v1 屋台換素材（爸爸 11/2 09:50）：同一條街的常見素材 2 個，換 1 個同街的其他常見素材；一天合計 2 次；不花島幣。
+// MAT_SWAP_v1 屋台換素材（爸爸 11/2 09:50）：常見素材 2 個，換 1 個另一種常見素材（SWAP_ANY_v1 11/19 起不限街區）；一天合計 2 次；不花島幣。
 // 稀有素材、智慧島珍品不能換也換不到。後端 Coins.gs swapMat 照同一套擋（夠不夠、同街、次數），只給她：家人島、家人碼、訪客都沒有
 const SWAP_N = 2, SWAP_DAILY = 2;
-function swapOk(from, to) { const a = MATS[from], b = MATS[to]; return !!(a && b && from !== to && !a.rare && !b.rare && a.s !== '智' && a.s === b.s); }
+function swapOk(from, to) { const a = MATS[from], b = MATS[to]; return !!(a && b && from !== to && !a.rare && !b.rare && a.s !== '智' && b.s !== '智' && a.s !== '季' && b.s !== '季'); }   // SWAP_ANY_v1：不限街區，只擋稀有、智慧島珍品、季節素材（和後端 MAT_STREET_ 的 15 種常見素材一致）
 function swapLeft() { return Math.max(0, SWAP_DAILY - ((D.mats.swaps || []).filter(e => e.at === S.today).length)); }
 function swapFroms() { return Object.keys(MATS).filter(m => (D.mats.have[m] || 0) >= SWAP_N && Object.keys(MATS).some(t => swapOk(m, t))); }
 function swapHtml() {
@@ -4241,7 +4306,7 @@ function swapHtml() {
     : `<button class="ghost" style="${sel === m ? on : pick}" onclick="draft.swap='${m}';render()">${sel === m ? '✓ ' : ''}${matText(m)} ×${D.mats.have[m]}</button>`).join('');
   const tos = sel ? Object.keys(MATS).filter(t => swapOk(sel, t)) : [];
   return `<div class="card"><h3>🔀 換素材</h3>
-      <div class="muted" style="font-size:13px">${left ? '同一種常見素材 2 個，可以換 1 個同一個街區的另一種常見素材。今天還能換 ' + left + ' 次。' : '今天換過 2 次了，明天會恢復。'}</div>
+      <div class="muted" style="font-size:13px">${left ? '同一種常見素材 2 個，可以換 1 個另一種常見素材。今天還能換 ' + left + ' 次。' : '今天換過 2 次了，明天會恢復。'}</div>
       ${froms.length ? `<div class="row" style="gap:8px;margin-top:8px">${pills}</div>` : '<div class="muted" style="margin-top:6px;font-size:13px">竹籃裡同一種常見素材有 2 個以上，就可以換。</div>'}
       ${sel && left ? `<div style="margin-top:10px"><b>${matText(sel)} ×2 要換成：</b></div><div class="row" style="gap:8px;margin-top:4px">${tos.map(t => `<button class="ghost${swapBusy ? ' off' : ''}" style="${swapBusy ? off : tap}" ${swapBusy ? 'disabled' : ''} onclick="swapNow('${t}')">${matText(t)} ×1</button>`).join('')}</div>` : ''}</div>`;
 }
@@ -8132,7 +8197,7 @@ const MAT_PRICE = 2, MAT_BUY_DAILY = 5, SELL_DAILY = 10;
 const DISH_PRICE = { onigiri: 3, matcha: 3, qiu: 5, taiyaki: 5, zongzi: 5, miso: 5, boba: 8, onsentama: 8, pancake: 5, scone: 5, pasta: 5, soup: 5, sasazushi: 5, sasacha: 3 };
 Object.assign(DISH_PRICE, { pinacake: 5, imopie: 5, karume: 5 });   // TUTOR3_v1
 let shopBusy = false, matOpen = false;
-function studyMatsToday() { return D.mats.by.filter(x => x.date === S.today && x.why !== 'week' && x.why !== 'islet' && x.why !== 'light' /* LH_RARE_v1 */).length; }   // 小島給的素材不算進收購上限
+function studyMatsToday() { return D.mats.by.filter(x => x.date === S.today && x.why !== 'week' && x.why !== 'islet' && x.why !== 'light' /* LH_RARE_v1 */ && x.why !== 'rare5' /* RARE_ALL5_v1 */).length; }   // 小島給的素材不算進收購上限
 function sellCap() { return Math.min(SELL_DAILY, studyMatsToday()); }
 function matShelfCard() {
   if (isFamily()) return '';
@@ -9371,13 +9436,13 @@ function viewGuide() {
     p('🗃️ <b>這週碰到的科目</b>：確認頁的日期下面，會列出這週有讀到、練到的科目，是從計畫紀錄、讀書計時（含上課）、挑戰和故事任務、燈塔和快問快答整理出來的。沒碰到的科目不會出現，也沒有分數。這張卡在 App 裡只有你自己看得到。') +
     p('週檢討表的顏色會自動塗好：排了幾次就做滿幾次是深色，做了一部分是中間色，沒做是淺色。計畫外做過的項目也會塗上。') +
     p('📊 <b>讀書感覺和停留時間</b>：每個月第一次按完「確認這週」，會問你這個月對讀書的感覺（1～5，沒有對錯，也可以先不填）。小島也會記下你在讀書、延伸、其他畫面各待了幾分鐘。這兩樣不加分，家人碼看不到，小島也不會自己送給 AI。讀書感覺只放在計畫頁「整理學習摘要」的「這個月」裡，要不要複製給' + GUARDIAN_ + '，由你決定；停留的分鐘數，' + GUARDIAN_ + '用讀數工具也看得到。')  /* GUIDE_PRIV_v1 */ /* PRIV_STATS_v1 */)}
-  ${sec('⭐', '經驗值怎麼算', `<table>${row('完成一次', '+25')}${row('部分完成一次', '+12')}${row('Boss 項目（歷屆、模卷、學測題）', '雙倍')}
-      ${row('週末確認這週', '+20')}${row('計畫達成一半／80%／全部', '+10／+25／+40')}${row('故事任務答對／答錯', '+15／+5')}${row('挑戰任務答對（基礎／中級／進階）', '+10／+15／+20')}${row('記錄一場 Boss 戰', '+50')}${row('發現一條跨科連結', '+15')}${row('燈塔撿瓶子答對', '基礎 +10、中級 +15、進階 +20')}${row('燈塔撿瓶子沒答對', '+3')}${row('拍照收錯題（一天最多算 20 題，不換島幣）', '每題 +5')}${row('快問快答練完一輪（有該複習或新的卡才算，不換島幣）', '+5')}${row('運動蓋一章', '+5')}</table>` +
+  ${sec('⭐', '經驗值怎麼算', `<table>${row('完成一次', '+25')}${row('部分完成一次', '+12')}${row('Boss 項目（歷屆、模卷、學測題）', '雙倍')}${row('有計時（⏳ 或上課紀錄）的格，超過 30 分鐘的部分（一格最多算 90 分鐘，一天合計最多 240 分鐘）', '每 2 分鐘 +1')}
+      ${row('週末確認這週', '+20')}${row('計畫達成一半／80%／全部', '+10／+25／+40')}${row('故事任務答對／答錯', '+15／+5')}${row('挑戰任務答對（基礎／中級／進階）', '+10／+15／+20')}${row('記錄一場 Boss 戰', '+50')}${row('發現一條跨科連結', '+15')}${row('燈塔撿瓶子答對', '基礎 +10、中級 +15、進階 +20')}${row('燈塔撿瓶子沒答對', '+3')}${row('拍照收錯題（一天最多算 20 題，不換島幣）', '每題 +5')}${row('放走的紙燈籠每累積 20 盞（標了「有點猜」的瓶子不算；不算進經驗值換島幣）', '+20')}${row('快問快答練完一輪（有該複習或新的卡才算，不換島幣）', '+5')}${row('運動蓋一章', '+5')}</table>` +
     p('同一項做幾次就算幾次，例如英文單字做了 5 天就是 5 × 25 = 125。') +
     p('經驗值會讓島嶼升級。全部達成就是 <b>FULL COMBO</b>！'))}
   ${sec('⚔️', 'Boss 戰', p('寫完模擬考或一整份考古題後，到「⚔️ 大考」記錄各科等級。島民頭上的等級，只看最近一次 Boss 戰的結果。') +
     p('就像音遊重打同一首歌，你只跟上一次的自己比。') + p('五科都可以填錯幾題（選填），各科等級和錯幾題排在同一列。歷次試煉會算「總分」，照會考積分算，滿分 36。你在「誰看得到什麼」打開「大考成績」的家人，也看得到總分和錯幾題。') /* GUIDE_SYNC_v1 */)}
-  ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：到商店最上面按「兌換」（點首頁的「🪙 島幣」也會到商店）。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚；照計畫完成一項 +25 經驗值，大約是 2.5 枚。挑戰任務答對另外直接給 1～3 枚。') +
+  ${sec('🪙', '島幣和商店', p('每 10 點經驗值可以換 1 枚島幣：到商店最上面按「兌換」（點首頁的「🪙 島幣」也會到商店）。換了之後經驗值不會減少，島嶼等級和房子都不會變小。開島送 20 枚；照計畫完成一項 +25 經驗值，大約是 2.5 枚。挑戰任務答對另外直接給 1～3 枚。撿瓶子拿到的經驗值，有一半可以在商店的「經驗值換島幣」換成島幣，每天最多換 5 枚；換了經驗值不會減少。瓶子變成紙燈籠的那一題已經直接給島幣，不再算一次。') +
     p('商店的商品和價格由你自己訂，在「⚙️ 更多 → 修改島嶼設定」新增，再跟爸媽討論。兌換後記得跟爸媽說一聲。') +
     p('🥕 <b>買素材</b>（在商店的「🧺 素材與料理」裡，點一下打開）：常見的素材一個 🪙 2，一天最多買 5 個。稀有素材（抹茶粉、蜂蜜、紅豆、糯米、螢石、柴魚）和智慧島的珍品不賣，要讀書才拿得到。') +
     p('💰 <b>賣料理</b>：屋台做好的料理可以賣給商店，一般料理 🪙 3～5、珍珠奶茶和溫泉蛋 🪙 8。一天最多賣得 🪙 10，而且不超過當天讀書拿到的素材數。賣掉的料理不會影響島民的交情。') + p('🧮 我的島幣帳本：商店裡的「看我的島幣帳本」可以看這個月進來、出去多少，也可以訂一個存錢目標，算算每週要存幾枚。主島的交易所也打得開。') /* GUIDE_SYNC_v1 */)}
@@ -9401,8 +9466,8 @@ function viewGuide() {
     p('🏠 搬到小島（即將開放，12 月底）：植木屋、獨立書店、島の屋台和音樂廳可以搬一間到小島上住，功能和等級都不變，隨時可以搬回來。'))}
   ${sec('🏮', '島の屋台（素材與料理）', p('首頁上方的 🏮 是碼頭邊的屋台。第一次去要先請一位店主（名字、樣子、個性），他會先跟你打招呼。') +
     p('在首頁把計畫格勾「完成」，那條街的島民就會塞一個素材給你：國文街是茶葉、竹葉、紫蘇，英文街是砂糖、牛奶，數學街是米、麵粉，自然街和社會街照分科給（理化岩鹽、生物地瓜和番茄、地科陶土、歷史檜木、地理昆布和魚、公民布）。每條街一天最多 3 個。') +
-    p('Boss 項目（歷屆、模卷）或某一科這週的計畫全部做完，會拿到稀有素材（抹茶粉、蜂蜜、紅豆、糯米、螢石、柴魚）；智慧島每上完一講，老師會送一樣珍品。') +
-    p('🔀 換素材：同一種常見素材 2 個，可以在屋台換 1 個同一個街區的另一種常見素材（例如 2 個竹葉換 1 個茶葉），一天可以換 2 次，不花島幣。稀有素材和智慧島的珍品不能換，也換不到。') +
+    p('Boss 項目（歷屆、模卷）或某一科這週的計畫全部做完，會拿到稀有素材（抹茶粉、蜂蜜、紅豆、糯米、螢石、柴魚）；燈塔當天漂回來的瓶子都撿過（答錯也算），也會拿到 1 個稀有素材，是那天瓶子最多的那一科的，一樣多的話挑其中一科，一天最多 1 個；同一天裡，國文、英文、數學、自然、社會都有做完的計畫格（自然、社會裡哪一科都算），也會拿到 1 個稀有素材，種類不一定，一天最多 1 個，和別的方式分開算；智慧島每上完一講，老師會送一樣珍品。') +
+    p('🔀 換素材：同一種常見素材 2 個，可以在屋台換 1 個另一種常見素材（例如 2 個竹葉換 1 個米），一天可以換 2 次，不花島幣。稀有素材和智慧島的珍品不能換，也換不到。') +
     p('料理大多要兩三條街的素材，湊齊了按「做」就做好了。拿到新的素材，店主就會教你一道用得到它的料理。素材不會扣經驗值和島幣；如果取消了勾選，竹籃最少是 0，做好的料理不會收回。') +
     p('每位島民和智慧島的老師都有最喜歡的料理，交情到「聊得來」以後，在絆の手帖裡就看得到。島民最喜歡的料理可以在島嶼設定裡改。') +
     p('🎁 做好的料理可以送給島民和已經開門的智慧島老師：每位一天收一份，送到最喜歡的那道，交情會多一點。送出去的料理就不能再賣了。') + p('🎋 竹葉魚壽司和竹葉茶一年四季都能做。還沒學會的食譜先收起來，學會了才出現。') /* GUIDE_SYNC_v1 */)}
@@ -9474,7 +9539,7 @@ function viewGuide() {
     p('智慧島上有一張碼頭導覽地圖，從上面看整座島；上過課的小屋會亮燈，點小屋就能進去。') +  /* GUIDE_MAP_v1 */
     p('飛船屋可以請一位主人：名字、樣子、個性都由你決定，他會幫你開飛船，每天跟你說一句話。') +
     p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木湯桶、阿律的打字機、愛因斯坦的航海望遠鏡、怡容的木頭講桌、瞇的紅色安全燈、郭哥的瑜珈墊。不用島幣，在我的家的家具店最下面可以擺出來。') + p('四位老師的上冊 13 講上完，會接著上下冊，孔明的下冊是《三十六計》；下冊蓋滿 13 個章，老師會再送一件畢業禮物。') + p('交完筆記、老師回了以後，可以再回老師一句，老師會再回你；不回也沒關係。') + p('🎒 碼頭的「你的生活」小卡：勾幾個你常碰到的生活場景，「搬到你的生活」那一步會換成比較貼近你的情境，也可以按「換個情境看看」。勾了什麼在 App 裡只有你自己看得到。') + p('渡船屋旁邊有一塊歡迎黑板，歡迎詞可以自己改。') /* GUIDE_SYNC_v1 */) : ''}
-  ${sec('⛰️', '核心主島', p('遠方天上浮著的那座島就是主島，在 3D 小島點它就能搭飛船過去（清單模式在「去島上走走」點 ⛰️ 主島）。去主島不用每天去，想逛就逛。') + p('🎈 飛船碼頭：Solomon 船長會先跟你打招呼，每天說一則世界各地的小知識。') + p('🏔️ 玉山聚會所：阿台婆婆那裡有家人的公告和今天的節氣。按「📚 山海筆記」可以讀用台灣的颱風、地震、特有種和潮汐說課本觀念的卡片，只是讀讀看，不加分。聚會所也有「今年的航程」：從一模到會考排成一條航線，日子到了港口的燈就亮起來，只有日期、沒有成績。') + p('🧮 交易所：阿黛阿嬤把在銀行看過的帳寫成「阿嬤的帳本」，有利息、存錢、風險這些理財觀念，還有一個小算盤可以自己算算看。也打得開「我的島幣帳本」。') + p('⛩️ 媽祖廟、教會：點建物可以翻故事卡，每張底下有一題「你來選」，只是想想看，不計分。') + p('✉️ 幫島民一個小忙：名牌上有信封的那位島民，今天有事想拜託你。點那位島民就看得到，接了、做完寫一句，會收到 1 個素材。寫的那一句在 App 裡只有你自己看得到；不想接，按「下次吧」就好。'))} /* GUIDE_SYNC_v1 */
+  ${sec('⛰️', '核心主島', p('遠方天上浮著的那座島就是主島，在 3D 小島點它就能搭飛船過去（清單模式在「去島上走走」點 ⛰️ 主島）。去主島不用每天去，想逛就逛。') + p('🎈 飛船碼頭：沙沙船長會先跟你打招呼，每天說一則世界各地的小知識。') + p('🏔️ 玉山聚會所：阿台婆婆那裡有家人的公告和今天的節氣。按「📚 山海筆記」可以讀用台灣的颱風、地震、特有種和潮汐說課本觀念的卡片，只是讀讀看，不加分。聚會所也有「今年的航程」：從一模到會考排成一條航線，日子到了港口的燈就亮起來，只有日期、沒有成績。') + p('🧮 交易所：阿黛阿嬤把在銀行看過的帳寫成「阿嬤的帳本」，有利息、存錢、風險這些理財觀念，還有一個小算盤可以自己算算看。也打得開「我的島幣帳本」。') + p('⛩️ 媽祖廟、教會：點建物可以翻故事卡，每張底下有一題「你來選」，只是想想看，不計分。') + p('✉️ 幫島民一個小忙：名牌上有信封的那位島民，今天有事想拜託你。點那位島民就看得到，接了、做完寫一句，會收到 1 個素材。寫的那一句在 App 裡只有你自己看得到；不想接，按「下次吧」就好。'))} /* GUIDE_SYNC_v1 */
   ${sec('✍️', '巷口的助教', p('🍍 作文值班室（國文街區的巷口）：鳳梨刀開了一門《文學的力量》，一共 12 講，一週一講。看完不用寫一句，按「📌 我記下了」就蓋章。週日還有「週日寫一段」：挑一個題目，先看材料、列素材，再到紙上寫一段，App 幫你計時；寫好勾一勾自我檢查、留一句話。素材本在 App 裡只有你自己看得到。每次寫的紀錄，想給家人看的話，可以一則一則選要給誰；家人只看得到日期、題目、開頭的寫法、你勾的項目和留的那一句，看不到素材。') + p('➗ 數學研究室（數學街區的巷口）：魏老的《再探數學的奧祕》，11/18 開第一講，之後大多是週三開一講。每講最後有一題挑戰題，提示和解答自己決定要不要看，看了也不會被記下來。家人看得到你上過哪幾講的課頁，看不到挑戰題。'))} /* GUIDE_SYNC_v1 */
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
   ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊節氣、天氣和生活小事，有的會關心你；很久沒去找他，他會說想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性或說話方式。島民家裡的道謝和島上消息，也是島民每天照自己的口吻寫的。') +
