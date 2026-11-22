@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.11';
+const APP_VERSION = '2.52.12';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.12', date: '2026-11-23', guide: ['我的家'], items: ['🌙 我的家多了晚安熄燈：家裡有同住的夥伴的話，晚上 9 點半到清晨 4 點回家時，夥伴會問「今天先到這裡？」，按「熄燈」房間的燈會慢慢暗下來。不記時間、不算天數。'] },
   { v: '2.52.11', date: '2026-11-22', fam: true, guide: ['島民的訊息和每日新聞'], items: ['🎵 音樂廳多了「今天的音樂」：每天一則，可能是一首歌、一首詩詞、一種樂器，或一個關於聲音的小知識。'] },
   { v: '2.52.10', date: '2026-11-22', guide: ['巷口的助教', '燈塔（錯題的漂流瓶）'], items: ['➗ 魏老的每一講蓋完章以後，下面多了「想再試兩題嗎？」：兩題同一個觀念的原題，以前上過的講也有，答完會看到解說。答錯的題可以放進漂流瓶：會算一題當天的挑戰題，過幾天漂回來，爸爸用讀數工具看得到。沒放的題不會記下來。'] },
   { v: '2.52.9', date: '2026-11-22', fam: true, guide: ['智慧島'], items: ['🏝️ 智慧島的插畫版也能點碼頭邊的立牌、飛船和郵筒了，點開會出現小卡；今天可以上課的老師，名牌前面多了一個小點。'] },
@@ -1389,6 +1390,7 @@ function residentEvent() {
 
 /* ===== 畫面 ===== */
 function render() {
+  if (window.Room3D && Room3D.undim && !document.getElementById('gnOv')) Room3D.undim();   /* GOODNIGHT_v1 */
   if (S && S.save) syncIsletPlaces();
   const app = document.getElementById('app');
   const nav = document.getElementById('nav');
@@ -3571,12 +3573,36 @@ function norenOf(h) { return NOREN.find(n => n.id === (h && h.noren)) || NOREN[0
 function norenBar(h) { const n = norenOf(h);
   return `<div class="noren" style="background:${n.bg};color:${n.fg}"><span>${esc((h && h.name) || '我的家')}</span><i></i><i></i><i></i></div>`; }
 // 同住角色（keeper:home）：只做三件事——第一次進門打招呼說明、日めくり回表情、回家說おかえり；不提讀書
+/* GOODNIGHT_v1 */ // 晚安熄燈：21:30～04:00、今晚還沒問過才問；只用 localStorage
+const GN_LINES = ['晚安，好好睡。', '晚安。', '晚安，好好休息。', '燈關了。晚安。', '晚安，睡個好覺。', '晚安，被子蓋好。'];
+function gnNight() { const d = new Date(), m = d.getHours() * 60 + d.getMinutes(); return m >= 21 * 60 + 30 || m < 4 * 60; }
+function gnAsk() { return !isFamily() && !ownMode() && gnNight() && !local.get('gn:' + S.today); }
+function gnStay() { local.set('gn:' + S.today, 'stay'); render(); }
+function gnOff() {
+  local.set('gn:' + S.today, 'off');
+  const slow = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const room = !!(window.Room3D && Room3D.dim && document.querySelector('#r3d canvas'));
+  if (room) { document.getElementById('r3d').scrollIntoView({ block: 'center', behavior: slow ? 'auto' : 'smooth' }); Room3D.dim(slow ? 0 : 2000); }   // 房間在下面，先捲到房間再暗
+  const ov = document.createElement('div'); ov.id = 'gnOv';
+  ov.setAttribute('role', 'button'); ov.setAttribute('aria-label', '點一下回到小島');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:' + (room ? 'flex-end' : 'center') + ';padding:16px;' + (room ? 'padding-bottom:calc(50vh - min(28vh, 200px) + 18px);' : '') + 'cursor:pointer;color:#f2eee6;'   // 3D：字放在房間下半、不壓島民的頭（美術 11/19）
+    + 'background:' + (room ? 'rgba(18,20,36,.35)' : '#121424') + ';transition:background ' + (slow ? '0s' : '2s');
+  const dots = room ? '' : '<div style="display:flex;gap:22px;margin-bottom:18px">' + [0, 1, 2].map(i => `<span class="gnDot" style="width:34px;height:34px;border-radius:50%;background:#ffd36b;box-shadow:0 0 18px 6px rgba(255,211,107,.6);opacity:${slow ? .12 : .95};transition:opacity .7s ${slow ? 0 : i * .65}s"></span>`).join('') + '</div>';
+  const k = keeperOf('home');
+  ov.innerHTML = dots + `<div class="speech" style="background:#2b2f47;color:#f2eee6;max-width:320px">${k ? '<b>' + esc(k.name) + '</b>：' : ''}${GN_LINES[daySeed() % GN_LINES.length]}</div>
+    <div style="margin-top:${room ? 10 : 14}px;font-size:${room ? 14 : 13}px;color:#c9c4d6${room ? ';background:#121424;padding:4px 12px;border-radius:999px' : ''}">點一下畫面回到小島</div>`;
+  ov.onclick = () => { ov.remove(); if (window.Room3D && Room3D.undim) Room3D.undim(); tab = 'home'; render(); window.scrollTo(0, 0); };
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => { if (room) ov.style.background = 'rgba(18,20,36,.55)'; ov.querySelectorAll('.gnDot').forEach(d => d.style.opacity = '.12'); });
+}
 function homeMateCard() {
   if (isFamily()) { const k = keeperOf('home'); return k ? `<div class="row" style="margin-bottom:10px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(k)}</span><div class="speech grow"><b>${esc(k.name)}</b>：いらっしゃい～歡迎來我們家坐坐！</div></div>` : ''; }
   const k = keeperOf('home');
   if (!k) return `<button class="ghost" style="width:100%;margin-bottom:12px" onclick="openKeeper('home')">🐾 家裡還沒有同住的夥伴，邀一位一起住</button>`;
   const intro = placeIntro('home');
   if (intro) return `<div class="card">${intro}</div>`;
+  if (gnAsk()) return `<div class="row" style="margin-bottom:8px;flex-wrap:nowrap"><span style="font-size:30px">${kpPic(k)}</span><div class="speech grow"><b>${esc(k.name)}</b>：おかえり～今天先到這裡？</div></div>
+      <div class="row" style="gap:8px;margin-bottom:12px"><button onclick="gnOff()">熄燈</button><button class="ghost" onclick="gnStay()">再待一下</button></div>`;   /* GOODNIGHT_v1 */
   const lines = ['おかえり～今天辛苦了！', 'おかえり！我剛剛在窗邊曬太陽，等你好久了～', 'おかえり～要不要先喝杯茶休息一下？', 'おかえり！今天外面的風好舒服喔。', 'おかえり～我幫你把燈打開了。'];
   return `<div class="row" style="margin-bottom:12px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('home')"><span style="font-size:30px">${kpPic(k)}</span>
       <div class="speech grow"><b>${esc(k.name)}</b>${k.role ? '（' + esc(k.role) + '）' : ''}：${lines[daySeed() % lines.length]}</div></div>`;
@@ -9612,7 +9638,7 @@ function viewGuide() {
     p('可以邀一位同住的夥伴（寵物或室友都可以，自己取名、選樣子或上傳圖、寫個性）。第一次進門他會跟你說明家裡有什麼，之後你回家他會說「おかえり」。') +
     p('牆上的 📆 日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，大約 30 字，寫完同住夥伴會回你一個表情；按 ◀ ▶ 可以翻回去看。不寫也沒關係，不會提醒、也沒有獎勵。每一頁預設只有你自己看得到，想給家人看的那頁，在「這一頁給誰看」選人，隨時可以收回。') +
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
-    p('家裡上面有三個分頁：🛋️ 房間（日めくり、喝水、3D 房間、去島民家作客）、🛒 家具店、🏅 收藏（運動獎勵、燈塔和智慧島送的家具、徽章）。') + p('🌬️ 冥想計時：在我的家開始冥想，開始前可以選時間到了輕輕響一聲。每 25 分鐘一朵蓮花 🪷 +10 綠點，同一天分幾次也會加起來算；忘了按也可以補登。你在「誰看得到什麼」為哪位家人打開了「計畫和讀書紀錄」，那位家人也看得到冥想的分鐘數。') /* GUIDE_SYNC_v1 */)}
+    p('家裡上面有三個分頁：🛋️ 房間（日めくり、喝水、3D 房間、去島民家作客）、🛒 家具店、🏅 收藏（運動獎勵、燈塔和智慧島送的家具、徽章）。') + p('🌬️ 冥想計時：在我的家開始冥想，開始前可以選時間到了輕輕響一聲。每 25 分鐘一朵蓮花 🪷 +10 綠點，同一天分幾次也會加起來算；忘了按也可以補登。你在「誰看得到什麼」為哪位家人打開了「計畫和讀書紀錄」，那位家人也看得到冥想的分鐘數。') + p('🌙 <b>晚安熄燈</b>：家裡有同住的夥伴的話，晚上 9 點半到清晨 4 點回家時，夥伴會問「今天先到這裡？」。按「熄燈」，房間的燈會慢慢暗下來，夥伴跟你說晚安，點一下畫面就回到小島；按「再待一下」，今晚就不再問。一個晚上只問一次，不記時間、不算天數。') /* GUIDE_SYNC_v1 */)}
   ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎼 藝文活動也算：到「音樂廳」選「🎻 練習、上課」「🎫 聽音樂會、看展演」「🥁 樂團排練」或「🎨 畫畫、書法、創作」開始計時，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，多久都算，不用證明。藝文計時不會蓋運動的章，運動和藝文一次只能開一個計時。') + p('一週藝文計時滿 ' + ART_WEEK_MIN + ' 分鐘就算一週，累積幾週就解鎖藝文家具，不用島幣，拿到的也不會收回：') +
     `<table><tr><th>累積週數</th><th>解鎖的家具</th></tr>${ART_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` + p('音樂廳在 3D 小島碼頭廣場的正前方，這週有來計時，晚上大玻璃會亮。') + p('忘了按也可以在卡片下面「補登一筆」，藝文、閱讀計時也一樣。') /* GUIDE_SYNC_v1 */)}
   ${sec('💊', '吃藥', p('首頁「今日のおつとめ」有一行「💊 吃藥」。早上和晚上各有一段時間（一開始是早上 7～10 點、晚上 7～10 點，可以自己改），這段時間打開小島，它會問一聲；吃了就按一下。時間過了也可以補勾，按錯再按一次就取消。補勾只是補記錄；忘了吃要不要補吃，請照醫師或藥師說的做。') + p('這裡不給綠點、島幣或經驗值，也不算連續天數，只是幫你記得。小島沒打開不會叫你，要準時提醒，可以用手機鬧鐘，或在設定裡按「📅 加到 Google 日曆」。') + p('只記有沒有勾、幾點勾的，不記吃什麼藥，也不會送給 AI。預設只有你自己看得到；想讓爸爸看到，可以在設定裡打開，隨時可以關。'))}

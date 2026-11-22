@@ -181,6 +181,7 @@
   }
 
   let hemi, lamp;
+  let dimA = null, lit = null;   /* GOODNIGHT_v1 */ // 晚安熄燈：只改燈的亮度，不加物件（dc 不變）；undim 復原
   function resize() {
     if (!container) return;
     const w = container.clientWidth, h = container.clientHeight;
@@ -197,6 +198,7 @@
     if (!renderer.domElement.isConnected) { running = false; return; }
     if (document.hidden) { setTimeout(() => requestAnimationFrame(loop), 1000); return; }
     const dt = CALM ? 0 : Math.min(clock.getDelta(), 0.1); t += dt;
+    if (dimA && lit) { const k = dimA.ms ? Math.min(1, (performance.now() - dimA.s) / dimA.ms) : 1; lamp.intensity = lit.l + (0.05 - lit.l) * k; hemi.intensity = lit.h * (1 - 0.4 * k); if (k >= 1) dimA = null; }   /* GOODNIGHT_v1 */
     if (visitorSp) visitorSp.position.y = 0.95 + Math.abs(Math.sin(t * 2.2)) * 0.18;
     controls.update(); renderer.render(scene, camera);
     if (guard) guard.frame();
@@ -230,5 +232,7 @@
     if (sig !== signature) { signature = sig; build(opts); }
     if (!running) { running = true; clock.getDelta(); loop(); }
   }
-  window.Room3D = { mount };
+  function dim(ms) { if (!lamp) return; lit = lit || { l: lamp.intensity, h: hemi.intensity }; dimA = { s: performance.now(), ms: ms || 0 }; }
+  function undim() { if (!lit) return; lamp.intensity = lit.l; hemi.intensity = lit.h; lit = null; dimA = null; }
+  window.Room3D = { mount, dim, undim };
 })();
