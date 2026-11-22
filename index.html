@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.9';
+const APP_VERSION = '2.52.10';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.10', date: '2026-11-22', guide: ['巷口的助教', '燈塔（錯題的漂流瓶）'], items: ['➗ 魏老的每一講蓋完章以後，下面多了「想再試兩題嗎？」：兩題同一個觀念的原題，以前上過的講也有，答完會看到解說。答錯的題可以放進漂流瓶：會算一題當天的挑戰題，過幾天漂回來，爸爸用讀數工具看得到。沒放的題不會記下來。'] },
   { v: '2.52.9', date: '2026-11-22', fam: true, guide: ['智慧島'], items: ['🏝️ 智慧島的插畫版也能點碼頭邊的立牌、飛船和郵筒了，點開會出現小卡；今天可以上課的老師，名牌前面多了一個小點。'] },
   { v: '2.52.8', date: '2026-11-22', minor: true, items: ['🛠 首頁清單點開一個街區，和 3D 點房子打開的畫面，現在用同一套程式；看到的內容和用法都和原來一樣。'], guide: '無' },
   { v: '2.52.7', date: '2026-11-21', fam: true, guide: ['日文單字巷'], items: ['🔤 家人自己的島：日文街區多了「單字巷」，可以一張一張翻 N1 單字卡，看字義和例句；記得了按「✓ 記得了」，想再看就按「🔁 再看一次」。'] },
@@ -2155,6 +2156,59 @@ wisdomNoteHtml = function (L, t, rec) {
   return sxLayers(L) + h.replace(/<textarea id="wNote"[\s\S]*?id="wGo"[\s\S]*?<\/button>/, `<button id="wGo" style="width:100%;margin-top:10px;background:${t.color}" onclick="sxSubmit()">📌 我記下了</button>`)
     .replace(/<div class="muted wtell"[\s\S]*?<\/div>/, '');   // 不寫字，就不需要「這句只有你看得到」
 };
+// ===== TUTOR_PRAC_v1 魏老課後兩題（答錯可以放進漂流瓶）=====
+const SX_PRAC_W = {"1": {"link": "這兩題都用得上這一講那個不變的比。第二題比較難，卡住的話，先選一個再看解說也可以。", "q": [{"id": "114-math-16", "ex": "EF ∥ BC，所以 AE : EB = AF : FC = 7 : 3。把 AB 當成 10 份：AD 是 5 份、AE 是 7 份，DE 2 份比 EB 3 份短；AD : AE = 5 : 7，AF : AC = 7 : 10，兩個比不一樣，所以 DF 和 EC 不平行。"}, {"id": "112-math-23", "ex": "AEPF 是矩形，EF 和 AP 一樣長。AP 最短的時候是從 A 垂直到 BD，那一刀把直角三角形切成相似的兩塊：6 × 8 ÷ 10 = 24/5。"}]}, "2": {"link": "這兩題都是先看下一項怎麼來。", "q": [{"id": "113-math-05", "ex": "每一層的三列都比上一層多 2 張，一層多 6 張：9、15、21……。十層加起來是 10 × 9 + 6 × (0 + 1 + … + 9) = 360。"}, {"id": "112-math-15", "ex": "新的公差是 1 的幾分之一，設成 1/m，項數就是 4m + 1。選項裡只有 33 = 4 × 8 + 1 對得上。"}]}, "3": {"link": "這兩題都跟次方有關，一題還是指數成長。", "q": [{"id": "115-math-17", "ex": "每年乘 1.025，從 2023 到 2030 乘了 7 次，所以是 2700 × (1.025)⁷。"}, {"id": "113-math-08", "ex": "先把次方調成一樣：c = 0.63 × 10⁻⁵，再比前面的數，c < a < b。"}]}, "4": {"link": "這兩題都是兩層的選擇，先數有幾種。", "q": [{"id": "115-math-04", "ex": "3 × 3 = 9 種一樣可能。總和 7 有 (2,5)、(3,4)、(4,3) 三種，比其他總和都多。"}, {"id": "106-math-06", "ex": "兩人各有 5 節可以選，共 5 × 5 = 25 種，同一節的有 5 種，機率是 5/25 = 1/5。"}]}, "5": {"link": "這兩題都要先把所有情形數清楚。", "q": [{"id": "114-math-11", "ex": "阿嘉蓋住 2、4、5，小楊蓋住 1、3、4，共 9 種。阿嘉比較大的：翻到 2 有 1 種、4 有 2 種、5 有 3 種，6/9 = 2/3。"}, {"id": "108-math-20", "ex": "去程 15 人、回程 10 人，來回都搭的人被算了兩次。設來回都搭的有 x 人，只搭單程的就是 (15 − x) + (10 − x) = 25 − 2x 人，全團 15 + 10 − x 人。300x + 200(25 − 2x) = 4100，x = 9，全團 16 人。"}]}, "6": {"link": "這兩題都是一個輸入對到一個輸出。", "q": [{"id": "113-math-12", "ex": "甲的平方項前面是正的，開口向上，在 x = −20 有最小值；乙前面是負的，開口向下，在 x = 30 有最大值。"}, {"id": "108-math-16", "ex": "小涵付的 295 元是減了 5 元以後的，原價是 300 元買 250 公克。阿嘉沒有減，所以 y = 300/250 × x。"}]}, "7": {"link": "這兩題都要從因數下手。", "q": [{"id": "112-math-09", "ex": "216 ÷ 18 = 12，要找的數就是 18 乘上 12 的因數。12 有 6 個因數，所以是 6 個。"}, {"id": "115-math-20", "ex": "M 除了自己以外最大的因數是 44，M 就是 44 乘上 M 最小的質因數，只能是 2，所以 M = 88，8 一定是因數。N 可能是 39 × 2 = 78 或 39 × 3 = 117，78 沒有因數 9，所以乙不一定對。"}]}, "8": {"link": "這兩題都可以設一個 k。", "q": [{"id": "107-math-23", "ex": "柳丁沒動，拿它當尺。本來是 9k、7k、6k；後來柳丁 6k 對到 4 份，一份是 1.5k，蘋果還是 9k，芭樂剩 4.5k，所以只用了芭樂。"}, {"id": "109-math-16", "ex": "設三種是 2k、k、3k。鹹蛋黃用了 2 × 2k + k = 5k = 120，k = 24，鳳梨酥是 3k = 72 個。"}]}, "9": {"link": "這兩題一題是不等式，一題用平方差。", "q": [{"id": "110-math-12", "ex": "5x 在 300 到 400 之間（可以等於 300，不到 400），5x + 150 在 400 到 500 之間，兩個同時成立是 60 ≤ x < 70。"}, {"id": "114-math-10", "ex": "每個括號都是平方差，例如 106² − 4² = 102 × 110。全部拆開後，B、C、D 都是 104 × 106 × 108 × 110，只有 A 不一樣。"}]}, "10": {"link": "這兩題都在坐標上量距離、看位置。", "q": [{"id": "106-math-13", "ex": "C 本來在 B 正上方 1 格，轉完到 B 正右方 1 格，是繞 B 順時針轉 90°。D 本來在 B 的左 2、上 1，轉完變成右 1、上 2，就是 (3, 2)。"}, {"id": "111-math-07", "ex": "x = −2 是一條鉛垂線，點到它的距離只看 x：6 − (−2) = 8。"}]}, "11": {"link": "這兩題都靠同一段弧對的角。", "q": [{"id": "107-math-22", "ex": "用公切線的弦切角，∠PAC 和 ∠PBD 相等，△PAC 和 △PBD 相似，PD : PB = PC : PA = 9 : 10。PD 比較短，它對面的 ∠PBD 就比較小。"}, {"id": "108-math-24", "ex": "∠APQ 是圓周角，它對的弧是 260°。扣掉 AD 那半圈 180°，弧 DQ 是 80°，所以 Q 在弧 BC 上，離 B 只有 10°。"}]}, "12": {"link": "這兩題都要先說出哪兩個三角形全等。", "q": [{"id": "107-math-11", "ex": "三邊對應相等，△ABC ≅ △DEA，所以 ∠BAC + ∠EAD = ∠EDA + ∠EAD = 180° − 115° = 65°，再加上正三角形的 60°，是 125°。"}, {"id": "115-math-12", "ex": "△BED ≅ △AFC（SAS），所以 BD = AC = 9，AD = 15 − 9 = 6。DE + EF + FA 換成 FC + EF + BE，正好是 BC = 16，周長是 6 + 16 = 22。"}]}};
+let sxPracBusy = false;
+const SX_PRAC_ERR = { full: '🍶 今天的挑戰題放滿了，這題放不進漂流瓶。明天會恢復。', open: '🍶 挑戰任務還有一題沒回答，答完以後就可以放進漂流瓶。', dup: '🍶 這題以前在挑戰任務做過了，不能再放進漂流瓶。' };
+function sxPracWhy(m) { m = String(m || ''); return /加碼任務都做完/.test(m) ? 'full' : /還有一題沒回答/.test(m) ? 'open' : /你做過了/.test(m) ? 'dup' : ''; }   // 後端 challengeBank 的三種擋下來的原文
+function sxPracBlock(id) {   // 和後端 challengeBank 同一組條件，先在前端擋，不白打一趟
+  if (todayChallenges().length >= XQ_MAX) return 'full';
+  if (todayChallenges().some(q => !q.done)) return 'open';
+  if (extraQuests().some(q => q.bank === id && !q.review)) return 'dup';
+  return '';
+}
+const sxPracNote0 = wisdomNoteHtml;
+wisdomNoteHtml = function (L, t, rec) {
+  const h = sxPracNote0(L, t, rec), w = draft.wl;
+  if (!w || w.book !== 'sx' || !rec || isFamily() || ownMode() || !wisdomBook('sx')) return h;
+  const Lw = (wisdomBook('sx').lessons || []).find(y => y.n === w.n), P = Lw && SX_PRAC_W[String(Lw.w)]; if (!P) return h;
+  if (bankData === null) { loadBank().then(() => render()); return h; }
+  if (!bankData) return h;
+  const its = P.q.map(e => Object.assign({ ex: e.ex }, bankData.items.find(x => x.id === e.id))).filter(x => x.img), pk = w.prac || (w.prac = {}), put = w.pracPut || {};
+  const q = (x, i) => {
+    const k = pk[x.id], done = k != null, wrong = done && k !== x.answer;
+    return `<div style="margin-top:14px"><div style="font-size:13px;color:#1f6f8b;font-weight:700">第 ${i + 1} 題</div>
+      <figure class="wphoto"><img src="exam/${x.img}" alt="原題圖" onclick="zoomPhoto(this)"><figcaption>心測中心公告試題，${x.year} 年數學科選擇題第 ${x.q} 題</figcaption></figure>
+      <div class="sxpo" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">${[0, 1, 2, 3].map(j => `<button style="margin:0;text-align:center;min-height:44px;white-space:nowrap;padding-left:2px;padding-right:2px" class="opt${done && j === x.answer ? ' right' : done && j === k ? ' wrong' : ''}" ${done ? 'disabled' : ''} onclick="sxPracPick('${x.id}',${j})">(${'ABCD'[j]})${done && j === x.answer ? ' ✓' : done && j === k ? ' ✗' : ''}</button>`).join('')}</div>
+      ${done ? `<div style="font-size:14px;line-height:1.7;margin-top:6px;color:#5f5a55">${k === x.answer ? '對了。' : '正確答案是 (' + 'ABCD'[x.answer] + ')。'}${esc(x.ex)}</div>` : ''}
+      ${wrong && !put[x.id] ? `<div class="row" style="flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px"><button class="ghost" id="sxPut_${x.id}" style="margin:0;min-height:44px" onclick="sxPracPut('${x.id}')">🍶 放進漂流瓶</button><span class="muted" style="font-size:12px">會算一題今天的挑戰題，爸爸看得到。</span></div>` : ''}</div>`;
+  };
+  return h + `<div class="sxprac" style="margin-top:16px;padding:12px;border-radius:12px;background:#eef5f8;border:1px solid #cfdde4">
+    <div class="row" style="flex-wrap:nowrap;align-items:center;gap:8px">${sxFace(24)}<b class="grow" style="font-size:15px">想再試兩題嗎？</b></div>
+    <div class="muted" style="font-size:13px;margin-top:6px;line-height:1.6">魏老：「${esc(P.link)}」</div>
+    ${its.map(q).join('')}
+    <div class="muted" style="font-size:12px;margin-top:10px">答錯的題可以放進漂流瓶，會算一題當天的挑戰題，爸爸看得到。沒放的題不會記下來，也不算點數。</div></div>`;
+};
+function sxPracPick(id, j) { const w = draft.wl; (w.prac || (w.prac = {}))[id] = j; render(); }
+async function sxPracPut(id) {
+  const w = draft.wl, k = w && w.prac && w.prac[id], item = bankData && bankData.items && bankData.items.find(x => x.id === id);
+  if (sxPracBusy || k == null || !item || k === item.answer || isFamily() || ownMode()) return;
+  const b = sxPracBlock(id); if (b) return toast(SX_PRAC_ERR[b]);
+  sxPracBusy = true; const btn = document.getElementById('sxPut_' + id); if (btn) btn.disabled = true;   // 按下先停用（工程顧問 11/14）
+  let qid = '';
+  try {
+    await flush();
+    S = await call('challengeBank', item); D = derive(S);   // 整筆 bank.json 的 item（含 pass）
+    qid = Object.keys(S.save).filter(x => /^xq:/.test(x) && S.save[x] && S.save[x].bank === id && !S.save[x].done).sort().pop() || '';
+  } catch (e) {
+    sxPracBusy = false; if (btn) btn.disabled = false; const c = sxPracWhy(e && e.message);
+    return toast(c ? SX_PRAC_ERR[c] : '出題失敗：' + ((e && e.message) || e));
+  }
+  let ok = false;
+  for (let t = 0; t < 2 && qid && !ok; t++) { try { S = await call('answerQuest', qid, k, { guess: false }); D = derive(S); ok = true; } catch (e) { /* 失敗重試一次 */ } }
+  sxPracBusy = false; (w.pracPut || (w.pracPut = {}))[id] = 1; render();
+  toast(ok ? '🍶 放進漂流瓶了，過幾天會漂回來。' : '這題先放在挑戰題，等一下再答');
+}
 /** 「我記下了」：不寫字、不送 AI，直接蓋章（後端 takeLesson 對 sx 收空白、不叫 AI，開講表同一份） */
 async function sxSubmit() {
   const w = draft.wl, L = wisdomLessonNow(), btn = document.getElementById('wGo');
@@ -9559,6 +9613,7 @@ function viewGuide() {
     p('挑戰任務或故事任務答錯的題，會變成 🍶 漂流瓶漂到燈塔海灘。<b>隔天</b>它會漂回來，按「撿起來」，守燈人會請 AI 出一題<b>類題</b>：考同一個觀念，但數字、情境或說法都換過，不會是一模一樣的題目。想撿幾個都可以；每天先出 ' + MATH_DAILY + ' 個數學瓶，別科的瓶子撿完了，才會再出數學瓶。題目下面會寫「AI 類題・改編自 113 年會考自然第 10 題」這樣的來源。原題太依賴圖表、AI 改寫不了時，會改出一題同科同難度的考古題，也會標明。') +
     `<table>${row('類題答錯', '+3 經驗值，隔 1 天再漂回來')}${row('類題答對', '+10／+15／+20 經驗值（看難度），第一次答對隔 3 天、第二次隔 7 天再漂回來')}${row('連續三次答對', '🏮 變成紙燈籠放到海上，🪙 +1／+2／+3')}${row('第三次（考古題回合）', '換一題同單元、你還沒做過的考古題；答對變成燈籠，多一個「📜 考古題也答對」；沒答對 +3，原本的瓶子留著，這題另外變成新瓶子')}${row('老朋友（燈籠漂回來）', '燈籠 3 週後漂回來一次，之後每個月一次；答對 +10／+15／+20 經驗值，答錯 +3、一週後再來，燈籠不會變回瓶子')}</table>` +
     p(`全國答對率高、你卻答錯的題會先漂回來，因為這種題最值得追回來。`) +
+    p('數學研究室那兩題練習答錯的題，也可以按「🍶 放進漂流瓶」；會算一題當天的挑戰題，爸爸看得到放進瓶子的題。') +  /* TUTOR_PRAC_v1 */
     p('<b>答完當下就能記</b>：答錯時，結果下面點一下為什麼會錯，就記到瓶子上（可以跳過）；答對時會問「這題你有把握嗎？」，選「有點猜」，這題會變成一個 🫧 輕輕的瓶子漂回來，下次有把握答對就直接變燈籠（這種燈籠不另給島幣）。海灘上的瓶子超過 ' + GUESS_CAP + ' 個時，有點猜的題先不收，一次撿幾個就好。') +
     p('🧭 <b>正在補強／已補強</b>：燈塔頂樓的燈室會把做過的題照單元整理（國文、英文照題型）。一個單元做滿 ' + UNIT_MIN + ' 題、海灘上還有瓶子，就可能列進「正在補強」，最多 3 個；一個單元的瓶子都變成燈籠，就會搬到「已補強」；最近 ' + RECENT_N + ' 題考古題和挑戰至少對 ' + RECENT_OK + ' 題，會多一個 ⭐（拍照收的題不算）。這裡不加分也不扣分。你在「誰看得到什麼」選了的家人看得到這兩張卡。') +
     p('🩹 <b>照原因換練法</b>：撿瓶子的時候，會照你記的原因換一種練法：' + (UNIT_TOOLS ? '觀念不熟，先看一張這個單元的觀念小卡；' : '') + '粗心，在漂流瓶上寫一句下次要檢查的事，之後同一個單元的題會先提醒你；沒讀懂題目，先選這題在問什麼，再答題；讀懂了，判斷錯，照一般的方式複習。數學漂流瓶如果不是粗心，類題會改成選怎麼列式、第一步怎麼做，不用算出答案；第三次漂回來的考古題和燈籠還是完整的題。' + (UNIT_TOOLS ? '小卡可以跳過，跳過也不影響經驗值和島幣。' : '')) +
@@ -9600,7 +9655,7 @@ function viewGuide() {
     p('飛船屋可以請一位主人：名字、樣子、個性都由你決定，他會幫你開飛船，每天跟你說一句話。') +
     p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木湯桶、阿律的打字機、愛因斯坦的航海望遠鏡、怡容的木頭講桌、瞇的紅色安全燈、郭哥的瑜珈墊。不用島幣，在我的家的家具店最下面可以擺出來。') + p('四位老師的上冊 13 講上完，會接著上下冊，孔明的下冊是《三十六計》；下冊蓋滿 13 個章，老師會再送一件畢業禮物。') + p('交完筆記、老師回了以後，可以再回老師一句，老師會再回你；不回也沒關係。') + p('🎒 碼頭的「你的生活」小卡：勾幾個你常碰到的生活場景，「搬到你的生活」那一步會換成比較貼近你的情境，也可以按「換個情境看看」。勾了什麼在 App 裡只有你自己看得到。') + p('渡船屋旁邊有一塊歡迎黑板，歡迎詞可以自己改。') /* GUIDE_SYNC_v1 */) : ''}
   ${sec('⛰️', '核心主島', p('遠方天上浮著的那座島就是主島，在 3D 小島點它就能搭飛船過去（清單模式在「去島上走走」點 ⛰️ 主島）。去主島不用每天去，想逛就逛。') + p('🎈 飛船碼頭：沙沙船長會先跟你打招呼，每天說一則世界各地的小知識。') + p('🏔️ 玉山聚會所：阿台婆婆那裡有家人的公告和今天的節氣。按「📚 山海筆記」可以讀用台灣的颱風、地震、特有種和潮汐說課本觀念的卡片，只是讀讀看，不加分。聚會所也有「今年的航程」：從一模到會考排成一條航線，日子到了港口的燈就亮起來，只有日期、沒有成績。') + p('🧮 交易所：阿黛阿嬤把在銀行看過的帳寫成「阿嬤的帳本」，有利息、存錢、風險這些理財觀念，還有一個小算盤可以自己算算看。也打得開「我的島幣帳本」。') + p('⛩️ 媽祖廟、教會：點建物可以翻故事卡，每張底下有一題「你來選」，只是想想看，不計分。') + p('✉️ 幫島民一個小忙：名牌上有信封的那位島民，今天有事想拜託你。點那位島民就看得到，接了、做完寫一句，會收到 1 個素材。寫的那一句在 App 裡只有你自己看得到；不想接，按「下次吧」就好。'))} /* GUIDE_SYNC_v1 */
-  ${sec('✍️', '巷口的助教', p('🍍 作文值班室（國文街區的巷口）：鳳梨刀開了一門《文學的力量》，一共 12 講，一週一講。看完不用寫一句，按「📌 我記下了」就蓋章。週日還有「週日寫一段」：挑一個題目，先看材料、列素材，再到紙上寫一段，App 幫你計時；寫好勾一勾自我檢查、留一句話。素材本在 App 裡只有你自己看得到。每次寫的紀錄，想給家人看的話，可以一則一則選要給誰；家人只看得到日期、題目、開頭的寫法、你勾的項目和留的那一句，看不到素材。') + p('➗ 數學研究室（數學街區的巷口）：魏老的《再探數學的奧祕》，11/18 開第一講，之後大多是週三開一講。每講最後有一題挑戰題，提示和解答自己決定要不要看，看了也不會被記下來。家人看得到你上過哪幾講的課頁，看不到挑戰題。'))} /* GUIDE_SYNC_v1 */
+  ${sec('✍️', '巷口的助教', p('🍍 作文值班室（國文街區的巷口）：鳳梨刀開了一門《文學的力量》，一共 12 講，一週一講。看完不用寫一句，按「📌 我記下了」就蓋章。週日還有「週日寫一段」：挑一個題目，先看材料、列素材，再到紙上寫一段，App 幫你計時；寫好勾一勾自我檢查、留一句話。素材本在 App 裡只有你自己看得到。每次寫的紀錄，想給家人看的話，可以一則一則選要給誰；家人只看得到日期、題目、開頭的寫法、你勾的項目和留的那一句，看不到素材。') + p('➗ 數學研究室（數學街區的巷口）：魏老的《再探數學的奧祕》，11/18 開第一講，之後大多是週三開一講。每講最後有一題挑戰題，提示和解答自己決定要不要看，看了也不會被記下來。家人看得到你上過哪幾講的課頁，看不到挑戰題。') + p('每講蓋章後，可以再試魏老給的兩題原題。答錯的題可以按「🍶 放進漂流瓶」：會算一題當天的挑戰題，過幾天會漂回來再練，爸爸看得到。沒放進瓶子的題不會記下來，也不算點數。'))} /* GUIDE_SYNC_v1 */
   ${sec('👋', '每天的招呼', p(`每天第一次打開小島，${esc(g.name)}會先跟你打招呼，可能會聊到今天星期幾、台北的天氣或節日。按下按鈕就會進到小島。`))}
   ${sec('📮', '島民的訊息和每日新聞', p('每天第一次打開小島，五位島民會各寫一則訊息給你，語氣跟你幫他設定的個性一樣。有的會跟你聊節氣、天氣和生活小事，有的會關心你；很久沒去找他，他會說想你。想讓他換個說話方式，到「⚙️ 更多 → 修改島嶼設定」改他的個性或說話方式。島民家裡的道謝和島上消息，也是島民每天照自己的口吻寫的。') +
     p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
