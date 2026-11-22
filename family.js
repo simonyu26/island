@@ -617,8 +617,9 @@
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${fcTag(b)}<button class="${b.readAt ? 'ghost' : ''}" style="padding:4px 10px;font-size:13px" onclick="famBookRead('${b.key}', ${b.readAt ? 'false' : 'true'})">${b.readAt ? '還沒讀完' : '讀完了'}</button>
         <button class="ghost" style="padding:4px 10px;font-size:13px" onclick="famBookDel('${b.key}')">拿下來</button></div></div>`;
     const cat = draft.bcat || SHELF_CATS[0][0];
-    return `<div class="card"><h2>📚 書店</h2>${placeIntro('bookstore') || (kp ? `<div class="row" style="margin-top:6px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('bookstore')"><span style="font-size:30px">${kpPic(kp)}</span>
-        <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：いらっしゃいませ～${list.some(b => !b.readAt) ? '書架上有 ' + list.filter(b => !b.readAt).length + ' 本書，挑一本想讀的就好。' : '要不要挑一本新書？'}</div></div>` : '')}</div>
+    // FAM_BOOKSCENE_v1：場景（她那頁同一個 bookScene）在標題下；管理員站櫃台，所以這句話旁不再放頭像；沒有店貓時多一顆養貓鈕
+    return `<div class="card"><h2>📚 書店</h2>${bookScene()}${placeIntro('bookstore') || (kp ? `<div class="row" style="margin-top:6px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('bookstore')">
+        <div class="speech grow"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}<br>いらっしゃいませ～<br>${list.some(b => !b.readAt) ? '書架上有 ' + list.filter(b => !b.readAt).length + ' 本書，挑一本想讀的就好。' : '要不要挑一本新書？'}</div></div>${keeperOf('bookcat') ? '' : `<button class="ghost" style="width:100%;margin-top:10px" onclick="openKeeper('bookcat')">🐾 ${esc(kp.name)}：「店裡好像少了一隻貓……要不要幫我們養一隻？」</button>`}` : '')}</div>
     <div class="card"><h3>我的書架</h3>${fcCss()}${list.length ? fcChips(list) + (fcList(list).map(row).join('') || '<div class="muted">這個分類還沒有書。</div>') : '<div class="muted">書架還空空的。從下面的書單挑一本，或自己加一本吧。</div>'}
       <div class="muted" style="font-size:12px;margin-top:8px">讀完一本，那個方向的街上會長出一個地標。書架上的書，在島上只有你自己看得到。</div></div>${shioriHtml()}
     <div class="card"><h3>➕ 自己加一本</h3>
@@ -1737,5 +1738,14 @@
   };
   const viewWordsJw0 = window.viewWords;
   window.viewWords = function () { return langCanOn() && draft && draft.jw ? jwView() : viewWordsJw0.apply(this, arguments); };
+  // FAM_TALK_v1：想找人說說（文案審查 245）。她那頁 viewTalk 的家人版：沒有學校輔導室、沒有「讓爸爸知道」那張卡（那顆按鈕會叫後端寄信），所以只動前端、不記錄。
+  OWN_TABS.push('talk'); OWN_CARDS.push('talk', 'talkEntry');
+  window.viewTalk = () => window.card('talk', `<div class="card"><h2 style="margin:0">🫶 想找人說說</h2>
+    <div style="font-size:15px;margin-top:6px">不用說原因，想找人的時候就找。</div>
+    ${TALK_LINES.map(([t, sub, ns]) => `<div class="hrow"><div class="grow"><b>${t}</b>${sub ? `<div class="muted" style="font-size:13px">${sub}</div>` : ''}</div>${ns.map(n => `<a class="call${ns.length > 1 ? ' n' : ''}" href="tel:${n}" aria-label="${TALK_ARIA[n]}">${ns.length > 1 ? n : '撥打'}</a>`).join('')}</div>`).join('')}
+    <div class="muted" style="font-size:12px;margin:8px 0 12px">這一頁開過幾次不會記下來。</div>
+    <div class="row"><button class="ghost grow" onclick="go(talkBack && talkBack !== 'talk' ? talkBack : 'more')">回去</button></div></div>`);
+  const viewMore0talk = window.viewMore;
+  window.viewMore = () => window.card('talkEntry', `<div class="card"><div class="mtop"><button class="ghost mtalk" onclick="openTalk()">🫶 想找人說說</button></div></div>`) + viewMore0talk();
   window.FamIsle = { apply, after, cards: OWN_CARDS };
 })();
