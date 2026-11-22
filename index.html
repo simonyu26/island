@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.8';
+const APP_VERSION = '2.52.9';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.9', date: '2026-11-22', fam: true, guide: ['智慧島'], items: ['🏝️ 智慧島的插畫版也能點碼頭邊的立牌、飛船和郵筒了，點開會出現小卡；今天可以上課的老師，名牌前面多了一個小點。'] },
   { v: '2.52.8', date: '2026-11-22', minor: true, items: ['🛠 首頁清單點開一個街區，和 3D 點房子打開的畫面，現在用同一套程式；看到的內容和用法都和原來一樣。'], guide: '無' },
   { v: '2.52.7', date: '2026-11-21', fam: true, guide: ['日文單字巷'], items: ['🔤 家人自己的島：日文街區多了「單字巷」，可以一張一張翻 N1 單字卡，看字義和例句；記得了按「✓ 記得了」，想再看就按「🔁 再看一次」。'] },
   { v: '2.52.6', date: '2026-11-21', guide: ['挑戰任務（賺島幣）'], items: ['⚔️ 挑戰任務選「🎲 隨便一條」時，每週會先出 3 題自然。另外每週最多有 3 題，是你兩到四週前答對過的題，再出一次看看還記不記得，照常有島幣和經驗值；答對幾題，爸爸用讀數工具看得到。'] },
@@ -2230,9 +2231,9 @@ function wisdomScene() {
   const sky = night ? ['#141c36', '#2a3560'] : ph === 'dusk' ? ['#e9875a', '#f5c48f'] : ph === 'dawn' ? ['#f1b48f', '#fbe0c2'] : wet ? ['#8b97a5', '#b9c2cc'] : ['#8fcbea', '#e3f3fa'];
   const sea = night ? '#22325a' : wet ? '#6f8797' : '#5fa8cf', win = `fill="#ffd27a" opacity="${lit}"`;
   const hut = (key, x, y, body) => `<g class="whut" onclick="openWisdomHut('${key}')" transform="translate(${x} ${y})">${body}
-      <rect x="-30" y="34" width="60" height="15" rx="7" fill="#fffaf0" opacity=".92"/><text x="0" y="45" text-anchor="middle" font-size="9" font-weight="700" fill="${WISDOM_T[key].color}">${WISDOM_T[key].name}</text></g>`;
+      <rect x="${-wHutHalf(key)}" y="34" width="${2 * wHutHalf(key)}" height="15" rx="7" fill="#fffaf0" opacity=".92"/><text x="0" y="45" text-anchor="middle" font-size="9" font-weight="700" fill="${wHutInk(key)}">${WISDOM_T[key].name}</text>${wHutDot(key, 34)}</g>`;
   const hutBack = (key, x, y, top, body) => `<g class="whut" onclick="openWisdomHut('${key}')" transform="translate(${x} ${y})">${body}
-      <rect x="-30" y="${top - 18}" width="60" height="15" rx="7" fill="#fffaf0" opacity=".92"/><text x="0" y="${top - 7}" text-anchor="middle" font-size="9" font-weight="700" fill="${WISDOM_T[key].color}">${WISDOM_T[key].name}</text></g>`;   // top：屋頂最高點，名牌底緣在它上面 3
+      <rect x="${-wHutHalf(key)}" y="${top - 18}" width="${2 * wHutHalf(key)}" height="15" rx="7" fill="#fffaf0" opacity=".92"/><text x="0" y="${top - 7}" text-anchor="middle" font-size="9" font-weight="700" fill="${wHutInk(key)}">${WISDOM_T[key].name}</text>${wHutDot(key, top - 18)}</g>`;   // top：屋頂最高點，名牌底緣在它上面 3
   return `<div class="wscene"><svg viewBox="0 0 400 270" preserveAspectRatio="xMidYMid slice" aria-label="智慧島">
     <defs><linearGradient id="wSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient>
       <radialGradient id="wMist"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
@@ -2292,24 +2293,36 @@ function wisdomScene() {
     <!-- 碼頭和飛船 -->
     <path d="M176 206 L170 252 M224 206 L230 252" stroke="#7a5236" stroke-width="3"/>
     <path d="M178 204 H222 L226 246 H174Z" fill="#b08356"/>${[0, 1, 2, 3, 4].map(i => `<path d="M${176 - i * 0.5} ${212 + i * 8} H${224 + i * 0.5}" stroke="#8f6640" stroke-width="1"/>`).join('')}
-    <rect x="185" y="186" width="30" height="13" rx="2" fill="#fbf4e4" stroke="#6b4a2b" stroke-width="1.5"/><text x="200" y="196" text-anchor="middle" font-size="7" font-weight="700" fill="#5b3a1e">智慧島</text>
-    <path d="M190 199 V206 M210 199 V206" stroke="#6b4a2b" stroke-width="1.5"/>
-    <g transform="translate(364 248)"><path d="M-5 -10 V0 M5 -10 V0" stroke="#7a5236" stroke-width="1.5"/>
+    <g class="whut" onclick="wDockTap('board')" aria-label="碼頭的歡迎黑板"><rect x="185" y="186" width="30" height="13" rx="2" fill="#fbf4e4" stroke="#6b4a2b" stroke-width="1.5"/><text x="200" y="196" text-anchor="middle" font-size="7" font-weight="700" fill="#5b3a1e">智慧島</text>
+    <path d="M190 199 V206 M210 199 V206" stroke="#6b4a2b" stroke-width="1.5"/>${wDockHl('board', 183, 184, 34, 17)}<rect x="164" y="162" width="62" height="64" fill="transparent"/></g>
+    <g class="whut" onclick="wDockTap('post')" aria-label="郵筒"><g transform="translate(252 210) scale(1.5)"><!-- WDOCK2D_v1 郵筒（美術 11/14：1.5 倍、紅身白信口） --><rect x="-1.2" y="4" width="2.4" height="12" fill="#6b4a2b"/><rect x="-6" y="-8" width="12" height="13" rx="5" fill="#c0392b"/><rect x="-3.5" y="-3" width="7" height="1.8" fill="#fff"/></g>${wDockHl('post', 241, 196, 22, 28)}<rect x="226" y="178" width="62" height="64" fill="transparent"/></g>
+    <g class="whut" onclick="wDockTap('house')" aria-label="飛船屋"><rect x="340" y="214" width="60" height="62" fill="transparent"/>${wDockHl('house', 346, 216, 40, 44)}</g>
+    <g class="whut" onclick="wDockTap('house')" transform="translate(364 248)"><path d="M-5 -10 V0 M5 -10 V0" stroke="#7a5236" stroke-width="1.5"/>
       <ellipse cx="0" cy="-19" rx="19" ry="11" fill="#e9875a"/><path d="M-17 -19 Q0 -14 17 -19" stroke="#c8995f" stroke-width="1" fill="none" opacity=".6"/>
       <rect x="-10" y="0" width="20" height="9" rx="2" fill="#fdfaf2" stroke="#6b4a2b" stroke-width="1"/><rect x="-4" y="2.5" width="8" height="3.5" rx="1" ${win}/>
       <animateTransform attributeName="transform" type="translate" values="364 248;364 251;364 248" dur="3s" repeatCount="indefinite"/></g>
   </svg></div>`;
 }
 // 智慧島 3D（v2.25）：和「我的家」一樣，3D 開不了就換回插畫；也可以自己切換
+// ===== WDOCK2D_v1 插畫的碼頭熱點和小屋名牌狀態（3D 是 onDock、labelSprite 的 st／can／closed）=====
+const WISDOM_TAP_HINT = '點小屋或老師就能進去，碼頭邊的黑板、飛船屋、郵筒也點得到。';
+const WISDOM_TAP_HINT_2D = '點小屋或名牌就能進去，碼頭邊的立牌、飛船、郵筒也點得到。';   // 文案 225：插畫上畫的是名牌、立牌、渡船
+function wDockTap(k) { draft.wDock = draft.wDock === k ? '' : k; render(); }
+function wHutCx(key) { return Math.max(23, WISDOM_T[key].name.length * 4.5 + 8); }   // 點和名字之間留 4（美術 11/14：愛因斯坦四個字）
+function wHutHalf(key) { return Math.max(30, wHutCx(key) + 6); }   // 名字長的名牌跟著加寬
+function wHutDot(key, top) { const w = wisdomNext(key).why; return !w ? `<circle class="wdot" cx="${-wHutCx(key)}" cy="${top + 7.5}" r="4" fill="#741b47"/>` : w === 'closed' ? `<circle class="wdot" cx="${-wHutCx(key)}" cy="${top + 7.5}" r="3.4" fill="none" stroke="#5f5a55" stroke-width="1.35"/>` : ''; }   // 今天可以上 ●、還沒開門 ○
+function wHutInk(key) { return wisdomNext(key).why === 'closed' ? '#5f5a55' : WISDOM_T[key].color; }   // 還沒開門：鼠色（白名牌上 4.5:1 以上）
+function wDockHl(k, x, y, w, h) { return draft.wDock === k ? `<rect class="wdkhl" x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="none" stroke="#741b47" stroke-width="2.7"/>` : ''; }   // 點到的那個：梅色框＋淡梅光暈，0.6 秒淡出
+const WDOCK2D_CSS = '<style>.wdkhl{filter:drop-shadow(0 0 6px #ead1dc);animation:wdkFade .6s ease-out forwards}@keyframes wdkFade{from{opacity:1}to{opacity:0}}</style>';
 function use3DWisdom() { return BETA3D && local.get('wisdomView') !== '2d'; }
 function wisdomView3D() {
   const toggle = BETA3D ? `<div class="row" style="justify-content:flex-end;gap:6px;margin:-4px 0 8px">
       <button class="${use3DWisdom() ? '' : 'ghost'}" style="padding:6px 12px" onclick="local.set('wisdomView','3d');render()">🧊 3D 小島</button>
       <button class="${use3DWisdom() ? 'ghost' : ''}" style="padding:6px 12px" onclick="local.set('wisdomView','2d');render()">🖼️ 插畫</button></div>` : '';
-  if (!use3DWisdom()) return toggle + wisdomScene();
+  if (!use3DWisdom()) return toggle + WDOCK2D_CSS + wisdomScene() + `<div class="muted" style="margin-top:6px;font-size:13px">${WISDOM_TAP_HINT_2D}${WISDOM_RULE}</div>` + wisdomDockCard();   // WDOCK2D_v1
   return toggle + `<div id="w3d" style="height:min(58vh,440px);border-radius:16px;overflow:hidden;background:${env.phase === 'night' ? '#141c36' : '#cfe8f3'}">
       <div class="loading" style="padding-top:150px">🎈 靠岸中…</div></div>
-    <div class="muted" style="margin-top:6px;font-size:13px">👆 拖曳可以轉動小島，兩指可以拉近；點小屋或老師就能進去，碼頭邊的黑板、飛船屋、郵筒也點得到。</div>${wisdomDockCard()}`;
+    <div class="muted" style="margin-top:6px;font-size:13px">👆 拖曳可以轉動小島，兩指可以拉近；${WISDOM_TAP_HINT}${WISDOM_RULE}</div>${wisdomDockCard()}`;
 }
 async function mountWisdom3D() {
   const el = document.getElementById('w3d'); if (!el) return;
@@ -2333,7 +2346,7 @@ function viewWisdom() {
   const today = wisdomTodayDone(), one = wisdomTodayN() === 1;
   return `<div class="card"><h2>🪶 智慧島</h2>${wisdomView3D()}
       <div class="speech" style="margin-top:8px">${today ? '🌙 今天的兩講上完了。飛船照樣開，想回看筆記可以進小屋坐坐。新的課明天會恢復。' : one ? '🌙 今天上過一講了。想的話，還可以找另一位老師再上一講；不上也沒關係。' : '🎈 飛船靠岸了。霧散開，小屋的燈都亮著。今天想去哪一間上課？'}</div>
-      <div class="muted" style="margin-top:6px;font-size:13px">點小屋就能進去。${WISDOM_RULE}</div>${ferryKeeper(today)}</div>
+      ${ferryKeeper(today)}</div>
     ${WISDOM_ORDER.map(k => { const t = WISDOM_T[k], x = wisdomNext(k);
       return `<div class="card whcard" style="border-left:5px solid ${t.color}" onclick="openWisdomHut('${k}')"><div class="row" style="flex-wrap:nowrap">
         <span style="font-size:30px">${t.ic}</span><div class="grow"><b>${esc(t.place)}</b>・${esc(t.name)}<div class="muted" style="font-size:13px">《${esc((wisdomBook(x.book) || {}).title || '')}》${wisdomCount(k)}／13 講</div></div>
@@ -9583,6 +9596,7 @@ function viewGuide() {
     p('🔐 寫給老師的那一句會交給 AI，讓老師回你一句話；在 App 裡只有你自己看得到。如果寫到讓人擔心的話，回應會附上可以求助的地方，也會寄一封信請' + GUARDIAN_ + '關心你（信裡沒有你寫的字）。') +  /* GUIDE_PRIV_v1 */
     p('<b>每天最多上兩講</b>，同一位老師<b>每週一講</b>（週一重新算），想上幾位老師都可以，不用急。上過的課可以在小屋或集章冊回看，也會擺到書店的「你的書架」上。') +
     p('智慧島上有一張碼頭導覽地圖，從上面看整座島；上過課的小屋會亮燈，點小屋就能進去。') +  /* GUIDE_MAP_v1 */
+    p('碼頭邊的立牌、飛船和郵筒都可以點（3D 小島是黑板、飛船屋和郵筒），會打開一張小卡。老師名字前面的小點：實心的表示今天可以上這位老師的課；空心的灰點表示這位老師的課要從開講那天起才能上；其他時候不顯示小點。') +  /* GUIDE_DOCK_v1 WDOCK2D_v1 */
     p('飛船屋可以請一位主人：名字、樣子、個性都由你決定，他會幫你開飛船，每天跟你說一句話。') +
     p('一位老師的第一本書蓋滿 13 個章，老師會送一件畢業禮物到你家：孔明的羽扇、小苗的檜木湯桶、阿律的打字機、愛因斯坦的航海望遠鏡、怡容的木頭講桌、瞇的紅色安全燈、郭哥的瑜珈墊。不用島幣，在我的家的家具店最下面可以擺出來。') + p('四位老師的上冊 13 講上完，會接著上下冊，孔明的下冊是《三十六計》；下冊蓋滿 13 個章，老師會再送一件畢業禮物。') + p('交完筆記、老師回了以後，可以再回老師一句，老師會再回你；不回也沒關係。') + p('🎒 碼頭的「你的生活」小卡：勾幾個你常碰到的生活場景，「搬到你的生活」那一步會換成比較貼近你的情境，也可以按「換個情境看看」。勾了什麼在 App 裡只有你自己看得到。') + p('渡船屋旁邊有一塊歡迎黑板，歡迎詞可以自己改。') /* GUIDE_SYNC_v1 */) : ''}
   ${sec('⛰️', '核心主島', p('遠方天上浮著的那座島就是主島，在 3D 小島點它就能搭飛船過去（清單模式在「去島上走走」點 ⛰️ 主島）。去主島不用每天去，想逛就逛。') + p('🎈 飛船碼頭：沙沙船長會先跟你打招呼，每天說一則世界各地的小知識。') + p('🏔️ 玉山聚會所：阿台婆婆那裡有家人的公告和今天的節氣。按「📚 山海筆記」可以讀用台灣的颱風、地震、特有種和潮汐說課本觀念的卡片，只是讀讀看，不加分。聚會所也有「今年的航程」：從一模到會考排成一條航線，日子到了港口的燈就亮起來，只有日期、沒有成績。') + p('🧮 交易所：阿黛阿嬤把在銀行看過的帳寫成「阿嬤的帳本」，有利息、存錢、風險這些理財觀念，還有一個小算盤可以自己算算看。也打得開「我的島幣帳本」。') + p('⛩️ 媽祖廟、教會：點建物可以翻故事卡，每張底下有一題「你來選」，只是想想看，不計分。') + p('✉️ 幫島民一個小忙：名牌上有信封的那位島民，今天有事想拜託你。點那位島民就看得到，接了、做完寫一句，會收到 1 個素材。寫的那一句在 App 裡只有你自己看得到；不想接，按「下次吧」就好。'))} /* GUIDE_SYNC_v1 */
