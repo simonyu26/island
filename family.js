@@ -1620,7 +1620,7 @@
   let jwPending = {}, jwTimer = null, jwLoaded = false, jwErr = '';
   function p3a1Open() {
     if (p3a1Ready || !langCanOn()) return; p3a1Ready = true;
-    ['n1Cards', 'langGet', 'langSet', 'langMark', 'langStreet'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    ['n1Cards', 'langGet', 'langSet', 'langMark', 'langStreet', 'enCards', 'rdGet', 'rdSite', 'rdLog', 'rdClass']   /* P3A2_EW */ .forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
   }
   // 這條街區練哪一種語言：本人選的（lsl）優先；名字寫了日文／英文就照名字；都看不出來回 ''
   function famLangOfDir(d) {
@@ -1641,11 +1641,10 @@
     const lang = famLangOfDir(d);
     if (!lang) return `<div style="margin-top:8px"><div class="muted" style="font-size:13px">這個街區要練哪一種語言？</div>
       <div class="row" style="gap:8px;margin-top:6px"><button class="ghost grow" onclick="famLangPick(${d.slot},'ja')">日文</button><button class="ghost grow" onclick="famLangPick(${d.slot},'en')">英文</button></div></div>`;
-    if (lang !== 'ja') return null;
     const off = n => `<div class="jwlane off" aria-disabled="true"><div>${n[0]}</div><div>${n[1]}</div><div class="muted" style="font-size:11px">準備中</div></div>`;
     return `<style>.jwlanes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}.jwlane{border:2px solid var(--plum-light,#e6c6d4);border-radius:12px;padding:10px 6px;text-align:center;background:#fff;min-height:44px}
       .jwlane.off{border-style:dashed;opacity:.6}</style>
-      <div class="jwlanes"><button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="jwGo()"><div>🔤</div><div>單字巷</div></button>${off(['📃', '閱讀巷'])}${off(['🧱', '文法巷'])}${off(['🎧', '聽力巷'])}</div>`;
+      <div class="jwlanes"><button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="${lang === 'en' ? 'ewGo()' : 'jwGo()'}"><div>🔤</div><div>單字巷</div></button><button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="rdGo('${lang}')"><div>📃</div><div>閱讀巷</div></button>${off(['🧱', '文法巷'])}${off(['🎧', '聽力巷'])}</div>`;
   }
   const jwMarks = () => Object.assign({}, (S.save && S.save['lcards:ja']) || {}, jwPending);
   function jwRange() { const r = (S.save && S.save['lrange:ja']) || { k: 'all' }; return r && r.k ? r : { k: 'all' }; }
@@ -1697,7 +1696,7 @@
   };
   async function jwFlush() {
     clearTimeout(jwTimer); const batch = jwPending; if (!Object.keys(batch).length) return; jwPending = {};
-    try { await call('langMark', 'ja', batch); } catch (e) { Object.keys(batch).forEach(k => { if (!(k in jwPending)) jwPending[k] = batch[k]; }); toast('這幾張的標記還沒存到，稍後會再試：' + (e.message || e)); clearTimeout(jwTimer); jwTimer = setTimeout(jwFlush, 15000); }
+    try { await call('langMark', 'ja', batch); } catch (e) { Object.keys(batch).forEach(k => { if (!(k in jwPending)) jwPending[k] = batch[k]; }); toast('這幾張的標記沒有存到，稍後會再試：' + (e.message || e)); clearTimeout(jwTimer); jwTimer = setTimeout(jwFlush, 15000); }
   }
   window.jwBack = async function () { await jwFlush(); draft = {}; go('home'); window.scrollTo(0, 0); };
   window.jwToWords = async function () { await jwFlush(); draft = {}; render(); window.scrollTo(0, 0); };
@@ -1738,6 +1737,191 @@
   };
   const viewWordsJw0 = window.viewWords;
   window.viewWords = function () { return langCanOn() && draft && draft.jw ? jwView() : viewWordsJw0.apply(this, arguments); };
+  // ---------- P3A2_EW 語言模組 P3a-2：英文單字巷＋閱讀巷＋記一堂課 ----------
+  const EW_PER = 10, EW_PAGE = 50, EW_MAX = 6012, EW_FLUSH = 20, EW_WAIT = 3000;
+  const ewCache = {};   // 編號 → 卡（只在這次開 App 的記憶體）
+  let ewPending = {}, ewTimer = null, ewErr = '';
+  const P3A2_CSS = `<style>.jwc{border:2px solid var(--plum-light,#e6c6d4);border-radius:14px;padding:12px;margin:10px 0;background:#fff;cursor:pointer}
+      .jwc .bk{display:none}.jwc.fl .fr{display:none}.jwc.fl .bk{display:block}
+      .jwc.mk{border-color:#2f5a3a;background:#e5efe0}.jwc.ma{border-style:dashed;background:#f7f1e5}
+      .jwb{background:#fff;color:inherit;border:1px solid #d8d4ce;border-radius:12px;padding:8px 10px;min-height:44px;font:inherit;cursor:pointer}
+      .jwb.on{background:var(--plum-light,#ead1dc);border:2px solid var(--plum,#741b47)}
+      .jwb .ck{display:none}.jwb.on .ck{display:inline}.jwb.on .ic{display:none}
+      .jwoff{background:#f7f1e5;color:#5f5a55;border:1px dashed #d8d4ce;border-radius:12px;padding:8px 14px;min-height:44px;font:inherit}
+      .rdsite{display:block;width:100%;box-sizing:border-box;text-align:left;text-decoration:none;color:inherit;background:#fff;border:1px solid #d8d4ce;border-radius:12px;padding:10px 12px;min-height:44px;margin-top:8px;font:inherit}
+      .rdin{width:100%;box-sizing:border-box;min-height:44px;margin-top:6px}</style>`;
+  const ewMarks = () => Object.assign({}, (S.save && S.save['lcards:en']) || {}, ewPending);
+  function ewRange() { const r = (S.save && S.save['lrange:en']) || { k: 'all' }; return r && r.k ? r : { k: 'all' }; }
+  function ewDeck() {
+    const r = ewRange(), m = ewMarks(), out = [];
+    if (r.k === 'seg') { for (let n = Math.max(1, r.a || 1); n <= Math.min(EW_MAX, r.b || 50); n++) out.push(n); return out; }
+    for (let n = 1; n <= EW_MAX; n++) { const v = m[String(n)]; if (r.k === 'again' ? v === 'a' : r.k === 'unseen' ? !v : true) out.push(n); }
+    return out;
+  }
+  window.ewGo = async function () {
+    go('words'); draft = { ew: { p: 0, ready: false } }; render(); window.scrollTo(0, 0);
+    try {
+      const g = await call('langGet', 'en'); S.save['lcards:en'] = g.cards; S.save['lrange:en'] = g.range; S.save['llv:en'] = { v: g.lv }; if (g.lsl) S.save.lsl = g.lsl;
+      ewErr = '';
+    } catch (e) { ewErr = '拿不到你的紀錄：' + (e.message || e); }
+    await ewLoad();
+  };
+  async function ewLoad() {
+    if (!draft || !draft.ew) return;
+    const deck = ewDeck(), p = draft.ew.p || 0, nos = deck.slice(p * EW_PER, p * EW_PER + EW_PER), need = {};
+    nos.forEach(n => { if (!ewCache[n]) need[Math.floor((n - 1) / EW_PAGE) * EW_PAGE + 1] = 1; });
+    try {
+      for (const st of Object.keys(need)) { const r = await call('enCards', Number(st), EW_PAGE); (r.cards || []).forEach(c => { ewCache[c.no] = c; }); }
+      ewErr = '';
+    } catch (e) { ewErr = '卡片載入失敗：' + (e.message || e); }
+    if (draft && draft.ew) { draft.ew.ready = true; render(); }
+  }
+  window.ewPage = function (d) { const total = Math.max(1, Math.ceil(ewDeck().length / EW_PER)); draft.ew.p = Math.min(total - 1, Math.max(0, (draft.ew.p || 0) + d)); draft.ew.ready = false; render(); window.scrollTo(0, 0); ewLoad(); };
+  window.ewRangeSet = async function (k) {
+    const o = { k: k };
+    if (k === 'seg') {
+      const a = Number((document.getElementById('ewA') || {}).value), b = Number((document.getElementById('ewB') || {}).value);
+      o.a = a >= 1 && a <= EW_MAX ? Math.floor(a) : 1; o.b = b >= o.a && b <= EW_MAX ? Math.floor(b) : Math.min(EW_MAX, o.a + 49);
+    }
+    await ewFlush();
+    try { S = await call('langSet', 'en', { range: o }); D = derive(S); const g = await call('langGet', 'en'); S.save['lcards:en'] = g.cards; } catch (e) { return toast('沒有存到：' + (e.message || e)); }   // langSet 回整份狀態，英文標記分六格存，要再合成一次
+    draft.ew.p = 0; draft.ew.ready = false; render(); ewLoad();
+  };
+  window.ewFlip = function (n) { const el = document.getElementById('ewc' + n); if (el) el.classList.toggle('fl'); };
+  window.ewMark = function (n, v, ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    const m = ewMarks(), cur = m[String(n)], next = cur === v ? null : v;   // 再按一次同一顆就取消
+    ewPending[String(n)] = next;
+    if (next) (S.save['lcards:en'] = S.save['lcards:en'] || {})[String(n)] = next; else if (S.save['lcards:en']) delete S.save['lcards:en'][String(n)];
+    const el = document.getElementById('ewc' + n);
+    if (el) { el.classList.toggle('mk', next === 'k'); el.classList.toggle('ma', next === 'a'); el.querySelectorAll('[data-v]').forEach(b => { b.classList.toggle('on', b.dataset.v === next); b.setAttribute('aria-pressed', String(b.dataset.v === next)); }); }
+    const cn = document.getElementById('ewCnt'), mm = ewMarks(); if (cn) cn.textContent = '記得了 ' + Object.keys(mm).filter(k => mm[k] === 'k').length + ' 張・再看一次 ' + Object.keys(mm).filter(k => mm[k] === 'a').length + ' 張';
+    if (Object.keys(ewPending).length >= EW_FLUSH) ewFlush(); else { clearTimeout(ewTimer); ewTimer = setTimeout(ewFlush, EW_WAIT); }
+  };
+  async function ewFlush() {
+    clearTimeout(ewTimer); const batch = ewPending; if (!Object.keys(batch).length) return; ewPending = {};
+    try { await call('langMark', 'en', batch); } catch (e) { Object.keys(batch).forEach(k => { if (!(k in ewPending)) ewPending[k] = batch[k]; }); toast('這幾張的標記沒有存到，稍後會再試：' + (e.message || e)); clearTimeout(ewTimer); ewTimer = setTimeout(ewFlush, 15000); }
+  }
+  window.ewBack = async function () { await ewFlush(); draft = {}; go('home'); window.scrollTo(0, 0); };
+  window.ewToWords = async function () { await ewFlush(); draft = {}; render(); window.scrollTo(0, 0); };
+  function ewCardHtml(c, m) {
+    const v = m[String(c.no)], lvN = String(c.lv || '').replace(/^L/, '');
+    const hi = ex => { const w = String(c.w || '').split('/')[0].replace(/\(.*?\)/g, ''); const re = w ? new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\w*', 'i') : null; const m2 = re && re.exec(ex); return m2 ? esc(ex.slice(0, m2.index)) + '<u>' + esc(m2[0]) + '</u>' + esc(ex.slice(m2.index + m2[0].length)) : esc(ex); };
+    return `<div class="jwc${v === 'k' ? ' mk' : ''}${v === 'a' ? ' ma' : ''}" id="ewc${c.no}" onclick="ewFlip(${c.no})" role="button" tabindex="0" aria-label="翻面">
+      <div class="fr"><div class="muted" style="font-size:12px">第 ${esc(lvN)} 級・No.${c.no}</div>
+        <div class="row" style="flex-wrap:nowrap;gap:6px"><div class="grow" lang="en"><span style="font-size:22px">${esc(c.w)}</span> <span class="muted">${esc(c.pos)}</span></div><span onclick="event.stopPropagation()">${sayBtn(String(c.w).split('/')[0], 'en-gsat')}</span></div>
+        <div class="muted" style="font-size:12px;margin-top:4px">點一下看字義和例句</div></div>
+      <div class="bk"><div><b lang="en">${esc(c.w)}</b> <span class="muted">${esc(c.pos)}</span>　${esc(c.mean)}</div>
+        <div lang="en" style="margin-top:6px">${hi(String(c.ex || ''))} <span onclick="event.stopPropagation()">${sayBtn(c.ex || '', 'en-gsat')}</span></div><div class="muted">${esc(c.exZh)}</div>
+        <div class="muted" style="font-size:11px;margin-top:6px">出處：大學入學考試中心高中英文參考詞彙表</div></div>
+      <div class="row" style="gap:8px;margin-top:8px" onclick="event.stopPropagation()"><button data-v="a" class="jwb${v === 'a' ? ' on' : ''} grow" aria-pressed="${v === 'a'}" onclick="ewMark(${c.no},'a',event)"><span class="ck">✓ </span><span class="ic">🔁 </span>再看一次</button><button data-v="k" class="jwb${v === 'k' ? ' on' : ''} grow" aria-pressed="${v === 'k'}" onclick="ewMark(${c.no},'k',event)"><span class="ck">✓ </span>記得了</button></div></div>`;
+  }
+  window.ewView = function () {
+    const r = ewRange(), m = ewMarks(), deck = ewDeck(), p = draft.ew.p || 0, total = Math.max(1, Math.ceil(deck.length / EW_PER)), nos = deck.slice(p * EW_PER, p * EW_PER + EW_PER);
+    const known = Object.keys(m).filter(k => m[k] === 'k').length, again = Object.keys(m).filter(k => m[k] === 'a').length;
+    const rb = (k, t) => `<button class="jwb${r.k === k ? ' on' : ''}" style="padding:6px 12px;min-height:44px" aria-pressed="${r.k === k}" onclick="ewRangeSet('${k}')"><span class="ck">✓ </span>${t}</button>`;
+    const body = !draft.ew.ready ? '<div class="loading">卡片載入中…</div>'
+      : !nos.length ? `<div class="muted" style="padding:10px 0">${r.k === 'again' ? '沒有標「再看一次」的字。' : r.k === 'unseen' ? '每一張都標過了。' : '這個範圍沒有字。'}</div>`
+      : nos.map(n => ewCache[n] ? ewCardHtml(ewCache[n], m) : '').join('');
+    return P3A2_CSS + `<div class="card"><h2>🔤 英文單字巷</h2><div class="muted">大學入學考試中心高中英文參考詞彙表，一共 ${EW_MAX.toLocaleString('en-US')} 個字，分成第 1 級到第 6 級。點卡片翻面，記得就按「記得了」，想再看就按「再看一次」。</div>
+        <div class="muted" style="margin-top:4px" id="ewCnt">記得了 ${known} 張・再看一次 ${again} 張</div>
+        <div class="muted" style="margin-top:4px;font-size:13px">你按了「記得了」或「再看一次」的字，在 App 裡只有你自己看得到。</div>
+        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${rb('all', '全部')}${rb('seg', '挑一段編號')}${rb('again', '再看一次的字')}${rb('unseen', '新的字')}</div>
+        ${r.k === 'seg' ? `<div class="row" style="gap:6px;margin-top:6px;align-items:center">No.<input id="ewA" type="number" min="1" max="${EW_MAX}" value="${r.a || 1}" style="width:80px"> ～ <input id="ewB" type="number" min="1" max="${EW_MAX}" value="${r.b || 50}" style="width:80px"><button class="ghost" onclick="ewRangeSet('seg')">套用</button></div>` : ''}
+        ${ewErr ? `<div class="muted" style="color:#9a3567;margin-top:6px">${esc(ewErr)}</div>` : ''}</div>
+      ${body}
+      <div class="row" style="gap:8px">${p <= 0 ? '<button class="jwoff" disabled aria-disabled="true">上一頁</button>' : '<button class="ghost" onclick="ewPage(-1)">上一頁</button>'}<span class="muted grow" style="text-align:center;align-self:center">${deck.length ? (p + 1) + '／' + total : '0'}</span>${p >= total - 1 ? '<button class="jwoff" disabled aria-disabled="true">下一頁</button>' : '<button class="ghost" onclick="ewPage(1)">下一頁</button>'}</div>
+      <div class="row" style="margin-top:8px"><button class="ghost grow" onclick="ewToWords()">🔤 我的單字卡（拍照出題）</button></div>
+      <div class="row"><button class="ghost grow" onclick="ewBack()">回到小島 🏝️</button></div>`;
+  };
+  // ---------- 閱讀巷、記一堂課 ----------
+  const RD_SITES = {
+    ja: [['NHK NEWS WEB EASY', 'https://www3.nhk.or.jp/news/easy/'], ['NHK NEWS WEB', 'https://www3.nhk.or.jp/news/']],
+    en: [['VOA Learning English', 'https://learningenglish.voanews.com/'], ['BBC News', 'https://www.bbc.com/news']]
+  };
+  let rdTick = null, rdData = {}, rdErr = '';
+  const rdLangName = l => l === 'en' ? '英文' : '日文';
+  const rdT0 = l => { try { return Number(localStorage.getItem('rdT0:' + l)) || 0; } catch (e) { return 0; } };
+  const rdSetT0 = (l, v) => { try { if (v) localStorage.setItem('rdT0:' + l, String(v)); else localStorage.removeItem('rdT0:' + l); } catch (e) { /* 存不到就只在這次開著時有效 */ } };
+  const rdFmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60); return m + ':' + String(s % 60).padStart(2, '0'); };
+  window.rdGo = async function (lang) {
+    go('words'); draft = { rd: { lang: lang, ready: false } }; render(); window.scrollTo(0, 0);
+    try { rdData[lang] = await call('rdGet', lang); rdErr = ''; } catch (e) { rdErr = '拿不到你的紀錄：' + (e.message || e); }
+    if (draft && draft.rd) { draft.rd.ready = true; render(); rdStartTick(); }
+  };
+  function rdStartTick() {
+    clearInterval(rdTick);
+    if (!draft || !draft.rd) return;
+    const l = draft.rd.lang;
+    if (rdT0(l)) rdTick = setInterval(() => { const el = document.getElementById('rdEl'); if (el && rdT0(l)) el.textContent = rdFmt(Date.now() - rdT0(l)); else if (!el) clearInterval(rdTick); }, 1000);
+  }
+  window.rdTimer = function (on) {
+    const l = draft.rd.lang;
+    if (on) rdSetT0(l, Date.now());
+    else { const t0 = rdT0(l); draft.rd.min = t0 ? Math.min(600, Math.max(1, Math.ceil((Date.now() - t0) / 60000))) : (draft.rd.min || ''); rdSetT0(l, 0); }
+    render(); rdStartTick();
+  };
+  window.rdAddSite = async function () {
+    const l = draft.rd.lang, n = (document.getElementById('rdSn') || {}).value || '', u = (document.getElementById('rdSu') || {}).value || '';
+    try { const r = await call('rdSite', l, { add: { n: n, u: u } }); rdData[l].sites = r.sites; toast('加好了'); } catch (e) { return toast('沒有加成功：' + (e.message || e)); }
+    render(); rdStartTick();
+  };
+  window.rdDelSite = async function (i) {
+    const l = draft.rd.lang, s = (rdData[l].sites || [])[i]; if (!s) return;
+    try { const r = await call('rdSite', l, { del: s.u }); rdData[l].sites = r.sites; } catch (e) { return toast('沒有刪成功：' + (e.message || e)); }
+    render(); rdStartTick();
+  };
+  window.rdSave = async function () {
+    const l = draft.rd.lang, t = Number((document.getElementById('rdMin') || {}).value), n = (document.getElementById('rdTitle') || {}).value || '', u = (document.getElementById('rdUrl') || {}).value || '';
+    if (!(t >= 1 && t <= 600)) return toast('讀了幾分鐘？請填 1 到 600');
+    try { const r = await call('rdLog', l, { t: t, n: n, u: u }); rdData[l].log = (rdData[l].log || []).concat([r.rec]).slice(-30); rdData[l].nLog = r.n; } catch (e) { return toast('沒有記到：' + (e.message || e)); }
+    draft.rd.min = ''; toast('記下了：讀了 ' + t + ' 分鐘'); render(); rdStartTick();
+  };
+  window.rdClass = async function () {
+    const l = draft.rd.lang, c = (document.getElementById('rdCn') || {}).value || '', m = (document.getElementById('rdCm') || {}).value || '';
+    try { const r = await call('rdClass', l, { c: c, m: m === '' ? undefined : Number(m) }); rdData[l].cls = (rdData[l].cls || []).concat([r.rec]).slice(-30); rdData[l].nCls = r.n; toast('記下了：上了一堂課' + (r.rec.c ? '（' + r.rec.c + '）' : '')); } catch (e) { return toast('沒有記到：' + (e.message || e)); }
+    render(); rdStartTick();
+  };
+  window.rdBack = function () { clearInterval(rdTick); draft = {}; go('home'); window.scrollTo(0, 0); };
+  window.rdToWords = function () { clearInterval(rdTick); draft = {}; render(); window.scrollTo(0, 0); };
+  window.rdView = function () {
+    const l = draft.rd.lang, d = rdData[l] || {}, sites = d.sites || [], t0 = rdT0(l), md = x => String(x || '').slice(5).replace('-', '/');
+    const site = (n, u) => `<a class="rdsite" href="${esc(u)}" target="_blank" rel="noopener noreferrer">去 ${esc(n)} ↗<span class="muted" style="display:block;font-size:13px">會開新的分頁</span></a>`;
+    const recent = (d.log || []).slice(-5).reverse().map(x => `<div class="muted" style="font-size:13px;padding:2px 0">${md(x.d)}・${x.t} 分鐘${x.n ? '・' + esc(x.n) : ''}</div>`).join('');
+    const recentC = (d.cls || []).slice(-3).reverse().map(x => `<div class="muted" style="font-size:13px;padding:2px 0">${md(x.d)}・上了一堂課${x.c ? '（' + esc(x.c) + '）' : ''}${x.m ? '・' + x.m + ' 分鐘' : ''}</div>`).join('');
+    if (!draft.rd.ready) return P3A2_CSS + '<div class="card"><h2>📃 ' + rdLangName(l) + '閱讀巷</h2><div class="loading">載入中…</div></div>';
+    return P3A2_CSS + `<div class="card"><h2>📃 ${rdLangName(l)}閱讀巷</h2>
+        <div class="muted">去網站讀一篇，回來記下來。在網站上看了什麼，App 不會知道；記下來的那一篇，在 App 裡只有你自己看得到。</div>
+        ${rdErr ? `<div class="muted" style="color:#9a3567;margin-top:6px">${esc(rdErr)}</div>` : ''}
+        ${RD_SITES[l].map(x => site(x[0], x[1])).join('')}${sites.map(x => site(x.n, x.u)).join('')}</div>
+      <div class="card"><h3>⏱️ 計時</h3>
+        ${t0 ? `<div style="font-size:28px;margin:6px 0" aria-live="off">已讀 <span id="rdEl">${rdFmt(Date.now() - t0)}</span></div><button class="ghost" style="min-height:44px" onclick="rdTimer(false)">結束計時</button>`
+          : `<div class="muted">開始讀的時候按「開始計時」，只會顯示已經讀了多久。</div><button class="ghost" style="min-height:44px;margin-top:6px" onclick="rdTimer(true)">⏱️ 開始計時</button>`}
+        <h3 style="margin-top:14px">記一篇</h3>
+        <label class="muted" style="font-size:13px">讀了幾分鐘<input class="rdin" id="rdMin" type="number" min="1" max="600" inputmode="numeric" value="${draft.rd.min || ''}"></label>
+        <label class="muted" style="font-size:13px;display:block;margin-top:6px">標題（可以不填）<input class="rdin" id="rdTitle" maxlength="60"></label>
+        <label class="muted" style="font-size:13px;display:block;margin-top:6px">網址（可以不填，https 開頭）<input class="rdin" id="rdUrl" maxlength="300" inputmode="url"></label>
+        <button style="min-height:44px;margin-top:10px;width:100%" onclick="rdSave()">記一篇</button>
+        ${d.nLog ? `<div class="muted" style="margin-top:8px;font-size:13px">記了 ${d.nLog} 篇</div>${recent}` : ''}</div>
+      <div class="card"><details ${draft.rd.oc ? 'open' : ''} ontoggle="draft.rd.oc = this.open"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer"><b>🎓 記一堂課</b></summary><div class="muted">線上課、跟著影片學也算。</div>
+        <label class="muted" style="font-size:13px;display:block;margin-top:6px">課名或老師（可以不填）<input class="rdin" id="rdCn" maxlength="40"></label>
+        <label class="muted" style="font-size:13px;display:block;margin-top:6px">上了幾分鐘（可以不填）<input class="rdin" id="rdCm" type="number" min="1" max="600" inputmode="numeric"></label>
+        <button class="ghost" style="min-height:44px;margin-top:10px;width:100%" onclick="rdClass()">🎓 記一堂課</button>
+        ${d.nCls ? `<div class="muted" style="margin-top:8px;font-size:13px">記了 ${d.nCls} 堂</div>${recentC}` : ''}</details></div>
+      <div class="card"><details ${draft.rd.os ? 'open' : ''} ontoggle="draft.rd.os = this.open"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer"><b>加上自己的網站</b></summary><div class="muted">想看別的網站，可以加在這裡（最多 5 個，只收 https 開頭的網址）。</div>
+        ${sites.map((x, i) => `<div class="row" style="gap:6px;align-items:center;margin-top:6px"><span class="grow" style="overflow-wrap:anywhere">${esc(x.n)}</span><button class="ghost" style="min-height:44px" onclick="rdDelSite(${i})" aria-label="刪除 ${esc(x.n)}">刪除</button></div>`).join('')}
+        <label class="muted" style="font-size:13px;display:block;margin-top:6px">網站名稱（可以不填）<input class="rdin" id="rdSn" maxlength="30"></label>
+        <label class="muted" style="font-size:13px;display:block;margin-top:6px">網址<input class="rdin" id="rdSu" maxlength="300" inputmode="url" placeholder="https://"></label>
+        <button class="ghost" style="min-height:44px;margin-top:10px;width:100%" onclick="rdAddSite()">加上這個網站</button></details></div>
+      <div class="row" style="margin-top:8px"><button class="ghost grow" style="min-height:44px" onclick="rdToWords()">🔤 我的單字卡（拍照出題）</button></div>
+      <div class="row" style="margin-top:8px"><button class="ghost grow" style="min-height:44px" onclick="rdBack()">回到小島 🏝️</button></div>`;
+  };
+  const viewWordsEw0 = window.viewWords;
+  window.viewWords = function () {
+    if (langCanOn() && draft && draft.ew) return ewView();
+    if (langCanOn() && draft && draft.rd) return rdView();
+    return viewWordsEw0.apply(this, arguments);
+  };
   // FAM_TALK_v1：想找人說說（文案審查 245）。她那頁 viewTalk 的家人版：沒有學校輔導室、沒有「讓爸爸知道」那張卡（那顆按鈕會叫後端寄信），所以只動前端、不記錄。
   OWN_TABS.push('talk'); OWN_CARDS.push('talk', 'talkEntry');
   window.viewTalk = () => window.card('talk', `<div class="card"><h2 style="margin:0">🫶 想找人說說</h2>
