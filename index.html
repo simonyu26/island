@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.13';
+const APP_VERSION = '2.52.14';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.14', date: '2026-11-23', guide: ['交易所'], items: ['🏦 主島的交易所多了「阿嬤的銀行」和「阿嬤的股票」：島幣可以存進銀行領利息，也可以照真的價格，練習買賣一檔追蹤臺灣 50 指數的 ETF（0050）。買了股票的島幣，要賣出、隔天才回到錢包。'] },
   { v: '2.52.13', date: '2026-11-23', fam: true, guide: '無', items: ['📚 家人自己的島：書店裡多了一張店裡的插畫，請了管理員的話，管理員會站在櫃台；也可以幫書店養一隻貓（不用花島幣，也不用照顧），牠會在店裡走走、坐坐、打個盹。', '🫶 家人自己的島：「更多」最上面多了「想找人說說」，列了幾條求助專線和緊急電話，點了可以直接撥打。這一頁開過幾次不會記下來。'] },
   { v: '2.52.12', date: '2026-11-23', guide: ['我的家'], items: ['🌙 我的家多了晚安熄燈：家裡有同住的夥伴的話，晚上 9 點半到清晨 4 點回家時，夥伴會問「今天先到這裡？」，按「熄燈」房間的燈會慢慢暗下來。不記時間、不算天數。'] },
   { v: '2.52.11', date: '2026-11-22', fam: true, guide: ['島民的訊息和每日新聞'], items: ['🎵 音樂廳多了「今天的音樂」：每天一則，可能是一首歌、一首詩詞、一種樂器，或一個關於聲音的小知識。'] },
@@ -1125,6 +1126,54 @@ function lanternMsXp_(save, today) {
   });
   return Math.floor(n / LANTERN_MS_EVERY) * LANTERN_MS_XP;
 }
+/** BANK_ETF_v1 交易所銀行＋0050 的帳（主島串 11/12）。後端 Coins.gs 和前端 index.html 放的是同一段文字（patch 從這個檔貼進去，測試會比對兩邊逐字相同），改一邊就要改另一邊。
+ *  save：存檔；today：YYYY-MM-DD；px：[[日期, 收盤], …] 由舊到新；div：[{ ex, cash }]。日期都是 YYYY-MM-DD 字串，直接比大小。
+ *  銀行用 0.1 枚為單位的整數；股票單位用 ×1,000,000 的整數（u）。回傳的 wallet 是要從原本島幣扣掉的淨額（存入＋買進−領出−已入帳的賣出）。 */
+const FIN_RATE_ = 5, FIN_CAP_ = 5000, FIN_IN_MAX_ = 5000, FIN_U_ = 1000000;   // 週利率 0.5%（5／1000），只算前 500 枚；存入後最多 500 枚
+function finDay_(s, n) { const p = String(s).split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)); return d.toISOString().slice(0, 10); }
+function finWd_(s) { const p = String(s).split('-').map(Number); return (new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay() + 6) % 7 + 1; }   // 1＝週一 … 7＝週日
+function finPx_(px, d) { let r = null; for (let i = 0; i < (px || []).length; i++) { if (px[i][0] < d) r = px[i]; else break; } return r; }   // d 當天以前（不含）最近一個收盤
+function finLog_(save, pre) {
+  const out = [];
+  Object.keys(save || {}).filter(k => k.indexOf(pre) === 0 && save[k] && Array.isArray(save[k].log)).sort().forEach(k => save[k].log.forEach(e => { if (e && typeof e.at === 'string') out.push(e); }));
+  return out.sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0);   // 同一天照原本的順序（sort 是穩定的）
+}
+function finCalc_(save, today, px, div) {
+  const bank = finLog_(save, 'bank:').filter(e => e.at <= today), etf = finLog_(save, 'etf:').filter(e => e.at <= today);
+  const r = { bankIn: 0, bankOut: 0, interest: 0, divs: 0, bal: 0, u: 0, cost: 0, buy: 0, sold: 0, pending: 0, trades: 0, plan: 0, skip: 0, hist: [] };
+  const uAt = {};   // 日期 → 當天日終持有單位
+  let u = 0, cost = 0;
+  etf.forEach(e => {
+    if (e.t === 'buy') { const c = Math.floor(Number(e.coins) || 0), uu = Math.floor(Number(e.u) || 0); u += uu; cost += c; r.buy += c; if (e.plan) r.plan++; }
+    if (e.t === 'skip') r.skip++;
+    if (e.t === 'sell') { const uu = Math.min(u, Math.floor(Number(e.u) || 0)), c = Math.floor(Number(e.coins) || 0); cost = u ? Math.round(cost * (u - uu) / u) : 0; u -= uu; if (e.settle <= today) r.sold += c; else r.pending += c; }
+    if (!e.plan && (e.t === 'buy' || e.t === 'sell') && e.at === today) r.trades++;
+    uAt[e.at] = u;
+  });
+  r.u = u; r.cost = cost;
+  const uBefore = d => { let x = 0; Object.keys(uAt).sort().forEach(k => { if (k < d) x = uAt[k]; }); return x; };
+  const delta = {}, add = (d, v, kind) => { (delta[d] = delta[d] || []).push([v, kind]); };
+  bank.forEach(e => { const n = Math.floor(Number(e.n) || 0); if (e.t === 'in') { r.bankIn += n; add(e.at, n * 10, 'in'); } if (e.t === 'out') { r.bankOut += n; add(e.at, -n * 10, 'out'); } });
+  (div || []).forEach(x => { if (!x || typeof x.ex !== 'string' || !(Number(x.cash) > 0) || x.ex > today) return; const h = uBefore(x.ex); if (!h) return; const v = Math.floor(h * Number(x.cash) * 10 / FIN_U_); if (v > 0) { add(x.ex, v, 'div'); r.divs += v; } });
+  const days = Object.keys(delta).sort();
+  if (days.length) {
+    let bal = 0, d = days[0];
+    const eod = [];   // 最近 7 天的日終餘額
+    while (d <= today) {
+      if (finWd_(d) === 1 && eod.length) {   // 週一：上週（週一～週日）日終餘額的最小值；開戶前那幾天算 0
+        let m = Infinity; for (let i = 0; i < 7; i++) m = Math.min(m, i < 7 - eod.length ? 0 : eod[i - (7 - eod.length)]);
+        const it = Math.floor(Math.min(Math.max(0, m), FIN_CAP_) * FIN_RATE_ / 1000);
+        if (it > 0) { bal += it; r.interest += it; r.hist.push([d, 'int', it]); }
+      }
+      (delta[d] || []).forEach(x => { bal += x[0]; if (x[1] === 'div') r.hist.push([d, 'div', x[0]]); });
+      eod.push(bal); if (eod.length > 7) eod.shift();
+      d = finDay_(d, 1);
+    }
+    r.bal = bal;
+  }
+  r.wallet = r.bankIn - r.bankOut + r.buy - r.sold;   // 要從原本島幣扣掉的
+  return r;
+}
 function derive(S) {
   const save = S.save || {};
   const cfg = save.config || null;
@@ -1254,7 +1303,8 @@ function derive(S) {
     if (e.t === 'buy') { const n = Number(e.n) || 0; shop.matSpent += n * MAT_PRICE; if (e.at === S.today) shop.buyToday += n; }
     if (e.t === 'sell') { shop.sellEarned += Number(e.price) || 0; if (e.at === S.today) shop.soldToday += Number(e.price) || 0; }
   }));
-  const coins = 20 + Math.floor(exXp / 10) + xqCoins + exCoins + paperCoins - spent - shop.matSpent + shop.sellEarned;   // 開島禮物 20 枚
+  const fin = finCalc_(save, S.today, (S.market && S.market.px) || [], (S.market && S.market.div) || []);   // BANK_ETF_v1：存進銀行、投入股票的不在錢包裡，賣出隔天才回來（和後端 ledger_ 同一段）
+  const coins = 20 + Math.floor(exXp / 10) + xqCoins + exCoins + paperCoins - spent - shop.matSpent + shop.sellEarned - fin.wallet;   // 開島禮物 20 枚
   const level = Math.floor(Math.sqrt(xp / 60)) + 1;
   const lvBase = 60 * Math.pow(level - 1, 2), lvNext = 60 * Math.pow(level, 2);
 
@@ -1292,7 +1342,7 @@ function derive(S) {
     { ic: '⛵', name: '紙船 ×10', ok: sessions.length >= 10 }
   ];
 
-  return { cfg, xp, coins, planBonus: Math.round(planBonus), coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent, matSpent: shop.matSpent, sellEarned: shop.sellEarned }, shop, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
+  return { cfg, xp, coins, planBonus: Math.round(planBonus), coinParts: { gift: 20, coinXp, exXp, fromXp: Math.floor(exXp / 10), canEx: Math.floor(Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)) / 10), landXp: (save.land && save.land.xp) || 0, avail: Math.max(0, coinXp - exXp - ((save.land && save.land.xp) || 0)), xqCoins, exCoins, paperCoins, spent, matSpent: shop.matSpent, sellEarned: shop.sellEarned, fin }, fin, shop, level, lvBase, lvNext, pts, ptsBy, streak, best, cards, recordedWeeks, grades, bond, kizuna, mats: matsOf(save, itemsByRow, S.today),
            links, badges, bossDone, fullCombo, log, itemsByRow, questsDone, rates, weekPts,
            exDays, exWeeks, exStreak, exBest, artWeeks, artBest, paperSessions: sessions, autoLinks, focusDays, focusGlass, focusGreen: focusGlass * FOCUS_GREEN, moveDays, moveSteps, daySumAdd: (focusGlass - focusGlassOld) * FOCUS_GREEN + (moveSteps - moveStepsOld) * MOVE_GREEN, waterDays, waterGreen,
            // 綠點（v2.10）：植木屋的開張禮＋讀書計時的砂時計＋運動／練習＋喝水－種樹花掉的；不扣經驗值、不影響等級
@@ -1473,12 +1523,15 @@ function coinBook() {
     if (e.t === 'buy') add('mat', -(Number(e.n) || 0) * MAT_PRICE, e.at);
     if (e.t === 'sell') add('sell', Number(e.price) || 0, e.at);
   }));
+  finLog_(save, 'bank:').forEach(e => { if (e.at > S.today) return; const n = Math.floor(Number(e.n) || 0); if (e.t === 'in') add('bankIn', -n, e.at); if (e.t === 'out') add('bankOut', n, e.at); });   // BANK_ETF_v1
+  finLog_(save, 'etf:').forEach(e => { if (e.at > S.today) return; if (e.t === 'buy') add('etfBuy', -Math.floor(Number(e.coins) || 0), e.at); if (e.t === 'sell' && e.settle <= S.today) add('etfSell', Math.floor(Number(e.coins) || 0), e.settle); });
   return log;
 }
 const COIN_ROWS = [
   { k: 'gift', ic: '🎁', name: '開島禮物', inn: 1 }, { k: 'fromXp', ic: '⭐', name: '經驗值換來的', inn: 1 }, { k: 'xq', ic: '⚔️', name: '挑戰任務答對', inn: 1 },
   { k: 'ex', ic: '🏃', name: '運動達標', inn: 1 }, { k: 'paper', ic: '⛵', name: '紙本檢討', inn: 1 }, { k: 'sell', ic: '💰', name: '收購賣得', inn: 1 },
-  { k: 'spent', ic: '🛍️', name: '在商店花掉' }, { k: 'mat', ic: '🧺', name: '素材櫃花掉' }];
+  { k: 'bankOut', ic: '🏦', name: '從銀行領出', inn: 1 }, { k: 'etfSell', ic: '📈', name: '賣出股票入帳', inn: 1 },   // BANK_ETF_v1
+  { k: 'spent', ic: '🛍️', name: '在商店花掉' }, { k: 'mat', ic: '🧺', name: '素材櫃花掉' }, { k: 'bankIn', ic: '🏦', name: '存進銀行' }, { k: 'etfBuy', ic: '📈', name: '買進股票' }];
 let coinScope = 'month', goalEdit = null, goalMsg = '';
 function coinSums(month) {
   const c = D.coinParts, o = {};
@@ -1565,8 +1618,8 @@ function viewCoins() {
 // 家人碼看她的島（v2.50.0.3）：數字要從好幾類存檔一起算，她沒分享的那一類會少掉收入、只剩支出，算出來變 0 或負數。
 // 來源沒全開的數字一律顯示「—」；綠點含喝水（water: 誰都不給），家人碼永遠算不完整。她自己的手機不受影響
 const FAM_NUM_NEED = { xp: ['study', 'exam'], coins: ['isle', 'study', 'exam'], streak: ['study'], green: null };
-function famNumOk(k) { if (!isFamily() || !(S && S.see)) return true; const need = FAM_NUM_NEED[k]; return !!need && need.every(seeOpen); }
-function famNum(k, v) { return famNumOk(k) ? v : '—'; }
+function famNumOk(k) { if (!isFamily() || !(S && S.see)) return true; if (k === 'coins') return typeof S.coinsNow === 'number'; const need = FAM_NUM_NEED[k]; return !!need && need.every(seeOpen); }
+function famNum(k, v) { return famNumOk(k) ? (k === 'coins' && isFamily() && S && S.see ? S.coinsNow : v) : '—'; }   // BANK_ETF_v1：家人碼的島幣用後端算好的 coinsNow（已扣掉銀行、股票），沒有就「—」，前端不自己推算
 function hud() {
   const pct = Math.round((D.xp - D.lvBase) / (D.lvNext - D.lvBase) * 100);
   return `<div class="card" id="hudCard">
@@ -8340,7 +8393,7 @@ function shopMatCard() {   // 素材櫃＋收購合成一張；裡面照舊走 c
 function viewShop() {
   const shop = (D.cfg.shop || []).filter(x => x.name);
   const bought = (S.save.purchases || []).slice().reverse();
-  return `<div class="shopv"><div class="card"><h2>🛍️ 島嶼商店</h2><div class="muted">${famNumOk('coins') ? `你有 <b>${D.coins}</b> 枚島幣。` : ''}島幣是讀書、賣料理慢慢存下來的，挑戰任務可以再多賺一些；不用急著一次用完。商品可以在「更多 → 修改島嶼設定」新增。</div></div>
+  return `<div class="shopv"><div class="card"><h2>🛍️ 島嶼商店</h2><div class="muted">${famNumOk('coins') ? `你有 <b>${famNum('coins', D.coins)}</b> 枚島幣。` : ''}島幣是讀書、賣料理慢慢存下來的，挑戰任務可以再多賺一些；不用急著一次用完。商品可以在「更多 → 修改島嶼設定」新增。</div></div>
     <div class="xplink">${card('xpEx', xpExCard())}</div>
     ${shopMatCard()}
     <div class="card"><h3>🎁 兌換獎品</h3>${shop.length ? shop.map((x, i) => `<div class="item"><div class="name">${esc(x.name)}</div><span>🪙 ${x.price}</span>
@@ -9507,7 +9560,7 @@ function toggleHQ() { local.set('island3dHQ', hqOn() ? '0' : '1'); local.del('is
 const GUIDE_GROUPS = [
   ['🏝️ 島和島民', ['這座島是什麼', '島民和室友有什麼不一樣', '跨科連結和好感度', '和島民的絆', '打扮你的島']],
   ['☀️ 每天要做的事', ['首頁怎麼看', '排計畫', '記錄你做了什麼', '讀書計時（集中の砂時計）', '週末確認這週', '故事任務', '挑戰任務（賺島幣）', '運動集章卡', '運動計時', '吃藥', '喝水', '每天的招呼', '島民的訊息和每日新聞']],
-  ['🗺️ 島上的地方', ['我的家', '燈塔（錯題的漂流瓶）', '紙船碼頭（紙本檢討）', '植木屋（種樹）', '島の屋台（素材與料理）', '獨立書店', '智慧島', '巷口的助教', '衛星小島', '核心主島', '3D 小島和成長回放', '二十四節氣']],
+  ['🗺️ 島上的地方', ['我的家', '燈塔（錯題的漂流瓶）', '紙船碼頭（紙本檢討）', '植木屋（種樹）', '島の屋台（素材與料理）', '獨立書店', '智慧島', '巷口的助教', '衛星小島', '核心主島', '交易所', '3D 小島和成長回放', '二十四節氣']],
   ['🪙 經驗值、島幣和獎勵', ['經驗值怎麼算', '島幣和商店', 'Boss 戰', '連續週數和休息卡', '房子怎麼長大']],
   ['💌 家人和朋友', ['邀請朋友來島上', '明信片冊', '讓島順起來']]
 ];
@@ -9706,6 +9759,7 @@ function viewGuide() {
     p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
     p('嚮導會講一則<b>昨天</b>的國內外新聞，附上跟會考哪一科有關，下面也有新聞來源可以點開看。新聞是 AI 用 Google 搜尋整理的，偶爾可能不精確，有疑問就點來源確認。') +
     p('🌍 有四個地方每天會換一張小知識卡：音樂廳的「今天的音樂」、植木屋的「今天的植物」、主島飛船碼頭的「今天的世界遺產」，還有智慧島碼頭渡船屋的「今天的港口」。到那裡就看得到，看看就好，沒有經驗值和島幣。'))}
+  ${isFamily() ? '' : sec('🧮', '交易所', p('主島的交易所裡有「阿嬤的銀行」和「阿嬤的股票」。🏦 銀行：島幣存進去，每個星期一算一次利息，隨時可以領出來；超過 500 枚的部分不算利息。📈 股票：照真的價格，練習買賣一檔追蹤臺灣 50 指數的 ETF（0050），會漲也會跌。買賣一天一次，用前一天的收盤價；頁面上的價錢每個星期一更新一次。賣出的島幣隔天才回到錢包。存進銀行或買了股票的島幣不在錢包裡，商店用不到。'))}
   ${sec('📖', '故事任務', p('每天打開小島，會有一位島民（或室友）遇到難題來找你幫忙：可能是石碑上的詩句、燈塔的電路、或是颱風的風向。幫他解一題會考範圍的選擇題，就是今天的任務。') +
     p('題目是那條巷子的<b>會考考古題</b>，大多是中級題（四到七成的考生答對），有時候會遇到進階題（不到四成答對），出過的題不會再出。數學和自然不出題組題。做完可以按「🙋 請島民講解這一題」。') +
     p(`答對 +${QUEST_XP.right} 經驗值；答錯也有 +${QUEST_XP.wrong}，而且會看到解說。每天可以按「🎲 換一個」一次，換成別條巷子的故事。`) +

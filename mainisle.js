@@ -577,11 +577,157 @@
     return `<div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#f3f7fb"><div class="row"><b class="grow">🪙 我的島幣帳本</b><button class="ghost" onclick="coinFrom='mainisle';go('coins')">打開</button></div>
       <div class="muted" style="margin-top:2px">看看自己的島幣從哪裡來、去了哪裡，也可以訂一個存錢目標。</div></div>`;
   }
+  // ---------- BANK_ETF_v1 交易所：阿嬤的銀行、阿嬤的股票（主島串 11/12；畫面文字 交易所設計串、文案 213 定稿）----------
+  // 只給她自己（家人碼、家人自己的島都不畫；家人島版 12/1）。價錢只在這一頁：不推、不紅點、不排行；漲跌不用紅綠。
+  // 帳都用 index.html 的 finCalc_（和後端 ledger_ 同一段）；成交、補登都在後端，這裡只送枚數。
+  let finTab = '', finCf = null, finMsg = '', finBusy = false, finSay = '';
+  const FIN_SAY = ['漲跌每天都有，看久一點才看得清楚。', '先想好這筆錢多久不用，再決定放多少。', '分散、放得久、不借錢，這三件事比猜漲跌重要。', '買之前先想好為什麼買，這就是在練習。'];
+  const FIN_INTRO = {
+    bank: '這是阿嬤的銀行。島幣存進來，每個星期一算一次利息，隨時都能領出來，不會變少。遊戲裡的利率故意調得比較高，一週 0.5%，讓你看得到複利；真實銀行的定期存款大約一年 1～2%，活期更低。',
+    etf: '這裡可以用島幣買一種追蹤台灣市值最大 50 家公司的 ETF，買賣用前一天的收盤價，這一頁的價錢每個星期一更新一次。它會漲也會跌，沒有人能保證。先想好這筆錢多久不用，再決定要放多少。這裡只是用來練習，不是建議你買哪一種。' };
+  const finLs = (k, v) => { try { if (v === undefined) return localStorage.getItem('fin:' + k); localStorage.setItem('fin:' + k, v); } catch (e) { return null; } };
+  const finMk = () => S.market || { px: [], div: [] };
+  const finF = () => D.fin || finCalc_(S.save || {}, S.today, finMk().px, finMk().div);
+  const finMon = () => finDay_(S.today, 1 - finWd_(S.today));
+  const finUnits = u => (Math.floor(u / 10000) / 100).toFixed(2);
+  const finD = d => { const p = d.split('-'); return (+p[1]) + '/' + (+p[2]); };
+  // 美術 11/12：一個畫面只有一顆實心鈕；選中的分頁是淡紫底＋2px 紫框＋✓；不能按的一律 off（生成色底、鼠灰字、虛線框，字對比 ≥ 4.5:1），不用透明度
+  const FIN_OFF = 'background:#f7f1e5;color:#5f5a55;border:1px dashed #d8d4ce;opacity:1';
+  const finBtn = (t, on, dis, kind) => `<button class="${kind === 1 && !dis ? '' : 'ghost'}" style="min-height:44px;white-space:nowrap;padding:0 8px;${kind === 'sel' || kind === 0 ? 'font-size:14px;' : ''}${dis ? FIN_OFF : kind === 'sel' ? 'border:2px solid var(--plum)' : ''}"${dis ? ' disabled' : ''} onclick="${on}">${kind === 'sel' ? '✓ ' : ''}${t}</button>`;
+  const finNarrow = () => (window.innerWidth || 400) <= 360;   // 美術 11/12：≤360 寬時分頁拿掉圖示、三顆按鈕字 14px
+  const finRow = (n, html) => { if (n === 3 && finNarrow()) html = html.replace(/style="min-height:44px;/g, 'style="min-height:44px;font-size:14px;'); return `<div style="display:grid;grid-template-columns:repeat(${n},minmax(0,1fr));gap:8px;margin-top:8px">${html}</div>`; };
+  const finIn = (id, ph) => `<input id="${id}" type="number" inputmode="numeric" min="1" step="1" placeholder="${ph}" style="width:100%;min-height:44px;margin-top:8px">`;
+  const finVal = id => { const el = document.getElementById(id), n = el ? Number(el.value) : NaN; return Math.floor(n) === n && n >= 1 ? n : 0; };
+  function finIntro(k) {
+    if (finLs('intro:' + k)) return '';
+    return `<div style="margin-top:8px;padding:8px 10px;border-radius:12px;background:#f8eddb"><b>🧮 阿黛阿嬤</b><div style="margin-top:4px">${FIN_INTRO[k]}</div>
+      <div class="row" style="margin-top:6px"><button class="ghost" style="min-height:44px" onclick="finIntroOk('${k}')">知道了</button></div></div>`;
+  }
+  function finBankHtml() {
+    const F = finF(), bal = F.bal, mon = finMon(), lastInt = F.hist.filter(h => h[1] === 'int' && h[0] === mon).reduce((a, h) => a + h[2], 0);
+    const room = Math.max(0, Math.floor((FIN_IN_MAX_ - bal) / 10)), rec = F.hist.slice(-6).reverse();
+    const t = n => (n / 10).toFixed(1).replace(/\.0$/, '');
+    return `<h3 style="margin-top:12px">🏦 阿嬤的銀行</h3>${finIntro('bank')}
+      <div style="margin-top:6px"><b>存款 ${t(bal)} 枚・上週利息 ${t(lastInt)} 枚</b></div>
+      ${finIn('finBankN', '幾枚')}
+      <div class="muted" style="font-size:12px;margin-top:4px">最多存到 500 枚，現在還能存 ${room} 枚。</div>
+      ${finRow(3, finBtn('存入', 'finBank(\'in\')', finBusy || !room, 1) + finBtn('領出', 'finBank(\'out\')', finBusy || bal < 10) + finBtn('全部領出', 'finBank(\'all\')', finBusy || bal < 10))}
+      ${finMsg ? `<div style="margin-top:8px">${esc(finMsg)}</div>` : ''}
+      ${rec.length ? `<div style="margin-top:8px">${rec.map(h => `<div class="muted" style="font-size:13px">${h[1] === 'int' ? `${finD(h[0])} 利息 +${t(h[2])} 枚` : `${finD(h[0])} 配息 ${t(h[2])} 枚，存進銀行`}</div>`).join('')}</div>` : ''}
+      ${bal > FIN_CAP_ ? '<div class="muted" style="font-size:12px;margin-top:6px">配息和利息都放進銀行；超過 500 枚的部分不算利息。</div>' : ''}
+      <div class="muted" style="font-size:12px;margin-top:8px">遊戲裡的利率故意調高，真實銀行的定期存款大約一年 1～2%，活期更低。</div>`;
+  }
+  function finTrend(F) {   // 一週一個點：每個星期一以前最後一個收盤，最近 26 週。美術 11/12：上下至少留平均價 ±5%，小漲跌看起來就小；每點 3px 圓點、頭尾標價錢；有持有時加買進均價虛線
+    const px = finMk().px, pts = [];
+    for (let i = 25; i >= 0; i--) { const p = finPx_(px, finDay_(finMon(), -7 * i)); if (p && (!pts.length || pts[pts.length - 1][0] !== p[0])) pts.push(p); }
+    if (pts.length < 2) return '';
+    const avg = pts.reduce((a, p) => a + p[1], 0) / pts.length, paid = F && F.u > 0 ? F.cost * FIN_U_ / F.u : 0;
+    let lo = Math.min(avg * 0.95, ...pts.map(p => p[1])), hi = Math.max(avg * 1.05, ...pts.map(p => p[1]));
+    if (paid) { lo = Math.min(lo, paid); hi = Math.max(hi, paid); }
+    const W = 300, H = 96, L = 6, R = 6, x = i => L + i * (W - L - R) / (pts.length - 1), y = v => 22 + (hi - v) * (H - 44) / (hi - lo), last = pts.length - 1;
+    const lab = (i, nb, anchor, dx) => { const yy = y(pts[i][1]), up = y(pts[nb][1]) >= yy; return `<text x="${(x(i) + dx).toFixed(1)}" y="${(up ? yy - 7 : yy + 17).toFixed(1)}" font-size="14" fill="var(--muted)" text-anchor="${anchor}">${pts[i][1].toFixed(1)}</text>`; };   // 頭尾標價錢：線往下走就標在點上方，往上走就標在下方，不壓到線；一律一位小數
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:100%;height:auto;margin-top:8px" role="img" aria-label="一週一個點的走勢，從 ${pts[0][1]} 到 ${pts[last][1]} 元">
+      ${paid ? `<line x1="${L}" x2="${W - R}" y1="${y(paid).toFixed(1)}" y2="${y(paid).toFixed(1)}" stroke="#d8d4ce" stroke-width="1.5" stroke-dasharray="4 3"/>` : ''}
+      <polyline fill="none" stroke="var(--plum)" stroke-width="2" points="${pts.map((p, i) => x(i).toFixed(1) + ',' + y(p[1]).toFixed(1)).join(' ')}"/>
+      ${pts.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="3" fill="var(--plum)"/>`).join('')}
+      ${lab(0, 1, 'start', 4)}${lab(last, last - 1, 'end', -4)}</svg>
+      <div class="muted" style="font-size:12px">一週一個點，不用每天看。${paid ? '虛線是你買進的平均價。' : ''}</div>`;
+  }
+  function finEtfHtml() {
+    const F = finF(), mk = finMk(), wk = finPx_(mk.px, finMon()), plan = (S.save.etfPlan && S.save.etfPlan.hist || []).slice(-1)[0];
+    const val = wk ? Math.floor(F.u * wk[1] / FIN_U_) : 0, pct = F.cost ? Math.round((val - F.cost) / F.cost * 1000) / 10 : 0, done = F.trades >= 1;
+    const exNear = (mk.div || []).some(x => x && x.ex <= S.today && x.ex > finDay_(S.today, -30));
+    const skips = finLog_(S.save, 'etf:').filter(e => e.t === 'skip').slice(-3).reverse();
+    let cf = '';
+    if (finCf && finCf.kind === 'buy') {
+      const p = finPx_(mk.px, S.today), amt = finCf.amt, after = F.cost + amt;
+      cf = p ? `<div style="margin-top:8px;padding:12px;border-radius:12px;background:#fff;border:1px solid #d8d4ce">用前一天收盤 ${p[1]} 元買進，大約 ${finUnits(Math.floor(amt * FIN_U_ / p[1]))} 單位。這筆是你島幣的 ${Math.round(amt / Math.max(1, D.coins) * 100)}%；如果跌一半，這筆會剩 ${Math.floor(amt / 2)} 枚；投入的島幣在賣出前不能拿去商店用。確定要買嗎？
+        ${after * 2 > D.coins + F.cost ? '<div style="margin-top:8px">買了以後，你一半以上的島幣都在股票裡。</div>' : ''}
+        ${finRow(2, finBtn('確定', 'finGo()', finBusy, 1) + finBtn('再想想', 'finCancel()'))}</div>` : '';
+    }
+    if (finCf && finCf.kind === 'sell') {
+      const p = finPx_(mk.px, S.today), u = finCf.all ? F.u : Math.min(F.u, Math.ceil(finCf.amt * FIN_U_ / p[1])), got = Math.floor(u * p[1] / FIN_U_);
+      cf = `<div style="margin-top:8px;padding:12px;border-radius:12px;background:#fff;border:1px solid #d8d4ce">用前一天收盤 ${p[1]} 元賣出，大約 ${got} 枚，明天會進到你的島幣。確定要賣嗎？
+        ${finRow(2, finBtn('確定', 'finGo()', finBusy, 1) + finBtn('再想想', 'finCancel()'))}</div>`;
+    }
+    return `<h3 style="margin-top:12px">📈 阿嬤的股票</h3>${finIntro('etf')}
+      ${finSay ? `<div class="muted" style="margin-top:4px">阿嬤：「${finSay}」</div>` : ''}
+      <div style="margin-top:6px">${wk ? `上週收盤 ${wk[1]} 元（${finD(wk[0])}，每個星期一更新）` : '還沒有收盤價，下個星期一再來看。'}</div>
+      ${F.u > 0 ? `<div style="margin-top:6px"><b>你有 ${finUnits(F.u)} 單位，投入 ${F.cost} 枚，照上週收盤，約值 ${val} 枚（${pct > 0 ? '+' : ''}${pct}%）</b></div>
+        ${val < F.cost * 0.8 ? '<div class="muted" style="margin-top:4px">價錢本來就會上下，跌了不代表做錯。要繼續放還是賣掉，兩種都是練習。</div>' : ''}` : ''}
+      ${exNear ? '<div class="muted" style="font-size:12px;margin-top:4px">除息後價錢會少一截，那部分已經用配息放進你的銀行了。</div>' : ''}
+      ${finTrend(F)}
+      ${finIn('finEtfN', '要投入幾枚')}
+      ${finRow(3, finBtn('買進', 'finAsk(\'buy\')', finBusy || done || !wk || !!finCf, 1) + finBtn('賣出', 'finAsk(\'sell\')', finBusy || done || !(F.u > 0)) + finBtn('全部賣出', 'finAsk(\'all\')', finBusy || done || !(F.u > 0)))}
+      <div class="muted" style="margin-top:6px">${done ? '買賣一天一次，明天會恢復。' : '買賣一天一次。'}</div>
+      ${cf}${finMsg ? `<div style="margin-top:8px">${esc(finMsg)}</div>` : ''}
+      ${F.pending ? `<div class="muted" style="margin-top:6px">${F.pending} 枚明天入帳。</div>` : ''}
+      <h3 style="margin-top:14px">定期定額</h3>
+      <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">每
+        <select id="finPer" style="width:auto;min-height:44px" onchange="finPerUi()"><option value="w"${!plan || plan.per !== 'm' ? ' selected' : ''}>週</option><option value="m"${plan && plan.per === 'm' ? ' selected' : ''}>月</option></select>
+        <select id="finWd" style="width:auto;min-height:44px${plan && plan.per === 'm' ? ';display:none' : ''}">${['一', '二', '三', '四', '五', '六', '日'].map((w, i) => `<option value="${i + 1}"${(plan ? plan.wd : 1) === i + 1 ? ' selected' : ''}>星期${w}</option>`).join('')}</select>
+        <select id="finMd" style="width:auto;min-height:44px${plan && plan.per === 'm' ? '' : ';display:none'}">${Array.from({ length: 28 }, (_, i) => `<option value="${i + 1}"${(plan ? plan.md : 1) === i + 1 ? ' selected' : ''}>${i + 1} 號</option>`).join('')}</select>
+        投入 <input id="finAmt" type="number" inputmode="numeric" min="1" step="1" value="${plan ? plan.amt : ''}" style="width:5.5em;min-height:44px"> 枚</div>
+      ${finRow(2, finBtn(plan && plan.on ? '儲存' : '開始', 'finPlan(true)', finBusy) + (plan && plan.on ? finBtn('暫停', 'finPlan(false)', finBusy) : ''))}
+      <div class="muted" style="font-size:12px;margin-top:6px">${plan && plan.on ? '你照自己訂的方式在投。' : ''}時間到會用前一天收盤自動買，不會通知你。價錢低時買到的單位比較多，高時比較少；一樣有賠錢的時候。</div>
+      ${skips.map(e => `<div class="muted" style="font-size:13px">${finD(e.at)} 島幣不夠，這期沒買</div>`).join('')}`;
+  }
+  function finHtml() {
+    if (!her() || typeof finCalc_ !== 'function') return '';
+    return `<div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#f3f7fb" id="finBox">
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${finBtn((finNarrow() ? '' : '🏦 ') + '阿嬤的銀行', 'finOpen(\'bank\')', false, finTab === 'bank' ? 'sel' : 0)}${finBtn((finNarrow() ? '' : '📈 ') + '阿嬤的股票', 'finOpen(\'etf\')', false, finTab === 'etf' ? 'sel' : 0)}</div>
+      ${finTab === 'bank' ? finBankHtml() : finTab === 'etf' ? finEtfHtml() : ''}</div>`;
+  }
+  function finPaint() { const el = document.getElementById('finBox'); if (el) el.outerHTML = finHtml(); }
+  let finXo = null;   // 股票頁：今天打開幾次、前景幾分鐘（學習策略 11/12）；只記數字，送 saveXo
+  function finXoTick(open) {
+    const k = 'xo:' + S.today; let v = [0, 0]; try { v = JSON.parse(finLs(k) || '[0,0]'); } catch (e) { v = [0, 0]; }
+    if (open) v[0]++; else if (document.visibilityState === 'visible' && finTab === 'etf' && document.getElementById('finBox')) v[1] = Math.min(1440, v[1] + 1); else return;
+    finLs(k, JSON.stringify(v));
+    if (open || v[1] % 5 === 0) call('saveXo', S.today, v[0], v[1]).catch(() => {});
+  }
+  window.finOpen = function (k) {
+    finTab = finTab === k ? '' : k; finCf = null; finMsg = '';
+    if (finTab === 'etf') { finSay = FIN_SAY[Math.floor(Math.random() * FIN_SAY.length)]; finXoTick(true); if (!finXo) finXo = setInterval(() => finXoTick(false), 60000); }
+    finPaint();
+  };
+  window.finIntroOk = function (k) { finLs('intro:' + k, '1'); finPaint(); };
+  window.finCancel = function () { finCf = null; finPaint(); };
+  window.finPerUi = function () { const m = document.getElementById('finPer').value === 'm'; document.getElementById('finWd').style.display = m ? 'none' : ''; document.getElementById('finMd').style.display = m ? '' : 'none'; };
+  async function finRun(fn, args, ok) {
+    finBusy = true; finMsg = ''; finPaint();
+    try { S = await call(fn, ...args); D = derive(S); finCf = null; finMsg = ok || ''; }
+    catch (e) { finMsg = String(e.message || e); }
+    finBusy = false; finPaint();
+  }
+  window.finBank = function (how) {
+    const F = finF(), n = how === 'all' ? Math.floor(F.bal / 10) : finVal('finBankN');
+    if (!n) { finMsg = '寫一下要幾枚（整數）'; return finPaint(); }
+    const left = how === 'all' ? F.bal - n * 10 : 0;
+    finRun(how === 'in' ? 'bankIn' : 'bankOut', [n, D.coins], how === 'all' && left > 0 ? '不到 1 枚的零頭 ' + (left / 10).toFixed(1) + ' 枚留在銀行，會繼續長利息。' : '');
+  };
+  window.finAsk = function (k) {
+    const n = k === 'all' ? 0 : finVal('finEtfN');
+    if (k !== 'all' && !n) { finMsg = '寫一下要投入幾枚（整數）'; return finPaint(); }
+    if (k === 'buy' && n > D.coins) { finMsg = '島幣不夠，錢包現在有 ' + Math.max(0, D.coins) + ' 枚'; return finPaint(); }
+    finCf = k === 'buy' ? { kind: 'buy', amt: n } : { kind: 'sell', amt: n, all: k === 'all' }; finMsg = ''; finPaint();
+  };
+  window.finGo = function () {
+    if (!finCf) return;
+    if (finCf.kind === 'buy') return finRun('buyEtf', [finCf.amt, D.coins]);
+    const F = finF(), p = finPx_(finMk().px, S.today), u = finCf.all ? F.u : Math.min(F.u, Math.ceil(finCf.amt * FIN_U_ / p[1])), got = Math.floor(u * p[1] / FIN_U_), basis = F.u ? Math.round(F.cost * u / F.u) : 0;
+    finRun('sellEtf', [finCf.all ? 'all' : finCf.amt, D.coins], got < basis ? '這次的經驗也算數。' : '');
+  };
+  window.finPlan = function (on) {
+    const per = document.getElementById('finPer').value, amt = finVal('finAmt');
+    if (!amt) { finMsg = '寫一下每次投入幾枚（整數）'; return finPaint(); }
+    finRun('saveEtfPlan', [{ amt, per, wd: Number(document.getElementById('finWd').value), md: Number(document.getElementById('finMd').value), on }]);
+  };
   function infoHtml() {
     if (!info) return '<div class="muted">👆 點飛船碼頭搭飛船；點其他建物看看它們什麼時候開門。用手指拖曳可以轉動，兩指可以縮放。</div>';
     if (info.kind === 'place') {
       const k = info.key;
-      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + voyageHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') + (k === 'exchange' ? coinBtn() : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
+      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + voyageHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') + (k === 'exchange' ? coinBtn() + finHtml() : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
     }
     const x = isleList().find(i => i.key === info.key); if (!x) return '';
     if (x.mine) return `<b>🏝️ ${esc(x.name)}</b><div class="muted">這是你的島。</div>${x.open !== false ? `<button style="margin-top:8px" onclick="mainSail('${x.key}')">🎈 ${isFamily() ? '去我的島' : '回到我的島'}</button>` : ''}`;
