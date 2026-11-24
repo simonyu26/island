@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.15';
+const APP_VERSION = '2.52.16';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.16', date: '2026-11-25', guide: ['燈塔（錯題的漂流瓶）'], items: ['🔎 燈室多了「模考錯得最多的單元」：拍錯題時標了是哪一次模考，就會照單元排出那場錯得最多的，最多三個；最近三場可以切換。這張卡在 App 裡只有你自己看得到。'] },
   { v: '2.52.15', date: '2026-11-24', fam: true, guide: ['英文單字巷', '閱讀巷'], items: ['🔤 家人自己的島：英文街區也有「單字巷」了，可以翻大考中心高中英文詞彙的單字卡；日文、英文街區都多了「📃 閱讀巷」，可以去網站讀一篇、計時、記下來，也可以記一堂課。'] },
   { v: '2.52.14', date: '2026-11-23', guide: ['交易所'], items: ['🏦 主島的交易所多了「阿嬤的銀行」和「阿嬤的股票」：島幣可以存進銀行領利息，也可以照真的價格，練習買賣一檔追蹤臺灣 50 指數的 ETF（0050）。買了股票的島幣，要賣出、隔天才回到錢包。'] },
   { v: '2.52.13', date: '2026-11-23', fam: true, guide: '無', items: ['📚 家人自己的島：書店裡多了一張店裡的插畫，請了管理員的話，管理員會站在櫃台；也可以幫書店養一隻貓（不用花島幣，也不用照顧），牠會在店裡走走、坐坐、打個盹。', '🫶 家人自己的島：「更多」最上面多了「想找人說說」，列了幾條求助專線和緊急電話，點了可以直接撥打。這一頁開過幾次不會記下來。'] },
@@ -5371,6 +5372,30 @@ function viewLogMonth() {
     ${emaki}${tot}${words}${life}
     <div class="row"><button class="ghost grow" onclick="go('light')">去海灘 🌊</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
+/* MOCKSRC_v1 */ // 燈室：模考錯得最多的單元。只算拍錯題時標了「哪一次」的題（pq.mock＝那場的日期）；只有她自己看得到
+function mockDays() { return [...new Set(photoWrongs().map(q => q.mock).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d || '')))].sort().reverse().slice(0, 3); }
+function mockTop(day) {
+  const n = {}; let un = 0, all = 0;
+  photoWrongs().filter(q => q.mock === day).forEach(q => { all++; const u = unitOf(q, q.id); if (!u) { un++; return; } const k = laneOf(q, q.lane) + '|' + u; n[k] = (n[k] || 0) + 1; });
+  const top = Object.keys(n).sort((a, b) => n[b] - n[a] || (SUBJECTS.indexOf(GROUP[a.split('|')[0]] || a.split('|')[0]) - SUBJECTS.indexOf(GROUP[b.split('|')[0]] || b.split('|')[0])) || (a < b ? -1 : 1)).slice(0, 3)
+    .map(k => ({ lane: k.split('|')[0], unit: k.split('|')[1], n: n[k] }));
+  return { top, un, all };
+}
+function mockUnitCard() {
+  if (isFamily() || ownMode()) return '';
+  const days = mockDays(); if (!days.length) return '';
+  const day = days.includes(draft.mockDay) ? draft.mockDay : days[0], t = unitsData ? mockTop(day) : null;
+  return `<div class="card"><h3>🔎 模考錯得最多的單元</h3>
+    <div class="muted" style="font-size:12px;margin-bottom:6px">拍錯題時標了「哪一次模考」的題，照單元排出錯得最多的，最多三個。這張卡在 App 裡只有你自己看得到。</div>
+    ${days.length > 1 ? `<div class="row" style="gap:6px;margin-bottom:6px">${days.map(d => `<button class="ghost" aria-pressed="${d === day}" style="padding:4px 10px;font-size:13px;color:var(--plum);${d === day ? 'background:#ead1dc;border:2px solid var(--plum)' : 'background:#fff;border:1px solid #d8d4ce'}" onclick="draft.mockDay='${d}';render()">${d === day ? '✓ ' : ''}${short(d)}</button>`).join('')}</div>` : ''}
+    <div style="font-size:13px;margin-bottom:4px">${mockLabel(day)}</div>
+    ${!t ? `<div class="muted">${unitsData === false ? '單元資料要在網頁 App 版才看得到。' : '單元資料載入中…'}</div>`
+      : !t.top.length ? '<div class="muted">這場收的題，都對不到單元。</div>'   // 文案 238：沒有單元可排時只留這一行
+      : t.top.map((x, i) => `<div class="item" style="border-bottom:1px solid #ece8e1"><span style="font-size:18px;width:1.4em;text-align:center">${i + 1}</span><div class="name grow"><b>${esc(laneLabel(x.lane))}・${esc(x.unit)}</b></div><span class="muted">${x.n} 題</span></div>`).join('')
+        + (t.all <= 2 ? `<div class="muted" style="font-size:12px;margin-top:6px">這場才記了 ${t.all} 題，先參考就好。</div>` : '')
+        + (t.un ? `<div class="muted" style="font-size:12px;margin-top:6px">還有 ${t.un} 題對不到單元，沒有算進來。</div>` : '')}
+  </div>`;
+}
 function viewLamp() {
   if (isFamily() && !seeOpen('exam')) return famLock('exam');
   famSeen('cat', 'exam');
@@ -5426,7 +5451,7 @@ function viewLampBody() {
       ${d.whyN >= LAMP_MIN ? lampBar(pctOf(n, d.whyN), 'var(--plum-mid)') : ''}</div>`; }).join('')}
     <div class="muted" style="font-size:12px;margin-top:6px">${d.whyN >= LAMP_MIN ? '一共記了 ' + d.whyN + ' 題。' : '已經記了 ' + d.whyN + ' 題，滿 ' + LAMP_MIN + ' 題再算比例。在瓶子上點「為什麼會錯」就會記進來。'}</div></details>`;
   return `${lightFloors('lamp')}<div class="card"><h2>🔭 燈室</h2><div class="muted">${esc(lightTitle())}的頂樓，照照哪裡還沒會、時間花在哪裡。不加分也不扣分。下面收起來的卡，點標題就會打開。</div>${fam ? '' : '<details class="muted" style="font-size:13px;margin-top:4px"><summary>家人看得到哪些？</summary>燈室的卡，只有你在「誰看得到什麼」選了的人看得到；瓶子上寫的原因和那一句話，要在瓶子上選人才看得到。</details>'}${greet}</div>
-    ${advisorCard()}${unitCard}${lookCard}${easyCard}${lampCharts()}${selfCard}${invCard}${whyCard}
+    ${advisorCard()}${unitCard}${mockUnitCard()/* MOCKSRC_v1 */}${lookCard}${easyCard}${lampCharts()}${selfCard}${invCard}${whyCard}
     <div class="row"><button class="ghost grow" onclick="go('light')">回燈塔 🗼</button><button class="ghost grow" onclick="go('home')">回到小島 🏝️</button></div>`;
 }
 /* --- 燈室的學習顧問（AI）：她自己請一位（keeper:advisor）；爸爸把和學習顧問（AI）討論好的建議貼回來（advice:<週一>，後端 Advisor.gs）。
@@ -6313,6 +6338,7 @@ const XQ_TIERS = {
   adv: { name: '進階', ic: '💎', xp: 20, coins: 3 }
 };
 let xqBusy = false, xqLanePick = '';   // 記住她上次選的科目
+// 12/5 STREET_v1 一起改：街→街區（數學街、英文街…）；巷不動（文案 238 提醒）  /* MOCKSRC_v1 */
 function laneLabel(l) { return subIc(l) + ' ' + (SUBS[GROUP[l]] ? l + '巷' : SUBJECT_NAME[l] + '街'); }
 function extraQuests() { return Object.keys(S.save).filter(k => k.startsWith('xq:') && S.save[k]).sort().map(k => Object.assign({ id: k }, S.save[k])); }
 function todayChallenges() { return extraQuests().filter(q => q.tier && q.date === S.today); }
@@ -9715,6 +9741,7 @@ function viewGuide() {
     p('數學研究室那兩題練習答錯的題，也可以按「🍶 放進漂流瓶」；會算一題當天的挑戰題，爸爸看得到放進瓶子的題。') +  /* TUTOR_PRAC_v1 */
     p('<b>答完當下就能記</b>：答錯時，結果下面點一下為什麼會錯，就記到瓶子上（可以跳過）；答對時會問「這題你有把握嗎？」，選「有點猜」，這題會變成一個 🫧 輕輕的瓶子漂回來，下次有把握答對就直接變燈籠（這種燈籠不另給島幣）。海灘上的瓶子超過 ' + GUESS_CAP + ' 個時，有點猜的題先不收，一次撿幾個就好。') +
     p('🧭 <b>正在補強／已補強</b>：燈塔頂樓的燈室會把做過的題照單元整理（國文、英文照題型）。一個單元做滿 ' + UNIT_MIN + ' 題、海灘上還有瓶子，就可能列進「正在補強」，最多 3 個；一個單元的瓶子都變成燈籠，就會搬到「已補強」；最近 ' + RECENT_N + ' 題考古題和挑戰至少對 ' + RECENT_OK + ' 題，會多一個 ⭐（拍照收的題不算）。這裡不加分也不扣分。你在「誰看得到什麼」選了的家人看得到這兩張卡。') +
+    p('🔎 <b>模考錯得最多的單元</b>：拍錯題時選了「模考」和是哪一次，燈室就會照單元排出那場錯得最多的，最多三個。對不到單元的題不算。這張卡在 App 裡只有你自己看得到。') +
     p('🩹 <b>照原因換練法</b>：撿瓶子的時候，會照你記的原因換一種練法：' + (UNIT_TOOLS ? '觀念不熟，先看一張這個單元的觀念小卡；' : '') + '粗心，在漂流瓶上寫一句下次要檢查的事，之後同一個單元的題會先提醒你；沒讀懂題目，先選這題在問什麼，再答題；讀懂了，判斷錯，照一般的方式複習。數學漂流瓶如果不是粗心，類題會改成選怎麼列式、第一步怎麼做，不用算出答案；第三次漂回來的考古題和燈籠還是完整的題。' + (UNIT_TOOLS ? '小卡可以跳過，跳過也不影響經驗值和島幣。' : '')) +
     (UNIT_TOOLS ? p('🧭 <b>練一題、從補強單元出題</b>：燈室的「正在補強」可以按「練一題」，從那個單元你還沒做過的考古題抽一題。挑戰任務選「隨便一條」時，每天前 ' + XQ_WEAK + ' 題會從正在補強的單元抽，不想要可以在挑戰卡上關掉。題數和島幣都不變。') : '') +
     p('點一個瓶子可以看原題、記下為什麼會錯（粗心、觀念不熟、沒讀懂題目、讀懂了，判斷錯），也可以寫一句想對自己說的話。這些只有你看得到；想問家人的題，在「👀 想問誰這一題？」選人，家人才看得到你寫的原因和那句話。') +
