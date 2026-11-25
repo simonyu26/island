@@ -527,12 +527,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.19';
+const APP_VERSION = '2.52.20';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.20', date: '2026-11-25', guide: ['衛星小島'], items: ['🏝️ 漁港、沙洲、松樹岩島開始給素材了：讀完一格社會計畫，漁船分你魚或昆布；自然計畫，沙洲給岩鹽或地瓜；數學計畫，松樹岩島給陶土或檜木。每座一天 1 份，放進屋台的竹籃，不算商店收購的上限。之前讀完的份也一起補給你了，從小島蓋好那天算起。'] },
   { v: '2.52.19', date: '2026-11-25', guide: ['核心主島'], items: ['🎈 主島的飛船碼頭和玉山聚會所，靠近一點看會多出很多小細節：碼頭的木板、欄杆和繩子，聚會所的柱子和屋頂。拉遠的時候還是和原來一樣的樣子，島也跑得更順。'] },
   { v: '2.52.18', date: '2026-11-25', fam: true, guide: ['日文文法巷'], items: ['🧱 家人自己的島：日文街區多了「文法巷」，可以一張一張翻日文 N1 的文法卡，看意思、接續和例句。'] },
   { v: '2.52.17', date: '2026-11-25', fam: [0, 2], guide: ['島幣和商店', '衛星小島'], items: ['🪙 商店的「經驗值換島幣」按「兌換」以後，會先跳出確認框，寫出要換幾枚、會用掉多少可以換的經驗值，按「確定換」才會換。', '🏝️ 衛星小島的說明補齊了：每一種都寫明讀完哪一科的計畫會給什麼素材。漁港、沙洲、松樹岩島的素材準備中，開始給的時候，之前的份也會補給你。', '🏝️ 家人自己的島：小島頁和 ❓ 的說明改了。你島上的衛星小島只有風景，不給素材；之前寫著會給茶葉、砂糖，是寫錯了。'] },
@@ -3921,9 +3922,9 @@ const ISLET_STYLES = {
 };
 // ISLEINFO_v1 每種小島能做什麼（換小島時點 ❓ 看，小島頁也顯示）；soon＝已經排好日期、還沒上線的
 const ISLET_PLAY = {
-  sand: { scene: '白沙灘上躺著一根大漂流木，是看海、發呆的好地方。', play: '白沙灘上躺著一根大漂流木，是看海、發呆的好地方。素材（準備中）：那天讀完一格自然計畫，會給你 1 份岩鹽或地瓜（兩種輪流，一天 1 份），可以拿去屋台做料理；開始給的時候，之前的份也會補給你。' },
-  pine: { scene: '灰色的岩石上長著彎彎的松樹。', play: '灰色的岩石上長著彎彎的松樹。石燈籠和素材（準備中）：岩石邊會有 7 盞石燈籠，這週有讀書的每一天都會亮一盞，週一換新的一週；那天讀完一格數學計畫，會給你 1 份陶土或檜木（兩種輪流，一天 1 份），可以拿去屋台做料理。開始給的時候，之前的素材也會補給你。' },
-  port: { scene: '小小的漁港、紅屋頂的漁寮，停著一艘漁船。', play: '小小的漁港、紅屋頂的漁寮，停著一艘漁船。素材（準備中）：那天讀完一格社會計畫，漁船回港會分你 1 條魚或 1 片昆布（一天 1 份），可以拿去屋台做料理；開始給的時候，之前的份也會補給你。' },
+  sand: { scene: '白沙灘上躺著一根大漂流木，是看海、發呆的好地方。', play: '白沙灘上躺著一根大漂流木，是看海、發呆的好地方。那天讀完一格自然計畫，會給你 1 份岩鹽或地瓜（兩種輪流，一天 1 份），可以拿去屋台做料理。' },
+  pine: { scene: '灰色的岩石上長著彎彎的松樹。', play: '灰色的岩石上長著彎彎的松樹。那天讀完一格數學計畫，會給你 1 份陶土或檜木（兩種輪流，一天 1 份），可以拿去屋台做料理。石燈籠（準備中）：岩石邊會有 7 盞石燈籠，這週有讀書的每一天都會亮一盞，週一換新的一週。' },
+  port: { scene: '小小的漁港、紅屋頂的漁寮，停著一艘漁船。', play: '小小的漁港、紅屋頂的漁寮，停著一艘漁船。那天讀完一格社會計畫，漁船回港會分你 1 條魚或 1 片昆布（兩種輪流，一天 1 份），可以拿去屋台做料理。' },
   tea: { scene: '一層一層的茶園梯田，最上面有一座看海的涼亭。', play: '那天讀完一格國文計畫，茶園會多採 1 份茶葉給你（一天 1 份），可以拿去屋台做料理。' },
   cane: { scene: '甘蔗田旁停著一節五分車，小站邊有一個紅色郵筒。', play: '那天讀完一格英文計畫，五分車會載 1 份砂糖或牛奶給你（兩種輪流，一天 1 份），可以拿去屋台做料理。小站的郵筒裡每天有一張英文小知識卡，看看就好，不用作答。' } };
 const ISLET_COMMON = [['每座小島都可以請一位你自己設定的主人，主人會寫話給你。'], ['小島上有 4 格可以種樹，讀完的書長出來的地標，本島放不下時也會長到小島上。']];
@@ -3936,6 +3937,9 @@ function isletPlayHtml(style) {
 let isleKey = null;
 // CANE_v1 甘蔗田小島頁：五分車今天載了什麼，郵筒裡的英文小知識（notes/islet_cane.json，30 則照日子輪；不出題、不考）
 let caneNotes = null;
+const ISLE3_LINE = { port: ['⚓', '漁船今天分你', '今天讀完一格社會計畫，漁船就會分你 1 條魚或 1 片昆布。', '漁港'], sand: ['🏖️', '沙洲今天給你', '今天讀完一格自然計畫，沙洲就會給你 1 份岩鹽或地瓜。', '沙洲'], pine: ['🌲', '松樹岩島今天給你', '今天讀完一格數學計畫，松樹岩島就會給你 1 份陶土或檜木。', '松樹岩島'] };   /* ISLET_MATS_v1 */
+function isle3Line(style) { const L = ISLE3_LINE[style], t = isle3Today(style), b = isle3Back(style);
+  return `<div class="speech" style="margin-top:8px;font-size:14px">${L[0]} ${t ? L[1] + ' 1 ' + (ISLE3_UNIT[t.m] || '份') + MATS[t.m].ic + MATS[t.m].n + '，已經放進屋台的竹籃。' : L[2]}${b ? `<br>${L[3]}幫你補了 ${isle3BackText(style)}，也放進竹籃了。` : ''}</div>`; }
 function caneLine() {
   const t = caneToday(), b = caneBack(), fam = isFamily();   // 家人來訪：只留小知識卡，不顯示今天拿到了沒（文案 210）
   if (!caneNotes) { caneNotes = []; fetch('notes/islet_cane.json').then(r => r.json()).then(j => { caneNotes = j.notes || []; if (tab === 'isle') render(); }).catch(() => {}); }
@@ -3960,7 +3964,7 @@ function isletCard() {
   const list = have.length ? `<div class="row" style="gap:6px;margin-top:8px">${have.map(x => `<button class="ghost" style="padding:6px 10px" onclick="openIsle('${x.key}')">${ISLET_STYLES[x.style].ic} ${esc(isletName(x))}</button>`).join('')}</div>` : '';
   return `<div class="card"><div class="row" style="flex-wrap:nowrap"><div class="grow"><b>🏝️ 經驗值換衛星小島</b>
       <div class="muted">海上多一座小島，用太鼓橋接回本島。經驗值不會減少，但換小島用掉的經驗值，就不能再拿來換島幣。</div>
-      <div class="muted" style="margin-top:4px">${ownMode() ? '衛星小島只有風景，不給素材。按「去挑」以後，每一種都可以點 ❓ 看樣子。' : '茶園、甘蔗田、漁港、沙洲、松樹岩島，在讀完那一科計畫的那天都會給屋台素材（漁港、沙洲、松樹岩島準備中，開始給的時候，之前的份也會補給你）。按「去挑」以後，每一種都可以點 ❓ 看說明。'}</div>
+      <div class="muted" style="margin-top:4px">${ownMode() ? '衛星小島只有風景，不給素材。按「去挑」以後，每一種都可以點 ❓ 看樣子。' : '茶園、甘蔗田、漁港、沙洲、松樹岩島，在讀完那一科計畫的那天都會給屋台素材。按「去挑」以後，每一種都可以點 ❓ 看說明。'}</div>
       <div style="margin-top:4px">${cost == null ? '六座小島都蓋好了！' : `第 ${n + 1} 座要 <b>${cost}</b> 點，現在可以換的經驗值有 <b>${c.avail}</b> 點`}</div></div>
       ${cost == null ? '' : `<button class="bline" ${c.avail >= cost ? '' : 'disabled'} onclick="draft={};tab='isleNew';render();window.scrollTo(0,0)">去挑</button>`}</div>${list}</div>`;
 }
@@ -3997,6 +4001,7 @@ function viewIsle() {
       <details style="margin-top:6px"><summary class="muted" style="font-size:13px">❓ 這座小島能做什麼</summary>${isletPlayHtml(x.style)}</details>
       ${x.style === 'tea' ? `<div class="speech" style="margin-top:8px;font-size:14px">🍃 ${teaToday() ? '今天採到 1 份茶葉了，已經放進屋台的竹籃。' : '今天讀完一格國文計畫，茶園就會採 1 份茶葉給你。'}${teaBack() ? `<br>茶園這幾天幫你留了 ${teaBack()} 份茶葉，也放進竹籃了。` : ''}</div>` : ''}
       ${x.style === 'cane' ? caneLine() : ''}
+      ${ISLE3_LINE[x.style] && !isFamily() && !ownMode() ? isle3Line(x.style) : ''}${'' /* ISLET_MATS_v1 */}
       ${k ? placeIntro(x.key) + `<div class="row" style="margin-top:10px;flex-wrap:nowrap;align-items:flex-start"><span class="avatar">${kpPic(k)}</span><div class="speech grow"><b>${esc(k.name)}</b>：${esc(msg || lines[(daySeed() + x.n) % lines.length])}</div></div>
         ${isFamily() ? '' : `<button class="ghost" style="margin-top:8px;padding:4px 10px;font-size:13px" onclick="openKeeper('${x.key}')">✏️ 改主人</button>`}`
       : isFamily() ? '<div class="muted" style="margin-top:8px">這座小島還沒有主人。</div>'
@@ -4242,7 +4247,16 @@ const FOOD_TUTOR = { kongming: 'zongzi', xiaomiao: 'onsentama', alu: 'boba', ein
 Object.assign(FOOD_TUTOR, { zw: 'pinacake', sx: 'imopie', lh: 'karume' });   // TUTOR3_v1
 function favFood(s) { const f = D.cfg && D.cfg.residents && D.cfg.residents[s] && D.cfg.residents[s].food; return dishOf(f) || dishOf(FOOD_DEFAULT[s]); }
 const TEA_START = '2026-11-01', TEA_LIVE = '2026-11-04';   // 茶園採茶：11/4 上線（爸爸 11/1 整串提早），往前補 3 天（追補原則）
-const CANE_START = '2026-11-16', CANE_LIVE = '2026-11-19';   // CANE_v1 甘蔗田：11/19 上線，往前補 3 天（追補原則）
+const CANE_START = '2026-11-16', CANE_LIVE = '2026-11-19';
+const ISLET3_START = '2026-09-01', ISLET3_LIVE = '2026-11-25';   /* ISLET_MATS_v1 */ // 起算日爸爸定；上線日以後 3 天在小島頁、屋台說一聲補了幾份
+const ISLET3 = [['port', '社', 'fish', 'kombu'], ['sand', '自', 'salt', 'imo'], ['pine', '數', 'clay', 'hinoki']];   // [樣子, 哪一科, 第 1 次給, 第 2 次給]
+function isle3Today(style) { return D.mats.by.find(x => x.why === 'islet' && x.isle === style && x.date === S.today); }
+function isle3Back(style) { return S.today < addD(ISLET3_LIVE, 3) ? D.mats.by.filter(x => x.why === 'islet' && x.isle === style && x.date < ISLET3_LIVE).length : 0; }
+const ISLE3_UNIT = { fish: '條', kombu: '片' };   // 文案 260：魚 1 條、昆布 1 片，其他 1 份
+function isle3Qty(m, n) { return n + ' ' + (ISLE3_UNIT[m] || '份') + MATS[m].n; }
+function isle3BackText(style) { const c = {}; D.mats.by.filter(x => x.why === 'islet' && x.isle === style && x.date < ISLET3_LIVE).forEach(x => c[x.m] = (c[x.m] || 0) + 1);
+  const k = ISLET3.find(x => x[0] === style).slice(2).filter(m => c[m]), n = k.reduce((a, m) => a + c[m], 0);
+  return k.length === 1 ? isle3Qty(k[0], n) : n + ' 份（' + k.map(m => isle3Qty(m, c[m])).join('、') + '）'; }   // CANE_v1 甘蔗田：11/19 上線，往前補 3 天（追補原則）
 function caneToday() { return D.mats.by.find(x => x.why === 'islet' && x.isle === 'cane' && x.date === S.today); }
 function caneBack() { return S.today < addD(CANE_LIVE, 3) ? D.mats.by.filter(x => x.why === 'islet' && x.isle === 'cane' && x.date < CANE_LIVE).length : 0; }
 function teaToday() { return D.mats.by.some(x => x.why === 'islet' && x.m === 'tea' && x.date === S.today); }
@@ -4303,6 +4317,12 @@ function matsOf(save, itemsByRow, today) {
   if (caneAt && !ownMode()) { let n = 0; Object.keys(save).filter(k => k.startsWith('log:')).map(k => k.slice(4)).filter(d => d >= CANE_START && d >= caneAt && d <= today).sort().forEach(d => {
     const rows = (save['log:' + d] && save['log:' + d].rows) || {};
     if (Object.keys(rows).some(r => rows[r] === 2 && itemsByRow[r] && (GROUP[itemsByRow[r].subject] || itemsByRow[r].subject) === '英')) { add(n++ % 2 ? 'milk' : 'sugar', d, 'islet'); by[by.length - 1].isle = 'cane'; } }); }
+  /* ISLET_MATS_v1 */ // 漁港、沙洲、松樹岩島：那天完成那一科的計畫格，就多 1 份，兩種照拿到的先後輪流；起算和家人島照茶園（Coins.gs ledgerCommon_ 同公式）
+  ISLET3.forEach(([style, g, a, b]) => { const at = ((save.land && save.land.list) || []).filter(x => x.style === style).map(x => String(x.at || '').slice(0, 10)).sort()[0];
+    if (!at || ownMode()) return; let n = 0;
+    Object.keys(save).filter(k => k.startsWith('log:')).map(k => k.slice(4)).filter(d => d >= ISLET3_START && d >= at && d <= today).sort().forEach(d => {
+      const rows = (save['log:' + d] && save['log:' + d].rows) || {};
+      if (Object.keys(rows).some(r => rows[r] === 2 && itemsByRow[r] && (GROUP[itemsByRow[r].subject] || itemsByRow[r].subject) === g)) { add(n++ % 2 ? b : a, d, 'islet'); by[by.length - 1].isle = style; } }); });
   Object.keys(save).filter(k => k.startsWith('iq:') && save[k] && save[k].done && k.slice(3) >= MAT_START && k.slice(3) <= today).sort().forEach(k => add(iqMat(k.slice(3)), k.slice(3), 'iq'));   // ISLE_QUEST_v1 島民任務：完成那天 1 個，一天最多一次（後端保證）
   /* RARE_ALL5_v1 */ // 那天國文、英文、數學、自然、社會五個領域都完成至少一格計畫，掉 1 個稀有素材（六種照日期隨機）；一天最多 1 個，不和燈塔、整週全做完共用；家人島不掉
   if (!ownMode()) { const R5 = Object.keys(MAT_RARE).reduce((a, g) => a.concat(MAT_RARE[g]), []);
@@ -4445,7 +4465,7 @@ function viewYatai() {
       ${kp && local.get('islandMet:yatai') ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:28px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.yatai) || yataiLine())}</div></div>` : ''}</div>
     <div class="card"><h3>🧺 你的竹籃</h3>${basket || '<div class="muted">還空空的。在首頁把今天的計畫格勾「完成」，那條街的島民就會塞素材給你（每條街一天最多 3 個）。</div>'}
       <div class="muted" style="margin-top:8px;font-size:13px">Boss 項目（歷屆、模卷）或某一科這週全部做完，會拿到稀有素材；智慧島每上完一講，老師會送一樣珍品。${islets().some(x => x.style === 'tea') ? '茶園小島：那天讀完一格國文計畫，會多採 1 份茶葉。' : ''}${islets().some(x => x.style === 'cane') ? '甘蔗田小島：那天讀完一格英文計畫，五分車會載 1 份砂糖或牛奶。' : ''}</div>
-      ${teaBack() ? `<div style="margin-top:6px;font-size:13px">🍵 茶園這幾天幫你留了 ${teaBack()} 份茶葉，已經放進竹籃了。</div>` : ''}${caneBack() ? `<div style="margin-top:6px;font-size:13px">🚃 五分車這幾天幫你留了 ${caneBack()} 份砂糖、牛奶，已經放進竹籃了。</div>` : ''}</div>
+      ${teaBack() ? `<div style="margin-top:6px;font-size:13px">🍵 茶園這幾天幫你留了 ${teaBack()} 份茶葉，已經放進竹籃了。</div>` : ''}${caneBack() ? `<div style="margin-top:6px;font-size:13px">🚃 五分車這幾天幫你留了 ${caneBack()} 份砂糖、牛奶，已經放進竹籃了。</div>` : ''}${ISLET3.map(([st]) => isle3Back(st) ? `<div style="margin-top:6px;font-size:13px">${ISLE3_LINE[st][0]} ${ISLE3_LINE[st][3]}幫你補了 ${isle3BackText(st)}，已經放進竹籃了。</div>` : '').join('')}${'' /* ISLET_MATS_v1 */}</div>
     ${fam || ownMode() ? '' : swapHtml()}
     <div class="card"><h3>📜 食譜</h3>${menu}${(u => u ? `<div class="item" style="opacity:.55"><span class="avatar" style="filter:grayscale(1)">❔</span><div class="name"><b>還有幾道料理沒學會</b><div class="muted">拿到其中一種素材，店主就會教你</div></div></div>` : '')(DISHES.filter(d => !knowDish(d)).length)}</div>
     ${done.length || draft.thanks ? `<div class="card"><h3>🍱 做好的料理</h3>${giftHtml(done, !fam && !ownMode())}</div>` : ''}
@@ -9705,10 +9725,10 @@ function viewGuide() {
     p('每座小島的沙灘上有 4 格空地可以種樹（在植木屋種）。讀完的書長出的地標，本島一條街最多放 ' + MARK_PER_ST + ' 個；放滿以後，新的地標會照讀完的先後長到小島上，每座小島 ' + MARK_PER_ISLE + ' 個。') +
     p('🍵 茶園小島：那天讀完一格國文計畫，茶園會多採 1 份茶葉給你（一天 1 份），可以拿去屋台做料理。') +
     p('🚃 甘蔗田小島：那天讀完一格英文計畫，五分車會載 1 份砂糖或牛奶給你（兩種輪流，一天 1 份），可以拿去屋台做料理。小站的郵筒裡每天有一張英文小知識卡，看看就好，不用作答。') +
-    p('⚓ 漁港小島：小小的漁港、紅屋頂的漁寮，停著一艘漁船。素材（準備中）：那天讀完一格社會計畫，漁船回港會分你 1 條魚或 1 片昆布（一天 1 份），可以拿去屋台做料理；開始給的時候，之前的份也會補給你。') +
-    p('🌲 松樹岩島：灰色的岩石上長著彎彎的松樹。石燈籠和素材（準備中）：岩石邊會有 7 盞石燈籠，這週有讀書的每一天都會亮一盞，週一換新的一週；那天讀完一格數學計畫，會給你 1 份陶土或檜木（兩種輪流，一天 1 份），可以拿去屋台做料理。開始給的時候，之前的素材也會補給你。') +
-    p('🏖️ 沙洲小島：白沙灘上有一根大漂流木，是看海、發呆的好地方。素材（準備中）：那天讀完一格自然計畫，會給你 1 份岩鹽或地瓜（兩種輪流，一天 1 份），可以拿去屋台做料理；開始給的時候，之前的份也會補給你。') +
-    p('衛星小島給的素材，都不算進商店收購的上限（準備中的小島，開始給以後也一樣）。') +
+    p('⚓ 漁港小島：小小的漁港、紅屋頂的漁寮，停著一艘漁船。那天讀完一格社會計畫，漁船回港會分你 1 條魚或 1 片昆布（兩種輪流，一天 1 份），可以拿去屋台做料理。') +
+    p('🌲 松樹岩島：灰色的岩石上長著彎彎的松樹。那天讀完一格數學計畫，會給你 1 份陶土或檜木（兩種輪流，一天 1 份），可以拿去屋台做料理。石燈籠（準備中）：岩石邊會有 7 盞石燈籠，這週有讀書的每一天都會亮一盞，週一換新的一週。') +
+    p('🏖️ 沙洲小島：白沙灘上有一根大漂流木，是看海、發呆的好地方。那天讀完一格自然計畫，會給你 1 份岩鹽或地瓜（兩種輪流，一天 1 份），可以拿去屋台做料理。') +
+    p('衛星小島給的素材，都不算進商店收購的上限。') +
     p('🏠 搬到小島（即將開放，12 月底）：植木屋、獨立書店、島の屋台和音樂廳可以搬一間到小島上住，功能和等級都不變，隨時可以搬回來。'))}
   ${sec('🏮', '島の屋台（素材與料理）', p('首頁上方的 🏮 是碼頭邊的屋台。第一次去要先請一位店主（名字、樣子、個性），他會先跟你打招呼。') +
     p('在首頁把計畫格勾「完成」，那條街的島民就會塞一個素材給你：國文街是茶葉、竹葉、紫蘇，英文街是砂糖、牛奶，數學街是米、麵粉，自然街和社會街照分科給（理化岩鹽、生物地瓜和番茄、地科陶土、歷史檜木、地理昆布和魚、公民布）。每條街一天最多 3 個。') +
