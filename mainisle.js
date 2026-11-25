@@ -520,6 +520,7 @@
 
   // ---------- 玉山聚會所的公告（2b-2）：只在點聚會所時讀 ----------
   const canPost = () => ownMode() || isFamily();   // 家人「我的島」和「看她的島」都可以貼；她只能看
+  window.mainBoardNow = () => board && { items: (board.items || []).map(x => Object.assign({}, x)) };   // DAYLOG_v1：「這一天做了什麼」沿用已讀過的公告（唯讀複本）
   function loadBoard() {
     if (boardBusy) return;
     boardBusy = true;

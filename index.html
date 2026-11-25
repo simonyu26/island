@@ -316,6 +316,33 @@
   details.fold > summary::-webkit-details-marker { display: none; }
   details.fold > summary::before { content: '▸'; color: var(--muted); font-size: 13px; transition: transform .15s; }
   details.fold[open] > summary::before { transform: rotate(90deg); }
+  /* DAYLOG_v1 這一天做了什麼 */
+  .daylog .date { flex: 1; min-width: 0; text-align: center; font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .daylog .row button { font-size: 14px; padding: 8px; white-space: nowrap; }
+  .daylog button.off { background: #f7f1e5; color: #5f5a55; border: 1px dashed #d8d4ce; opacity: 1; }
+  .daylog .sum { display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; gap: 8px; margin-top: 10px; }
+  .daylog .tile { background: var(--sand); border-radius: 12px; padding: 10px 12px; }
+  .daylog .tile b { display: block; font-size: 16px; color: var(--plum); }
+  .daylog .tile span { font-size: 12px; color: var(--muted); }
+  .daylog details { border-top: 1px solid var(--plum-light); }
+  .daylog details:first-of-type { border-top: none; }
+  .daylog summary { list-style: none; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 15px; min-height: 44px; }
+  .daylog summary::-webkit-details-marker { display: none; }
+  .daylog summary::before { content: '▸'; color: var(--muted); display: inline-block; transition: transform .15s; }
+  .daylog details[open] > summary::before { transform: rotate(90deg); }
+  .daylog summary .n { margin-left: auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .daylog .lv1 > summary { font-weight: 700; font-size: 17px; }
+  .daylog .lv1 > summary .n { font-weight: 400; }
+  .daylog details details { border-top: 1px dashed var(--plum-light); margin-left: 18px; }
+  .daylog details details:first-of-type { border-top: none; }
+  .daylog details details summary { font-size: 15px; }
+  .daylog ul { margin: 0 0 8px 18px; padding: 0; list-style: none; }
+  .daylog li { margin-bottom: 12px; }
+  .daylog li .l1 { display: flex; gap: 8px; font-size: 15px; }
+  .daylog li .w { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; }
+  .daylog li .m { white-space: nowrap; color: var(--muted); }
+  .daylog li .t { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .daylog #dayHall { margin-left: 18px; padding-bottom: 8px; }
   details.fold > summary h3 { margin: 0; display: inline; }
   .ghead { margin: 18px 4px 8px; color: var(--plum); }
   .gsec { padding: 12px 16px; margin-bottom: 8px; }
@@ -527,12 +554,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.20';
+const APP_VERSION = '2.52.21';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.21', date: '2026-11-25', fam: true, guide: ['記錄你做了什麼'], items: ['🧾 「更多」頁多了「這一天做了什麼」：選一天，上面看摘要，下面分成讀書、生活、我的島、智慧島，點開就能看每一筆。這一頁在 App 裡只有你自己看得到；裡面的紀錄誰看得到，照「誰看得到什麼」原本的設定，沒有改變。'] },
   { v: '2.52.20', date: '2026-11-25', guide: ['衛星小島'], items: ['🏝️ 漁港、沙洲、松樹岩島開始給素材了：讀完一格社會計畫，漁船分你魚或昆布；自然計畫，沙洲給岩鹽或地瓜；數學計畫，松樹岩島給陶土或檜木。每座一天 1 份，放進屋台的竹籃，不算商店收購的上限。之前讀完的份也一起補給你了，從小島蓋好那天算起。'] },
   { v: '2.52.19', date: '2026-11-25', guide: ['核心主島'], items: ['🎈 主島的飛船碼頭和玉山聚會所，靠近一點看會多出很多小細節：碼頭的木板、欄杆和繩子，聚會所的柱子和屋頂。拉遠的時候還是和原來一樣的樣子，島也跑得更順。'] },
   { v: '2.52.18', date: '2026-11-25', fam: true, guide: ['日文文法巷'], items: ['🧱 家人自己的島：日文街區多了「文法巷」，可以一張一張翻日文 N1 的文法卡，看意思、接續和例句。'] },
@@ -1468,10 +1496,10 @@ function render() {
   nav.style.display = 'flex';
   const tabs = [['home', '🏝️', '小島'], ['plan', '📅', '計畫'], ['exam', '⚔️', '大考'], ['shop', '🛍️', '商店'], ['more', '⚙️', '更多']];
   if (ownMode()) tabs.splice(2, 1);   // 家人島沒有大考
-  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', hand: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', club: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
+  const navOn = { lightword: 'home', story: 'home', moveStop: 'home', hand: 'home', coins: 'home', garden: 'home', focus: 'home', walk: 'home', mail: 'home', pick: pickFrom, scan: 'plan', confirm: 'plan', abbr: 'more', day: 'more', items: 'more', house: 'home', wish: 'home', paper: 'home', keeper: 'home', light: 'home', lamp: 'home', log: 'home', bottle: 'home', visits: 'home', cards: 'home', bookstore: 'home', club: 'home', book: 'home', isle: 'home', kizuna: 'home', isleNew: 'shop', yatai: 'home', hall: 'home', wisdom: 'home', whut: 'home', wlesson: 'home', giveBook: 'home', giftPick: 'home', cheerWrite: 'home', postcard: 'home', finvite: 'home', mainisle: 'home', famvisit: 'home' }[tab] || tab;
   nav.innerHTML = tabs.map(t => `<button class="${navOn === t[0] ? 'on' : ''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   if (isFamily() && tab === 'setup') tab = 'home';
-  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, club: viewClub, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, recall: viewRecall, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, more: viewMore, guide: viewGuide, talk: viewTalk })[tab]();
+  app.innerHTML = (isFamily() ? familyBar() : '') + (tab !== 'home' && tab !== 'focus' ? focusPill() : '') + ({ lightword: viewLightWord, story: viewStory, moveStop: viewMoveStop, hand: viewHand, cls: viewClass, coins: viewCoins, walk: viewWalk, mail: viewMail, visits: viewVisits, cards: viewCards, bookstore: viewBookstore, club: viewClub, book: viewBook, isle: viewIsle, kizuna: viewKizuna, isleNew: viewIsleNew, yatai: viewYatai, hall: viewHall, wisdom: viewWisdom, whut: viewWisdomHut, wlesson: viewWisdomLesson, giveBook: viewGiveBook, giftPick: viewGiftPick, cheerWrite: viewCheerWrite, postcard: viewPostcard, finvite: viewFamilyInvite, famvisit: viewFamVisit, mainisle: viewMainIsle, home: viewHome, plan: viewPlan, garden: viewGarden, focus: viewFocusStop, pick: viewPicker, scan: viewScan, confirm: viewConfirm, abbr: viewAbbr, items: viewItems, house: viewHouse, wish: viewWish, paper: viewPaper, keeper: viewKeeper, light: viewLight, lamp: viewLamp, log: viewLog, bottle: viewBottle, wrongScan: viewWrongScan, words: viewWords, recall: viewRecall, printWrong: viewPrintWrong, exam: viewExam, shop: viewShop, day: viewDay, more: viewMore, guide: viewGuide, talk: viewTalk })[tab]();
   if (TAB_HELP[tab]) app.insertAdjacentHTML('afterbegin', helpChip());
   if (tab === 'home' && use3D()) mount3D();
   if (tab === 'home' && !isFamily()) { ensureDaily(); maybeGreet(); }
@@ -9549,7 +9577,8 @@ function seeSummary() {   // 文案 177：稱呼從她的設定來，不寫死
 function viewMore() {   // MORE_FOLD_v1：頁首常用 → 📔 島民關係一行 → 📒 航海日誌 → ⚙️ 設定（我的寫法、修改島嶼設定、🔒 誰看得到什麼、3D 高畫質、登出、版本）
   const pairs = Object.keys(D.kizuna.pair).filter(k => D.kizuna.pair[k].score > 0).map(k => [k, D.kizuna.pair[k]]), kzO = moreOpen === 'kz', seeO = moreOpen === 'see';
   const top = `<div class="card"><div class="mtop">${seeMine() ? `<button class="ghost mtalk" onclick="openTalk()">🫶 想找人說說</button>` : ''}<button class="ghost" onclick="go('guide')">❓ 玩法說明</button><button class="ghost" onclick="go('items')">📋 任務清單</button>
-    <button class="ghost" onclick="go('wish')">💡 讓島順起來</button><button class="ghost" onclick="go('visits')">🎟️ 邀請朋友</button></div></div>`;
+    <button class="ghost" onclick="go('wish')">💡 讓島順起來</button>
+    <button class="ghost" onclick="go('day')">🧾 這一天做了什麼</button><button class="ghost" onclick="go('visits')">🎟️ 邀請朋友</button></div></div>`;
   const kz = `<div class="card" style="padding:4px 12px"><button class="mrow" aria-expanded="${kzO}" onclick="moreTap('kz')"><span style="font-size:22px" aria-hidden="true">📔</span><span class="mt"><b>島民關係・${SUBJECTS.length} 位</b><div>${SUBJECTS.map(s => resident(s).ipic).join(' ')}　絆の手帖、島民之間的交情</div></span><span class="chev" aria-hidden="true">${kzO ? '▴' : '›'}</span></button>
     ${kzO ? `<div style="padding:0 0 10px">${SUBJECTS.map(s => { const r = resident(s);
       return `<div class="item"><span class="avatar">${r.pic}</span><div class="name"><b>${esc(r.name)}</b>（${SUBJECT_NAME[s]}）${kzBadge(s)}<div class="muted">${esc(r.personality)}${r.relation ? '・' + esc(r.relation) : ''}</div>${r.intro ? `<div style="font-size:13px;margin-top:2px">${esc(r.intro)}</div>` : ''}</div></div>`; }).join('')}
@@ -9570,6 +9599,108 @@ function viewMore() {   // MORE_FOLD_v1：頁首常用 → 📔 島民關係一�
     ${BETA3D ? `<div class="srow"><button class="ghost" onclick="toggleHQ()" aria-pressed="${hqOn()}">🖥️ 3D 高畫質：${hqOn() ? '開著' : '關著'}</button><div class="msub">開著會有影子、比較細的海浪；手機變慢或發燙就關掉。畫面不順時會自動調低畫質，順了再調回來。</div></div>` : ''}
     <div class="srow"><button class="ghost" onclick="logoutPhone()">🚪 登出這支手機</button><div class="msub">清掉這支手機上的配對碼和存著的資料。島上的紀錄都還在，之後輸入配對碼就能回來。</div></div>
     <div class="muted" style="font-size:12px">版本 v${APP_VERSION}</div></div>`;
+}
+/* ===== DAYLOG_v1「這一天做了什麼」（爸爸 11/12 定樣稿 4）：她的島和家人島共用；只讀 S.save，不送 AI、不寫回後端、不進週檢查 =====
+ * 入口只在自己的島（她自己、家人的「我的島」）；家人碼看她的島（isFamily）不顯示入口，進來也只給一句話。訪客走 visit.html，沒有這頁。
+ * 主島公告：只在家人島（ownMode）、展開「聚會所公告」時才叫一次 getBoard；主島已讀過就沿用；她的島不顯示這類。 */
+const DAY_STAMP = k => { const n = Number(String(k).split(':')[1]); return n > 1e11 ? fmtD(new Date(n)) : ''; };
+function dayOf(k, v) { return String((v && (v.at || v.date)) || DAY_STAMP(k) || '').slice(0, 10); }
+function dayLog(save, date, items) {
+  save = save || {}; const byRow = {}; (items || []).forEach(it => { byRow[it.row] = it; });
+  const nm = r => { const it = byRow[r]; return it ? it.subject + '｜' + it.name : '第 ' + r + ' 列'; };
+  const tm = (a, b) => (a ? hhmm(a) : '') + (a && b ? '–' + hhmm(b) : '');
+  const cat = (ic, name, unit, rows, n) => rows.length ? { ic, name, unit, n: n == null ? rows.length : n, rows } : null;
+  const list = k => ((save[k] || {}).list || []);
+  // 讀書
+  const focus = list('focus:' + date), fMin = focus.reduce((a, x) => a + (x.min || 0), 0);
+  const per = {}; focus.forEach(x => { per[x.s] = (per[x.s] || 0) + (x.min || 0); });
+  const glass = Object.values(per).reduce((a, m) => a + Math.floor(m / FOCUS_GLASS), 0);
+  const logRows = ((save['log:' + date] || {}).rows) || {};
+  const qs = [];
+  Object.keys(save).forEach(k => { const v = save[k]; if (!v || typeof v !== 'object') return;
+    const p = k.split(':')[0];
+    if (p === 'quest' && v.done && dayOf(k, v) === date) qs.push({ a: '故事任務' + (v.lane ? '｜' + v.lane : ''), m: v.correct === true ? '答對' : v.correct === false ? '答錯' : '' });
+    else if (p === 'xq' && v.done && dayOf(k, v) === date) qs.push({ a: '挑戰題' + (v.lane ? '｜' + v.lane : ''), m: v.correct ? '答對' : '答錯' });
+    else if (p === 'pq' && dayOf(k, v) === date) qs.push({ a: '收錯題' + (v.lane ? '｜' + v.lane : ''), m: '' });
+  });
+  const right = qs.filter(q => q.m === '答對').length;
+  const study = [
+    cat('⏱️', '讀書計時', '段', focus.map(x => ({ a: nm(x.row), m: (x.min || 0) + ' 分', t: tm(x.start, x.end) }))),
+    cat('📝', '計畫打勾', '格', Object.keys(logRows).map(r => ({ a: nm(r), m: Number(logRows[r]) > 1 ? '×' + logRows[r] : '' }))),
+    cat('⚔️', '挑戰題・類題・錯題', '題', qs)].filter(Boolean);
+  // 生活
+  const move = list('move:' + date), mMin = move.reduce((a, m) => a + (m.min || 0), 0);
+  const moveRows = move.map(m => ({ a: m.k === 'art' ? '藝文' : '運動', m: (m.min || 0) + ' 分', t: tm(m.start, m.end) }));
+  if (save['ex:' + date]) moveRows.push({ a: '運動集章', m: '✓' });
+  const water = list('water:' + date), cc = water.reduce((a, w) => a + (w.cc || 0), 0), med = save['med:' + date] || {};
+  const wm = water.map(w => ({ a: '喝水', m: (w.cc || 0) + ' cc', t: w.at ? hhmm(w.at) : '' }))
+    .concat(MED_SLOTS.filter(k => med[k]).map(k => ({ a: '吃藥｜' + MED_NAME[k], m: '✓', t: hhmm(med[k]) })));
+  const diary = save['diary:' + date], dText = diary && diary.text ? String(diary.text) : '';
+  const life = [
+    cat('🏃', '運動・藝文計時', '段', moveRows, move.length || moveRows.length),
+    cat('🥤', '喝水・💊 吃藥', '筆', wm),
+    cat('📆', '日記', '篇', dText ? [{ a: dText, m: '' }] : [])].filter(Boolean);
+  // 我的島（家人島可能沒有 craft:、like:、garden：沒有就不顯示）
+  const T = { buy: '買素材', cook: '做料理', sell: '賣料理', gift: '送料理' };
+  const dish = id => ((typeof DISHES !== 'undefined' && DISHES.find(d => d.id === id)) || {}).n || id;
+  const mat = id => ((typeof MATS !== 'undefined' && MATS[id]) || {}).n || id;
+  const craft = (((save['craft:' + date.slice(0, 7)] || {}).log) || []).filter(e => e && e.at === date && T[e.t]);
+  const likes = Object.keys(save).filter(k => k.indexOf('like:') === 0 && k.slice(-10) === date && save[k]);
+  const who = s => { try { return resident(s).name; } catch (e) { return s; } };
+  const plant = id => ((typeof PLANTS !== 'undefined' && PLANTS.find(p => p.id === id)) || {}).name || id;
+  const trees = (((save.garden || {}).list) || []).filter(p => p && p.at === date);
+  const isle = [
+    cat('🍢', '屋台', '次', craft.map(e => ({ a: T[e.t] + '｜' + (e.mat ? mat(e.mat) + ' ×' + (e.n || 1) : dish(e.dish)) + (e.t === 'gift' && e.to ? '（給 ' + who(e.to) + '）' : ''), m: e.t === 'sell' && e.price ? '🪙 ' + e.price : '' }))),
+    cat('💞', '島民交情', '位', likes.map(k => ({ a: who(k.split(':')[1]), m: [save[k].visit ? '去作客' : '', save[k].reply ? '回信' : ''].filter(Boolean).join('・') }))),
+    cat('🌱', '種樹', '棵', trees.map(p => ({ a: plant(p.k) + (p.note ? '｜' + p.note : ''), m: '' })))].filter(Boolean);
+  // 智慧島：一律從 save.wisdom.lessons 讀（家人島的 wl:* 後端已組回這裡）
+  const ls = (save.wisdom && save.wisdom.lessons) || {}, title = b => ((typeof WISDOM_BOOKS !== 'undefined' && WISDOM_BOOKS.find(w => w.key === b)) || {}).title || b;
+  const lessons = []; Object.keys(ls).forEach(b => Object.keys(ls[b] || {}).forEach(n => { const L = ls[b][n]; if (L && String(L.at || '').slice(0, 10) === date) lessons.push({ a: title(b) + '｜第 ' + n + ' 講', m: L.note ? '寫了心得' : '' }); }));
+  const wis = [cat('🏫', '上課', '講', lessons)].filter(Boolean);
+  const secs = [
+    { key: 'study', ic: '📗', name: '讀書', cats: study, big: fMin + ' 分鐘', sub: '打勾 ' + Object.keys(logRows).length + '・挑戰 ' + qs.length },
+    { key: 'life', ic: '🌿', name: '生活', cats: life, big: mMin + ' 分鐘', sub: '運動 ' + mMin + ' 分・水 ' + (cc >= 1000 ? (cc / 1000).toFixed(1).replace(/\.0$/, '') + 'L' : cc + 'cc') },
+    { key: 'isle', ic: '🏝️', name: '我的島', cats: isle, big: (craft.length + likes.length + trees.length) + ' 件', sub: isle.map(c => c.name).join('・') },
+    { key: 'wisdom', ic: '🪶', name: '智慧島', cats: wis, big: lessons.length + ' 講', sub: lessons.length ? lessons[0].a.replace('｜', ' ') : '' }];
+  return { date, secs: secs.filter(s => s.cats.length), all: secs, diary: !!dText, glass, right, focusMin: fMin };
+}
+let dayBoard = null;   // 主島公告：這一頁只叫一次 getBoard
+function dayHallHtml(date) {
+  if (dayBoard === 'err') return '<div class="muted">現在讀不到，等一下再打開看看</div>';
+  if (!dayBoard || dayBoard === 'loading') return '<div class="muted">讀取中…</div>';
+  const mine = (dayBoard.items || []).filter(x => x.mine && String(x.at || '').slice(0, 10) === date);
+  return mine.length ? '<ul>' + mine.map(x => `<li><div class="l1"><span class="w">${esc(x.text)}</span><span class="m"></span></div><div class="t">${esc(String(x.at).slice(11, 16))}</div></li>`).join('') + '</ul>' : '<div class="muted">這一天沒有貼公告</div>';
+}
+function dayHallOpen(el) {
+  if (!el.open || !ownMode()) return;
+  const fill = () => { const box = document.getElementById('dayHall'); if (box) box.innerHTML = dayHallHtml(draft.day || S.today); };
+  if (dayBoard === 'loading') return;
+  const mb = typeof window.mainBoardNow === 'function' && window.mainBoardNow(); if (!dayBoard && mb && (mb.items || []).length) dayBoard = mb;
+  if (dayBoard) return fill();
+  fill(); dayBoard = 'loading';
+  call('getBoard').then(r => { dayBoard = r || { items: [] }; }).catch(() => { dayBoard = 'err'; }).then(fill);
+}
+function dayGo(n) { const d = addD(draft.day || S.today, n); if (d > S.today) return; draft.day = d; render(); window.scrollTo(0, 0); }
+function viewDay() {
+  if (isFamily()) return '<div class="card"><div class="muted">這一頁只在自己的島上看得到。</div></div>';
+  const date = draft.day || S.today, L = dayLog(S.save, date, S.allItems || S.items), wd = '日一二三四五六'[parseD(date).getDay()];
+  const own = ownMode(), atToday = date >= S.today;
+  const tile = (ic, name, big, sub) => `<div class="tile"><span>${ic} ${name}</span><b>${big}</b><span>${sub || ''}</span></div>`;
+  const tiles = L.all.map(s => tile(s.ic, s.name, s.big, s.sub)).concat(own ? [tile('⛰️', '主島', '點開看', '聚會所公告')] : []).concat([tile('📆', '日記', L.diary ? '有寫' : '沒寫', L.diary ? '收在生活裡' : '')]);
+  const rows = c => '<ul>' + c.rows.map(r => `<li><div class="l1"><span class="w">${esc(r.a)}</span><span class="m">${esc(r.m)}</span></div>${r.t ? `<div class="t">${esc(r.t)}</div>` : ''}</li>`).join('') + '</ul>';
+  const sec = (s, i) => `<details class="lv1"${i === 0 ? ' open' : ''}><summary>${s.ic} ${s.name}<span class="n">${s.cats.length} 類</span></summary>
+    ${s.cats.map((c, j) => `<details${i === 0 && j === 0 ? ' open' : ''}><summary>${c.ic} ${esc(c.name)}<span class="n">${c.n} ${c.unit}</span></summary>${rows(c)}</details>`).join('')}</details>`;
+  const hall = own ? `<details class="lv1"><summary>⛰️ 主島<span class="n">1 類</span></summary>
+    <details ontoggle="dayHallOpen(this)"><summary>聚會所公告<span class="n"></span></summary><div id="dayHall">${dayHallHtml(date)}</div></details></details>` : '';
+  return card('daylog', `<div class="card daylog"><h2>🧾 這一天做了什麼</h2>
+    <div class="row" style="flex-wrap:nowrap;gap:6px"><button class="ghost" onclick="dayGo(-1)">‹ 前一天</button><div class="date">${short(date)}（${wd}）</div>
+      <button class="ghost${atToday ? ' off' : ''}" ${atToday ? 'disabled' : ''} onclick="dayGo(1)">後一天 ›</button></div>
+    <div class="sum">${tiles.join('')}</div></div>`) +
+  card('daylog', `<div class="card daylog"><div class="muted" style="margin-bottom:4px">明細（點一下打開，最多三層）</div>
+    ${L.secs.length || own ? L.secs.map(sec).join('') + hall : '<div class="muted">這一天沒有紀錄</div>'}
+    ${!L.secs.length && own ? '<div class="muted" style="margin-top:6px">這一天島上沒有其他紀錄</div>' : ''}</div>`) +
+  card('daylog', `<div class="muted" style="text-align:center">這一頁在 App 裡只有你自己看得到。</div>
+  <div class="row" style="margin-top:10px"><button class="ghost grow" onclick="go('more')">返回</button></div>`);
 }
 // v2.31 隱私（爸爸 2026-10-26）：「誰看得到什麼」表＋登出這支手機
 const WHO_SEES = [
@@ -9679,7 +9810,8 @@ function viewGuide() {
     p('週檢討表上沒有的項目，到「⚙️ 更多 → 📋 任務清單」新增；名字想改也在那裡改，以前的紀錄都會保留。') +
     p('上週排過的項目會出現在「最近常排的」，自己加的時候找起來比較快。'))}
   ${sec('📝', '記錄你做了什麼', p('首頁「今日のおつとめ」的「📝 讀書計畫」會列出今天排的項目，做完就點「完成」，做了一半就點「部分」，再點一次可以取消。按了就會自動存好，右上角會顯示「✓ 已存到試算表」。') +
-    p('做了計畫外的項目？按「＋ 記錄計畫外的項目」。忘了記也沒關係，到計畫頁點那一天就能補，或週末確認時一次補。<b>想每天記、或只在週日記都可以</b>，小島兩種都接受。'))}
+    p('做了計畫外的項目？按「＋ 記錄計畫外的項目」。忘了記也沒關係，到計畫頁點那一天就能補，或週末確認時一次補。<b>想每天記、或只在週日記都可以</b>，小島兩種都接受。') +
+    p('想回頭看某一天做了什麼：到「更多」按「🧾 這一天做了什麼」，選日期，上面是摘要，下面分成讀書、生活、我的島、智慧島，點開看每一筆；那天沒有紀錄的類別不會出現。這一頁在 App 裡只有你自己看得到，也不會把任何內容送給 AI；裡面的紀錄誰看得到，照「誰看得到什麼」的設定。'))}
   ${sec('🌱', '植木屋（種樹）', p('碼頭旁有一間植木屋，第一次去要先幫它請一位管理員（取名字、選樣子、寫個性），見面時送你 ' + GARDEN_GIFT + ' 綠點當開張禮。點首頁上方的「🌱 綠點」，或在 3D 小島點那間小屋就能進去。') +
     p('綠點從<b>計時</b>和<b>喝水</b>來：讀書每專心 ' + FOCUS_GLASS + ' 分鐘一顆砂時計 +' + FOCUS_GREEN + ' 綠點；運動、藝文活動、閱讀每 ' + MOVE_STEP + ' 分鐘 +' + MOVE_GREEN + '；喝水每 ' + WATER_CUP + 'cc +' + WATER_GREEN + '（一天最多算 ' + WATER_CAP + 'cc）。種樹花的是綠點，經驗值、島幣和島嶼等級都不會少。') +
     p('選一種植物，再點地圖上白色的空地格，就種下去了。可以寫一塊小木牌（最多 20 字），之後在 3D 小島點那棵樹就看得到。種下 7 天變小樹、14 天長大，不用澆水，也不會枯掉。種錯地方可以免費移植；拔掉的話綠點不會退回。') +

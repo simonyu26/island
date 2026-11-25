@@ -164,6 +164,7 @@
     <div class="card"><div class="row"><button class="ghost" onclick="go('guide')">❓ 玩法說明</button>
       <button class="ghost" onclick="famOwnSwitch(false)">🎈 ${esc(herGo())}</button></div>
       <div class="muted" style="margin-top:8px">版本 v${APP_VERSION}・家人島第一版</div></div>
+    ${card('daylog', `<div class="card"><button class="ghost" style="width:100%" onclick="go('day')">🧾 這一天做了什麼</button><div class="muted" style="margin-top:6px">選一天，看那天做了哪些事。</div></div>`)}
     ${privacy()}
     ${visitCard()}
     ${ticketCard()}
@@ -354,8 +355,8 @@
   // ---------- 畫面畫好以後：上方橫幅、收掉會考專用的按鈕、島主夥伴第一次打招呼 ----------
   function after(t) {
     const app = document.getElementById('app');
-    app.insertAdjacentHTML('afterbegin', `<div class="card" style="background:#2f6b4f;color:#fff"><div class="row"><b class="grow">🏝️ ${esc(S.who.name)}的島</b>
-      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="famOwnSwitch(false)">🎈 ${esc(herGo())}</button></div></div>`);
+    app.insertAdjacentHTML('afterbegin', (t === 'day' ? '<div data-card="daylog" style="display:contents">' : '') + `<div class="card" style="background:#2f6b4f;color:#fff"><div class="row"><b class="grow">🏝️ ${esc(S.who.name)}的島</b>
+      <button style="background:transparent;color:#fff;border:1px solid #fff;padding:6px 12px" onclick="famOwnSwitch(false)">🎈 ${esc(herGo())}</button></div></div>` + (t === 'day' ? '</div>' : ''));
     const rm = el => el && el.remove();
     // 家人島沒有的卡片（日めくり的分享按鈕、跨科連結、燈塔的話、學習顧問、管理員上傳圖片）由 Index.html 的 card() 照 OWN_CARDS 不畫；這裡只剩管理員介紹裡講到它們的那幾行
     app.querySelectorAll('li').forEach(li => { if (/分享給家人|每天會寫一句話/.test(li.textContent)) rm(li); });   // 日めくり還不能分享；小島管理員每天的一句話要 AI（2c-2）
@@ -808,6 +809,7 @@
     return html.slice(0, i) + `<div class="card" id="famLand">${lines}</div>` + html.slice(i);
   };
   // ---------- 通案化第一批（FAM_COMMON_v1，爸爸 10/30）：她的島有、家人也用得到的，照她的畫面開給家人島 ----------
+  OWN_TABS.push('day'); if (OWN_CARDS.indexOf('daylog') < 0) OWN_CARDS.push('daylog');   // DAYLOG_v1 這一天做了什麼（test_own_buttons 規定新卡片要用 card() 包）
   OWN_TABS.push('log', 'wish'); OWN_CARDS.push('moveRead');
   ['saveMed', 'saveMedCfg', 'addWish'].forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
   // 吃藥：おつとめ板的那一行只在自己打開提醒以後才出現（她的一直都在）
