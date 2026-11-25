@@ -1620,7 +1620,7 @@
   let jwPending = {}, jwTimer = null, jwLoaded = false, jwErr = '';
   function p3a1Open() {
     if (p3a1Ready || !langCanOn()) return; p3a1Ready = true;
-    ['n1Cards', 'langGet', 'langSet', 'langMark', 'langStreet', 'enCards', 'rdGet', 'rdSite', 'rdLog', 'rdClass']   /* P3A2_EW */ .forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
+    ['n1Cards', 'langGet', 'langSet', 'langMark', 'langStreet', 'enCards', 'rdGet', 'rdSite', 'rdLog', 'rdClass', 'gramGet', 'gramCards', 'gramMark']   /* P3A2_EW */ /* JA_GRAM_GM */ .forEach(f => { if (OWN_FNS.indexOf(f) < 0) OWN_FNS.push(f); });
   }
   // 這條街區練哪一種語言：本人選的（lsl）優先；名字寫了日文／英文就照名字；都看不出來回 ''
   function famLangOfDir(d) {
@@ -1644,7 +1644,7 @@
     const off = n => `<div class="jwlane off" aria-disabled="true"><div>${n[0]}</div><div>${n[1]}</div><div class="muted" style="font-size:11px">準備中</div></div>`;
     return `<style>.jwlanes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}.jwlane{border:2px solid var(--plum-light,#e6c6d4);border-radius:12px;padding:10px 6px;text-align:center;background:#fff;min-height:44px}
       .jwlane.off{border-style:dashed;opacity:.6}</style>
-      <div class="jwlanes"><button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="${lang === 'en' ? 'ewGo()' : 'jwGo()'}"><div>🔤</div><div>單字巷</div></button><button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="rdGo('${lang}')"><div>📃</div><div>閱讀巷</div></button>${off(['🧱', '文法巷'])}${off(['🎧', '聽力巷'])}</div>`;
+      <div class="jwlanes"><button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="${lang === 'en' ? 'ewGo()' : 'jwGo()'}"><div>🔤</div><div>單字巷</div></button><button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="rdGo('${lang}')"><div>📃</div><div>閱讀巷</div></button>${lang === 'ja' ? `<button class="jwlane" style="cursor:pointer;font:inherit;color:inherit" onclick="gmGo()"><div>🧱</div><div>文法巷</div></button>` : off(['🧱', '文法巷'])}${off(['🎧', '聽力巷'])}</div>`;
   }
   const jwMarks = () => Object.assign({}, (S.save && S.save['lcards:ja']) || {}, jwPending);
   function jwRange() { const r = (S.save && S.save['lrange:ja']) || { k: 'all' }; return r && r.k ? r : { k: 'all' }; }
@@ -1922,6 +1922,99 @@
     if (langCanOn() && draft && draft.rd) return rdView();
     return viewWordsEw0.apply(this, arguments);
   };
+  // ---------- JA_GRAM_GM 日文文法巷 ----------
+  const GM_FLUSH = 20, GM_WAIT = 3000, GM_PAGE = 40;
+  const gmCache = {};   // 'N1:12' → 卡（只在這次開 App 的記憶體）
+  let gmPending = {}, gmTimer = null, gmErr = '', gmInfo = { lvs: [], cur: '' };
+  const gmMax = lv => { const x = (gmInfo.lvs || []).find(y => y.lv === lv); return x ? x.n : 0; };
+  const gmMarks = lv => Object.assign({}, (S.save && S.save['gcards:' + lv]) || {}, gmPending);
+  function gmDeck() {
+    const g = draft.gm, m = gmMarks(g.lv), out = [];
+    for (let n = 1; n <= gmMax(g.lv); n++) { const v = m[String(n)]; if (g.k === 'again' ? v === 'a' : g.k === 'unseen' ? !v : true) out.push(n); }
+    return out;
+  }
+  window.gmGo = async function () {
+    go('words'); draft = { gm: { lv: '', k: 'all', i: 0, fl: false, ready: false } }; render(); window.scrollTo(0, 0);
+    try {
+      const g = await call('gramGet'); gmInfo = { lvs: g.lvs || [], cur: g.cur || '' }; S.save = S.save || {};
+      Object.keys(g.marks || {}).forEach(lv => { S.save['gcards:' + lv] = g.marks[lv]; });
+      if (draft && draft.gm) draft.gm.lv = gmInfo.cur; gmErr = '';
+    } catch (e) { gmErr = '拿不到你的紀錄：' + (e.message || e); }
+    await gmLoad();
+  };
+  async function gmLoad() {
+    if (!draft || !draft.gm) return;
+    const g = draft.gm, deck = g.lv ? gmDeck() : [], n = deck[g.i || 0];
+    try {
+      if (n && !gmCache[g.lv + ':' + n]) {
+        const st = Math.floor((n - 1) / GM_PAGE) * GM_PAGE + 1, r = await call('gramCards', g.lv, st, GM_PAGE);
+        (r.cards || []).forEach(c => { gmCache[g.lv + ':' + c.no] = c; });
+      }
+      gmErr = '';
+    } catch (e) { gmErr = '卡片載入失敗：' + (e.message || e); }
+    if (draft && draft.gm) { draft.gm.ready = true; render(); }
+  }
+  window.gmStep = function (d) { const g = draft.gm, t = gmDeck().length; g.i = Math.min(Math.max(0, t - 1), Math.max(0, (g.i || 0) + d)); g.fl = false; g.ready = false; render(); window.scrollTo(0, 0); gmLoad(); };
+  window.gmFlip = function () { draft.gm.fl = !draft.gm.fl; render(); };
+  window.gmRange = async function (k) { await gmFlush(); const g = draft.gm; g.k = k; g.i = 0; g.fl = false; g.ready = false; render(); gmLoad(); };
+  window.gmLevel = async function (lv) { await gmFlush(); const g = draft.gm; g.lv = lv; g.i = 0; g.fl = false; g.ready = false; render(); gmLoad(); };
+  window.gmMark = function (n, v) {
+    const g = draft.gm, m = gmMarks(g.lv), cur = m[String(n)], next = cur === v ? null : v, mode = g.k;   // 再按一次同一顆就取消
+    gmPending[g.lv + ':' + n] = next;
+    const key = 'gcards:' + g.lv; S.save[key] = S.save[key] || {};
+    if (next) S.save[key][String(n)] = next; else delete S.save[key][String(n)];
+    if (Object.keys(gmPending).length >= GM_FLUSH) gmFlush(); else { clearTimeout(gmTimer); gmTimer = setTimeout(gmFlush, GM_WAIT); }
+    if (next) { const t = gmDeck().length; g.i = mode === 'all' ? Math.min(Math.max(0, t - 1), (g.i || 0) + 1) : Math.min(Math.max(0, t - 1), g.i || 0); g.fl = false; g.ready = false; render(); window.scrollTo(0, 0); gmLoad(); }
+    else { render(); }
+  };
+  async function gmFlush() {
+    clearTimeout(gmTimer); const batch = gmPending; if (!Object.keys(batch).length) return; gmPending = {};
+    const by = {}; Object.keys(batch).forEach(k => { const p = k.split(':'); (by[p[0]] = by[p[0]] || {})[p[1]] = batch[k]; });
+    for (const lv of Object.keys(by)) {
+      try { await call('gramMark', lv, by[lv]); } catch (e) { Object.keys(by[lv]).forEach(n => { if (!((lv + ':' + n) in gmPending)) gmPending[lv + ':' + n] = by[lv][n]; }); toast('這幾張的標記沒有存到，稍後會再試：' + (e.message || e)); clearTimeout(gmTimer); gmTimer = setTimeout(gmFlush, 15000); }
+    }
+  }
+  window.gmBack = async function () { await gmFlush(); draft = {}; go('home'); window.scrollTo(0, 0); };
+  window.gmToWords = async function () { await gmFlush(); draft = {}; render(); window.scrollTo(0, 0); };
+  window.gmView = function () {
+    const g = draft.gm, lv = g.lv, m = gmMarks(lv), deck = lv ? gmDeck() : [], i = Math.min(g.i || 0, Math.max(0, deck.length - 1)), no = deck[i], c = no ? gmCache[lv + ':' + no] : null;
+    const known = Object.keys(m).filter(k => m[k] === 'k').length, again = Object.keys(m).filter(k => m[k] === 'a').length;
+    const rb = (k, t) => `<button class="jwb${g.k === k ? ' on' : ''}" style="padding:6px 12px;min-height:44px" aria-pressed="${g.k === k}" onclick="gmRange('${k}')"><span class="ck">✓ </span>${t}</button>`;
+    const lb = x => `<button class="jwb${lv === x.lv ? ' on' : ''}" style="padding:6px 12px;min-height:44px" aria-pressed="${lv === x.lv}" onclick="gmLevel('${x.lv}')"><span class="ck">✓ </span>${x.lv}</button>`;
+    let card;
+    if (!g.ready) card = '<div class="card"><div class="loading">卡片載入中…</div></div>';
+    else if (!lv) card = '<div class="card"><div class="muted">這一級的文法卡還在準備。</div></div>';
+    else if (!no) card = `<div class="card"><div class="muted" style="padding:6px 0">${g.k === 'again' ? '沒有標「再看一次」的卡。' : g.k === 'unseen' ? '每一張都標過了。' : '這個範圍沒有卡。'}</div></div>`;
+    else if (!c) card = `<div class="card"><div class="muted">${esc(gmErr || '這張卡載不出來。')}</div></div>`;
+    else {
+      const v = m[String(no)];
+      const back = g.fl ? `<div style="margin-top:10px"><div><b>意思</b>　${esc(c.mean)}</div>
+          <div style="margin-top:6px"><b>接續</b>　<span lang="ja">${esc(c.conn)}</span></div>
+          ${c.ex.map(e => `<div style="margin-top:14px"><div lang="ja" style="font-size:18px">${esc(e.ja)} ${sayBtn(e.ja, 'ja-n1')}</div><div class="muted" style="font-size:14px;margin-top:4px">${esc(e.zh)}</div></div>`).join('')}
+          <details style="margin-top:10px"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer"><span class="gmar">▸</span>講解影片</summary>
+            ${c.tryNo ? `<div class="muted" style="font-size:13px">出口日語《TRY! N1》講解影片清單的第 ${c.tryNo} 支</div>` : ''}
+            <a class="rdsite" href="https://www.youtube.com/watch?v=${encodeURIComponent(c.v)}" target="_blank" rel="noopener noreferrer">出口日語的講解影片<div class="muted" style="font-size:12px">（會開新的分頁）</div></a></details></div>` : '';
+      card = `<div class="card jwc${v === 'k' ? ' mk' : ''}${v === 'a' ? ' ma' : ''}" id="gmc" style="cursor:default">
+        <div class="muted" style="font-size:12px">${esc(lv)}・第 ${no} 項</div>
+        <div lang="ja" style="font-size:24px;margin-top:2px">${String(c.g).split('・').map(x => `<span style="display:inline-block;max-width:100%;overflow-wrap:anywhere">${esc(x)}</span>`).join('・<wbr>')}</div>
+        <div class="row" style="margin-top:8px"><button class="ghost grow" style="min-height:44px" onclick="gmFlip()">${g.fl ? '翻回正面' : '翻面'}</button></div>
+        ${back}
+        <div class="row" style="gap:8px;margin-top:10px"><button data-v="a" class="jwb${v === 'a' ? ' on' : ''} grow" aria-pressed="${v === 'a'}" onclick="gmMark(${no},'a')"><span class="ck">✓ </span><span class="ic">🔁 </span>再看一次</button><button data-v="k" class="jwb${v === 'k' ? ' on' : ''} grow" aria-pressed="${v === 'k'}" onclick="gmMark(${no},'k')"><span class="ck">✓ </span><span class="ic">✅ </span>記得了</button></div></div>`;
+    }
+    return P3A2_CSS + `<style>.gmar{display:inline-block;width:1em;transition:transform .15s}details[open]>summary .gmar{transform:rotate(90deg)}</style><div class="row" style="align-items:center"><h2 style="margin:0" class="grow">🧱 日文文法巷</h2><span class="muted" style="font-size:13px">${deck.length ? (i + 1) + '／' + deck.length : '0'}</span></div>
+      ${card}
+      <div class="row" style="gap:8px">${i <= 0 ? '<button class="jwoff" disabled aria-disabled="true">上一張</button>' : '<button class="ghost" style="min-height:44px" onclick="gmStep(-1)">上一張</button>'}<span class="grow"></span>${i >= deck.length - 1 ? '<button class="jwoff" disabled aria-disabled="true">下一張</button>' : '<button class="ghost" style="min-height:44px" onclick="gmStep(1)">下一張</button>'}</div>
+      <div class="card"><div class="muted">日文 N1 文法，現在有 120 項。項目名稱和影片連結照出口日語的文法一覽，接續、意思和例句是另外寫的，不是從書或影片抄來的。</div>
+        <div class="muted" style="margin-top:4px" id="gmCnt">記得了 ${known} 張・再看一次 ${again} 張</div>
+        <div class="muted" style="margin-top:4px;font-size:13px">你按了「記得了」或「再看一次」的卡，在 App 裡只有你自己看得到。</div>
+        ${(gmInfo.lvs || []).length > 1 ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${gmInfo.lvs.map(lb).join('')}</div>` : ''}
+        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${rb('all', '全部')}${rb('again', '再看一次的卡')}${rb('unseen', '新的卡')}</div>
+        ${gmErr ? `<div class="muted" style="color:#9a3567;margin-top:6px">${esc(gmErr)}</div>` : ''}</div>
+      <div class="row" style="margin-top:8px"><button class="ghost grow" style="min-height:44px" onclick="gmToWords()">🔤 我的單字卡（拍照出題）</button></div>
+      <div class="row"><button class="ghost grow" style="min-height:44px" onclick="gmBack()">回到小島 🏝️</button></div>`;
+  };
+  const viewWordsGm0 = window.viewWords;
+  window.viewWords = function () { return langCanOn() && draft && draft.gm ? gmView() : viewWordsGm0.apply(this, arguments); };
   // FAM_TALK_v1：想找人說說（文案審查 245）。她那頁 viewTalk 的家人版：沒有學校輔導室、沒有「讓爸爸知道」那張卡（那顆按鈕會叫後端寄信），所以只動前端、不記錄。
   OWN_TABS.push('talk'); OWN_CARDS.push('talk', 'talkEntry');
   window.viewTalk = () => window.card('talk', `<div class="card"><h2 style="margin:0">🫶 想找人說說</h2>
