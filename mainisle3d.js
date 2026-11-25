@@ -188,6 +188,7 @@
     const win = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.08), glassMat); win.position.set(0, 0.1 + 0.02, 0.355 + 0.01); win.castShadow = false; boat.add(win);   // 小窗 [0.2, 0.08, 0.02, 0.02, 0.355]：和智慧島 AIRSHIP.win 同一組（相對吊艙中心，吊艙中心 y = 0.1）；做成一片平面貼在盒子正面的位置（+2 三角形，工程顧問 10/30），從後面看本來就被吊艙擋住；用窗戶的 glassMat，跟著天色亮
     const bal = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 4), mat('balloon', 0xe0782f)); bal.scale.set(0.9, 0.75, 1.6); bal.position.y = 0.75; boat.add(bal);   // 氣囊
     boat.add(box(0.03, 0.4, 0.03, mat('wood', 0x9a6b43), -0.15, 0.25, 0)); boat.add(box(0.03, 0.4, 0.03, mat('wood', 0x9a6b43), 0.15, 0.25, 0));
+    { const ms = boat.children.filter(c => c.material !== glassMat); ms.forEach(c => boat.remove(c)); boat.add(bakeColor(ms)); }   // MAINMERGE_v1：吊艙、氣囊、桿 4 → 1
     boat.position.set(-1.9, -0.25, 2.0); boat.rotation.y = 0.6; g.add(boat);
     return g;
   }
@@ -205,7 +206,8 @@
   const PAL = { templeRed: 0xc8372d, pillar: 0x9e2a22, plinth: 0xd9cbb4, gold: 0xf2c14e, door: 0x7a2a1f, jade: 0x2f8a6a, ai: 0x2f5f8a, concrete: 0xc9c6bf, line: 0xb9b5ad, dark: 0x3d3a36,
     washi: 0xfffdf8, wash: 0xd8cfbf, washLine: 0xc4baa8, frame: 0x2f5d62, medal: 0xb8ad98,
     shu: 0xc8452d, yamabuki: 0xd9a03a, matcha: 0x4f7a3e, glassAi: 0x2f5f8a, lamp: 0xffd98a, lampWarm: 0xf2bf55 };   // 新顏色（美術 10/29；色票表 C.*）
-  const NEAR_IN = 16, NEAR_OUT = 19;
+  Object.assign(PAL, { plankLine: 0x7a5233, rail: 0x8a5f3b, bollard: 0x5a4a42, rope: 0xd9cbb4, sign: 0xe8dcc6, hallBeam: 0x6b4a32, hallRoof: 0x6a5240 });   // NEAR2_v1：木色深一階、繫繩石階色、招牌淺紙色
+  const NEAR_IN = 16, NEAR_OUT = 19; const NEAR_FAR = 22, NEAR_FAR_OUT = 21; const NEAR_BUDGET = 340, NEAR_SWAP = 2; let farOn = false;   // NEAR22_v1 鏡頭到視線中心 ≥22 就不換近版（比的時候留 0.01，正好 22 的浮點誤差不會漏）；拉回 21 以下才恢復照距離換
   // 教會彩繪玻璃（CHURCH_BACK_v1，美術 11/1）：四色降彩度，上到下 BGAB／ARBG／GBRA
   const GLASS = { B: 0x3d5f8a, G: 0x6f8f6a, A: 0xc99a4a, R: 0xa8584a }, GLASS_ROWS = ['BGAB', 'ARBG', 'GBRA'], GW = 0.21, GH = 0.15, GX = -0.12, GY = 0.66, GZ = 0.556, GIN = 0.07;
   function glassCols(hex, night) {   // 一格四角 [左上, 右上, 左下, 右下]（sRGB 算完再轉線性）
@@ -245,6 +247,47 @@
       return out;
     },
 
+    // NEAR2_v1 飛船碼頭（美術 10/31 原則＋11/2 九點；三角形預算：每棟近版 ≤ 170，和廟／教會／交易所近版（98～120）同一級；工程顧問 10/29：零件全 inline、夜光併 glowV）
+    //   省面的做法：柱、桿、扶手、椽頭、風向袋用 4 面開口方柱（CylinderGeometry 4 段 openEnded，8 面，不畫上下蓋）；門、招牌、紙片、繫繩用單面平面（2 面）；只有要從上面看到頂面的零件（繫船柱、台階、屋簷、燈頭）才用盒子（12 面）
+    port: () => {
+      const RY = 0.6, s6 = Math.sin(RY), c6 = Math.cos(RY), PC = [-1.0, 1.0];   // 棧橋中心（遠版 pier）、長 2.6、寬 0.45、面 y -0.15；海側末端是 −along 那一頭
+      const at = (along, lat) => [PC[0] + along * s6 + lat * c6, PC[1] + along * c6 - lat * s6];   // 棧橋座標 → 建物座標
+      const pb = (w, h, d, c, along, lat, y, glow) => { const q = at(along, lat); return bx(w, h, d, c, q[0], y, q[1], 0, RY, glow); };
+      const vp = (w, h, c, along, lat, y) => { const q = at(along, lat); return { geo: new THREE.CylinderGeometry(w * 0.6, w * 0.6, h, 3, 1, true), m: new THREE.Matrix4().compose(new THREE.Vector3(q[0], y + h / 2, q[1]), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, RY + Math.PI / 4, 0)), new THREE.Vector3(1, 1, 1)), top: linC(c), bot: linC(c) }; };   // 直立 3 面開口柱（6 面；0.04 寬的柱子看不出是三角形）
+      const hp = (w, len, c, along, lat, y, ry, r2) => { const q = at(along, lat), g = new THREE.CylinderGeometry((r2 == null ? w : r2) / Math.SQRT2, w / Math.SQRT2, len, r2 == null ? 3 : 4, 1, true); if (r2 != null) g.rotateY(Math.PI / 4); g.rotateX(Math.PI / 2); return { geo: g, m: new THREE.Matrix4().compose(new THREE.Vector3(q[0], y, q[1]), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, RY + (ry || 0), 0)), new THREE.Vector3(1, 1, 1)), top: linC(c), bot: linC(c) }; };   // 橫放開口柱（沿 along；ry π/2 改沿 lat）、y 是中心；扶手 3 面，r2 給就是 4 面漸細（風向袋）
+      const pq = (w, h, c, x, y, z, ry, rz) => ({ geo: new THREE.PlaneGeometry(w, h), m: new THREE.Matrix4().compose(new THREE.Vector3(x, y + h / 2, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry || 0, rz || 0)), new THREE.Vector3(1, 1, 1)), top: linC(c), bot: linC(c) });   // 單面平面（貼在牆上的門、招牌）
+      const rope = (a, b, y1, y2, c) => { const A = at(a[0], a[1]), B = at(b[0], b[1]), dx = B[0] - A[0], dz = B[1] - A[1], dy = y2 - y1, L = Math.hypot(dx, dy, dz), g = new THREE.PlaneGeometry(0.03, L); g.rotateX(Math.PI / 2);
+        return { geo: g, m: new THREE.Matrix4().compose(new THREE.Vector3((A[0] + B[0]) / 2, (y1 + y2) / 2, (A[1] + B[1]) / 2), new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.asin(dy / L), Math.atan2(dx, dz), 0, 'YXZ')), new THREE.Vector3(1, 1, 1)), top: linC(c), bot: linC(c) }; };   // 繫繩：一條平面（2 面）
+      const out = [];
+      [-0.12, 0, 0.12].forEach(l => { const q = at(0, l), o = pq(0.012, 2.5, PAL.plankLine, q[0], -0.149 - 1.25, q[1], RY); o.m.multiply(new THREE.Matrix4().makeRotationX(-Math.PI / 2)); out.push(o); });   // 三條板縫線（平面躺平：pq 的 y 是底、中心在 y＋1.25，所以先減 1.25，躺平後中心才在 y −0.149）
+      [-1.0, 0.9].forEach(a => [-0.2, 0.2].forEach(l => out.push(vp(0.04, 0.3, PAL.rail, a, l, -0.15))));   // 欄杆柱每側 2 根
+      [-0.2, 0.2].forEach(l => out.push(hp(0.03, 1.94, PAL.rail, -0.05, l, 0.145)));   // 每側一根橫扶手連起柱頂（美術 11/2 ①）
+      [[-1.22, -0.16], [-0.45, -0.2]].forEach(([a, l]) => out.push(pb(0.07, 0.16, 0.07, PAL.bollard, a, l, -0.15)));   // 飛船那一側兩根繫船柱（末端一根、中段一根；盒子，從上面看得到頂）
+      out.push(vp(0.04, 0.62, PAL.rail, -1.2, 0.17, -0.15)); out.push(pb(0.1, 0.1, 0.1, PAL.lamp, -1.31, 0.17, 0.41, 1));   // 棧橋末端燈柱，燈頭往末端外側挑出 0.11（美術 11/2 ④，不和繫繩疊）（夜光 1）
+      out.push(vp(0.025, 0.75, PAL.rail, -1.15, -0.19, -0.15));   // 風向袋桿（末端飛船側）
+      [0, 1, 2, 3, 4].forEach(i => { const w0 = 0.11 * (1 - 0.1 * i), w1 = 0.11 * (1 - 0.1 * (i + 1)), dd = 0.12 + i * 0.11, yc = 0.56 - dd * 0.23; const o = hp(w0, 0.11, i % 2 ? PAL.washi : PAL.shu, -1.15, -0.19 - dd, yc, Math.PI / 2, w1); o.m.multiply(new THREE.Matrix4().makeRotationX(0.23)); out.push(o); });   // 風向袋 5 段：朱 washi 相間、往下垂約 13°、尾端漸細到 60%，開口方柱正好像袋口（美術 11/2 ②）
+      out.push(rope([-1.22, -0.16], [-0.1, -1.25], -0.06, -0.08, PAL.rope)); out.push(rope([-0.45, -0.2], [0.7, -1.25], -0.06, -0.08, PAL.rope));   // 吊艙兩條繫繩到繫船柱（飛船停在棧橋 −lat 外側，船位約 along 0.3、lat −1.3）
+      out.push(pq(0.26, 0.42, PAL.dark, -0.454, 0, 0.1, -Math.PI / 2)); out.push(pq(0.37, 0.15, PAL.dark, -0.454, 0.455, 0.1, -Math.PI / 2)); out.push(pq(0.34, 0.12, PAL.sign, -0.458, 0.47, 0.1, -Math.PI / 2));   // 登船口：小屋朝棧橋那一面的深色門、門上不寫字的小招牌（深色框，淺牆上才看得到；正面兩扇窗不動）
+      out.push(Object.assign(pq(0.1, 0.1, PAL.lamp, -0.47, 0.58, -0.16, -Math.PI / 2), { glow: 1 }));   // 登船口屋簷下一盞燈：貼牆的發光方片（夜光 2）
+      return out;   // 約 142 面
+    },
+    // NEAR2_v1 玉山聚會所（美術 10/31：原住民元素只到建築構造：椽頭、木台階、石板基座；不放圖騰紋樣；夜光 1 盞門廊）
+    hall: () => {
+      const vp = (w, h, c, x, y, z) => ({ geo: new THREE.CylinderGeometry(w * 0.6, w * 0.6, h, 3, 1, true), m: new THREE.Matrix4().compose(new THREE.Vector3(x, y + h / 2, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 6, 0)), new THREE.Vector3(1, 1, 1)), top: linC(c), bot: linC(c) });   // 直立 3 面開口柱（6 面）
+      const hz = (w, len, c, x, y, z, n) => { const g = new THREE.CylinderGeometry(w * 0.6, w * 0.6, len, n || 3, 1, true); if (!n) g.rotateY(Math.PI / 6); g.rotateX(Math.PI / 2); return { geo: g, m: new THREE.Matrix4().makeTranslation(x, y, z), top: linC(c), bot: linC(c) }; };   // 沿 z 橫放的開口柱（3 面椽頭或 n 面圓木）、y 是中心
+      const pq = (w, h, c, x, y, z, rz) => ({ geo: new THREE.PlaneGeometry(w, h), m: new THREE.Matrix4().compose(new THREE.Vector3(x, y + h / 2, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, rz || 0)), new THREE.Vector3(1, 1, 1)), top: linC(c), bot: linC(c) });   // 貼在朝 +z 牆面上的單面平面
+      const out = [];
+      out.push(bx(0.12, 0.12, 0.12, PAL.hallBeam, 0, 1.72, 0, 0, Math.PI / 4));   // 屋頂尖的木構件（四坡頂沒有屋脊，改成頂端一塊）
+      [-0.55, -0.18, 0.18, 0.55].forEach(x => out.push(hz(0.07, 0.16, PAL.hallBeam, x, 0.635, 0.93)));   // 前山牆露出的椽頭
+      [-0.42, 0.42].forEach(x => out.push(vp(0.08, 0.62, PAL.hallBeam, x, 0, 0.78)));   // 門廊柱
+      [0, 1].forEach(i => out.push(bx(0.72, 0.05, 0.1, PAL.plinth, 0, -0.05 * i, 0.68 + i * 0.1)));   // 兩級木台階（門口往外一級一級下，收在台基範圍內）
+      out.push(pq(0.4, 0.46, PAL.dark, 0, 0.0, 0.604)); out.push(pq(0.012, 0.44, PAL.hallBeam, 0, 0.01, 0.607));   // 深色雙開門＋中縫（兩扇窗在 x ±0.3，不碰）
+      [[-0.17, 0.07], [0, -0.07], [0.17, 0.07]].forEach(([dx, rz]) => out.push(pq(0.13, 0.19, PAL.washi, 0.95 + dx, 0.17, 0.729, rz)));   // 公告板貼三張獨立的淺色紙片、中間留縫、各轉 ±4°（美術 11/2 ①；不寫字）
+      out.push(bx(0.58, 0.03, 0.12, PAL.hallRoof, 0.95, 0.6, 0.72));   // 公告板上緣小屋簷（置中，比板寬 0.5 兩邊各多 8%）
+      out.push(bx(0.09, 0.09, 0.09, PAL.lamp, 0, 0.66, 0.72, 0, 0, 1));   // 門廊一盞燈（夜光 1）
+      [[-0.84, 0.045], [-0.94, 0.045], [-0.89, 0.125]].forEach(([x, y]) => { out.push(hz(0.09, 0.3, PAL.hallBeam, x, y, 0.42, 5)); out.push(disc(0.054, 5, 0, PAL.hallBeam, x, y, 0.571)); });   // 牆角一小堆短圓木（5 面）：下二上一、橫放、貼左前牆角，高 0.17，只封朝前的一端（美術 11/2 ②：不超過台階兩倍）
+      return out;   // 約 151 面
+    },
     exchange: () => [   // 二樓拱窗（深綠窗框＋半圓拱）、山頭圓徽、兩側柱頭、騎樓招牌帶（不寫字）、洗石子分格線
       ...[-0.55, 0, 0.55].map(x => bx(0.32, 0.4, 0.03, PAL.frame, x, 0.66, 0.445)),
       ...[-0.55, 0, 0.55].map(x => disc(0.16, 4, 1, PAL.frame, x, 1.06, 0.462)),
@@ -253,12 +296,31 @@
       bx(1.2, 0.08, 0.02, PAL.frame, 0, 0.56, 0.655),
       bx(1.9, 0.025, 0.02, PAL.washLine, 0, 0.6, 0.455), bx(1.9, 0.025, 0.02, PAL.washLine, 0, 1.12, 0.455)]
   };
+  function keepFlat(k, g) {   // NEAR2_v1：聚會所的公告板和它的柱子前後都共面（一樣厚 0.05、同一個 z）。線上兩件材質同一個 program，照材質 id 排序，公告板（後建）後畫、永遠在上面；併進同一個網格會變成柱子在上面（差 40 像素）。所以公告板留原物件、renderOrder 1（不管 program 順序都最後畫），柱子照併；遠版 6→4 個 draw call、近版開著 +2 = 6，仍 ≤ 線上
+    if (k === 'hall') g.children.forEach(c => { if (c.isMesh && c.material === M.board) { c.userData.keep = 1; c.renderOrder = 1; } });
+    return g;
+  }
+  // MAINMERGE_v1（11/2，爸爸 選「draw call 盤點合併」）：只合併不改外觀。
+  //   bakeSame：同一個材質的幾個網格併成一個，材質照舊（草地、樹的節氣換色、窗的晚上發亮都照舊）；bakeColor：不同顏色的烤成頂點色，用和遠版同一個材質（M.nearBody）。
+  //   顏色直接讀 material.color（已經過 lin()），和原本一樣；多材質（石台、草地側面）只取會畫的那一組。合併後整塊一起畫、不再一件一件剔除，三角形預算見 網格合併_開發中/盤點.md
+  const WHITE = new THREE.Color(1, 1, 1);
+  function geoOf(c) {   // 多材質的 geometry 只取第一個看得見的材質那一組（ExtrudeGeometry：0 上下蓋、1 側面）
+    const g = c.geometry; if (!Array.isArray(c.material)) return g;
+    const gi = c.material.findIndex(m => m && m.visible !== false), grp = g.groups.find(x => x.materialIndex === gi), src = g.index ? g.toNonIndexed() : g;
+    const out = new THREE.BufferGeometry(), a0 = grp.start, a1 = grp.count === Infinity ? src.attributes.position.count : grp.start + grp.count;
+    ['position', 'normal'].forEach(k => { const at = src.attributes[k]; out.setAttribute(k, new THREE.Float32BufferAttribute(at.array.slice(a0 * at.itemSize, a1 * at.itemSize), at.itemSize)); });
+    if (src !== g) src.dispose(); g.dispose(); return out;
+  }
+  function matOf(c) { return Array.isArray(c.material) ? c.material.find(m => m && m.visible !== false) : c.material; }
+  function bakeSame(ms, m) { const o = new THREE.Mesh(merged(ms.map(c => { c.updateMatrix(); return { geo: geoOf(c), m: c.matrix.clone(), top: WHITE, bot: WHITE }; })), m); return o; }
+  function bakeColor(ms) { return new THREE.Mesh(merged(ms.map(c => { c.updateMatrix(); const col = matOf(c).color.clone(); return { geo: geoOf(c), m: c.matrix.clone(), top: col, bot: col }; })), M.nearBody || (M.nearBody = std(0xffffff, { vertexColors: true }))); }
   function bakeFar(g) {   // 遠版：同一個不受光以外的物件都合成一個頂點色網格；夜光（lampMat）的合成另一個
     const body = [], lit = [];
-    g.children.slice().forEach(c => { if (!c.isMesh) return; c.updateMatrix(); const lamp = c.material === M.lamp || !!c.userData.tint, col = c.userData.tint ? c.userData.tint.clone() : lamp ? new THREE.Color(1, 1, 1) : c.material.color.clone();
+    g.children.slice().forEach(c => { if (!c.isMesh || c.material === glassMat || c.userData.keep) return; c.updateMatrix(); const lamp = c.material === M.lamp || !!c.userData.tint, col = c.userData.tint ? c.userData.tint.clone() : lamp ? new THREE.Color(1, 1, 1) : c.material.color.clone();
       (lamp ? lit : body).push({ geo: c.geometry, m: c.matrix.clone(), top: col, bot: col }); g.remove(c); });
     if (body.length) g.add(new THREE.Mesh(merged(body), M.nearBody || (M.nearBody = std(0xffffff, { vertexColors: true }))));
     if (lit.length) { const lm = lampMat().clone(); lm.vertexColors = true; g.add(new THREE.Mesh(merged(lit), M.lampV || (M.lampV = Object.assign(lm, {})))); }
+    const gl = g.children.filter(c => c.isMesh && c.material === glassMat); if (gl.length > 1) { gl.forEach(c => g.remove(c)); g.add(bakeSame(gl, glassMat)); }   // MAINMERGE_v1：窗併成一個（晚上一起亮照舊）
     return g;
   }
   function nearBuild(k) {
@@ -268,21 +330,30 @@
     g.add(n.body);
     if (lit.length) { if (!M.glowV) { M.glowV = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }); M.glowV.color.setScalar(glowK); } n.glow = new THREE.Mesh(merged(lit), M.glowV); g.add(n.glow); if (k === 'church') glassInit(n); }
     [n.body, n.glow].forEach(o => { if (o) { o.visible = false; o.userData.near = 1; } });
+    n.tri = [n.body, n.glow].reduce((t, o) => t + (o ? (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 : 0), 0);   // NEAR2_v1：這棟近版幾面（算預算用；indexed、non-indexed 都算對，工程顧問 11/2）
     return (near[k] = n);
   }
   function nearAll(drop) {   // 離開主島畫面時釋放（工程顧問 10/29）
     Object.keys(near).forEach(k => { const n = near[k]; [n.body, n.glow].forEach(o => { if (o) { o.parent && o.parent.remove(o); o.geometry.dispose(); } }); delete near[k]; });
   }
-  function nearStep() {   // 每一幀只算 3 個距離
-    const P = ctx.places || {}, w = new THREE.Vector3();
-    ['temple', 'church', 'exchange'].forEach(k => {
-      const open = P[k] && !P[k].closed; let n = near[k];
-      if (!open) { if (n && n.on) { n.on = false; n.body.visible = false; if (n.glow) n.glow.visible = false; } return; }   // 準備中一律遠版
+  function nearStep() {   // 每一幀只算 5 個距離（NEAR2_v1）
+    const P = ctx.places || {}, w = new THREE.Vector3(), dc = camera.position.distanceTo(controls.target), far = (farOn = farOn ? dc > NEAR_FAR_OUT : dc > NEAR_FAR - 0.01);   // NEAR22_v1：拉遠（鏡頭到視線中心 ≥22）一律遠版，整座島都在畫面裡時近版細節看不到；21 以下才解除（工程顧問 11/1 04:58：沒有遲滯會三棟一起閃）
+    const cand = [], on = []; let used = 0;   // NEAR2_v1：五棟都有近版，但同時開著的近版總共最多 NEAR_BUDGET 面。先後順序：視線中心 3 以內的那棟（玩家對準的）永遠第一，其他照離鏡頭多近；要換掉已開的，得比已開的最遠那棟再近 NEAR_SWAP 以上，所以不會兩棟互相閃
+    ['temple', 'church', 'exchange', 'port', 'hall'].forEach(k => {
+      const open = P[k] && !P[k].closed, n = near[k];
+      const off = () => { if (n && n.on) { n.on = false; n.body.visible = false; if (n.glow) n.glow.visible = false; } };
+      if (!open) return off();   // 準備中一律遠版
       w.set(PLACE[k].x, LIFT + (PLACE[k].top || 0), PLACE[k].z);
-      const d = camera.position.distanceTo(w), want = n && n.on ? d <= NEAR_OUT : d <= NEAR_IN;
-      if (want && !n) n = nearBuild(k);
-      if (n && n.on !== want) { n.on = want; n.body.visible = want; if (n.glow) n.glow.visible = want; }
+      const d = camera.position.distanceTo(w), want = !far && (n && n.on ? d <= NEAR_OUT : d <= NEAR_IN);   // NEAR22_v1
+      const dt = controls.target.distanceTo(w), key = dt < 3 ? dt : d;   // 對準的那棟排第一，其他看離鏡頭多近
+      if (n && n.on) { if (want) { on.push([key, n]); used += n.tri; } else off(); } else if (want) cand.push([key, k]);
     });
+    cand.sort((a, b) => a[0] - b[0]); on.sort((a, b) => b[0] - a[0]);
+    for (const [d, k] of cand) {
+      const n = near[k] || nearBuild(k); if (!n) continue;
+      if (used + n.tri > NEAR_BUDGET) { const f = on[0]; if (!f || f[0] < d + NEAR_SWAP || used - f[1].tri + n.tri > NEAR_BUDGET) break; f[1].on = false; f[1].body.visible = false; if (f[1].glow) f[1].glow.visible = false; used -= f[1].tri; on.shift(); }
+      n.on = true; n.body.visible = true; if (n.glow) n.glow.visible = true; used += n.tri; on.push([d, n]); on.sort((a, b) => b[0] - a[0]);
+    }
   }
 
   // ---------- 靜態：海、主島、山脈、樹 ----------
@@ -306,47 +377,51 @@
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(rp, 3));
     rain = new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: 0xcfe0f0, transparent: true, opacity: 0.55 })); lin(rain.material.color); rain.visible = false; scene.add(rain);
     const pts = outline();
-    root.add(slab(pts.filter((q, i) => i % 2 === 0), 1.06, 0.45, -0.75, mat('sand', 0xf1dfb0)));   // 沙灘只露一圈邊，用一半的點就夠（省下的三角形給浮空的岩塊和雲）
+    const ter = [], treeMs = [];   // MAINMERGE_v1：地形件先收著，最後烤成一個
+    ter.push(slab(pts.filter((q, i) => i % 2 === 0), 1.06, 0.45, -0.75, mat('sand', 0xf1dfb0)));   // 沙灘只露一圈邊，用一半的點就夠（省下的三角形給浮空的岩塊和雲）
     // 島底下：一層層往內收的石台（爸爸 10/27 給的造型概念），最下面垂著幾根岩根
     // 用原始外形每隔一點取一點（15 點），每層約 56 個三角形
     const HIDE = new THREE.MeshBasicMaterial({ visible: false });
     const P15 = TW.filter((q, i) => i % 2 === 0).map(q => xz(q[0], q[1]));
     [[0.97, 0.8, -1.55, 0xa08a6e], [0.84, 0.75, -2.3, 0x958169], [0.68, 0.7, -3.0, 0x857260]].forEach(([k, d, y, c], i) => {
-      const t = slab(P15, k, d, y, [HIDE, mat('tier' + i, c)]); t.position.z = -0.25 * i; root.add(t);   // 上下兩面被上一層蓋住、鏡頭也看不到底面，只畫側面
+      const t = slab(P15, k, d, y, [HIDE, mat('tier' + i, c)]); t.position.z = -0.25 * i; ter.push(t);   // 上下兩面被上一層蓋住、鏡頭也看不到底面，只畫側面
     });
     const rootMat = mat('rockRoot', 0x857260);
     [[121.0, 24.2, 2.6, 0.9], [120.75, 23.4, 3.4, 1.1], [120.95, 22.8, 2.4, 0.8], [121.25, 23.9, 2.0, 0.7], [120.55, 23.9, 1.8, 0.6]].forEach(([lon, lat, h, r]) => {
-      const p = xz(lon, lat), m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5, 1), rootMat); m.rotation.x = Math.PI; m.position.set(p.x * 0.6, -3.0 - h / 2, p.z * 0.6 - 0.6); root.add(m);
+      const p = xz(lon, lat), m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5, 1), rootMat); m.rotation.x = Math.PI; m.position.set(p.x * 0.6, -3.0 - h / 2, p.z * 0.6 - 0.6); ter.push(m);
     });
     // 島腳的雲（4 朵）
     const cloud = mat('footCloud', 0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.55, flatShading: false });
     if (0) [[121.8, 24.4, 1.5], [120.3, 23.6, 1.7], [121.2, 22.9, 1.4], [120.9, 24.9, 1.3]].forEach(([lon, lat, r]) => {   // 浮空群島：托雲改由雲海取代
       const p = xz(lon, lat), c = new THREE.Mesh(new THREE.SphereGeometry(r, 5, 3), cloud); c.scale.y = 0.45; c.position.set(p.x * 1.08, -1.6, p.z * 1.05); root.add(c);
     });
-    root.add(slab(pts, 1.0, 0.5, -0.5, [HIDE, mat('grass', 0x8cc56f)]));   // 浮空群島：草地只畫側面＋上面一片（底面永遠看不到，省約 118 個三角形）
-    { const sh = new THREE.Shape(); pts.forEach((p, i) => { if (i) sh.lineTo(p.x, -p.z); else sh.moveTo(p.x, -p.z); }); const tg = new THREE.ShapeGeometry(sh, 1); tg.rotateX(-Math.PI / 2); root.add(new THREE.Mesh(tg, M.grass)); }
+    const gside = slab(pts, 1.0, 0.5, -0.5, [HIDE, mat('grass', 0x8cc56f)]);   // 浮空群島：草地只畫側面＋上面一片（底面永遠看不到，省約 118 個三角形）
+    { const sh = new THREE.Shape(); pts.forEach((p, i) => { if (i) sh.lineTo(p.x, -p.z); else sh.moveTo(p.x, -p.z); }); const tg = new THREE.ShapeGeometry(sh, 1); tg.rotateX(-Math.PI / 2); root.add(bakeSame([gside, new THREE.Mesh(tg, M.grass)], M.grass)); }   // MAINMERGE_v1：側面＋上面 2 → 1
     // 中央山脈：沿脊線排幾座低多邊形山，玉山最高、山頂一點白
     const rock = mat('mountain', 0x6f9a5b), snow = mat('snow', 0xf6f6f2);
     RIDGE.forEach(([lon, lat, h], i) => {
       const p = xz(lon, lat), m = new THREE.Mesh(new THREE.ConeGeometry(0.9 + h * 0.18, h, 6, 1), rock);
-      m.position.set(p.x, h / 2, p.z); m.rotation.y = i; root.add(m);
+      m.position.set(p.x, h / 2, p.z); m.rotation.y = i; ter.push(m);
     });
     // 玉山：山頂削平一塊，玉山聚會所蓋在上面；山腰一圈白（冬天的雪、平常的雲）
     const yu = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.9, 2.6, 7, 1), rock); yu.position.set(PEAK.x, 1.3, PEAK.z); root.add(yu);
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.08, 1.25, 0.35, 7, 1), snow); cap.position.set(PEAK.x, 2.2, PEAK.z); root.add(cap);
+    root.add(bakeColor(ter));   // MAINMERGE_v1：沙灘 1＋石台 3＋岩根 5＋山脈 8 = 17 → 1（玉山、雪帽留著：雪帽插在山體裡，交線要一模一樣；雪帽節氣換色）
     // 平地上的樹：固定種子，每次一樣
     TREES.length = 0;
     const r = rng(23), tree = mat('tree', 0x4f9a55), trunk = mat('trunk', 0x8a6a4a);
     for (let i = 0, n = 0; i < 400 && n < 26; i++) {
       const lon = 120.2 + r() * 1.6, lat = 22.1 + r() * 3.1, p = xz(lon, lat);
       if (!inside(pts, p.x, p.z) || nearAny(p, 2.2) || Math.abs(lon - ridgeLon(lat)) < 0.28) continue;
-      const t = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.9, 5, 1), tree); t.position.set(p.x, 0.55, p.z); root.add(t); TREES.push(p);
+      const t = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.9, 5, 1), tree); t.position.set(p.x, 0.55, p.z); treeMs.push(t); TREES.push(p);
       t.userData.inland = Math.min(...pts.map(q => Math.hypot(q.x - p.x, q.z - p.z))) * (Math.abs(lon - ridgeLon(lat)) > 0.45 ? 1 : 0);   // 離海岸多遠；靠山脊的算 0
       n++;
     }
-    lodTrees = root.children.filter(o => o.userData.inland > 0).sort((a, b) => b.userData.inland - a.userData.inland).slice(0, 14);   // 遠看藏起來的 14 棵（騰出島邊浮雲的預算）
+    const lodPick = treeMs.filter(o => o.userData.inland > 0).sort((a, b) => b.userData.inland - a.userData.inland).slice(0, 14);
+    root.add(bakeSame(treeMs.filter(o => lodPick.indexOf(o) < 0), tree));   // MAINMERGE_v1：常駐的樹 → 1（材質照舊，節氣換色照舊）
+    const lodMesh = bakeSame(lodPick, tree); lodMesh.userData.inland = 1; root.add(lodMesh); lodTrees = [lodMesh];   // 內陸樹 → 1，farNear 切這一個的 visible   // 遠看藏起來的 14 棵（騰出島邊浮雲的預算）
     Object.keys(BUILD).forEach(k => {
-      const g = NEAR[k] ? bakeFar(BUILD[k]()) : BUILD[k](), p = PLACE[k];   // 三棟的遠版合成一個網格（夜光的另一個），draw call 每棟 2 個
+      const g = NEAR[k] ? bakeFar(keepFlat(k, BUILD[k]())) : BUILD[k](), p = PLACE[k];   // 三棟的遠版合成一個網格（夜光的另一個），draw call 每棟 2 個
       g.position.set(p.x, p.top || 0, p.z); g.userData.place = k;
       if (k === 'port') g.rotation.y = 0.5;
       if (k === 'exchange') g.rotation.y = Math.PI;   // 交易所在北端海邊，正面朝外海，主島轉到北邊時整面看得到（爸爸 10/30）
@@ -382,7 +457,8 @@
       const g = new THREE.Group(); g.position.set(x, up, z); g.userData.isle = s.key;
       const big = (s.mine ? 1.0 : 0.8) * 1.2;   // 浮空群島：總覽裡小島放大 1.2 倍，岩底和浮雲才看得清楚（美術 10/29；鏡頭不拉近，四角的島都要看得到）
       const b = new THREE.Mesh(new THREE.CylinderGeometry(2.4 * big, 2.7 * big, 0.5, 7), sand); b.position.y = -0.4; g.add(b);
-      const t = new THREE.Mesh(new THREE.CylinderGeometry(2.0 * big, 2.2 * big, 0.3, 7), s.open === false ? off : grass); t.position.y = -0.1; g.add(t);
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(2.0 * big, 2.2 * big, 0.3, 7), s.open === false ? off : grass); t.position.y = -0.1;
+      if (s.open === false) { g.remove(b); g.add(bakeColor([b, t])); } else g.add(t);   // MAINMERGE_v1：未開的島沙台＋灰台 2 → 1；開著的島草台留著（節氣換色）、房子屋頂不併（工程顧問 11/2：三角形餘裕）
       if (s.open !== false) {
         g.add(box(0.7, 0.5, 0.6, mat('isleHouse', 0xfdf6ec), 0, 0.05, 0));
         const r = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.4, 4, 1), mat(s.slot === 'wisdom' ? 'roofWis' : 'roofRed', s.slot === 'wisdom' ? 0x2e3a59 : 0xc0504d)); r.rotation.y = Math.PI / 4; r.position.y = 0.75; g.add(r);
