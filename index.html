@@ -554,7 +554,7 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.21';
+const APP_VERSION = '2.52.22';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
@@ -941,7 +941,7 @@ if (window.visualViewport) { visualViewport.addEventListener('resize', () => toa
 window.addEventListener('scroll', () => { if (toast.cur && !toastPlace.f) toastPlace.f = requestAnimationFrame(() => { toastPlace.f = 0; toastPlace(); }); }, { passive: true });
 async function load(fn, ...args) {
   try {
-    if (ownOn() && !window.FamIsle) await loadScript('family.js');
+    if (ownOn() && !window.FamIsle) { await loadScript('mods.js'); await loadScript('family.js'); }   // FAM_MODS_v1：家人島先載模組表（她不走這條）
     S = await call(fn || 'getState', ...args);
     D = derive(S);
     render();

@@ -31,6 +31,7 @@
   // 家人島畫得出來的卡片（白名單）：Index.html 用 card('key', html) 包起來的卡片，key 不在這裡就不畫；要開放新卡片時把 key 加進來，後端 OWN_API 也要有對應的函式
   //   不在這裡、家人島看不到的：diaryShare（日めくり的分享按鈕，等拜訪家人島那一版）、link（跨科連結）、lightWord（燈塔的話）、adv（學習顧問）、keeperImg（管理員上傳圖片）、hallLink（v2.44 我的家去音樂廳的按鈕，家人島沒有音樂廳）
   const OWN_CARDS = ['diaryShare', 'kairan', 'timeline', 'homeMate', 'moveArt', 'habit', 'move', 'islet', 'xpEx', 'water', 'medit', 'diary', 'news', 'version'];   // water、diary：2b-1   // medit：冥想計時（MEDIT_v1）   // news、version：版本說明的兩張卡（FAM_NEWSCARDS_v1）
+  let OWN_FNS_ALL = null;   // FAM_MODS_v1：index.html 和各 patch push 進 OWN_FNS 的全部，第一次 apply 時留一份，之後每次照模組重算
   function apply() {
     b1Open();   // B1
     shopOpen();   // FAM_SHOP_v1
@@ -38,7 +39,12 @@
     b2Open();   // FAM_B2_v1 挑戰和故事
     langOpen();   // FAM_LANG_A 語言先行
     p3a1Open();   // P3A1_JW 日文單字巷
-    if (!OWN_TABS.includes(tab)) { tab = 'home'; draft = {}; }
+    // FAM_MODS_v1：開著的模組（mods.js 產生的表；沒載到就什麼都不開，fail-closed）；四張白名單都再和它取交集，只會更少、不會更多
+    const MODS = (window.modsOf || (() => []))(S && S.save && S.save.isle), modOn = (kind, name) => (window.modAllows || (() => false))(MODS, kind, name);
+    if (!OWN_FNS_ALL) OWN_FNS_ALL = OWN_FNS.slice();
+    OWN_FNS.length = 0; OWN_FNS_ALL.forEach(f => { if ((window.MOD_ALWAYS || {})[f] || modOn('api', f)) OWN_FNS.push(f); });
+    if (window.FamIsle) FamIsle.cards = OWN_CARDS.filter(c => modOn('cards', c));
+    if (!OWN_TABS.includes(tab) || !modOn('tabs', tab)) { tab = 'home'; draft = {}; }
     const all = (isle() && isle().dirs) || [], live = liveDirs();
     // 項目的科目換成方向的名字（計畫、確認頁的小標題用），GROUP 也加上方向名字 → 位置，經驗值和房子照位置算
     all.forEach(d => { GROUP[d.name] = SLOT[d.slot]; });
@@ -49,8 +55,8 @@
     SLOT.forEach((s, i) => { const d = live.find(x => x.slot === i); SUBJECT_NAME[s] = d ? d.name : '空地'; SUBJ_IC[s] = d ? d.ic : '🌾'; });
     if (live.length) SUBJECTS.splice(0, SUBJECTS.length, ...SLOT.filter((s, i) => live.some(d => d.slot === i)));
     delete SUBS['自']; delete SUBS['社'];
-    for (let i = BOARD.length - 1; i >= 0; i--) if (KEEP_BOARD.indexOf(BOARD[i].key) < 0) BOARD.splice(i, 1);
-    for (let i = PLACE_LINKS.length - 1; i >= 0; i--) if (KEEP_PLACE.indexOf(PLACE_LINKS[i].key) < 0) PLACE_LINKS.splice(i, 1);
+    for (let i = BOARD.length - 1; i >= 0; i--) if (KEEP_BOARD.indexOf(BOARD[i].key) < 0 || !modOn('board', BOARD[i].key)) BOARD.splice(i, 1);   // FAM_MODS_v1
+    for (let i = PLACE_LINKS.length - 1; i >= 0; i--) if (KEEP_PLACE.indexOf(PLACE_LINKS[i].key) < 0 || !modOn('place', PLACE_LINKS[i].key)) PLACE_LINKS.splice(i, 1);
     // 打開 App 先到哪裡（10/26 決定）：家人自己在設定選「我的島」或「主島」，只在打開 App 的第一個畫面換一次
     if (!landed && D.cfg) { landed = true; if (D.cfg.landing === 'main' && tab === 'home' && mainOpen()) tab = 'mainisle'; }
   }
