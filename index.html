@@ -554,12 +554,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.22';
+const APP_VERSION = '2.52.23';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.23', date: '2026-11-26', guide: ['交易所'], items: ['🍂 主島的交易所多了「阿嬤的本週收購」：每個星期一換一張收購單，單子上的料理，阿嬤收得比平常高一點。賣給阿嬤和賣給商店，還是共用同一個每天的上限。首頁的回覧板看得到這週的單子，週末確認頁會先列出下一週的單子。'] },
   { v: '2.52.21', date: '2026-11-25', fam: true, guide: ['記錄你做了什麼'], items: ['🧾 「更多」頁多了「這一天做了什麼」：選一天，上面看摘要，下面分成讀書、生活、我的島、智慧島，點開就能看每一筆。這一頁在 App 裡只有你自己看得到；裡面的紀錄誰看得到，照「誰看得到什麼」原本的設定，沒有改變。'] },
   { v: '2.52.20', date: '2026-11-25', guide: ['衛星小島'], items: ['🏝️ 漁港、沙洲、松樹岩島開始給素材了：讀完一格社會計畫，漁船分你魚或昆布；自然計畫，沙洲給岩鹽或地瓜；數學計畫，松樹岩島給陶土或檜木。每座一天 1 份，放進屋台的竹籃，不算商店收購的上限。之前讀完的份也一起補給你了，從小島蓋好那天算起。'] },
   { v: '2.52.19', date: '2026-11-25', guide: ['核心主島'], items: ['🎈 主島的飛船碼頭和玉山聚會所，靠近一點看會多出很多小細節：碼頭的木板、欄杆和繩子，聚會所的柱子和屋頂。拉遠的時候還是和原來一樣的樣子，島也跑得更順。'] },
@@ -1336,6 +1337,7 @@ function derive(S) {
   Object.keys(save).filter(k => k.startsWith('craft:') && save[k]).sort().forEach(k => (save[k].log || []).forEach(e => {
     if (e.t === 'buy') { const n = Number(e.n) || 0; shop.matSpent += n * MAT_PRICE; if (e.at === S.today) shop.buyToday += n; }
     if (e.t === 'sell') { shop.sellEarned += Number(e.price) || 0; if (e.at === S.today) shop.soldToday += Number(e.price) || 0; }
+    if (e.t === 'sellx') { const pr = wbPriceOf(e.mon, e.dish, Number(e.price)); shop.sellEarned += pr; if (e.at === S.today) shop.soldToday += pr; }   // WEEKBUY_v1 阿嬤的本週收購（和後端 ledger_ 同一套）
   }));
   const fin = finCalc_(save, S.today, (S.market && S.market.px) || [], (S.market && S.market.div) || []);   // BANK_ETF_v1：存進銀行、投入股票的不在錢包裡，賣出隔天才回來（和後端 ledger_ 同一段）
   const coins = 20 + Math.floor(exXp / 10) + xqCoins + exCoins + paperCoins - spent - shop.matSpent + shop.sellEarned - fin.wallet;   // 開島禮物 20 枚
@@ -1559,6 +1561,7 @@ function coinBook() {
   Object.keys(save).filter(k => k.startsWith('craft:') && save[k]).sort().forEach(k => (save[k].log || []).forEach(e => {
     if (e.t === 'buy') add('mat', -(Number(e.n) || 0) * MAT_PRICE, e.at);
     if (e.t === 'sell') add('sell', Number(e.price) || 0, e.at);
+    if (e.t === 'sellx') add('sell', wbPriceOf(e.mon, e.dish, Number(e.price)), e.at);   // WEEKBUY_v1
   }));
   finLog_(save, 'bank:').forEach(e => { if (e.at > S.today) return; const n = Math.floor(Number(e.n) || 0); if (e.t === 'in') add('bankIn', -n, e.at); if (e.t === 'out') add('bankOut', n, e.at); });   // BANK_ETF_v1
   finLog_(save, 'etf:').forEach(e => { if (e.at > S.today) return; if (e.t === 'buy') add('etfBuy', -Math.floor(Number(e.coins) || 0), e.at); if (e.t === 'sell' && e.settle <= S.today) add('etfSell', Math.floor(Number(e.coins) || 0), e.settle); });
@@ -3221,7 +3224,7 @@ function kairanCard() {
       <div class="speech grow"><b>📮 ${esc(resident(pick).name)}</b>：${esc(d.messages[pick])}${has.length > 1 ? `<div class="muted" style="margin-top:4px">還有 ${has.length - 1} 位島民也寫了信，在下面的回覧板</div>` : ''}</div></div>` : '';
   return `<div class="card" id="kairanCard">${guideCard()}${featured}
     <details style="margin-top:10px" ${kairanOpen ? 'open' : ''} ontoggle="kairanOpen=this.open"><summary><b>📰 回覧板</b><span class="muted">・${what}${dailyState === 'loading' ? '（寫信中…）' : ''}</span></summary>
-      ${guideNews()}${dailyCard()}</details>
+      ${wbKairanLine()}${guideNews()}${dailyCard()}</details>
     ${wishNews() ? `<button class="ghost" style="width:100%;margin-top:10px" onclick="go('wish')">💡 讓島順起來<span class="pill" style="margin-left:6px">爸爸回覆了 ${wishNews()} 則</span></button>` : ''}</div>`;
 }
 function guideCard() {
@@ -4367,7 +4370,7 @@ function matsOf(save, itemsByRow, today) {
     if (e.t === 'fix' && e.add) { Object.keys(e.add).forEach(m => { if (MATS[m]) fixed[m] = (fixed[m] || 0) + Math.max(0, Number(e.add[m]) || 0); }); fixes.push(e); return; }
     if (e.t === 'buy' && MATS[e.mat]) { bought[e.mat] = (bought[e.mat] || 0) + (Number(e.n) || 0); return; }
     if (e.t === 'swap') { if (swapOk(e.from, e.to)) { used[e.from] = (used[e.from] || 0) + SWAP_N; swapIn[e.to] = (swapIn[e.to] || 0) + 1; swaps.push(e); } return; }   // MAT_SWAP_v1
-    if (e.t === 'sell') { sold[e.dish] = (sold[e.dish] || 0) + 1; return; }
+    if (e.t === 'sell' || e.t === 'sellx') { sold[e.dish] = (sold[e.dish] || 0) + 1; return; }   // WEEKBUY_v1：本週收購賣掉的也扣存量
     if (e.t === 'gift') { gifted[e.dish] = (gifted[e.dish] || 0) + 1; gifts.push(e); return; }
     const d = e.t === 'cook' && dishOf(e.dish); if (!d) return;
     cooked[d.id] = (cooked[d.id] || 0) + 1; cooks.push(e);
@@ -8353,7 +8356,7 @@ function viewConfirm() {
   const pct = total ? Math.round(got / total * 100) : 0;
   const fmin = {}; for (let i = 0; i < 7; i++) ((S.save['focus:' + addD(wk, i)] || {}).list || []).forEach(x => fmin[x.row] = (fmin[x.row] || 0) + (x.min || 0));
   return `<div class="card"><h2>✅ 確認 ${short(wk)}–${short(addD(wk, 6))}</h2>
-      <div class="muted">每一項做了幾次，已經從每天的紀錄帶進來了。漏記的用 ＋／－ 補上，做了一半就按「½」。${wd.settled ? '<br>這週確認過了，再送出會覆蓋。' : ''}</div>
+      <div class="muted">每一項做了幾次，已經從每天的紀錄帶進來了。漏記的用 ＋／－ 補上，做了一半就按「½」。${wd.settled ? '<br>這週確認過了，再送出會覆蓋。' : ''}</div>${wbPreview()}
       ${total ? `<div class="row" style="margin-top:10px"><div class="bar grow" style="margin-top:0"><i id="cfBar" style="width:${pct}%"></i></div><b id="cfPct">${pct}%</b></div>` : ''}
       <div style="margin-top:8px"><button class="ghost" onclick="draft.showAll=!draft.showAll;draft.note=document.getElementById('note').value;render()">${draft.showAll ? '只看這週的計畫和紀錄' : '顯示全部項目'}</button></div></div>
     ${weekSubjHtml(wk, c) /* WEEKSUBJ_v1 */}
@@ -8489,6 +8492,44 @@ function viewShop() {
 const MAT_PRICE = 2, MAT_BUY_DAILY = 5, SELL_DAILY = 10;
 const DISH_PRICE = { onigiri: 3, matcha: 3, qiu: 5, taiyaki: 5, zongzi: 5, miso: 5, boba: 8, onsentama: 8, pancake: 5, scone: 5, pasta: 5, soup: 5, sasazushi: 5, sasacha: 3 };
 Object.assign(DISH_PRICE, { pinacake: 5, imopie: 5, karume: 5 });   // TUTOR3_v1
+// ===== WEEKBUY_v1 阿嬤的本週收購（交易所設計串 11/14；爸爸 11/20 選 A：週日預告＋回覧板一行）：清單由後端算、getState 帶 weekBuy；帳本和後端 Coins.gs 用同一段（逐字相同，測試會比） =====
+// WEEKBUY_v1 阿嬤的本週收購：本週一（台北日期）當種子，從季節表挑 2～3 道；前後端同一段（逐字相同，測試會比）。
+// 依賴：price(dish)＝平常收購價（沒有這道料理回 0）、cost(dish)＝用買來素材做的成本（含買不到的素材回 null）；不依賴 Date、時區。
+const WB_EXTRA = 2;   // 比平常多 2 枚，再夾到素材成本（工程顧問 11/14）
+const WB_POOL = { winter: ['miso', 'soup', 'onsentama', 'taiyaki'], spring: ['onigiri', 'sasazushi', 'pasta', 'pancake'], early: ['sasacha', 'onigiri', 'matcha'], summer: ['boba', 'sasacha', 'matcha'], autumn: ['qiu', 'taiyaki', 'scone'], dragon: ['zongzi', 'sasacha'] };
+const WB_SAY = { winter: '冬天到了，大家想吃熱的，這週熱的收得比較好。', spring: '春天到了，大家喜歡帶便當出去走走，這週方便帶的收得比較好。', early: '夏天快到了，大家想吃清爽一點的，這週這幾道收得比較好。', summer: '夏天到了，大家常常口渴，這週飲料收得比較好。', autumn: '秋天到了，大家喜歡吃點心配茶，這週點心收得比較好。', dragon: '又到了吃粽子的時候，大家在找粽子，這週粽子收得比較好。' };
+const WB_DRAGON = ['2027-06-09', '2028-05-28', '2029-06-16', '2030-06-05'];   // 端午（農曆五月初五），之後每年補
+function wbDays(s) { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s); return Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000; }
+function wbDate(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
+function wbMonday(s) { const n = wbDays(s); return wbDate(n - ((n + 3) % 7 + 7) % 7); }   // 1970-01-01 是星期四
+function wbHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
+function wbSeason(mon) {
+  if (WB_DRAGON.some(d => { const m = wbMonday(d); return mon === m || mon === wbDate(wbDays(m) - 7); })) return 'dragon';
+  const mm = +mon.slice(5, 7);
+  return mm === 12 || mm <= 2 ? 'winter' : mm <= 4 ? 'spring' : mm <= 6 ? 'early' : mm <= 8 ? 'summer' : 'autumn';
+}
+function wbList(mon, price, cost) {
+  const season = wbSeason(mon), pool = WB_POOL[season].filter(d => price(d) > 0);
+  const picked = season === 'dragon' ? pool.slice() : pool.map(d => [wbHash(mon + ':' + d), d]).sort((a, b) => a[0] - b[0] || (a[1] < b[1] ? -1 : 1)).map(x => x[1]).slice(0, 2 + wbHash(mon) % 2);
+  return { mon, season, say: WB_SAY[season], items: picked.map(d => { const c = cost(d), p = price(d), up = p + WB_EXTRA; return { dish: d, price: c == null ? up : Math.max(p, Math.min(up, c)) }; }) };
+}
+const WB_SHELF = ['tea', 'bamboo', 'shiso', 'sugar', 'milk', 'rice', 'flour', 'salt', 'imo', 'tomato', 'clay', 'hinoki', 'kombu', 'fish', 'cloth'];   // 和後端 MAT_SHELF_ 一樣
+function wbCost(d) { const x = DISHES.filter(y => y.id === d)[0]; if (!x) return null; let n = 0; for (const m in x.use) { if (WB_SHELF.indexOf(m) < 0) return null; n += x.use[m]; } return n * MAT_PRICE; }
+function wbPriceOf(mon, dish, price) {
+  const normal = DISH_PRICE[dish] || 0;
+  if (typeof mon !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(mon) || mon !== wbMonday(mon)) return normal;
+  const it = wbList(mon, d => DISH_PRICE[d] || 0, wbCost).items.filter(x => x.dish === dish)[0];
+  return it && it.price === price ? it.price : normal;
+}
+// 只給她：家人碼、家人自己的島都不畫；單子空的整行不顯示（文案 250：不寫「這週沒有」「還沒」）
+function wbNames(items) { return items.map(x => { const d = DISHES.filter(y => y.id === x.dish)[0]; return d ? d.n : ''; }).filter(Boolean).join('、'); }
+function wbOn() { return !isFamily() && !ownMode() && S && S.weekBuy && S.weekBuy.items && S.weekBuy.items.length; }
+function wbKairanLine() { return wbOn() ? '<div class="muted" style="margin-top:6px">這週阿嬤的收購單：' + esc(wbNames(S.weekBuy.items)) + '</div>' : ''; }
+function wbPreview() {   // 只在週日的週末確認頁；寫日期，不寫「下週」
+  if (!wbOn() || !S.weekBuy.next || !S.weekBuy.next.items.length || wbDays(S.today) - wbDays(wbMonday(S.today)) !== 6) return '';
+  const m = S.weekBuy.next.mon;
+  return '<div class="muted" style="margin-top:6px">' + Number(m.slice(5, 7)) + '/' + Number(m.slice(8, 10)) + '（一）起，阿嬤的收購單：' + esc(wbNames(S.weekBuy.next.items)) + '</div>';
+}
 let shopBusy = false, matOpen = false;
 function studyMatsToday() { return D.mats.by.filter(x => x.date === S.today && x.why !== 'week' && x.why !== 'islet' && x.why !== 'light' /* LH_RARE_v1 */ && x.why !== 'rare5' /* RARE_ALL5_v1 */).length; }   // 小島給的素材不算進收購上限
 function sellCap() { return Math.min(SELL_DAILY, studyMatsToday()); }
@@ -9951,7 +9992,8 @@ function viewGuide() {
     p('這些信和新聞都在首頁嚮導那張卡的「📰 回覧板」，點開就看得到；以前的信收在我的家的 📬 信箱。') +
     p('嚮導會講一則<b>昨天</b>的國內外新聞，附上跟會考哪一科有關，下面也有新聞來源可以點開看。新聞是 AI 用 Google 搜尋整理的，偶爾可能不精確，有疑問就點來源確認。') +
     p('🌍 有四個地方每天會換一張小知識卡：音樂廳的「今天的音樂」、植木屋的「今天的植物」、主島飛船碼頭的「今天的世界遺產」，還有智慧島碼頭渡船屋的「今天的港口」。到那裡就看得到，看看就好，沒有經驗值和島幣。'))}
-  ${isFamily() ? '' : sec('🧮', '交易所', p('主島的交易所裡有「阿嬤的銀行」和「阿嬤的股票」。🏦 銀行：島幣存進去，每個星期一算一次利息，隨時可以領出來；超過 500 枚的部分不算利息。📈 股票：照真的價格，練習買賣一檔追蹤臺灣 50 指數的 ETF（0050），會漲也會跌。買賣一天一次，用前一天的收盤價；頁面上的價錢每個星期一更新一次。賣出的島幣隔天才回到錢包。存進銀行或買了股票的島幣不在錢包裡，商店用不到。'))}
+  ${isFamily() ? '' : sec('🧮', '交易所', p('主島的交易所裡有「阿嬤的銀行」和「阿嬤的股票」。🏦 銀行：島幣存進去，每個星期一算一次利息，隨時可以領出來；超過 500 枚的部分不算利息。📈 股票：照真的價格，練習買賣一檔追蹤臺灣 50 指數的 ETF（0050），會漲也會跌。買賣一天一次，用前一天的收盤價；頁面上的價錢每個星期一更新一次。賣出的島幣隔天才回到錢包。存進銀行或買了股票的島幣不在錢包裡，商店用不到。') +
+    p('🍂 阿嬤的本週收購：每個星期一換一張收購單，列 2～3 道這週阿嬤收得比平常高一點的料理。賣給阿嬤和賣給商店，共用同一個每天的上限，一天賣得的島幣總數不會變多。首頁的回覧板看得到這週的單子，週末確認頁會先列出下一週的單子。'))}
   ${sec('📖', '故事任務', p('每天打開小島，會有一位島民（或室友）遇到難題來找你幫忙：可能是石碑上的詩句、燈塔的電路、或是颱風的風向。幫他解一題會考範圍的選擇題，就是今天的任務。') +
     p('題目是那條巷子的<b>會考考古題</b>，大多是中級題（四到七成的考生答對），有時候會遇到進階題（不到四成答對），出過的題不會再出。數學和自然不出題組題。做完可以按「🙋 請島民講解這一題」。') +
     p(`答對 +${QUEST_XP.right} 經驗值；答錯也有 +${QUEST_XP.wrong}，而且會看到解說。每天可以按「🎲 換一個」一次，換成別條巷子的故事。`) +

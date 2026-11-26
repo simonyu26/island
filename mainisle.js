@@ -578,6 +578,37 @@
     return `<div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#f3f7fb"><div class="row"><b class="grow">🪙 我的島幣帳本</b><button class="ghost" onclick="coinFrom='mainisle';go('coins')">打開</button></div>
       <div class="muted" style="margin-top:2px">看看自己的島幣從哪裡來、去了哪裡，也可以訂一個存錢目標。</div></div>`;
   }
+  // ---------- WEEKBUY_v1 交易所「🍂 阿嬤的本週收購」（交易所設計串 11/14，文案 223、250 定稿；爸爸 11/20 選 A）----------
+  // 每個星期一換一張單（後端算，getState 帶 weekBuy），2～3 道比平常多 1～2 枚；賣出和平常收購共用每天上限。只有她自己看得到：不推、不紅點、不倒數、不排行。
+  let wbBusy = false, wbSay = '';
+  const wbLs = (k, v) => { try { if (v === undefined) return localStorage.getItem('wb:' + k); localStorage.setItem('wb:' + k, v); } catch (e) { return null; } };
+  function wbHtml() {
+    if (!her() || typeof wbOn !== 'function' || !wbOn()) return '';
+    const W = S.weekBuy, left = Math.max(0, (typeof sellCap === 'function' ? sellCap() : 0) - D.shop.soldToday);
+    const rows = W.items.map(x => {
+      const d = DISHES.filter(y => y.id === x.dish)[0]; if (!d) return '';
+      const have = (D.mats && D.mats.left && D.mats.left[x.dish]) || 0, can = have > 0 && x.price <= left && !wbBusy;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #efe3cf;min-width:0"><span style="font-size:22px">${d.ic}</span>
+        <span style="flex:1;min-width:0;font-size:15px;line-height:1.3">${esc(d.n)}${have ? '<span class="muted" style="font-size:12px"> ×' + have + '</span>' : ''}<br><span class="muted" style="font-size:12px">平常 ${DISH_PRICE[x.dish]}</span></span>
+        <b style="font-size:16px;white-space:nowrap">🪙 ${x.price}</b>
+        ${have ? `<button class="ghost" style="min-height:44px;padding:0 14px;white-space:nowrap" ${can ? '' : 'disabled'} onclick="wbSell('${x.dish}')">賣一個</button>` : '<button disabled style="min-height:44px;padding:0 14px;white-space:nowrap;background:#f7f1e5;color:#5f5a55;border:1px dashed #d8d4ce;border-radius:12px">手邊沒有</button>'}</div>`;
+    }).join('');
+    const none = W.items.every(x => !((D.mats && D.mats.left && D.mats.left[x.dish]) || 0));
+    const intro = wbLs('intro') ? '' : `<div class="speech" style="margin-top:6px;font-size:14px">每個星期一，阿嬤會換一張收購單。季節不一樣，大家想要的東西就不一樣；想要的人多，阿嬤就願意多付一點。<div style="margin-top:6px"><button class="ghost" style="min-height:44px" onclick="wbLs2('intro','1')">知道了</button></div></div>`;
+    const say = wbSay ? `<div class="speech" style="margin-top:6px;font-size:14px">${esc(wbSay)}</div>` : none ? '<div class="speech" style="margin-top:6px;font-size:14px">這週單子上的料理，你手邊剛好沒有。沒關係，下週會換一張。</div>' : '';
+    return `<div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#fbf3e4" id="wbBox"><div style="font-size:16px;font-weight:700">🍂 阿嬤的本週收購</div>
+      <div class="muted" style="font-size:13px;margin-top:2px">${esc(W.say)}</div>${intro}${say}<div style="margin-top:6px">${rows}</div>
+      <div class="muted" style="font-size:12px;margin-top:4px">${left > 0 ? '和平常一樣，賣料理一天能拿到的島幣有上限；今天還可以再拿到 🪙 ' + left + '。' : '和平常一樣，賣料理一天能拿到的島幣有上限；今天的已經到了，明天會恢復。'}</div></div>`;   // 文案 250 追記定稿
+  }
+  function wbPaint() { const el = document.getElementById('wbBox'); if (el) el.outerHTML = wbHtml(); }
+  window.wbLs2 = function (k, v) { wbLs(k, v); wbPaint(); };
+  window.wbSell = async function (dish) {
+    if (wbBusy || !S.weekBuy) return; wbBusy = true; wbSay = ''; wbPaint();
+    const rid = 'w' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+    try { await flush(); S = await call('sellWeekBuy', dish, S.weekBuy.mon, rid, D.coins); D = derive(S); wbSay = '謝謝，剛好有人在等這一道。'; }
+    catch (e) { wbSay = String(e.message || e); }
+    wbBusy = false; wbPaint();
+  };
   // ---------- BANK_ETF_v1 交易所：阿嬤的銀行、阿嬤的股票（主島串 11/12；畫面文字 交易所設計串、文案 213 定稿）----------
   // 只給她自己（家人碼、家人自己的島都不畫；家人島版 12/1）。價錢只在這一頁：不推、不紅點、不排行；漲跌不用紅綠。
   // 帳都用 index.html 的 finCalc_（和後端 ledger_ 同一段）；成交、補登都在後端，這裡只送枚數。
@@ -728,7 +759,7 @@
     if (!info) return '<div class="muted">👆 點飛船碼頭搭飛船；點其他建物看看它們什麼時候開門。用手指拖曳可以轉動，兩指可以縮放。</div>';
     if (info.kind === 'place') {
       const k = info.key;
-      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + voyageHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') + (k === 'exchange' ? coinBtn() + finHtml() : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
+      return keeperCard(k, info.first) + (k === 'port' ? worldHtml() + `<div style="margin-top:8px">${ferryRows()}</div>` : k === 'hall' ? summitHtml() + voyageHtml() + notesHtml() + boardHtml() : OPEN[k] ? (BOOK[k] ? bookHtml(k) : '') + (k === 'exchange' ? wbHtml() + coinBtn() + finHtml() : '') : '<div class="muted" style="margin-top:6px">準備中</div>');
     }
     const x = isleList().find(i => i.key === info.key); if (!x) return '';
     if (x.mine) return `<b>🏝️ ${esc(x.name)}</b><div class="muted">這是你的島。</div>${x.open !== false ? `<button style="margin-top:8px" onclick="mainSail('${x.key}')">🎈 ${isFamily() ? '去我的島' : '回到我的島'}</button>` : ''}`;
