@@ -554,12 +554,13 @@ let tab = 'home';
 let draft = {};        // 表單暫存
 
 /* ===== 版本與更新紀錄：每次改版都要更新這裡和 viewGuide() 的玩法說明 ===== */
-const APP_VERSION = '2.52.23';
+const APP_VERSION = '2.52.24';
 // 下次預計更新（爸爸，2026-10-26：每週五 16:30 更新，每次同時公告下一次的內容）；發版時改這裡
 const NEXT_UP = { when: '', items: [] };
 // 會影響操作的項目照常寫；小修加 minor: true，畫面上摺起來（爸爸，2026-10-26）
 const GUIDE_FROM = '2.51.5';   // GUIDE_SYNC_v1：這條（含）以上、非 minor 的更新紀錄都要寫 guide（改到的玩法說明章節名，或「無」）
 const CHANGELOG = [
+  { v: '2.52.24', date: '2026-11-26', guide: ['運動計時'], items: ['🏃 運動計時結束的時候，可以選動了什麼、感覺怎麼樣，也可以都不選。週六、日，海邊步道的管理員會說這週動了什麼；每月第一個週末，會說說上個月的樣子。', '🔒 你在「誰看得到什麼」把「計畫和讀書紀錄」分享給哪位家人，那位家人也看得到你選的運動種類；感覺在 App 裡只有你自己看得到。'] },   // STEP_REVIEW_v1
   { v: '2.52.23', date: '2026-11-26', guide: ['交易所'], items: ['🍂 主島的交易所多了「阿嬤的本週收購」：每個星期一換一張收購單，單子上的料理，阿嬤收得比平常高一點。賣給阿嬤和賣給商店，還是共用同一個每天的上限。首頁的回覧板看得到這週的單子，週末確認頁會先列出下一週的單子。'] },
   { v: '2.52.21', date: '2026-11-25', fam: true, guide: ['記錄你做了什麼'], items: ['🧾 「更多」頁多了「這一天做了什麼」：選一天，上面看摘要，下面分成讀書、生活、我的島、智慧島，點開就能看每一筆。這一頁在 App 裡只有你自己看得到；裡面的紀錄誰看得到，照「誰看得到什麼」原本的設定，沒有改變。'] },
   { v: '2.52.20', date: '2026-11-25', guide: ['衛星小島'], items: ['🏝️ 漁港、沙洲、松樹岩島開始給素材了：讀完一格社會計畫，漁船分你魚或昆布；自然計畫，沙洲給岩鹽或地瓜；數學計畫，松樹岩島給陶土或檜木。每座一天 1 份，放進屋台的竹籃，不算商店收購的上限。之前讀完的份也一起補給你了，從小島蓋好那天算起。'] },
@@ -2894,7 +2895,7 @@ function exerciseMini() {
   return `<div class="stamps" style="margin-top:0">${stamps}</div>
     <div class="row" style="margin-top:10px;flex-wrap:nowrap">${on ? `<div class="grow muted">${kp ? kpPic(kp) + ' ' + esc(kp.name) + '陪你跑完了！' : '🏮 海邊步道又多了一段'}</div><button class="ghost" style="padding:6px 10px;font-size:13px" onclick="toggleExercise()">按錯了</button>`
       : `<button class="grow" onclick="toggleExercise()">🏃 今天運動了！</button>`}</div>
-    ${kp ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:24px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>：${esc((daily && daily.messages && daily.messages.walk) || keeperLine('walk', on, D.exWeeks[wk] || 0))}</div></div>` : ''}
+    ${kp ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap"><span style="font-size:24px">${kpPic(kp)}</span><div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>：${esc(mvReview() || (daily && daily.messages && daily.messages.walk) || keeperLine('walk', on, D.exWeeks[wk] || 0))}</div></div>` : ''}
     ${moveActive() ? `<div class="muted" style="margin-top:8px">${mk(moveActive()).ic} ${mk(moveActive()).did}計時中 <b class="moveClock">${moveClockText(moveMs(moveActive()))}</b></div>` : ''}
     <button class="ghost" style="width:100%;margin-top:8px" onclick="go('walk')">${moveActive() ? '去步道看計時 ›' : '去海邊步道（運動計時）›'}</button>`;
 }
@@ -3887,7 +3888,7 @@ function habitCard() {
       ${on ? `<div class="grow muted">${kp ? kpPic(kp) + ' ' + esc(kp.name) + '陪你跑完了！' : '🏮 '}海邊步道又多了一段</div><button class="ghost" style="padding:6px 10px;font-size:13px" onclick="toggleExercise()">按錯了</button>`
         : `<button class="grow" onclick="toggleExercise()">🏃 今天運動了！</button>`}</div>
     ${placeIntro('walk') || (kp ? `<div class="row" style="margin-top:8px;flex-wrap:nowrap;cursor:pointer" onclick="openKeeper('walk')"><span style="font-size:28px">${kpPic(kp)}</span>
-        <div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc((daily && daily.messages && daily.messages.walk) || keeperLine('walk', on, n))}</div></div>`
+        <div class="speech grow" style="font-size:14px"><b>${esc(kp.name)}</b>${kp.role ? '（' + esc(kp.role) + '）' : ''}：${esc(mvReview() || (daily && daily.messages && daily.messages.walk) || keeperLine('walk', on, n))}</div></div>`
       : `<button class="ghost" style="width:100%;margin-top:8px;font-size:14px" onclick="openKeeper('walk')">🧢 海邊步道還沒有管理員，幫步道找一位陪跑夥伴</button>`)}
     <div class="muted" style="margin-top:6px">${D.exStreak ? `已經連續 ${D.exStreak} 週達標 🔥` : '一週運動 3 天就達標'}${next ? `・連續 ${next.weeks} 週可以拿到 ${next.ic} ${next.name}` : '・所有運動家具都拿到了！'}</div></div>`;
 }
@@ -7388,6 +7389,81 @@ const ART_T = { play: { ic: '🎻', name: '練習、上課', doing: '練習中',
   band: { ic: '🥁', name: '樂團排練', doing: '排練中', did: '排練', end: '排練完了' },
   make: { ic: '🎨', name: '畫畫、書法、創作', doing: '創作中', did: '創作', end: '完成了' } };
 function mk(m) { return m && m.k === 'art' ? Object.assign({}, MOVE_KIND.art, ART_T[m.t] || ART_T.play) : m && m.k === 'read' ? MOVE_KIND.read : m && m.k === 'medit' ? MOVE_KIND.medit : MOVE_KIND.move; }
+/* ===== STEP_REVIEW_v1 步道每週回顧（爸爸 11/2 選 ①②④＋③A）：運動計時結束時選「動了什麼」（可複選、可不選，存在 move 紀錄的 k2，範圍跟 study 一樣）
+   和「感覺怎麼樣」（五級、可不選，另存 mvf:日期，不給家人）；週六、日由步道管理員說這週的回顧；每月第一個週末說上個月的樣子（說習慣不說多寡）。
+   S.mvfOk（後端有 saveMvf 才帶）沒有就整段不出現；家人島不帶。不比較、不催、不猜感受（文案 133）；感覺跟經驗值、綠點、章都無關。 ===== */
+const MV_TYPES = [['walk', '🚶', '走路'], ['run', '👟', '跑步'], ['rope', '🪢', '跳繩'], ['stretch', '🙆', '伸展'], ['ball', '🏀', '球類'], ['bike', '🚲', '騎車'], ['switch', '🎮', 'Switch 運動'], ['ring', '🤸', '健身環'], ['other', '', '其他']];
+const MV_FEEL = [['😌', '很輕鬆'], ['🙂', '輕鬆'], ['😐', '還好'], ['😅', '有點喘'], ['😩', '很喘']], MV_FEEL_G = [0, 0, 1, 2, 2], MV_FEEL_NAME = ['輕鬆', '還好', '會喘'];
+const MV_END = { walk: ['走一走，路上看到的也算數。', '走路是最好帶著走的運動。'], run: ['跑步那幾次，都記下來了。', '有跑起來，就是跑過了。'], rope: ['一條繩子，就能動起來。', '跳繩不挑地方，很方便。'],
+  stretch: ['伸展也是在動，我都記著。', '拉一拉筋，也是照顧身體。'], ball: ['有球的運動，時間過得特別快。', '打球那幾次，我記下來了。'], bike: ['騎車那幾次，都記下來了。', '踩著踏板，也是在動。'],
+  switch: ['在客廳也能動起來。', 'Switch 運動那幾次，都記下來了。'], ring: ['一個圈，也能動起來。', '健身環那幾次，我都記著。'], other: ['這週的章，我都看到了。', '有動就好，我都記著。', '這幾個章，都是你自己蓋的。'] };
+const mvOn = () => !isFamily() && !!(S && S.mvfOk);
+const mvName = id => (MV_TYPES.find(t => t[0] === id) || [0, 0, ''])[2];
+function mvSeed(arr, seed) { let h = 0; String(seed).split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); return arr[h % arr.length]; }   // 同一週（月）固定同一句，重畫不會跳
+const MV_CSS = `<style>.mv-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.mv-chip{background:#fff;color:var(--ink);border:1px solid #d8d4ce;border-radius:12px;padding:8px 12px;min-height:44px;font-weight:400;line-height:1.25;white-space:nowrap}
+.mv-chip[aria-pressed="true"]{background:var(--plum-light);border:2px solid var(--plum);color:var(--plum);font-weight:700}.mv-chip[aria-pressed="true"]::before{content:"✓ "}
+.mv-feel{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}.mv-feel button{position:relative;background:#fff;color:var(--ink);border:1px solid #d8d4ce;border-radius:12px;min-height:56px;padding:6px 2px;font-weight:400;font-size:13px;line-height:1.25;white-space:nowrap}
+.mv-feel button span{display:block;font-size:22px;margin-top:6px}.mv-feel button[aria-checked="true"]{background:var(--plum-light);border:2px solid var(--plum);color:var(--plum);font-weight:700}.mv-feel button[aria-checked="true"]::after{content:"✓";position:absolute;top:1px;right:3px;font-size:10px;line-height:1}</style>`;
+function mvPicker(st) {
+  if (!mvOn() || st.m.k) return '';
+  const k2 = st.k2 || [], f = st.f || 0, first = local.get('mvfHint') !== '1';
+  return MV_CSS + `<div id="mvBox" style="margin-top:12px"><div style="font-weight:700">動了什麼？<span class="muted" style="font-weight:400">（可以不選，直接按存好）</span></div>
+      <div class="mv-chips" role="group" aria-label="動了什麼">${MV_TYPES.map(t => `<button class="mv-chip" aria-pressed="${k2.includes(t[0])}" onclick="mvPick('${t[0]}')">${t[1] ? t[1] + ' ' : ''}${t[2]}</button>`).join('')}</div>
+      <div style="font-weight:700;margin-top:12px">感覺怎麼樣？<span class="muted" style="font-weight:400">（可以不選）</span></div>${first ? '<div class="muted" style="font-size:13px">輕鬆也好、很喘也好，都算有動。</div>' : ''}
+      <div class="mv-feel" role="radiogroup" aria-label="感覺怎麼樣">${MV_FEEL.map((x, i) => `<button role="radio" aria-checked="${f === i + 1}" onclick="mvFeel(${i + 1})"><span>${x[0]}</span>${x[1]}</button>`).join('')}</div></div>`;
+}
+function mvKeep(fn) { const y = window.scrollY; fn(); render(); window.scrollTo(0, y); }
+function mvPick(id) { const st = draft.move; if (!st || !MV_TYPES.some(t => t[0] === id)) return; mvKeep(() => { const a = st.k2 || []; st.k2 = a.includes(id) ? a.filter(x => x !== id) : a.concat(id); }); }
+function mvFeel(i) { const st = draft.move; if (!st) return; mvKeep(() => { st.f = st.f === i ? 0 : i; }); }
+function mvRec(rec, st) { if (!mvOn() || !st.k2 || !st.k2.length) return; rec.k2 = MV_TYPES.map(t => t[0]).filter(id => st.k2.includes(id)); }
+// 感覺另存 mvf:日期 = { l: { 開始時間: 1~5 } }。不走 queueSave：送不出去會讓整個存檔佇列一直重試；這裡先等 move 存好，失敗最多再試 3 次就放手（感覺本來就是選填）
+function mvfPut(date, start, f) {
+  const cur = (S.save['mvf:' + date] || {}).l || {}; S.save['mvf:' + date] = { l: Object.assign({}, cur, { [start]: f }) };
+  mvfSend(date, start, f, 0);
+}
+function mvfSend(date, start, f, tries) {
+  flush().catch(() => {}).then(() => call('saveMvf', date, start, f)).catch(() => { if (tries < 3) setTimeout(() => mvfSend(date, start, f, tries + 1), 8000); });
+}
+function mvFeelOf(date, e) { return (((S.save['mvf:' + date] || {}).l) || {})[e.start] || 0; }
+function mvEntries(d0, d1) {   // 這段日子裡的運動紀錄（沒有 k 的）
+  const out = []; for (let d = d0; d <= d1; d = addD(d, 1)) (((S.save['move:' + d] || {}).list) || []).forEach(e => { if (!e.k) out.push({ date: d, e }); });
+  return out;
+}
+function mvWeek(wk) {   // 文案 133：只講做到的，不比較、不提下週、不猜感受；一天都沒動就不說
+  const n = D.exWeeks[wk] || 0; if (!n) return '';
+  const ent = mvEntries(wk, addD(wk, 6)), cnt = {};
+  ent.forEach(x => (x.e.k2 || []).forEach(id => { cnt[id] = (cnt[id] || 0) + 1; }));
+  const mins = ent.reduce((a, x) => a + (x.e.min || 0), 0), ids = MV_TYPES.map(t => t[0]).filter(id => id !== 'other' && cnt[id]).sort((a, b) => cnt[b] - cnt[a]);
+  const shown = ids.slice(0, 3), rest = ids.slice(3).reduce((a, id) => a + cnt[id], 0) + (cnt.other || 0), parts = shown.map(id => mvName(id) + ' ' + cnt[id] + ' 次'); if (rest) parts.push('還有 ' + rest + ' 次別的');
+  const timed = ent.length === 1 ? '有計時的那次 ' + mins + ' 分鐘' : '有計時的那幾次' + (shown.length ? '，' : '') + '加起來 ' + mins + ' 分鐘';
+  const all = Object.keys(cnt), top = Math.max(0, ...all.map(id => cnt[id])), tops = MV_TYPES.map(t => t[0]).filter(id => cnt[id] === top && top), pick = tops.length ? mvSeed(tops, wk) : 'other';
+  const end = mvSeed(MV_END[pick] || MV_END.other, wk + pick);
+  return '這週動了 ' + n + ' 天' + (shown.length ? '：' + parts.join('、') + '。' + (mins ? timed + '。' : '') : mins ? '，' + timed + '。' : '。') + end;
+}
+function mvMonth(sat) {   // 每月第一個週末（週六落在 1～7 號）：說上個月的樣子，說習慣不說多寡；某種類有選感受 ≥3 次且一組過半才說；一句最多 2 種；不評語、不跟別的月比
+  const sd = parseD(sat), p0 = fmtD(new Date(sd.getFullYear(), sd.getMonth() - 1, 1)), p1 = fmtD(new Date(sd.getFullYear(), sd.getMonth(), 0));
+  const ent = mvEntries(p0, p1).filter(x => x.e.k2 && x.e.k2.length), by = {};
+  ent.forEach(x => x.e.k2.forEach(id => { (by[id] = by[id] || []).push(x); }));
+  const ids = MV_TYPES.map(t => t[0]).filter(id => id !== 'other' && by[id]).sort((a, b) => by[b].length - by[a].length);
+  if (!ids.length || by[ids[0]].length < 3) return '';
+  const tops = ids.filter(id => by[id].length === by[ids[0]].length).slice(0, 2);
+  let s1 = '上個月最常做的是' + tops.map(mvName).join('和');
+  if (tops.length === 1) {
+    const per = { 早上: 0, 下午: 0, 晚上: 0 }; by[tops[0]].forEach(x => { const h = new Date(x.e.start).getHours(); per[h >= 5 && h < 12 ? '早上' : h >= 12 && h < 18 ? '下午' : '晚上']++; });
+    const w = Object.keys(per).sort((a, b) => per[b] - per[a])[0]; if (per[w] * 2 > by[tops[0]].length) s1 += '，多半在' + w;
+  }
+  const fl = [];
+  ids.forEach(id => { const g = [0, 0, 0]; let t = 0; by[id].forEach(x => { const v = mvFeelOf(x.date, x.e); if (v) { g[MV_FEEL_G[v - 1]]++; t++; } });
+    const gi = g.indexOf(Math.max(...g)); if (t >= 3 && g[gi] * 2 > t) fl.push({ id, gi, t }); });
+  fl.sort((a, b) => b.t - a.t);
+  return s1 + '。' + (fl.length ? fl.slice(0, 2).map(x => mvName(x.id) + '多半' + MV_FEEL_NAME[x.gi]).join('，') + '。' : '');
+}
+function mvReview() {   // 步道管理員那一句：週六、日說回顧；每月第一個週末改說月回顧（沒資料就照說週回顧）
+  if (isFamily() || !S || !S.today) return '';
+  const dow = parseD(S.today).getDay(); if (dow !== 0 && dow !== 6) return '';
+  const wk = mondayOf(S.today), sat = addD(wk, 5);
+  return (parseD(sat).getDate() <= 7 && mvMonth(sat)) || mvWeek(wk);
+}
 function moveBack(k) { if (k === 'art') openHall(); else if (k === 'read') go('bookstore'); else if (k === 'medit') openHouse('me'); else go('walk'); }
 function moveActive() { if (isFamily()) return null; try { return JSON.parse(local.get('moveActive') || 'null'); } catch (e) { return null; } }
 function movePut(m) { if (m) local.set('moveActive', JSON.stringify(m)); else local.del('moveActive'); }
@@ -7461,6 +7537,7 @@ function viewMoveStop() {
   return `<div class="card"><h2>🏁 這次${K.did}了 ${min} 分鐘</h2>
       <div class="speech">${who}：「${min < MOVE_MIN ? '這次不到 ' + MOVE_MIN + ' 分鐘，要記下來嗎？' : (m.k === 'read' ? '讀了 ' + min + ' 分鐘，真好！' : '辛苦了！') + (gain ? '這次留下 ' + K.step.repeat(gain) + '，+' + gain * MOVE_GREEN + ' 綠點。' : '再多' + (art ? '待' : '動') + '一點，滿 ' + MOVE_STEP + ' 分鐘就有一' + (K.unit || '個') + K.stepName + '喔。') + (stamp ? '今天的章也幫你蓋好了！' : '')}」</div>
       ${gain ? `<div class="muted" style="margin-top:6px">🌱 你會有 ${D.green + gain * MOVE_GREEN} 綠點，可以去植木屋種樹。</div>` : ''}
+      ${mvPicker(st)}
       <div class="row" style="margin-top:10px"><label class="grow" style="margin:0">什麼時候${art ? '結束' : '回來'}的？忘了按可以改早一點</label>
         <input type="time" id="mEnd" value="${hhmm(st.endAt)}" style="width:auto" onchange="moveSetEnd(this.value)"></div>
       <div class="row" style="margin-top:12px"><button class="grow" onclick="moveSave()">${min < MOVE_MIN ? '還是記下來' : '存好 ✨'}</button><button class="ghost" onclick="draft={};moveBack('${m.k || 'move'}')">還在${K.did}，回去</button></div>
@@ -7475,11 +7552,13 @@ function moveSave() {
   const st = draft.move; if (!st) return;
   const m = st.m, date = m.date, min = moveMinutes(st);
   if (min >= 1) {
-    const rec = { start: m.start, end: m.start + m.pause + min * 60000, min, pauses: Math.round(m.pause / 60000) }; if (m.k === 'art' || m.k === 'read' || m.k === 'medit') rec.k = m.k;
+    const rec = { start: m.start, end: m.start + m.pause + min * 60000, min, pauses: Math.round(m.pause / 60000) }; if (m.k === 'art' || m.k === 'read' || m.k === 'medit') rec.k = m.k; else mvRec(rec, st);   // STEP_REVIEW_v1
     const all = ((S.save['move:' + date] || {}).list || []).concat([rec]);
     S.save['move:' + date] = { list: all };
     queueSave('move:' + date, 'saveMove', date, all);
+    if (!m.k && mvOn() && st.f) mvfPut(date, rec.start, st.f);   // STEP_REVIEW_v1
   }
+  if (!m.k && mvOn()) local.set('mvfHint', '1');   // 小字只第一次出現
   const stamp = !m.k && min >= MOVE_STAMP && !S.save['ex:' + date];
   if (stamp) { S.save['ex:' + date] = { at: S.today, src: 'move' }; queueSave('ex:' + date, 'saveExercise', date, true, 'move'); }
   const g0 = D.moveSteps; if (m.k === 'medit') mdtOff(); movePut(null); D = derive(S);
@@ -9922,7 +10001,7 @@ function viewGuide() {
     p('牆上的 📆 日めくり（撕頁日曆）：睡前可以寫今天的一句話或心情，大約 30 字，寫完同住夥伴會回你一個表情；按 ◀ ▶ 可以翻回去看。不寫也沒關係，不會提醒、也沒有獎勵。每一頁預設只有你自己看得到，想給家人看的那頁，在「這一頁給誰看」選人，隨時可以收回。') +
     p('在家裡下面的「🏘️ 去島民家作客」，可以拜訪五位島民的家（3D 小島點一條街也可以去）。每位島民都有三件最想要的專屬家具，你送的家具會擺在他的客廳，牆壁顏色也可以幫他換。送越多，他越開心。') +
     p('家裡上面有三個分頁：🛋️ 房間（日めくり、喝水、3D 房間、去島民家作客）、🛒 家具店、🏅 收藏（運動獎勵、燈塔和智慧島送的家具、徽章）。') + p('🌬️ 冥想計時：在我的家開始冥想，開始前可以選時間到了輕輕響一聲。每 25 分鐘一朵蓮花 🪷 +10 綠點，同一天分幾次也會加起來算；忘了按也可以補登。你在「誰看得到什麼」為哪位家人打開了「計畫和讀書紀錄」，那位家人也看得到冥想的分鐘數。') + p('🌙 <b>晚安熄燈</b>：家裡有同住的夥伴的話，晚上 9 點半到清晨 4 點回家時，夥伴會問「今天先到這裡？」。按「熄燈」，房間的燈會慢慢暗下來，夥伴跟你說晚安，點一下畫面就回到小島；按「再待一下」，今晚就不再問。一個晚上只問一次，不記時間、不算天數。') /* GUIDE_SYNC_v1 */)}
-  ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('🎼 藝文活動也算：到「音樂廳」選「🎻 練習、上課」「🎫 聽音樂會、看展演」「🥁 樂團排練」或「🎨 畫畫、書法、創作」開始計時，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，多久都算，不用證明。藝文計時不會蓋運動的章，運動和藝文一次只能開一個計時。') + p('一週藝文計時滿 ' + ART_WEEK_MIN + ' 分鐘就算一週，累積幾週就解鎖藝文家具，不用島幣，拿到的也不會收回：') +
+  ${sec('⏱️', '運動計時', p('到海邊步道按「🏃 出發！」開始，回來按「🏁 回來了」。中途可以按「☕ 休息一下」，休息的時間不算。') + p('每運動 ' + MOVE_STEP + ' 分鐘留下一個足あと 👣，+' + MOVE_GREEN + ' 綠點，動多久都算；綠點可以去植木屋種樹。運動計時不給經驗值和島幣。') + p('一次運動滿 ' + MOVE_STAMP + ' 分鐘，會自動幫你蓋今天的章。一次最多算 ' + MOVE_MAX + ' 分鐘，忘了按「回來了」可以把結束時間改早一點。讀書計時和運動計時一次只能開一個。') + p('沒帶手機（體育課、校隊練習）也沒關係，照樣按「今天運動了」蓋章，只是沒有綠點。') + p('運動計時結束的時候，可以選動了什麼、感覺怎麼樣，也可以都不選。感覺在 App 裡只有你自己看得到；動了什麼，你在「誰看得到什麼」把「計畫和讀書紀錄」分享給誰，誰就看得到。週六、日，海邊步道的管理員會說這週動了什麼；每月第一個週末，會說說上個月的樣子。') + p('🎼 藝文活動也算：到「音樂廳」選「🎻 練習、上課」「🎫 聽音樂會、看展演」「🥁 樂團排練」或「🎨 畫畫、書法、創作」開始計時，每 ' + MOVE_STEP + ' 分鐘一個音符 🎵，+' + MOVE_GREEN + ' 綠點，多久都算，不用證明。藝文計時不會蓋運動的章，運動和藝文一次只能開一個計時。') + p('一週藝文計時滿 ' + ART_WEEK_MIN + ' 分鐘就算一週，累積幾週就解鎖藝文家具，不用島幣，拿到的也不會收回：') +
     `<table><tr><th>累積週數</th><th>解鎖的家具</th></tr>${ART_REWARDS.map(r => `<tr><td>${r.weeks} 週</td><td>${r.ic} ${esc(r.name)}</td></tr>`).join('')}</table>` + p('音樂廳在 3D 小島碼頭廣場的正前方，這週有來計時，晚上大玻璃會亮。') + p('忘了按也可以在卡片下面「補登一筆」，藝文、閱讀計時也一樣。') /* GUIDE_SYNC_v1 */)}
   ${sec('💊', '吃藥', p('首頁「今日のおつとめ」有一行「💊 吃藥」。早上和晚上各有一段時間（一開始是早上 7～10 點、晚上 7～10 點，可以自己改），這段時間打開小島，它會問一聲；吃了就按一下。時間過了也可以補勾，按錯再按一次就取消。補勾只是補記錄；忘了吃要不要補吃，請照醫師或藥師說的做。') + p('這裡不給綠點、島幣或經驗值，也不算連續天數，只是幫你記得。小島沒打開不會叫你，要準時提醒，可以用手機鬧鐘，或在設定裡按「📅 加到 Google 日曆」。') + p('只記有沒有勾、幾點勾的，不記吃什麼藥，也不會送給 AI。預設只有你自己看得到；想讓爸爸看到，可以在設定裡打開，隨時可以關。'))}
   ${sec('🥤', '喝水', p('在「我的家」的喝水卡按 +100cc、+250cc 或 +500cc，喝了多少就記多少。每 ' + WATER_CUP + 'cc（大約一杯）+' + WATER_GREEN + ' 🌱 綠點。') + p('一天最多算 ' + WATER_CAP + 'cc 的綠點，再喝還是可以記，只是不加綠點，水不是喝越多越好。' + WATER_WIN + ' 分鐘內最多記 ' + WATER_MAX + 'cc，按錯了可以按 ✕ 刪掉今天的那筆。') + p('喝水的紀錄只有你自己看得到，家人和訪客都看不到。'))}
