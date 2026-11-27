@@ -16,14 +16,23 @@
     call('famSnap', name).then(r => { cache[name] = r || { error: '這座島還沒開放拜訪' }; }, e => { cache[name] = { error: String(e && e.message || e) }; })
       .then(() => { busy = null; if (tab === 'famvisit') render(); });
   }
+  // FAM_VISITPICK_v1（11/23 決策）：選人列。目前這座實心梅紫＋✓，其他白底梅紫字；全部用 🏝️，靠文字分辨
+  const vpStyle = '<style>.vpick{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin:0 -2px 4px;scroll-snap-type:x proximity}.vpick button{flex:0 0 auto;scroll-snap-align:start;min-height:44px;max-width:70vw;padding:0 14px;border-radius:22px;background:#fff;color:var(--plum);border:1px solid #d8d4ce;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vpick button[aria-current]{background:var(--plum);color:#fff;border-color:var(--plum)}</style>';
+  function pick(cur) {
+    const me = (S && S.who && S.who.name) || '', list = ((S && S.famVisit) || []).filter(n => typeof n === 'string' && n && n !== me);
+    if (!list.length) return '';
+    return vpStyle + '<div class="muted" style="margin:0 0 4px">去哪座島看看</div><div class="vpick" id="vpick" role="group" aria-label="去哪座島看看">'
+      + '<button onclick="go(\'home\')">🏝️ 我的島</button>'
+      + list.map(n => n === cur ? `<button aria-current="page" onclick="">🏝️ ✓ ${esc(famIsleLabel(n))}</button>` : `<button onclick="openFamVisit(${esc(JSON.stringify(n))})">🏝️ ${esc(famIsleLabel(n))}</button>`).join('') + '</div>';
+  }
   function view() {
     const name = famVisitWho, r = cache[name];
     if (!r) { load(name); return '<div class="loading">🎈 飛往' + esc(name) + '的島…</div>'; }   // AIRSHIP_WORDS_v1
-    if (r.error) return `<div class="card" style="text-align:center"><div style="font-size:40px">🌫️</div><h3>${esc(r.error)}</h3></div>
+    if (r.error) return pick(name) + `<div class="card" style="text-align:center"><div style="font-size:40px">🌫️</div><h3>${esc(r.error)}</h3></div>
       <div class="row"><button class="ghost grow" onclick="go('home')">${back()}</button></div>`;
     const s = r.snapshot || {}, g = s.guide || {}, dirs = s.dirs || [], res = s.residents || {}, diary = r.diary || [];
-    return `<div class="card"><div class="row"><h2 class="grow" style="margin:0">🏝️ ${esc(s.title || name + '的島')}</h2><span class="muted">島嶼 Lv.${esc(s.level || 1)}</span></div>
-        <div class="muted" style="margin-top:4px">${esc(name)}的島・${esc(short(r.at || s.at || ''))} 的樣子</div></div>
+    return pick(name) + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">🏝️ ${esc(famIsleLabel(name))}</h2><span class="muted">島嶼 Lv.${esc(s.level || 1)}</span></div>
+        <div class="muted" style="margin-top:4px">${esc(short(r.at || s.at || ''))} 的樣子</div></div>
       <div id="fv3d" style="height:min(52vh,400px);border-radius:16px;overflow:hidden;background:${s.bg === 'space' ? '#141c36' : s.bg === 'sky' ? '#dcefff' : '#cfe8f3'}"><div class="loading" style="padding-top:150px">🏝️ 小島浮出海面中…</div></div>
       <div class="card"><div class="row" style="flex-wrap:nowrap"><span style="font-size:34px">${fvAv(g.emoji, '🐢', g.name || '島主夥伴')}</span>
         <div class="speech grow"><b>${esc(g.name || '島主夥伴')}</b>：歡迎來${esc(name)}的島！慢慢逛。</div></div></div>
@@ -34,6 +43,7 @@
       <div class="row"><button class="ghost grow" onclick="go('home')">${back()}</button></div>`;
   }
   async function after() {
+    { const v = document.getElementById('vpick'), c = v && v.querySelector('[aria-current]'); if (v && c) v.scrollLeft = Math.max(0, c.offsetLeft - (v.clientWidth - c.offsetWidth) / 2); }   // FAM_VISITPICK_v1：目前那顆捲到看得到
     const el = document.getElementById('fv3d'), r = cache[famVisitWho]; if (!el || !r || r.error) return;
     const s = r.snapshot || {}, live = (s.dirs || []).map(d => SLOT[d.slot]), res = s.residents || {}, names = {}, ics = {};
     (s.dirs || []).forEach(d => { names[SLOT[d.slot]] = d.name; ics[SLOT[d.slot]] = d.ic; });
